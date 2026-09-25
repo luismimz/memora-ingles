@@ -1,5 +1,6 @@
 # Despliegue en Coolify: "Docker Compose" apuntando a este repo.
 # Asigna el dominio (p. ej. https://ingles.luismontalvan.com) SOLO al servicio "web".
+# Variables obligatorias: APP_URL, PUBLIC_URL, DIRECTUS_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD, DB_PASSWORD (ver .env.example).
 services:
   web:
     build:
@@ -22,16 +23,16 @@ services:
     volumes:
       - uploads:/directus/uploads
     environment:
-      PUBLIC_URL: ${PUBLIC_URL:?Pon https://tu-dominio/api}
-      SECRET: ${DIRECTUS_SECRET:?Genera uno con: openssl rand -hex 32}
-      ADMIN_EMAIL: ${ADMIN_EMAIL:?}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?}
+      PUBLIC_URL: ${PUBLIC_URL}
+      SECRET: ${DIRECTUS_SECRET}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
       DB_CLIENT: pg
       DB_HOST: db
       DB_PORT: "5432"
       DB_DATABASE: memora
       DB_USER: memora
-      DB_PASSWORD: ${DB_PASSWORD:?}
+      DB_PASSWORD: ${DB_PASSWORD}
       WEBSOCKETS_ENABLED: "false"
       TELEMETRY: "false"
       PUBLIC_REGISTRATION: ${PUBLIC_REGISTRATION:-true}
@@ -46,7 +47,7 @@ services:
       IMAGE_PROVIDER: ${IMAGE_PROVIDER:-pollinations}
       SENTENCES_PROVIDER: ${SENTENCES_PROVIDER:-tatoeba}
       # Recuperar contraseña (email con enlace a https://tu-dominio/reset)
-      PASSWORD_RESET_URL_ALLOW_LIST: ${APP_URL:?Pon https://tu-dominio}/reset
+      PASSWORD_RESET_URL_ALLOW_LIST: ${APP_URL}/reset
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
       EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-smtp}
       EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
@@ -63,7 +64,7 @@ services:
     environment:
       POSTGRES_DB: memora
       POSTGRES_USER: memora
-      POSTGRES_PASSWORD: ${DB_PASSWORD:?}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U memora -d memora"]
       interval: 5s
