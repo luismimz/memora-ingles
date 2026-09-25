@@ -1,0 +1,75 @@
+# Despliegue en Coolify: "Docker Compose" apuntando a este repo.
+# Asigna el dominio (p. ej. https://ingles.luismontalvan.com) SOLO al servicio "web".
+services:
+  web:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      - directus
+    expose:
+      - "80"
+
+  directus:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    volumes:
+      - uploads:/directus/uploads
+    environment:
+      PUBLIC_URL: ${PUBLIC_URL:?Pon https://tu-dominio/api}
+      SECRET: ${DIRECTUS_SECRET:?Genera uno con: openssl rand -hex 32}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:?}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?}
+      DB_CLIENT: pg
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_DATABASE: memora
+      DB_USER: memora
+      DB_PASSWORD: ${DB_PASSWORD:?}
+      WEBSOCKETS_ENABLED: "false"
+      TELEMETRY: "false"
+      PUBLIC_REGISTRATION: ${PUBLIC_REGISTRATION:-true}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-deepseek/deepseek-chat-v3.1}
+      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-deepseek/deepseek-chat-v3.1,google/gemini-2.5-flash,openai/gpt-4o-mini,anthropic/claude-haiku-4.5}
+      OPENROUTER_IMAGE_MODEL: ${OPENROUTER_IMAGE_MODEL:-google/gemini-2.5-flash-image}
+      AI_ALLOWED_EMAILS: ${AI_ALLOWED_EMAILS:-}
+      LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
+      PRONUNCIATION_PROVIDER: ${PRONUNCIATION_PROVIDER:-datamuse}
+      CANDIDATES_PROVIDER: ${CANDIDATES_PROVIDER:-datamuse}
+      IMAGE_PROVIDER: ${IMAGE_PROVIDER:-pollinations}
+      SENTENCES_PROVIDER: ${SENTENCES_PROVIDER:-tatoeba}
+      # Recuperar contraseña (email con enlace a https://tu-dominio/reset)
+      PASSWORD_RESET_URL_ALLOW_LIST: ${APP_URL:?Pon https://tu-dominio}/reset
+      EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}
+      EMAIL_TRANSPORT: ${EMAIL_TRANSPORT:-smtp}
+      EMAIL_SMTP_HOST: ${EMAIL_SMTP_HOST:-}
+      EMAIL_SMTP_PORT: ${EMAIL_SMTP_PORT:-587}
+      EMAIL_SMTP_USER: ${EMAIL_SMTP_USER:-}
+      EMAIL_SMTP_PASSWORD: ${EMAIL_SMTP_PASSWORD:-}
+      EMAIL_SMTP_SECURE: ${EMAIL_SMTP_SECURE:-false}
+
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    environment:
+      POSTGRES_DB: memora
+      POSTGRES_USER: memora
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U memora -d memora"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+volumes:
+  pgdata:
+  uploads:

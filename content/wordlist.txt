@@ -1,0 +1,3086 @@
+# Lista base de los días 4-30 (sin mnemotecnia: la IA la genera al vuelo o con scripts/generate-mnemonics.mjs).
+# Formato:  "## día | tema"  y luego una palabra por línea:  inglés|español|tipo
+# Tipos: n (sustantivo), v (verbo), adj, adv, prep, conj, phr (expresión)
+
+## 4 | Comida y bebida
+bread|pan|n
+butter|mantequilla|n
+cheese|queso|n
+egg|huevo|n
+meat|carne|n
+beef|carne de vaca|n
+pork|cerdo (carne)|n
+chicken|pollo|n
+fish|pescado / pez|n
+seafood|marisco|n
+prawn|gamba|n
+rice|arroz|n
+pasta|pasta|n
+flour|harina|n
+sugar|azúcar|n
+salt|sal|n
+pepper|pimienta / pimiento|n
+oil|aceite|n
+vinegar|vinagre|n
+garlic|ajo|n
+onion|cebolla|n
+potato|patata|n
+tomato|tomate|n
+carrot|zanahoria|n
+lettuce|lechuga|n
+cucumber|pepino|n
+cabbage|col|n
+mushroom|champiñón / seta|n
+bean|judía / alubia|n
+pea|guisante|n
+corn|maíz|n
+nut|fruto seco / nuez|n
+apple|manzana|n
+pear|pera|n
+peach|melocotón|n
+grape|uva|n
+strawberry|fresa|n
+cherry|cereza|n
+lemon|limón|n
+orange|naranja|n
+banana|plátano|n
+pineapple|piña|n
+watermelon|sandía|n
+plum|ciruela|n
+fruit|fruta|n
+vegetable|verdura|n
+honey|miel|n
+jam|mermelada|n
+cake|tarta / pastel|n
+biscuit|galleta (UK)|n
+cookie|galleta (US)|n
+sweets|caramelos / chuches|n
+ice cream|helado|n
+chocolate|chocolate|n
+soup|sopa|n
+salad|ensalada|n
+sandwich|bocadillo / sándwich|n
+toast|tostada / brindis|n
+cereal|cereales|n
+yoghurt|yogur|n
+milk|leche|n
+cream|nata / crema|n
+juice|zumo|n
+water|agua|n
+tea|té|n
+coffee|café|n
+beer|cerveza|n
+wine|vino|n
+drink|bebida / beber|n
+snack|tentempié / picoteo|n
+breakfast|desayuno|n
+lunch|almuerzo / comida|n
+dinner|cena|n
+meal|comida (plato completo)|n
+dish|plato (comida) / fuente|n
+dessert|postre|n
+starter|entrante|n
+recipe|receta|n
+ingredient|ingrediente|n
+slice|rebanada / loncha|n
+piece|trozo / pieza|n
+loaf|barra de pan|n
+tin|lata|n
+can|lata / poder|n
+packet|paquete (pequeño)|n
+bottle|botella|n
+bowl|cuenco / bol|n
+hungry|hambriento|adj
+delicious|delicioso|adj
+tasty|sabroso|adj
+sweet|dulce|adj
+sour|ácido / agrio|adj
+bitter|amargo|adj
+salty|salado|adj
+spicy|picante|adj
+raw|crudo|adj
+fresh|fresco|adj
+rotten|podrido|adj
+frozen|congelado|adj
+fried|frito|adj
+roast|asado|adj
+grilled|a la plancha / a la parrilla|adj
+boiled|hervido / cocido|adj
+fry|freír|v
+bake|hornear|v
+chop|picar / trocear|v
+peel|pelar|v
+stir|remover|v
+mix|mezclar|v
+heat|calentar / calor|v
+swallow|tragar|v
+chew|masticar|v
+
+## 5 | Restaurante, bar y cocinar
+waiter|camarero|n
+waitress|camarera|n
+chef|chef / cocinero|n
+cook|cocinero|n
+menu|carta / menú|n
+order|pedido / pedir / orden|n
+tip|propina / consejo|n
+table|mesa|n
+seat|asiento|n
+booking|reserva|n
+reservation|reserva|n
+counter|mostrador / barra|n
+tray|bandeja|n
+napkin|servilleta|n
+straw|pajita|n
+ice|hielo|n
+portion|ración|n
+takeaway|comida para llevar|n
+delivery|entrega / reparto|n
+customer|cliente|n
+service|servicio|n
+price|precio|n
+cash|efectivo|n
+change|cambio (dinero) / cambiar|n
+receipt|recibo / tiquet|n
+opening hours|horario de apertura|phr
+still water|agua sin gas|phr
+sparkling water|agua con gas|phr
+medium|al punto / mediano|adj
+rare|poco hecho / raro (poco común)|adj
+well done|muy hecho / ¡bien hecho!|phr
+vegetarian|vegetariano|adj
+vegan|vegano|adj
+gluten-free|sin gluten|adj
+allergic|alérgico|adj
+full|lleno / saciado|adj
+empty|vacío|adj
+crowded|abarrotado|adj
+noisy|ruidoso|adj
+cosy|acogedor|adj
+serve|servir|v
+book|reservar / libro|v
+recommend|recomendar|v
+suggest|sugerir|v
+prefer|preferir|v
+taste|probar / sabor|v
+share|compartir|v
+split|dividir / pagar a medias|v
+refill|rellenar|v
+complain|quejarse|v
+cheers|¡salud! / gracias (UK)|phr
+enjoy your meal|que aproveche|phr
+the bill|la cuenta|phr
+to go|para llevar|phr
+for here|para tomar aquí|phr
+anything else|¿algo más?|phr
+I'll have|tomaré|phr
+could I have|¿me pone...?|phr
+knife and fork|cuchillo y tenedor|phr
+chopping board|tabla de cortar|n
+kettle|hervidor de agua|n
+microwave|microondas|n
+dishwasher|lavavajillas|n
+toaster|tostadora|n
+frying pan|sartén|n
+saucepan|cazo|n
+lid|tapa|n
+tablespoon|cucharada / cuchara sopera|n
+teaspoon|cucharilla|n
+grater|rallador|n
+bin bag|bolsa de basura|n
+leftovers|sobras|n
+crumb|miga|n
+flavour|sabor|n
+smell|olor|n
+steam|vapor|n
+smoke|humo|n
+burnt|quemado|adj
+tender|tierno|adj
+tough|duro (carne) / difícil|adj
+crunchy|crujiente|adj
+greasy|grasiento|adj
+juicy|jugoso|adj
+bland|soso|adj
+melt|derretir|v
+squeeze|exprimir / apretar|v
+spread|untar / extender|v
+slice|cortar en rodajas|v
+grate|rallar|v
+defrost|descongelar|v
+warm up|calentar (recalentar)|v
+set the table|poner la mesa|phr
+clear the table|quitar la mesa|phr
+do the washing-up|fregar los platos|phr
+go out for dinner|salir a cenar|phr
+eat out|comer fuera|phr
+grab a bite|picar algo|phr
+starving|muerto de hambre|adj
+thirst|sed|n
+appetite|apetito|n
+diet|dieta|n
+healthy food|comida sana|phr
+junk food|comida basura|phr
+fast food|comida rápida|phr
+homemade|casero|adj
+treat|capricho / invitar|n
+round|ronda (de bebidas)|n
+
+## 6 | Familia y relaciones
+family|familia|n
+parents|padres|n
+mother|madre|n
+father|padre|n
+mum|mamá|n
+dad|papá|n
+son|hijo|n
+daughter|hija|n
+child|niño / hijo|n
+children|niños / hijos|n
+baby|bebé|n
+brother|hermano|n
+sister|hermana|n
+sibling|hermano/a (neutro)|n
+twin|gemelo|n
+grandfather|abuelo|n
+grandmother|abuela|n
+grandparents|abuelos|n
+grandson|nieto|n
+granddaughter|nieta|n
+uncle|tío|n
+aunt|tía|n
+cousin|primo / prima|n
+nephew|sobrino|n
+niece|sobrina|n
+husband|marido|n
+wife|esposa|n
+partner|pareja / socio|n
+boyfriend|novio|n
+girlfriend|novia|n
+fiancé|prometido|n
+bride|novia (en la boda)|n
+groom|novio (en la boda)|n
+wedding|boda|n
+marriage|matrimonio|n
+divorce|divorcio|n
+couple|pareja|n
+relative|pariente|n
+in-laws|familia política|n
+father-in-law|suegro|n
+mother-in-law|suegra|n
+brother-in-law|cuñado|n
+sister-in-law|cuñada|n
+stepfather|padrastro|n
+stepmother|madrastra|n
+only child|hijo único|phr
+friend|amigo|n
+best friend|mejor amigo|phr
+mate|colega|n
+colleague|compañero de trabajo|n
+classmate|compañero de clase|n
+flatmate|compañero de piso|n
+stranger|desconocido|n
+guest|invitado|n
+host|anfitrión|n
+generation|generación|n
+childhood|infancia|n
+adult|adulto|n
+teenager|adolescente|n
+elderly|anciano / mayor|adj
+birthday|cumpleaños|n
+anniversary|aniversario|n
+funeral|funeral|n
+birth|nacimiento|n
+death|muerte|n
+relationship|relación|n
+love|amor / querer|n
+hug|abrazo / abrazar|n
+kiss|beso / besar|n
+date|cita / fecha|n
+fall in love|enamorarse|phr
+get married|casarse|phr
+get divorced|divorciarse|phr
+break up|romper (una relación)|phr
+get on well|llevarse bien|phr
+argue|discutir|v
+fight|pelear / pelea|v
+forgive|perdonar|v
+trust|confiar / confianza|v
+support|apoyar / apoyo|v
+look after|cuidar|phr
+take care of|cuidar de|phr
+raise|criar / subir|v
+grow up|crecer / criarse|phr
+be born|nacer|phr
+die|morir|v
+marry|casarse con|v
+invite|invitar|v
+visit|visitar / visita|v
+meet|conocer / quedar|v
+introduce|presentar (a alguien)|v
+celebrate|celebrar|v
+miss|echar de menos|v
+lonely|solo (sentirse)|adj
+close|cercano / cerrar|adj
+single|soltero / individual|adj
+married|casado|adj
+engaged|prometido / ocupado|adj
+pregnant|embarazada|adj
+related|emparentado / relacionado|adj
+loyal|leal|adj
+jealous|celoso|adj
+friendly|simpático / amable|adj
+generous|generoso|adj
+selfish|egoísta|adj
+shy|tímido|adj
+outgoing|extrovertido|adj
+stubborn|terco / cabezota|adj
+spoilt|mimado|adj
+nickname|apodo|n
+surname|apellido|n
+neighbour|vecino|n
+behaviour|comportamiento|n
+together|juntos|adv
+
+## 7 | Trabajo y oficina
+job|trabajo (puesto)|n
+work|trabajo / trabajar|n
+career|carrera profesional|n
+company|empresa / compañía|n
+business|negocio / empresa|n
+office|oficina|n
+boss|jefe|n
+manager|gerente / encargado|n
+employee|empleado|n
+employer|empleador|n
+staff|personal / plantilla|n
+team|equipo|n
+meeting|reunión|n
+interview|entrevista|n
+salary|salario|n
+wage|sueldo (por hora/semana)|n
+pay rise|subida de sueldo|n
+contract|contrato|n
+shift|turno|n
+overtime|horas extra|n
+deadline|fecha límite|n
+task|tarea|n
+project|proyecto|n
+report|informe / informar|n
+goal|objetivo / gol|n
+skill|habilidad|n
+experience|experiencia|n
+CV|currículum|n
+application|solicitud / aplicación|n
+applicant|candidato|n
+position|puesto / posición|n
+department|departamento|n
+client|cliente|n
+customer service|atención al cliente|phr
+sales|ventas|n
+marketing|marketing|n
+profit|beneficio|n
+loss|pérdida|n
+budget|presupuesto|n
+tax|impuesto|n
+invoice|factura|n
+document|documento|n
+file|archivo / expediente|n
+folder|carpeta|n
+desk|escritorio|n
+printer|impresora|n
+stapler|grapadora|n
+email|correo electrónico|n
+phone call|llamada|phr
+schedule|horario / agenda|n
+appointment|cita (médico, reunión)|n
+break|descanso / romper|n
+lunch break|pausa para comer|phr
+holiday|vacaciones / festivo|n
+day off|día libre|phr
+sick leave|baja por enfermedad|phr
+retirement|jubilación|n
+unemployed|en paro|adj
+full-time|a tiempo completo|adj
+part-time|a tiempo parcial|adj
+self-employed|autónomo|adj
+hard-working|trabajador|adj
+skilled|cualificado|adj
+responsible|responsable|adj
+reliable|fiable|adj
+efficient|eficiente|adj
+busy|ocupado|adj
+apply for|solicitar (un trabajo)|phr
+hire|contratar|v
+employ|emplear|v
+fire|despedir|v
+resign|dimitir|v
+retire|jubilarse|v
+earn|ganar (dinero)|v
+manage|dirigir / arreglárselas|v
+organise|organizar|v
+plan|planear / plan|v
+attend|asistir|v
+arrange|organizar / quedar|v
+deal with|ocuparse de / tratar con|phr
+handle|manejar / gestionar|v
+achieve|lograr|v
+succeed|tener éxito|v
+fail|fallar / suspender|v
+improve|mejorar|v
+negotiate|negociar|v
+sign|firmar / señal|v
+print|imprimir|v
+type|escribir a máquina / tipo|v
+update|actualizar|v
+delay|retrasar / retraso|v
+cancel|cancelar|v
+postpone|aplazar|v
+promote|ascender / promocionar|v
+promotion|ascenso|n
+commute|trayecto al trabajo|n
+workplace|lugar de trabajo|n
+headquarters|sede central|n
+branch|sucursal / rama|n
+industry|industria / sector|n
+factory|fábrica|n
+warehouse|almacén|n
+supplier|proveedor|n
+competitor|competidor|n
+market|mercado|n
+agreement|acuerdo|n
+issue|asunto / problema|n
+feedback|opinión / valoración|n
+training|formación|n
+trainee|becario / aprendiz|n
+qualification|titulación|n
+workload|carga de trabajo|n
+stress|estrés|n
+
+## 8 | Dinero y compras
+money|dinero|n
+cash|efectivo|n
+card|tarjeta|n
+credit card|tarjeta de crédito|phr
+bank|banco|n
+account|cuenta|n
+loan|préstamo|n
+debt|deuda|n
+mortgage|hipoteca|n
+savings|ahorros|n
+income|ingresos|n
+expense|gasto|n
+cost|coste / costar|n
+price|precio|n
+discount|descuento|n
+sale|rebajas / venta|n
+bargain|ganga|n
+offer|oferta / ofrecer|n
+refund|reembolso|n
+exchange|cambiar / cambio|v
+shop|tienda / comprar|n
+store|tienda (US) / almacén|n
+shopping|compras|n
+shopping centre|centro comercial|phr
+supermarket|supermercado|n
+market|mercado|n
+checkout|caja (del súper)|n
+cashier|cajero|n
+queue|cola / hacer cola|n
+trolley|carrito|n
+basket|cesta|n
+bag|bolsa / bolso|n
+brand|marca|n
+size|talla / tamaño|n
+fitting room|probador|phr
+shop assistant|dependiente|phr
+product|producto|n
+item|artículo|n
+goods|mercancías / productos|n
+stock|existencias|n
+out of stock|agotado|phr
+wallet|cartera|n
+purse|monedero|n
+coin|moneda|n
+note|billete (UK) / nota|n
+change|cambio / vuelta|n
+cheap|barato|adj
+expensive|caro|adj
+affordable|asequible|adj
+free|gratis / libre|adj
+worth|que vale / valor|adj
+rich|rico|adj
+poor|pobre|adj
+broke|sin blanca|adj
+wealthy|adinerado|adj
+second-hand|de segunda mano|adj
+brand-new|nuevo a estrenar|adj
+buy|comprar|v
+sell|vender|v
+pay|pagar|v
+spend|gastar|v
+save|ahorrar|v
+waste|malgastar|v
+borrow|pedir prestado|v
+lend|prestar|v
+owe|deber (dinero)|v
+afford|permitirse|v
+charge|cobrar / cargar|v
+cost|costar|v
+return|devolver / volver|v
+try on|probarse (ropa)|phr
+pick up|recoger|phr
+look for|buscar|phr
+deliver|entregar / repartir|v
+order|pedir / encargar|v
+withdraw|sacar (dinero)|v
+deposit|ingresar / depósito|v
+transfer|transferir / transferencia|v
+invest|invertir|v
+fee|tarifa / honorarios|n
+fine|multa / bien|n
+tip|propina|n
+wage|salario|n
+cheque|cheque|n
+PIN|PIN|n
+cash machine|cajero automático|phr
+online shopping|compras por internet|phr
+delivery|envío / entrega|n
+parcel|paquete|n
+postage|franqueo|n
+warranty|garantía|n
+receipt|tiquet / recibo|n
+how much|¿cuánto?|phr
+it's on me|invito yo|phr
+rip-off|timo|n
+customer|cliente|n
+purchase|compra / comprar|n
+payment|pago|n
+instalment|plazo (pago)|n
+currency|moneda (divisa)|n
+exchange rate|tipo de cambio|phr
+value|valor|n
+budget|presupuesto|n
+luxury|lujo|n
+gift|regalo|n
+present|regalo / presente|n
+wrapping paper|papel de regalo|phr
+counter|mostrador|n
+
+## 9 | Viajes y transporte
+travel|viajar / viajes|v
+trip|viaje (corto)|n
+journey|trayecto / viaje|n
+holiday|vacaciones|n
+tourist|turista|n
+passport|pasaporte|n
+visa|visado|n
+ticket|billete / entrada|n
+luggage|equipaje|n
+suitcase|maleta|n
+backpack|mochila|n
+airport|aeropuerto|n
+flight|vuelo|n
+plane|avión|n
+pilot|piloto|n
+gate|puerta (de embarque) / verja|n
+boarding pass|tarjeta de embarque|phr
+check-in|facturación|n
+delay|retraso|n
+departure|salida|n
+arrival|llegada|n
+destination|destino|n
+customs|aduana|n
+border|frontera|n
+abroad|en el extranjero|adv
+foreign|extranjero|adj
+foreigner|extranjero (persona)|n
+train|tren|n
+station|estación|n
+platform|andén|n
+bus|autobús|n
+coach|autocar|n
+bus stop|parada de autobús|phr
+underground|metro (UK)|n
+subway|metro (US)|n
+taxi|taxi|n
+car|coche|n
+bike|bici|n
+motorbike|moto|n
+boat|barco (pequeño)|n
+ship|barco (grande)|n
+ferry|ferry|n
+road|carretera|n
+motorway|autopista|n
+traffic|tráfico|n
+traffic jam|atasco|phr
+traffic lights|semáforo|phr
+roundabout|rotonda|n
+crossroads|cruce|n
+petrol|gasolina|n
+petrol station|gasolinera|phr
+parking|aparcamiento|n
+car park|parking|phr
+driver|conductor|n
+passenger|pasajero|n
+seat belt|cinturón de seguridad|phr
+map|mapa|n
+direction|dirección|n
+left|izquierda|n
+right|derecha|n
+straight on|todo recto|phr
+turn|girar|v
+hotel|hotel|n
+hostel|albergue|n
+room|habitación|n
+single room|habitación individual|phr
+double room|habitación doble|phr
+reception|recepción|n
+key card|tarjeta llave|phr
+sightseeing|turismo (visitar lugares)|n
+guidebook|guía de viaje|n
+guide|guía|n
+souvenir|recuerdo (objeto)|n
+beach|playa|n
+mountain|montaña|n
+view|vista|n
+drive|conducir|v
+ride|montar / ir en|v
+fly|volar|v
+catch|coger (transporte)|v
+miss|perder (transporte)|v
+get on|subir (a un transporte)|phr
+get off|bajar (de un transporte)|phr
+get in|subir (a un coche)|phr
+get out|bajar (de un coche)|phr
+pack|hacer la maleta|v
+unpack|deshacer la maleta|v
+land|aterrizar / tierra|v
+take off|despegar / quitarse|phr
+arrive|llegar|v
+leave|salir / irse|v
+stay|alojarse / quedarse|v
+book|reservar|v
+explore|explorar|v
+get lost|perderse|phr
+set off|salir / ponerse en camino|phr
+one-way|solo ida|adj
+return ticket|billete de ida y vuelta|phr
+round trip|ida y vuelta|phr
+on time|puntual|phr
+late|tarde / con retraso|adj
+fast|rápido|adj
+slow|lento|adj
+far|lejos|adv
+near|cerca|adv
+nearby|cercano / cerca|adv
+distance|distancia|n
+speed|velocidad|n
+accident|accidente|n
+crash|choque / chocar|n
+
+## 10 | Salud y médico
+health|salud|n
+doctor|médico|n
+nurse|enfermero/a|n
+patient|paciente|n
+hospital|hospital|n
+clinic|clínica / ambulatorio|n
+chemist's|farmacia|n
+pharmacy|farmacia|n
+medicine|medicina|n
+pill|pastilla|n
+tablet|comprimido / tableta|n
+prescription|receta médica|n
+appointment|cita|n
+ambulance|ambulancia|n
+emergency|emergencia|n
+illness|enfermedad|n
+disease|enfermedad (grave)|n
+pain|dolor|n
+ache|dolor (sordo)|n
+headache|dolor de cabeza|n
+toothache|dolor de muelas|n
+stomachache|dolor de estómago|n
+backache|dolor de espalda|n
+sore throat|dolor de garganta|phr
+cold|resfriado / frío|n
+flu|gripe|n
+cough|tos / toser|n
+fever|fiebre|n
+temperature|temperatura / fiebre|n
+sneeze|estornudar / estornudo|v
+runny nose|moqueo|phr
+allergy|alergia|n
+injury|lesión|n
+wound|herida|n
+cut|corte / cortar|n
+bruise|moratón|n
+burn|quemadura / quemar|n
+bandage|venda|n
+plaster|tirita / escayola|n
+blood|sangre|n
+heart|corazón|n
+lungs|pulmones|n
+brain|cerebro|n
+stomach|estómago|n
+liver|hígado|n
+kidney|riñón|n
+muscle|músculo|n
+bone|hueso|n
+skin|piel|n
+tooth|diente|n
+dentist|dentista|n
+check-up|revisión médica|n
+X-ray|radiografía|n
+surgery|cirugía / consulta|n
+operation|operación|n
+treatment|tratamiento|n
+cure|curar / cura|v
+heal|sanar / cicatrizar|v
+recover|recuperarse|v
+feel sick|marearse / tener náuseas|phr
+throw up|vomitar|phr
+faint|desmayarse|v
+bleed|sangrar|v
+break|romperse (un hueso)|v
+twist|torcer|v
+swollen|hinchado|adj
+dizzy|mareado|adj
+tired|cansado|adj
+exhausted|agotado|adj
+ill|enfermo|adj
+sick|enfermo / mareado|adj
+healthy|sano|adj
+fit|en forma|adj
+unfit|en baja forma|adj
+weak|débil|adj
+pregnant|embarazada|adj
+painful|doloroso|adj
+serious|grave / serio|adj
+itchy|que pica|adj
+itch|picor / picar|n
+rash|sarpullido|n
+scar|cicatriz|n
+symptom|síntoma|n
+insurance|seguro|n
+vaccine|vacuna|n
+injection|inyección|n
+blood pressure|tensión arterial|phr
+weight|peso|n
+lose weight|adelgazar|phr
+put on weight|engordar|phr
+exercise|ejercicio|n
+diet|dieta|n
+sleep|dormir / sueño|v
+rest|descansar|v
+stress|estrés|n
+breathe|respirar|v
+lie down|tumbarse|phr
+get better|mejorar(se)|phr
+get worse|empeorar|phr
+take a pill|tomar una pastilla|phr
+make an appointment|pedir cita|phr
+side effect|efecto secundario|phr
+mental health|salud mental|phr
+anxiety|ansiedad|n
+depression|depresión|n
+disabled|discapacitado|adj
+blind|ciego|adj
+deaf|sordo|adj
+glasses|gafas|n
+wheelchair|silla de ruedas|n
+crutches|muletas|n
+
+## 11 | Tiempo, calendario y clima
+time|tiempo / hora / vez|n
+hour|hora|n
+minute|minuto|n
+second|segundo|n
+moment|momento|n
+day|día|n
+week|semana|n
+month|mes|n
+year|año|n
+decade|década|n
+century|siglo|n
+morning|mañana|n
+afternoon|tarde|n
+evening|tarde-noche|n
+night|noche|n
+midnight|medianoche|n
+noon|mediodía|n
+dawn|amanecer|n
+sunset|puesta de sol|n
+today|hoy|adv
+tomorrow|mañana|adv
+yesterday|ayer|adv
+tonight|esta noche|adv
+weekend|fin de semana|n
+Monday|lunes|n
+Tuesday|martes|n
+Wednesday|miércoles|n
+Thursday|jueves|n
+Friday|viernes|n
+Saturday|sábado|n
+Sunday|domingo|n
+January|enero|n
+February|febrero|n
+March|marzo|n
+April|abril|n
+May|mayo|n
+June|junio|n
+July|julio|n
+August|agosto|n
+September|septiembre|n
+October|octubre|n
+November|noviembre|n
+December|diciembre|n
+spring|primavera|n
+summer|verano|n
+autumn|otoño|n
+winter|invierno|n
+season|estación / temporada|n
+date|fecha|n
+calendar|calendario|n
+clock|reloj (de pared)|n
+watch|reloj (de pulsera) / mirar|n
+alarm|alarma|n
+o'clock|en punto|adv
+quarter|cuarto|n
+half|media / mitad|n
+past|y (hora) / pasado|prep
+to|menos (hora) / a|prep
+early|temprano|adv
+late|tarde|adv
+on time|a tiempo|phr
+in time|a tiempo (con margen)|phr
+recently|recientemente|adv
+lately|últimamente|adv
+nowadays|hoy en día|adv
+soon|pronto|adv
+ago|hace|adv
+already|ya|adv
+yet|todavía|adv
+still|aún|adv
+ever|alguna vez|adv
+never|nunca|adv
+always|siempre|adv
+usually|normalmente|adv
+sometimes|a veces|adv
+rarely|raramente|adv
+once|una vez|adv
+twice|dos veces|adv
+daily|diario|adj
+weekly|semanal|adj
+monthly|mensual|adj
+yearly|anual|adj
+weather|tiempo (clima)|n
+sun|sol|n
+sunny|soleado|adj
+rain|lluvia / llover|n
+rainy|lluvioso|adj
+snow|nieve / nevar|n
+wind|viento|n
+windy|ventoso|adj
+cloudy|nublado|adj
+fog|niebla|n
+foggy|con niebla|adj
+storm|tormenta|n
+thunder|trueno|n
+lightning|relámpago|n
+hail|granizo|n
+rainbow|arcoíris|n
+heat|calor|n
+hot|caluroso / caliente|adj
+warm|templado / cálido|adj
+cool|fresco / guay|adj
+cold|frío|adj
+freezing|helado (muy frío)|adj
+humid|húmedo|adj
+degree|grado|n
+forecast|previsión|n
+climate|clima|n
+shower|chubasco / ducha|n
+drought|sequía|n
+flood|inundación|n
+umbrella|paraguas|n
+melt|derretirse|v
+pour|llover a cántaros / verter|v
+shine|brillar|v
+
+## 12 | Naturaleza y animales
+nature|naturaleza|n
+animal|animal|n
+dog|perro|n
+cat|gato|n
+horse|caballo|n
+cow|vaca|n
+pig|cerdo|n
+sheep|oveja|n
+goat|cabra|n
+donkey|burro|n
+rabbit|conejo|n
+mouse|ratón|n
+rat|rata|n
+bird|pájaro|n
+duck|pato|n
+hen|gallina|n
+chicken|pollo / gallina|n
+eagle|águila|n
+owl|búho|n
+pigeon|paloma|n
+parrot|loro|n
+fish|pez|n
+shark|tiburón|n
+whale|ballena|n
+dolphin|delfín|n
+crab|cangrejo|n
+octopus|pulpo|n
+snake|serpiente|n
+frog|rana|n
+turtle|tortuga|n
+insect|insecto|n
+fly|mosca|n
+bee|abeja|n
+wasp|avispa|n
+ant|hormiga|n
+spider|araña|n
+mosquito|mosquito|n
+butterfly|mariposa|n
+worm|gusano|n
+snail|caracol|n
+lion|león|n
+tiger|tigre|n
+bear|oso|n
+wolf|lobo|n
+fox|zorro|n
+deer|ciervo|n
+monkey|mono|n
+elephant|elefante|n
+giraffe|jirafa|n
+zebra|cebra|n
+squirrel|ardilla|n
+bat|murciélago / bate|n
+pet|mascota|n
+tail|cola (de animal)|n
+wing|ala|n
+feather|pluma|n
+fur|pelaje|n
+claw|garra|n
+beak|pico|n
+nest|nido|n
+cage|jaula|n
+farm|granja|n
+plant|planta / plantar|n
+flower|flor|n
+tree|árbol|n
+leaf|hoja|n
+branch|rama|n
+root|raíz|n
+seed|semilla|n
+bush|arbusto|n
+grass|hierba|n
+wood|madera / bosque|n
+forest|bosque|n
+jungle|selva|n
+desert|desierto|n
+island|isla|n
+coast|costa|n
+sea|mar|n
+ocean|océano|n
+wave|ola / saludar con la mano|n
+sand|arena|n
+rock|roca|n
+stone|piedra|n
+mountain|montaña|n
+valley|valle|n
+lake|lago|n
+river|río|n
+stream|arroyo|n
+waterfall|cascada|n
+cave|cueva|n
+earth|tierra / la Tierra|n
+soil|tierra (suelo)|n
+mud|barro|n
+field|campo|n
+countryside|campo (rural)|n
+landscape|paisaje|n
+environment|medio ambiente|n
+pollution|contaminación|n
+recycle|reciclar|v
+wild|salvaje|adj
+tame|domesticado|adj
+dangerous|peligroso|adj
+endangered|en peligro de extinción|adj
+hunt|cazar|v
+bark|ladrar|v
+bite|morder|v
+sting|picar (insecto)|v
+feed|alimentar|v
+water|regar / agua|v
+grow|crecer / cultivar|v
+bloom|florecer|v
+fall|caer|v
+climate change|cambio climático|phr
+
+## 13 | Ciudad y servicios
+city|ciudad|n
+town|pueblo|n
+village|aldea|n
+capital|capital|n
+centre|centro|n
+suburb|barrio de las afueras|n
+neighbourhood|barrio|n
+area|zona|n
+street|calle|n
+avenue|avenida|n
+square|plaza|n
+park|parque|n
+pavement|acera|n
+crossing|paso de peatones|n
+corner|esquina|n
+block|manzana / bloque|n
+building|edificio|n
+flat|piso|n
+apartment|apartamento|n
+house|casa|n
+skyscraper|rascacielos|n
+tower|torre|n
+church|iglesia|n
+cathedral|catedral|n
+castle|castillo|n
+palace|palacio|n
+museum|museo|n
+gallery|galería|n
+library|biblioteca|n
+theatre|teatro|n
+cinema|cine|n
+stadium|estadio|n
+gym|gimnasio|n
+swimming pool|piscina|phr
+school|colegio|n
+university|universidad|n
+hospital|hospital|n
+police station|comisaría|phr
+fire station|parque de bomberos|phr
+post office|correos|phr
+town hall|ayuntamiento|phr
+bank|banco|n
+cash point|cajero|phr
+hairdresser's|peluquería|n
+bakery|panadería|n
+butcher's|carnicería|n
+newsagent's|quiosco|n
+bookshop|librería|n
+café|cafetería|n
+pub|bar (UK)|n
+restaurant|restaurante|n
+hotel|hotel|n
+shop|tienda|n
+market|mercado|n
+factory|fábrica|n
+bridge|puente|n
+statue|estatua|n
+fountain|fuente|n
+bench|banco (asiento)|n
+sign|señal / cartel|n
+street light|farola|phr
+bin|papelera|n
+rubbish|basura|n
+noise|ruido|n
+crowd|multitud|n
+resident|residente|n
+citizen|ciudadano|n
+local|local / vecino|adj
+public|público|adj
+private|privado|adj
+modern|moderno|adj
+old|viejo / antiguo|adj
+ancient|antiguo (muy)|adj
+historic|histórico|adj
+busy|concurrido|adj
+quiet|tranquilo|adj
+safe|seguro|adj
+dirty|sucio|adj
+clean|limpio|adj
+polluted|contaminado|adj
+lively|animado|adj
+crowded|abarrotado|adj
+huge|enorme|adj
+famous|famoso|adj
+beautiful|bonito|adj
+ugly|feo|adj
+located|situado|adj
+opposite|enfrente de|prep
+next to|al lado de|prep
+in front of|delante de|prep
+around|alrededor de|prep
+along|a lo largo de|prep
+past|pasando|prep
+walk|caminar / paseo|v
+get to|llegar a|phr
+go straight|ir recto|phr
+take the first left|coger la primera a la izquierda|phr
+how do I get to|¿cómo llego a...?|phr
+is it far|¿está lejos?|phr
+visit|visitar|v
+live|vivir|v
+move|mudarse|v
+rent|alquilar|v
+own|poseer|v
+build|construir|v
+knock down|derribar|phr
+renovate|reformar|v
+sightseeing|turismo|n
+tour|visita guiada / gira|n
+entrance|entrada|n
+exit|salida|n
+fee|tarifa|n
+opening time|hora de apertura|phr
+closed|cerrado|adj
+open|abierto / abrir|adj
+
+## 14 | Emociones y personalidad
+feeling|sentimiento|n
+emotion|emoción|n
+mood|estado de ánimo|n
+happy|feliz|adj
+sad|triste|adj
+cheerful|alegre|adj
+excited|emocionado|adj
+exciting|emocionante|adj
+nervous|nervioso|adj
+worried|preocupado|adj
+relaxed|relajado|adj
+calm|tranquilo|adj
+stressed|estresado|adj
+angry|enfadado|adj
+furious|furioso|adj
+annoyed|molesto|adj
+annoying|molesto (que molesta)|adj
+disappointed|decepcionado|adj
+surprised|sorprendido|adj
+shocked|impactado|adj
+confused|confundido|adj
+frightened|asustado|adj
+terrified|aterrorizado|adj
+ashamed|avergonzado (culpa)|adj
+guilty|culpable|adj
+jealous|celoso|adj
+grateful|agradecido|adj
+hopeful|esperanzado|adj
+hopeless|sin esperanza / negado|adj
+lonely|solo|adj
+homesick|con morriña|adj
+satisfied|satisfecho|adj
+curious|curioso|adj
+confident|seguro de sí mismo|adj
+proud|orgulloso|adj
+jealousy|celos|n
+fear|miedo|n
+anger|ira|n
+joy|alegría|n
+sadness|tristeza|n
+happiness|felicidad|n
+hope|esperanza|n
+pride|orgullo|n
+shame|vergüenza|n
+surprise|sorpresa|n
+worry|preocupación|n
+kind|amable|adj
+nice|agradable / majo|adj
+friendly|simpático|adj
+honest|honesto|adj
+patient|paciente|adj
+impatient|impaciente|adj
+polite|educado|adj
+rude|maleducado|adj
+funny|gracioso|adj
+serious|serio|adj
+smart|listo|adj
+wise|sabio|adj
+stupid|estúpido|adj
+brave|valiente|adj
+coward|cobarde|n
+lazy|vago|adj
+hard-working|trabajador|adj
+clever|listo|adj
+creative|creativo|adj
+curious|curioso|adj
+careful|cuidadoso|adj
+careless|descuidado|adj
+mean|tacaño / malo|adj
+generous|generoso|adj
+selfish|egoísta|adj
+sensitive|sensible|adj
+sensible|sensato (¡ojo!)|adj
+reasonable|razonable|adj
+moody|de humor cambiante|adj
+bossy|mandón|adj
+cheeky|descarado|adj
+charming|encantador|adj
+arrogant|arrogante|adj
+humble|humilde|adj
+ambitious|ambicioso|adj
+easy-going|tranquilo / de trato fácil|adj
+open-minded|de mente abierta|adj
+narrow-minded|cerrado de mente|adj
+feel|sentir|v
+cry|llorar|v
+laugh|reír|v
+smile|sonreír|v
+shout|gritar|v
+scream|chillar|v
+sigh|suspirar|v
+blush|sonrojarse|v
+frown|fruncir el ceño|v
+upset|disgustar / disgustado|v
+bother|molestar|v
+scare|asustar|v
+calm down|calmarse|phr
+cheer up|animarse / animar|phr
+get angry|enfadarse|phr
+lose your temper|perder los nervios|phr
+be fed up with|estar harto de|phr
+look forward to|tener ganas de|phr
+can't stand|no soportar|phr
+be keen on|ser aficionado a|phr
+be scared of|tener miedo de|phr
+be proud of|estar orgulloso de|phr
+make someone laugh|hacer reír a alguien|phr
+mood swing|cambio de humor|phr
+tears|lágrimas|n
+temper|genio / carácter|n
+personality|personalidad|n
+character|carácter / personaje|n
+
+## 15 | Comunicación y opiniones
+say|decir|v
+tell|decir / contar|v
+speak|hablar (idioma, formal)|v
+talk|hablar / charlar|v
+chat|charlar / charla|v
+ask|preguntar / pedir|v
+answer|responder|v
+reply|contestar / respuesta|v
+explain|explicar|v
+describe|describir|v
+mention|mencionar|v
+discuss|hablar de / debatir|v
+argue|discutir / argumentar|v
+agree|estar de acuerdo|v
+disagree|no estar de acuerdo|v
+think|pensar / creer|v
+believe|creer|v
+suppose|suponer|v
+guess|suponer / adivinar|v
+imagine|imaginar|v
+wonder|preguntarse|v
+doubt|dudar / duda|v
+mean|significar / querer decir|v
+understand|entender|v
+realise|darse cuenta|v
+know|saber / conocer|v
+remember|recordar|v
+forget|olvidar|v
+repeat|repetir|v
+spell|deletrear|v
+pronounce|pronunciar|v
+translate|traducir|v
+promise|prometer / promesa|v
+refuse|negarse|v
+deny|negar|v
+admit|admitir|v
+accept|aceptar|v
+complain|quejarse|v
+apologise|pedir perdón|v
+thank|dar las gracias|v
+warn|advertir|v
+advise|aconsejar|v
+advice|consejo|n
+persuade|convencer|v
+convince|convencer|v
+insist|insistir|v
+interrupt|interrumpir|v
+whisper|susurrar|v
+shout|gritar|v
+call|llamar|v
+message|mensaje|n
+text|mensaje de texto / escribir un mensaje|v
+letter|carta / letra|n
+note|nota|n
+conversation|conversación|n
+discussion|debate / conversación|n
+argument|discusión / argumento|n
+opinion|opinión|n
+point of view|punto de vista|phr
+idea|idea|n
+reason|razón / motivo|n
+question|pregunta|n
+answer|respuesta|n
+word|palabra|n
+sentence|frase / condena|n
+language|idioma / lenguaje|n
+accent|acento|n
+meaning|significado|n
+joke|chiste / broma|n
+rumour|rumor|n
+secret|secreto|n
+lie|mentira / mentir|n
+truth|verdad|n
+news|noticias|n
+information|información|n
+in my opinion|en mi opinión|phr
+I think so|creo que sí|phr
+I don't think so|creo que no|phr
+I agree|estoy de acuerdo|phr
+that's true|es verdad|phr
+exactly|exactamente|adv
+of course|por supuesto|phr
+it depends|depende|phr
+I'm not sure|no estoy seguro|phr
+what do you mean|¿qué quieres decir?|phr
+could you repeat that|¿puedes repetirlo?|phr
+how do you say|¿cómo se dice...?|phr
+what does it mean|¿qué significa?|phr
+by the way|por cierto|phr
+to be honest|para ser sincero|phr
+as far as I know|que yo sepa|phr
+I see|ya veo|phr
+never mind|no importa|phr
+no way|¡ni hablar! / ¡no me digas!|phr
+you're right|tienes razón|phr
+you're wrong|te equivocas|phr
+fair enough|me parece justo|phr
+I'm afraid|me temo que|phr
+sorry|perdón / lo siento|phr
+excuse me|disculpe / perdone|phr
+pardon|¿perdón? (no he oído)|phr
+clear|claro|adj
+obvious|obvio|adj
+polite|educado|adj
+fluent|fluido|adj
+silent|silencioso|adj
+loud|alto (volumen)|adj
+
+## 16 | Tecnología e internet
+technology|tecnología|n
+computer|ordenador|n
+laptop|portátil|n
+screen|pantalla|n
+keyboard|teclado|n
+mouse|ratón|n
+phone|teléfono|n
+mobile|móvil|n
+smartphone|smartphone|n
+battery|batería / pila|n
+charger|cargador|n
+plug|enchufe|n
+cable|cable|n
+device|dispositivo|n
+app|aplicación|n
+software|software|n
+program|programa|n
+website|página web|n
+internet|internet|n
+Wi-Fi|wifi|n
+network|red|n
+password|contraseña|n
+username|nombre de usuario|n
+account|cuenta|n
+email|correo|n
+attachment|archivo adjunto|n
+link|enlace|n
+file|archivo|n
+folder|carpeta|n
+data|datos|n
+memory|memoria|n
+storage|almacenamiento|n
+update|actualización / actualizar|n
+download|descargar / descarga|v
+upload|subir (archivo)|v
+install|instalar|v
+delete|borrar|v
+save|guardar|v
+copy|copiar|v
+paste|pegar|v
+cut|cortar|v
+click|hacer clic|v
+tap|tocar (pantalla)|v
+scroll|desplazarse (pantalla)|v
+swipe|deslizar|v
+type|teclear|v
+search|buscar|v
+browse|navegar|v
+log in|iniciar sesión|phr
+log out|cerrar sesión|phr
+sign up|registrarse|phr
+switch on|encender|phr
+switch off|apagar|phr
+turn on|encender|phr
+turn off|apagar|phr
+charge|cargar (batería)|v
+connect|conectar|v
+restart|reiniciar|v
+crash|colgarse / bloquearse|v
+freeze|congelarse (pantalla)|v
+hack|piratear|v
+virus|virus|n
+backup|copia de seguridad|n
+settings|ajustes|n
+button|botón|n
+icon|icono|n
+menu|menú|n
+notification|notificación|n
+message|mensaje|n
+video call|videollamada|phr
+social media|redes sociales|phr
+post|publicación / publicar|n
+comment|comentario|n
+like|me gusta / gustar|n
+share|compartir|v
+follow|seguir|v
+follower|seguidor|n
+profile|perfil|n
+photo|foto|n
+selfie|selfi|n
+camera|cámara|n
+headphones|auriculares|n
+speaker|altavoz / orador|n
+microphone|micrófono|n
+printer|impresora|n
+robot|robot|n
+artificial intelligence|inteligencia artificial|phr
+online|en línea|adj
+offline|sin conexión|adj
+digital|digital|adj
+wireless|inalámbrico|adj
+smart|inteligente|adj
+user-friendly|fácil de usar|adj
+slow|lento|adj
+broken|roto|adj
+available|disponible|adj
+screenshot|captura de pantalla|n
+emoji|emoji|n
+chat|chat|n
+game|juego|n
+stream|retransmitir / en directo|v
+subscribe|suscribirse|v
+unsubscribe|darse de baja|v
+browser|navegador|n
+search engine|buscador|phr
+spam|correo basura|n
+privacy|privacidad|n
+security|seguridad|n
+code|código|n
+developer|desarrollador|n
+engineer|ingeniero|n
+invent|inventar|v
+invention|invento|n
+machine|máquina|n
+tool|herramienta|n
+electricity|electricidad|n
+power|energía / poder|n
+signal|señal|n
+
+## 17 | Educación y aprendizaje
+education|educación|n
+school|colegio|n
+high school|instituto|phr
+university|universidad|n
+college|universidad / escuela superior|n
+student|estudiante|n
+pupil|alumno|n
+teacher|profesor|n
+lecturer|profesor universitario|n
+class|clase|n
+classroom|aula|n
+lesson|lección / clase|n
+course|curso|n
+subject|asignatura / tema|n
+timetable|horario|n
+homework|deberes|n
+exercise|ejercicio|n
+exam|examen|n
+test|prueba / examen|n
+mark|nota|n
+grade|nota / curso (US)|n
+degree|título / grado|n
+master's|máster|n
+certificate|certificado|n
+scholarship|beca|n
+term|trimestre / término|n
+semester|semestre|n
+lecture|clase magistral / conferencia|n
+notes|apuntes|n
+notebook|cuaderno|n
+textbook|libro de texto|n
+dictionary|diccionario|n
+pen|bolígrafo|n
+pencil|lápiz|n
+rubber|goma de borrar|n
+ruler|regla|n
+board|pizarra|n
+desk|pupitre|n
+bag|mochila / bolsa|n
+maths|matemáticas|n
+history|historia|n
+geography|geografía|n
+science|ciencia|n
+physics|física|n
+chemistry|química|n
+biology|biología|n
+art|arte|n
+music|música|n
+literature|literatura|n
+language|idioma|n
+grammar|gramática|n
+vocabulary|vocabulario|n
+pronunciation|pronunciación|n
+spelling|ortografía|n
+knowledge|conocimiento|n
+skill|habilidad|n
+mistake|error|n
+error|error|n
+answer|respuesta|n
+question|pregunta|n
+example|ejemplo|n
+practice|práctica|n
+progress|progreso|n
+level|nivel|n
+beginner|principiante|n
+intermediate|intermedio|adj
+advanced|avanzado|adj
+learn|aprender|v
+study|estudiar|v
+teach|enseñar|v
+revise|repasar|v
+review|repasar / reseña|v
+memorise|memorizar|v
+practise|practicar|v
+pass|aprobar|v
+fail|suspender|v
+cheat|copiar / hacer trampa|v
+graduate|graduarse / graduado|v
+enrol|matricularse|v
+attend|asistir|v
+explain|explicar|v
+correct|corregir / correcto|v
+check|comprobar|v
+underline|subrayar|v
+concentrate|concentrarse|v
+focus|centrarse / enfoque|v
+research|investigar / investigación|v
+solve|resolver|v
+calculate|calcular|v
+count|contar|v
+add|sumar / añadir|v
+subtract|restar|v
+multiply|multiplicar|v
+divide|dividir|v
+number|número|n
+fraction|fracción|n
+percentage|porcentaje|n
+difficult|difícil|adj
+easy|fácil|adj
+hard|difícil / duro|adj
+clever|listo|adj
+right|correcto|adj
+wrong|incorrecto|adj
+fluent|fluido|adj
+by heart|de memoria|phr
+make progress|progresar|phr
+take an exam|hacer un examen|phr
+make a mistake|cometer un error|phr
+do homework|hacer los deberes|phr
+pay attention|prestar atención|phr
+get better at|mejorar en|phr
+
+## 18 | Ocio, deporte y aficiones
+hobby|afición|n
+free time|tiempo libre|phr
+leisure|ocio|n
+sport|deporte|n
+football|fútbol|n
+basketball|baloncesto|n
+tennis|tenis|n
+swimming|natación|n
+cycling|ciclismo|n
+running|correr (running)|n
+skiing|esquí|n
+surfing|surf|n
+climbing|escalada|n
+hiking|senderismo|n
+fishing|pesca|n
+yoga|yoga|n
+team|equipo|n
+player|jugador|n
+coach|entrenador|n
+referee|árbitro|n
+fan|aficionado|n
+match|partido|n
+game|juego / partido|n
+race|carrera|n
+competition|competición|n
+tournament|torneo|n
+champion|campeón|n
+winner|ganador|n
+loser|perdedor|n
+score|marcador / marcar|n
+goal|gol|n
+point|punto|n
+draw|empate / empatar / dibujar|n
+ball|pelota|n
+racket|raqueta|n
+net|red|n
+court|pista / cancha / tribunal|n
+pitch|campo (de fútbol)|n
+track|pista (atletismo)|n
+gym|gimnasio|n
+equipment|equipo / material|n
+trainers|zapatillas de deporte|n
+helmet|casco|n
+medal|medalla|n
+trophy|trofeo|n
+training|entrenamiento|n
+win|ganar|v
+lose|perder|v
+beat|vencer a|v
+play|jugar / tocar|v
+train|entrenar|v
+kick|dar una patada|v
+throw|lanzar|v
+catch|atrapar|v
+jump|saltar|v
+run|correr|v
+swim|nadar|v
+climb|escalar|v
+dive|bucear / tirarse de cabeza|v
+score a goal|marcar un gol|phr
+go for a walk|dar un paseo|phr
+work out|hacer ejercicio|phr
+music|música|n
+song|canción|n
+band|grupo musical|n
+singer|cantante|n
+concert|concierto|n
+instrument|instrumento|n
+guitar|guitarra|n
+piano|piano|n
+drums|batería|n
+dance|bailar / baile|v
+sing|cantar|v
+painting|pintura|n
+drawing|dibujo|n
+photography|fotografía|n
+reading|lectura|n
+novel|novela|n
+film|película|n
+movie|película (US)|n
+series|serie|n
+cartoon|dibujos animados|n
+board game|juego de mesa|phr
+cards|cartas|n
+chess|ajedrez|n
+puzzle|puzle / rompecabezas|n
+video game|videojuego|phr
+party|fiesta|n
+festival|festival|n
+picnic|pícnic|n
+camping|acampada|n
+tent|tienda de campaña|n
+barbecue|barbacoa|n
+gardening|jardinería|n
+knitting|hacer punto|n
+collect|coleccionar|v
+relax|relajarse|v
+enjoy|disfrutar|v
+join|unirse / apuntarse|v
+take up|empezar (una afición)|phr
+give up|dejar / rendirse|phr
+be into|estar metido en / gustar|phr
+hang out|pasar el rato|phr
+go out|salir|phr
+fun|diversión / divertido|n
+boring|aburrido|adj
+exciting|emocionante|adj
+relaxing|relajante|adj
+tiring|cansado (que cansa)|adj
+fit|en forma|adj
+
+## 19 | Casa: objetos y tareas
+home|hogar / casa|n
+living room|salón|phr
+dining room|comedor|phr
+hall|recibidor / pasillo|n
+balcony|balcón|n
+terrace|terraza|n
+garden|jardín|n
+attic|desván|n
+basement|sótano|n
+lift|ascensor|n
+door|puerta|n
+window|ventana|n
+wall|pared|n
+furniture|muebles|n
+sofa|sofá|n
+armchair|sillón|n
+chair|silla|n
+table|mesa|n
+bed|cama|n
+wardrobe|armario (ropa)|n
+cupboard|armario (cocina)|n
+bookcase|estantería|n
+mirror|espejo|n
+lamp|lámpara|n
+light|luz|n
+switch|interruptor|n
+socket|enchufe (pared)|n
+heating|calefacción|n
+radiator|radiador|n
+air conditioning|aire acondicionado|phr
+fan|ventilador|n
+washing machine|lavadora|phr
+dryer|secadora|n
+iron|plancha|n
+vacuum cleaner|aspiradora|phr
+mop|fregona|n
+brush|cepillo|n
+sponge|esponja|n
+cloth|trapo|n
+detergent|detergente|n
+bath|bañera / baño|n
+shower|ducha|n
+toilet|váter / baño|n
+toilet paper|papel higiénico|phr
+toothbrush|cepillo de dientes|n
+toothpaste|pasta de dientes|n
+shampoo|champú|n
+comb|peine|n
+hairdryer|secador de pelo|n
+razor|cuchilla de afeitar|n
+bedroom|dormitorio|n
+sheet|sábana|n
+duvet|edredón|n
+alarm clock|despertador|phr
+hanger|percha|n
+box|caja|n
+shelf|estante|n
+drawer|cajón|n
+key|llave|n
+doorbell|timbre|n
+stairs|escaleras|n
+floor|suelo / planta|n
+ceiling|techo|n
+roof|tejado|n
+chimney|chimenea|n
+tidy|ordenado / ordenar|adj
+messy|desordenado|adj
+comfortable|cómodo|adj
+spacious|espacioso|adj
+cosy|acogedor|adj
+dark|oscuro|adj
+bright|luminoso|adj
+furnished|amueblado|adj
+housework|tareas de casa|n
+chores|tareas|n
+do the laundry|hacer la colada|phr
+do the ironing|planchar|phr
+do the shopping|hacer la compra|phr
+make the bed|hacer la cama|phr
+take out the rubbish|sacar la basura|phr
+hoover|pasar la aspiradora|v
+dust|quitar el polvo|v
+sweep|barrer|v
+wipe|limpiar (pasar un trapo)|v
+scrub|frotar|v
+wash|lavar|v
+dry|secar|v
+hang out the washing|tender la ropa|phr
+tidy up|recoger / ordenar|phr
+put away|guardar|phr
+throw away|tirar (a la basura)|phr
+fix|arreglar|v
+repair|reparar|v
+paint|pintar|v
+decorate|decorar|v
+lock|cerrar con llave|v
+unlock|abrir con llave|v
+open|abrir|v
+close|cerrar|v
+shut|cerrar|v
+switch|cambiar / interruptor|v
+leak|gotera / gotear|n
+landlord|casero|n
+tenant|inquilino|n
+rent|alquiler|n
+bills|facturas|n
+move house|mudarse|phr
+neighbourhood|barrio|n
+tool|herramienta|n
+hammer|martillo|n
+screwdriver|destornillador|n
+ladder|escalera de mano|n
+
+## 20 | Ropa, aspecto y moda
+clothes|ropa|n
+clothing|ropa (general)|n
+outfit|conjunto|n
+T-shirt|camiseta|n
+shirt|camisa|n
+blouse|blusa|n
+jumper|jersey|n
+sweater|suéter|n
+hoodie|sudadera con capucha|n
+jacket|chaqueta|n
+coat|abrigo|n
+suit|traje|n
+tie|corbata|n
+dress|vestido|n
+skirt|falda|n
+trousers|pantalones|n
+jeans|vaqueros|n
+shorts|pantalones cortos|n
+tracksuit|chándal|n
+pyjamas|pijama|n
+underwear|ropa interior|n
+socks|calcetines|n
+tights|medias|n
+shoes|zapatos|n
+boots|botas|n
+sandals|sandalias|n
+slippers|zapatillas de casa|n
+trainers|zapatillas|n
+heels|tacones|n
+hat|sombrero|n
+cap|gorra|n
+scarf|bufanda|n
+gloves|guantes|n
+belt|cinturón|n
+bag|bolso|n
+handbag|bolso de mano|n
+wallet|cartera|n
+watch|reloj|n
+jewellery|joyas|n
+necklace|collar|n
+bracelet|pulsera|n
+earrings|pendientes|n
+ring|anillo|n
+glasses|gafas|n
+sunglasses|gafas de sol|n
+uniform|uniforme|n
+swimsuit|bañador|n
+pocket|bolsillo|n
+button|botón|n
+zip|cremallera|n
+collar|cuello (de camisa)|n
+sleeve|manga|n
+size|talla|n
+fashion|moda|n
+style|estilo|n
+fabric|tela|n
+cotton|algodón|n
+wool|lana|n
+leather|cuero|n
+silk|seda|n
+pattern|estampado / patrón|n
+striped|de rayas|adj
+spotted|de lunares|adj
+checked|de cuadros|adj
+plain|liso / sencillo|adj
+tight|ajustado|adj
+loose|suelto / holgado|adj
+baggy|ancho (ropa)|adj
+fashionable|de moda|adj
+old-fashioned|pasado de moda|adj
+smart|elegante / arreglado|adj
+casual|informal|adj
+elegant|elegante|adj
+comfortable|cómodo|adj
+wear|llevar puesto|v
+put on|ponerse|phr
+take off|quitarse|phr
+get dressed|vestirse|phr
+get undressed|desvestirse|phr
+try on|probarse|phr
+fit|quedar bien (talla)|v
+suit|favorecer / sentar bien|v
+match|combinar|v
+change|cambiarse|v
+appearance|aspecto|n
+look|aspecto / parecer|n
+face|cara|n
+hair|pelo|n
+beard|barba|n
+moustache|bigote|n
+tall|alto|adj
+short|bajo / corto|adj
+slim|delgado|adj
+fat|gordo|adj
+overweight|con sobrepeso|adj
+skinny|flaco|adj
+good-looking|guapo|adj
+handsome|guapo (hombre)|adj
+beautiful|precioso|adj
+pretty|bonita|adj
+attractive|atractivo|adj
+curly|rizado|adj
+straight|liso (pelo)|adj
+wavy|ondulado|adj
+blond|rubio|adj
+dark-haired|moreno (pelo)|adj
+bald|calvo|adj
+young|joven|adj
+old|viejo|adj
+middle-aged|de mediana edad|adj
+freckles|pecas|n
+wrinkles|arrugas|n
+make-up|maquillaje|n
+haircut|corte de pelo|n
+
+## 21 | Verbos muy frecuentes II
+become|llegar a ser|v
+begin|empezar|v
+start|empezar / arrancar|v
+finish|terminar|v
+end|acabar / final|v
+stop|parar|v
+continue|continuar|v
+keep|seguir / guardar|v
+change|cambiar|v
+open|abrir|v
+close|cerrar|v
+give|dar|v
+take|coger / llevar / tardar|v
+get|conseguir / llegar / ponerse|v
+put|poner|v
+set|fijar / poner|v
+make|hacer / fabricar|v
+do|hacer|v
+let|dejar|v
+help|ayudar|v
+show|mostrar|v
+look|mirar / parecer|v
+see|ver|v
+watch|mirar / ver (TV)|v
+listen|escuchar|v
+hear|oír|v
+feel|sentir|v
+seem|parecer|v
+appear|aparecer / parecer|v
+disappear|desaparecer|v
+happen|pasar / ocurrir|v
+cause|causar / causa|v
+allow|permitir|v
+prevent|prevenir / impedir|v
+protect|proteger|v
+include|incluir|v
+contain|contener|v
+involve|implicar|v
+depend|depender|v
+belong|pertenecer|v
+consider|considerar|v
+expect|esperar (prever)|v
+wish|desear|v
+intend|tener intención|v
+decide|decidir|v
+choose|elegir|v
+prefer|preferir|v
+compare|comparar|v
+count|contar / importar|v
+matter|importar|v
+mind|importar (molestar)|v
+care|importar / cuidar|v
+reach|alcanzar|v
+arrive|llegar|v
+enter|entrar|v
+return|volver / devolver|v
+remain|permanecer|v
+stay|quedarse|v
+wait|esperar|v
+follow|seguir|v
+lead|llevar a / liderar|v
+bring|traer|v
+carry|llevar|v
+send|enviar|v
+receive|recibir|v
+provide|proporcionar|v
+offer|ofrecer|v
+accept|aceptar|v
+refuse|rechazar|v
+join|unirse|v
+leave|irse / dejar|v
+lose|perder|v
+find|encontrar|v
+hide|esconder|v
+search|buscar|v
+discover|descubrir|v
+notice|darse cuenta / notar|v
+recognise|reconocer|v
+test|probar|v
+try|intentar|v
+manage|conseguir|v
+succeed|tener éxito|v
+develop|desarrollar|v
+create|crear|v
+produce|producir|v
+grow|crecer|v
+increase|aumentar|v
+reduce|reducir|v
+rise|subir|v
+drop|bajar / dejar caer|v
+fall|caer|v
+break|romper|v
+fix|arreglar|v
+fill|llenar|v
+cover|cubrir|v
+touch|tocar|v
+hold|sostener|v
+pull|tirar de|v
+push|empujar|v
+press|pulsar / apretar|v
+lift|levantar|v
+move|mover|v
+shake|agitar|v
+turn|girar|v
+fold|doblar|v
+hang|colgar|v
+lay|poner / tender|v
+lie|estar tumbado / mentir|v
+sit|sentarse|v
+stand|estar de pie / soportar|v
+rise|levantarse / subir|v
+wake|despertar|v
+sleep|dormir|v
+dream|soñar|v
+
+## 22 | Adjetivos frecuentes II
+good|bueno|adj
+bad|malo|adj
+better|mejor|adj
+worse|peor|adj
+best|el mejor|adj
+worst|el peor|adj
+great|genial / grande|adj
+fine|bien / fino|adj
+important|importante|adj
+possible|posible|adj
+impossible|imposible|adj
+necessary|necesario|adj
+different|diferente|adj
+similar|parecido|adj
+same|mismo|adj
+other|otro|adj
+certain|cierto / seguro|adj
+sure|seguro|adj
+clear|claro|adj
+simple|sencillo|adj
+easy|fácil|adj
+difficult|difícil|adj
+common|común|adj
+usual|habitual|adj
+normal|normal|adj
+strange|extraño|adj
+special|especial|adj
+real|real|adj
+true|verdadero|adj
+false|falso|adj
+main|principal|adj
+whole|entero|adj
+total|total|adj
+complete|completo|adj
+general|general|adj
+specific|específico|adj
+basic|básico|adj
+free|libre / gratis|adj
+available|disponible|adj
+ready|listo|adj
+able|capaz|adj
+unable|incapaz|adj
+likely|probable|adj
+unlikely|improbable|adj
+recent|reciente|adj
+current|actual|adj
+modern|moderno|adj
+traditional|tradicional|adj
+early|temprano|adj
+late|tarde|adj
+long|largo|adj
+short|corto|adj
+high|alto|adj
+low|bajo|adj
+big|grande|adj
+small|pequeño|adj
+large|grande (formal)|adj
+little|pequeño / poco|adj
+wide|ancho|adj
+deep|profundo|adj
+heavy|pesado|adj
+light|ligero|adj
+full|lleno|adj
+empty|vacío|adj
+open|abierto|adj
+closed|cerrado|adj
+hot|caliente|adj
+cold|frío|adj
+warm|cálido|adj
+dry|seco|adj
+wet|mojado|adj
+clean|limpio|adj
+dirty|sucio|adj
+new|nuevo|adj
+old|viejo|adj
+young|joven|adj
+fast|rápido|adj
+quick|rápido (breve)|adj
+slow|lento|adj
+strong|fuerte|adj
+weak|débil|adj
+hard|duro|adj
+soft|suave|adj
+loud|ruidoso|adj
+quiet|silencioso|adj
+bright|brillante|adj
+dark|oscuro|adj
+safe|seguro|adj
+dangerous|peligroso|adj
+correct|correcto|adj
+wrong|equivocado|adj
+right|correcto / derecho|adj
+fair|justo|adj
+unfair|injusto|adj
+useful|útil|adj
+useless|inútil|adj
+interesting|interesante|adj
+boring|aburrido|adj
+amazing|increíble|adj
+awful|horrible|adj
+terrible|terrible|adj
+wonderful|maravilloso|adj
+perfect|perfecto|adj
+excellent|excelente|adj
+nice|agradable|adj
+lovely|encantador / precioso|adj
+pleasant|agradable|adj
+horrible|horrible|adj
+familiar|conocido / familiar|adj
+popular|popular|adj
+successful|exitoso|adj
+lucky|afortunado / con suerte|adj
+unlucky|desafortunado|adj
+busy|ocupado|adj
+alive|vivo|adj
+dead|muerto|adj
+awake|despierto|adj
+asleep|dormido|adj
+extra|adicional|adj
+enormous|enorme|adj
+narrow|estrecho|adj
+
+## 23 | Phrasal verbs esenciales
+get up|levantarse|phr
+wake up|despertarse|phr
+sit down|sentarse|phr
+stand up|ponerse de pie|phr
+come in|entrar / pasar|phr
+go in|entrar|phr
+come back|volver|phr
+go back|regresar|phr
+go away|irse / marcharse|phr
+come on|¡vamos! / ¡venga!|phr
+hurry up|darse prisa|phr
+slow down|ir más despacio|phr
+carry on|continuar|phr
+go on|seguir / pasar|phr
+find out|averiguar|phr
+figure out|entender / resolver|phr
+work out|resolver / hacer ejercicio|phr
+look up|buscar (información)|phr
+look at|mirar|phr
+look after|cuidar|phr
+look forward to|tener ganas de|phr
+look out|¡cuidado!|phr
+look like|parecerse a|phr
+turn up|subir (volumen) / aparecer|phr
+turn down|bajar (volumen) / rechazar|phr
+turn around|darse la vuelta|phr
+put on|ponerse (ropa)|phr
+put off|aplazar|phr
+put up with|aguantar|phr
+take off|quitarse / despegar|phr
+take out|sacar|phr
+take up|empezar (actividad) / ocupar|phr
+take after|parecerse a (familiar)|phr
+give up|rendirse / dejar|phr
+give back|devolver|phr
+give away|regalar|phr
+get on|subir / llevarse bien|phr
+get off|bajar|phr
+get over|superar|phr
+get along|llevarse bien|phr
+get back|volver|phr
+get by|arreglárselas|phr
+get rid of|deshacerse de|phr
+pick up|recoger / aprender (de oído)|phr
+set up|montar / establecer|phr
+set off|salir de viaje|phr
+break down|averiarse / derrumbarse|phr
+break up|romper (relación)|phr
+break in|entrar a robar|phr
+run out of|quedarse sin|phr
+run away|escaparse|phr
+run into|encontrarse con|phr
+come across|encontrarse (por casualidad)|phr
+come up with|ocurrírsele (una idea)|phr
+bring up|criar / sacar un tema|phr
+call back|devolver la llamada|phr
+call off|cancelar|phr
+check in|registrarse (hotel)|phr
+check out|dejar el hotel / echar un vistazo|phr
+fill in|rellenar (formulario)|phr
+fill up|llenar|phr
+hang up|colgar (teléfono)|phr
+hold on|esperar un momento|phr
+keep on|seguir (haciendo)|phr
+let down|decepcionar|phr
+make up|inventar / reconciliarse|phr
+point out|señalar|phr
+show up|presentarse / aparecer|phr
+show off|presumir|phr
+sort out|solucionar / organizar|phr
+throw away|tirar|phr
+try on|probarse|phr
+try out|probar|phr
+turn on|encender|phr
+turn off|apagar|phr
+turn into|convertirse en|phr
+wash up|fregar|phr
+write down|apuntar|phr
+cut down on|reducir (consumo)|phr
+catch up|ponerse al día|phr
+cheer up|animar(se)|phr
+calm down|calmarse|phr
+drop off|dejar a alguien / quedarse dormido|phr
+eat out|comer fuera|phr
+end up|acabar (en)|phr
+fall down|caerse|phr
+fall apart|desmoronarse|phr
+go out|salir|phr
+go off|sonar (alarma) / estropearse|phr
+go over|repasar|phr
+grow up|crecer|phr
+hand in|entregar|phr
+hang out|pasar el rato|phr
+join in|participar|phr
+knock down|derribar / atropellar|phr
+log in|iniciar sesión|phr
+move in|mudarse (a)|phr
+move out|mudarse (de)|phr
+pass away|fallecer|phr
+pay back|devolver (dinero)|phr
+run over|atropellar|phr
+set up|montar|phr
+speak up|hablar más alto|phr
+stand out|destacar|phr
+take care|cuidarse|phr
+think over|pensarse|phr
+wake someone up|despertar a alguien|phr
+watch out|tener cuidado|phr
+
+## 24 | Adverbios, conectores y expresiones de tiempo
+very|muy|adv
+really|realmente / muy|adv
+quite|bastante|adv
+rather|bastante / más bien|adv
+too|demasiado / también|adv
+also|también|adv
+as well|también (al final)|adv
+only|solo|adv
+just|justo / acabar de / solo|adv
+even|incluso|adv
+almost|casi|adv
+nearly|casi|adv
+hardly|apenas|adv
+exactly|exactamente|adv
+completely|completamente|adv
+totally|totalmente|adv
+absolutely|absolutamente|adv
+especially|especialmente|adv
+particularly|en particular|adv
+mainly|principalmente|adv
+mostly|en su mayoría|adv
+probably|probablemente|adv
+perhaps|quizás|adv
+maybe|tal vez|adv
+certainly|ciertamente|adv
+definitely|sin duda|adv
+obviously|obviamente|adv
+clearly|claramente|adv
+luckily|por suerte|adv
+unfortunately|por desgracia|adv
+hopefully|con suerte / ojalá|adv
+suddenly|de repente|adv
+quickly|rápidamente|adv
+slowly|despacio|adv
+carefully|con cuidado|adv
+easily|fácilmente|adv
+well|bien|adv
+badly|mal|adv
+hard|duro (trabajar duro)|adv
+fast|rápido|adv
+together|juntos|adv
+alone|solo|adv
+again|otra vez|adv
+once again|una vez más|phr
+anymore|ya no|adv
+anyway|de todos modos|adv
+otherwise|si no / de lo contrario|adv
+however|sin embargo|adv
+therefore|por lo tanto|adv
+so|así que / tan|conj
+because|porque|conj
+because of|debido a|prep
+since|ya que / desde|conj
+as|como / ya que|conj
+although|aunque|conj
+though|aunque|conj
+even though|aunque (enfático)|conj
+while|mientras|conj
+whereas|mientras que|conj
+unless|a menos que|conj
+if|si|conj
+whether|si (entre dos opciones)|conj
+in case|por si acaso|conj
+so that|para que|conj
+in order to|para (finalidad)|phr
+besides|además|adv
+moreover|además (formal)|adv
+furthermore|además (formal)|adv
+in addition|además|phr
+instead|en su lugar|adv
+instead of|en lugar de|prep
+apart from|aparte de|prep
+except|excepto|prep
+according to|según|prep
+despite|a pesar de|prep
+in spite of|a pesar de|prep
+thanks to|gracias a|prep
+due to|debido a|prep
+first|primero|adv
+firstly|en primer lugar|adv
+then|luego / entonces|adv
+next|después / siguiente|adv
+after that|después de eso|phr
+afterwards|después|adv
+finally|finalmente|adv
+at last|por fin|phr
+in the end|al final|phr
+at first|al principio|phr
+at the moment|en este momento|phr
+right now|ahora mismo|phr
+at once|enseguida|phr
+from now on|a partir de ahora|phr
+for a while|durante un rato|phr
+so far|hasta ahora|phr
+by the time|para cuando|phr
+meanwhile|mientras tanto|adv
+immediately|inmediatamente|adv
+eventually|al final|adv
+lately|últimamente|adv
+forever|para siempre|adv
+sooner or later|tarde o temprano|phr
+on the other hand|por otro lado|phr
+for example|por ejemplo|phr
+such as|tales como|phr
+in fact|de hecho|phr
+as a result|como resultado|phr
+in general|en general|phr
+at least|al menos|phr
+at all|en absoluto|phr
+of course|por supuesto|phr
+somehow|de alguna manera|adv
+somewhere|en algún lugar|adv
+everywhere|en todas partes|adv
+nowhere|en ningún sitio|adv
+anywhere|en cualquier sitio|adv
+
+## 25 | Sociedad, noticias y política
+society|sociedad|n
+people|gente|n
+person|persona|n
+population|población|n
+community|comunidad|n
+country|país|n
+nation|nación|n
+government|gobierno|n
+politics|política|n
+policy|política (medida)|n
+politician|político|n
+president|presidente|n
+prime minister|primer ministro|phr
+minister|ministro|n
+king|rey|n
+queen|reina|n
+election|elecciones|n
+vote|votar / voto|v
+party|partido / fiesta|n
+law|ley|n
+right|derecho|n
+freedom|libertad|n
+democracy|democracia|n
+power|poder|n
+state|estado|n
+region|región|n
+tax|impuesto|n
+economy|economía|n
+crisis|crisis|n
+unemployment|desempleo|n
+poverty|pobreza|n
+wealth|riqueza|n
+inequality|desigualdad|n
+immigrant|inmigrante|n
+refugee|refugiado|n
+war|guerra|n
+peace|paz|n
+army|ejército|n
+soldier|soldado|n
+weapon|arma|n
+attack|ataque / atacar|n
+protest|protesta / protestar|n
+strike|huelga|n
+news|noticias|n
+newspaper|periódico|n
+journalist|periodista|n
+article|artículo|n
+headline|titular|n
+report|reportaje / informe|n
+media|medios|n
+interview|entrevista|n
+event|acontecimiento|n
+situation|situación|n
+issue|cuestión|n
+problem|problema|n
+solution|solución|n
+change|cambio|n
+future|futuro|n
+past|pasado|n
+history|historia|n
+culture|cultura|n
+tradition|tradición|n
+religion|religión|n
+belief|creencia|n
+charity|organización benéfica|n
+volunteer|voluntario|n
+public|público|n
+official|oficial / funcionario|adj
+international|internacional|adj
+national|nacional|adj
+local|local|adj
+political|político|adj
+social|social|adj
+economic|económico|adj
+legal|legal|adj
+illegal|ilegal|adj
+equal|igual|adj
+independent|independiente|adj
+rich|rico|adj
+poor|pobre|adj
+elect|elegir (votación)|v
+govern|gobernar|v
+rule|gobernar / regla|v
+support|apoyar|v
+oppose|oponerse|v
+demand|exigir / demanda|v
+announce|anunciar|v
+report|informar|v
+claim|afirmar / reclamar|v
+state|declarar|v
+reveal|revelar|v
+affect|afectar|v
+improve|mejorar|v
+increase|aumentar|v
+decrease|disminuir|v
+develop|desarrollar|v
+fight|luchar|v
+defend|defender|v
+invade|invadir|v
+destroy|destruir|v
+survive|sobrevivir|v
+according to|según|prep
+worldwide|mundial|adj
+majority|mayoría|n
+minority|minoría|n
+leader|líder|n
+member|miembro|n
+citizen|ciudadano|n
+generation|generación|n
+opinion poll|encuesta|phr
+campaign|campaña|n
+
+## 26 | Ley, seguridad y problemas
+police|policía|n
+police officer|agente de policía|phr
+crime|delito / crimen|n
+criminal|delincuente|n
+thief|ladrón|n
+robbery|atraco|n
+burglar|ladrón (de casas)|n
+theft|robo|n
+murder|asesinato|n
+murderer|asesino|n
+victim|víctima|n
+witness|testigo|n
+suspect|sospechoso|n
+prison|prisión|n
+jail|cárcel|n
+court|tribunal|n
+judge|juez|n
+lawyer|abogado|n
+trial|juicio|n
+guilty|culpable|adj
+innocent|inocente|adj
+evidence|pruebas|n
+fine|multa|n
+punishment|castigo|n
+rule|norma|n
+permission|permiso|n
+licence|licencia / carné|n
+driving licence|carné de conducir|phr
+ID card|DNI|phr
+fraud|fraude|n
+scam|estafa|n
+danger|peligro|n
+risk|riesgo|n
+accident|accidente|n
+emergency|emergencia|n
+fire|fuego / incendio|n
+firefighter|bombero|n
+alarm|alarma|n
+safety|seguridad (física)|n
+security|seguridad (protección)|n
+guard|guardia / vigilar|n
+lock|cerradura|n
+problem|problema|n
+trouble|problema / lío|n
+mess|lío / desorden|n
+mistake|error|n
+fault|culpa / defecto|n
+damage|daño / dañar|n
+harm|daño / hacer daño|n
+loss|pérdida|n
+threat|amenaza|n
+fear|miedo|n
+help|ayuda|n
+rescue|rescatar / rescate|v
+steal|robar|v
+rob|robar (a alguien)|v
+break into|entrar a robar|phr
+arrest|detener / arresto|v
+catch|atrapar|v
+escape|escapar|v
+kill|matar|v
+hurt|herir|v
+attack|atacar|v
+threaten|amenazar|v
+shoot|disparar|v
+punish|castigar|v
+blame|culpar|v
+accuse|acusar|v
+deny|negar|v
+prove|demostrar|v
+investigate|investigar|v
+report|denunciar / informar|v
+call the police|llamar a la policía|phr
+break the law|infringir la ley|phr
+get into trouble|meterse en un lío|phr
+be careful|tener cuidado|phr
+watch out|¡cuidado!|phr
+look out|¡ojo!|phr
+help!|¡socorro!|phr
+fire!|¡fuego!|phr
+lost|perdido|adj
+stolen|robado|adj
+missing|desaparecido|adj
+broken|roto|adj
+injured|herido|adj
+dead|muerto|adj
+safe|a salvo|adj
+dangerous|peligroso|adj
+violent|violento|adj
+serious|grave|adj
+urgent|urgente|adj
+careful|cuidadoso|adj
+wrong|mal / incorrecto|adj
+illegal|ilegal|adj
+forbidden|prohibido|adj
+allowed|permitido|adj
+emergency exit|salida de emergencia|phr
+first aid|primeros auxilios|phr
+fire extinguisher|extintor|phr
+lost property|objetos perdidos|phr
+embassy|embajada|n
+complaint|queja / denuncia|n
+insurance|seguro|n
+claim|reclamación|n
+warning|aviso / advertencia|n
+
+## 27 | Ciencia, espacio y materiales
+science|ciencia|n
+scientist|científico|n
+experiment|experimento|n
+research|investigación|n
+laboratory|laboratorio|n
+theory|teoría|n
+discovery|descubrimiento|n
+invention|invento|n
+result|resultado|n
+fact|hecho / dato|n
+evidence|prueba|n
+method|método|n
+process|proceso|n
+system|sistema|n
+energy|energía|n
+power|energía / potencia|n
+force|fuerza|n
+gravity|gravedad|n
+heat|calor|n
+light|luz|n
+sound|sonido|n
+electricity|electricidad|n
+atom|átomo|n
+cell|célula / celda|n
+gene|gen|n
+body|cuerpo|n
+brain|cerebro|n
+space|espacio|n
+planet|planeta|n
+star|estrella|n
+moon|luna|n
+sun|sol|n
+universe|universo|n
+galaxy|galaxia|n
+rocket|cohete|n
+astronaut|astronauta|n
+satellite|satélite|n
+orbit|órbita|n
+world|mundo|n
+air|aire|n
+oxygen|oxígeno|n
+gas|gas|n
+liquid|líquido|n
+solid|sólido|adj
+material|material|n
+metal|metal|n
+iron|hierro|n
+steel|acero|n
+gold|oro|n
+silver|plata|n
+copper|cobre|n
+plastic|plástico|n
+glass|cristal / vidrio|n
+paper|papel|n
+wood|madera|n
+stone|piedra|n
+rubber|goma / caucho|n
+cotton|algodón|n
+wool|lana|n
+leather|cuero|n
+concrete|hormigón|n
+brick|ladrillo|n
+sand|arena|n
+coal|carbón|n
+fuel|combustible|n
+oil|petróleo / aceite|n
+shape|forma|n
+circle|círculo|n
+square|cuadrado|n
+triangle|triángulo|n
+line|línea|n
+point|punto|n
+size|tamaño|n
+length|longitud|n
+width|anchura|n
+height|altura|n
+depth|profundidad|n
+weight|peso|n
+amount|cantidad|n
+measure|medir|v
+weigh|pesar|v
+calculate|calcular|v
+prove|demostrar|v
+discover|descubrir|v
+invent|inventar|v
+observe|observar|v
+analyse|analizar|v
+predict|predecir|v
+mix|mezclar|v
+heat up|calentar|phr
+cool down|enfriar|phr
+boil|hervir|v
+freeze|congelar|v
+melt|fundir / derretir|v
+burn|quemar|v
+float|flotar|v
+sink|hundirse|v
+explode|explotar|v
+shine|brillar|v
+spin|girar|v
+exist|existir|v
+scientific|científico|adj
+natural|natural|adj
+artificial|artificial|adj
+chemical|químico|adj
+physical|físico|adj
+solid|sólido|adj
+smooth|liso|adj
+rough|áspero|adj
+round|redondo|adj
+flat|plano|adj
+sharp|afilado|adj
+hollow|hueco|adj
+transparent|transparente|adj
+huge|enorme|adj
+tiny|diminuto|adj
+
+## 28 | Arte, cultura y medios
+art|arte|n
+artist|artista|n
+painter|pintor|n
+painting|cuadro / pintura|n
+picture|imagen / cuadro|n
+drawing|dibujo|n
+sculpture|escultura|n
+exhibition|exposición|n
+museum|museo|n
+gallery|galería|n
+culture|cultura|n
+music|música|n
+musician|músico|n
+composer|compositor|n
+song|canción|n
+lyrics|letra (canción)|n
+album|álbum|n
+concert|concierto|n
+stage|escenario|n
+audience|público|n
+performance|actuación|n
+show|espectáculo|n
+theatre|teatro|n
+play|obra de teatro|n
+actor|actor|n
+actress|actriz|n
+director|director|n
+film|película|n
+cinema|cine|n
+scene|escena|n
+character|personaje|n
+plot|trama|n
+ending|final|n
+script|guion|n
+star|estrella|n
+role|papel|n
+book|libro|n
+novel|novela|n
+story|historia / cuento|n
+poem|poema|n
+poetry|poesía|n
+writer|escritor|n
+author|autor|n
+chapter|capítulo|n
+page|página|n
+title|título|n
+magazine|revista|n
+comic|cómic|n
+television|televisión|n
+channel|canal|n
+programme|programa|n
+episode|episodio|n
+series|serie|n
+documentary|documental|n
+news|noticias|n
+radio|radio|n
+advertisement|anuncio|n
+ad|anuncio|n
+podcast|podcast|n
+review|crítica / reseña|n
+critic|crítico|n
+fame|fama|n
+celebrity|famoso|n
+fan|fan|n
+ticket|entrada|n
+queue|cola|n
+seat|butaca|n
+screen|pantalla|n
+subtitles|subtítulos|n
+dubbed|doblado|adj
+live|en directo|adj
+recorded|grabado|adj
+famous|famoso|adj
+popular|popular|adj
+classical|clásico|adj
+modern|moderno|adj
+funny|divertido|adj
+scary|de miedo|adj
+romantic|romántico|adj
+boring|aburrido|adj
+moving|conmovedor|adj
+entertaining|entretenido|adj
+talented|con talento|adj
+creative|creativo|adj
+paint|pintar|v
+draw|dibujar|v
+write|escribir|v
+read|leer|v
+sing|cantar|v
+play|tocar / interpretar|v
+perform|actuar|v
+act|actuar|v
+direct|dirigir|v
+record|grabar|v
+film|filmar|v
+publish|publicar|v
+broadcast|emitir|v
+watch|ver|v
+listen to|escuchar|phr
+clap|aplaudir|v
+applaud|aplaudir|v
+recommend|recomendar|v
+review|reseñar|v
+imagine|imaginar|v
+inspire|inspirar|v
+express|expresar|v
+design|diseñar / diseño|v
+photograph|fotografiar / fotografía|v
+masterpiece|obra maestra|n
+talent|talento|n
+inspiration|inspiración|n
+imagination|imaginación|n
+beauty|belleza|n
+style|estilo|n
+
+## 29 | Expresiones útiles para conversar
+how are you|¿cómo estás?|phr
+how's it going|¿qué tal va?|phr
+what's up|¿qué pasa?|phr
+nice to meet you|encantado de conocerte|phr
+see you later|hasta luego|phr
+see you soon|hasta pronto|phr
+take care|cuídate|phr
+have a nice day|que tengas un buen día|phr
+good luck|buena suerte|phr
+well done|¡bien hecho!|phr
+congratulations|enhorabuena|phr
+happy birthday|feliz cumpleaños|phr
+thank you very much|muchas gracias|phr
+you're welcome|de nada|phr
+no problem|no hay problema|phr
+don't mention it|no hay de qué|phr
+I'm sorry|lo siento|phr
+that's OK|no pasa nada|phr
+don't worry|no te preocupes|phr
+it doesn't matter|no importa|phr
+it's up to you|como tú quieras|phr
+I don't mind|me da igual|phr
+whatever|lo que sea|phr
+let's go|vamos|phr
+let me see|déjame ver|phr
+let me know|avísame|phr
+just a moment|un momento|phr
+wait a minute|espera un minuto|phr
+hang on|espera|phr
+come on|¡venga!|phr
+calm down|tranquilo|phr
+take it easy|tómatelo con calma|phr
+what a pity|¡qué pena!|phr
+what a shame|¡qué lástima!|phr
+how nice|¡qué bien!|phr
+that's great|¡genial!|phr
+sounds good|suena bien|phr
+that's a good idea|buena idea|phr
+I'd love to|me encantaría|phr
+I'd rather|preferiría|phr
+would you like|¿te gustaría...?|phr
+do you fancy|¿te apetece...?|phr
+shall we|¿vamos a...? / ¿hacemos...?|phr
+why don't we|¿por qué no...?|phr
+how about|¿qué tal si...?|phr
+what about|¿y qué hay de...?|phr
+I'm in|me apunto|phr
+count me out|no contéis conmigo|phr
+it's my turn|me toca|phr
+it's your turn|te toca|phr
+make yourself at home|estás en tu casa|phr
+help yourself|sírvete|phr
+after you|usted primero|phr
+bless you|¡salud! (estornudo)|phr
+guess what|¿a que no sabes?|phr
+you know what|¿sabes qué?|phr
+you know|ya sabes|phr
+I mean|o sea / quiero decir|phr
+kind of|más o menos / un poco|phr
+sort of|algo así|phr
+more or less|más o menos|phr
+so so|regular|phr
+not bad|nada mal|phr
+not at all|en absoluto / de nada|phr
+for sure|seguro|phr
+no idea|ni idea|phr
+I have no idea|no tengo ni idea|phr
+it's not my fault|no es culpa mía|phr
+it's none of your business|no es asunto tuyo|phr
+mind your own business|métete en tus asuntos|phr
+what's wrong|¿qué pasa? / ¿qué te pasa?|phr
+what happened|¿qué ha pasado?|phr
+are you kidding|¿estás de broma?|phr
+you must be joking|debes estar bromeando|phr
+really|¿de verdad?|phr
+seriously|¿en serio?|phr
+that makes sense|tiene sentido|phr
+it's worth it|merece la pena|phr
+it's not worth it|no merece la pena|phr
+there's no hurry|no hay prisa|phr
+I'm starving|me muero de hambre|phr
+I'm exhausted|estoy agotado|phr
+I can't wait|no puedo esperar / estoy deseando|phr
+it's a deal|trato hecho|phr
+on the way|de camino|phr
+by the way|por cierto|phr
+as soon as possible|lo antes posible|phr
+at the end of the day|al fin y al cabo|phr
+in the meantime|mientras tanto|phr
+once in a while|de vez en cuando|phr
+from time to time|de vez en cuando|phr
+all of a sudden|de repente|phr
+it's raining cats and dogs|llueve a cántaros|phr
+piece of cake|pan comido|phr
+break a leg|¡mucha suerte! (actuación)|phr
+under the weather|pachucho|phr
+on second thought|pensándolo mejor|phr
+make a decision|tomar una decisión|phr
+make friends|hacer amigos|phr
+make money|ganar dinero|phr
+make sure|asegurarse|phr
+make a mistake|equivocarse|phr
+do me a favour|hazme un favor|phr
+do your best|haz lo que puedas|phr
+have a good time|pasarlo bien|phr
+have fun|divertirse|phr
+take a photo|hacer una foto|phr
+take a break|tomarse un descanso|phr
+take your time|tómate tu tiempo|phr
+pay attention|prestar atención|phr
+keep in touch|mantenerse en contacto|phr
+
+## 30 | Palabras abstractas muy frecuentes
+thing|cosa|n
+stuff|cosas / cosillas|n
+way|manera / camino|n
+kind|tipo|n
+type|tipo|n
+sort|tipo / clase|n
+part|parte|n
+side|lado|n
+end|final|n
+beginning|principio|n
+middle|medio|n
+top|parte de arriba / cima|n
+bottom|fondo / parte de abajo|n
+front|parte delantera|n
+back|parte trasera|n
+place|lugar|n
+space|espacio|n
+number|número|n
+amount|cantidad|n
+lot|montón|n
+bit|trocito / poco|n
+couple|par|n
+group|grupo|n
+level|nivel|n
+case|caso|n
+example|ejemplo|n
+fact|hecho|n
+idea|idea|n
+reason|razón|n
+cause|causa|n
+effect|efecto|n
+result|resultado|n
+purpose|propósito|n
+aim|objetivo|n
+plan|plan|n
+chance|oportunidad / probabilidad|n
+opportunity|oportunidad|n
+choice|elección|n
+decision|decisión|n
+experience|experiencia|n
+knowledge|conocimiento|n
+memory|memoria / recuerdo|n
+mind|mente|n
+thought|pensamiento|n
+attention|atención|n
+interest|interés|n
+effort|esfuerzo|n
+success|éxito|n
+failure|fracaso|n
+difference|diferencia|n
+relationship|relación|n
+connection|conexión|n
+situation|situación|n
+condition|condición / estado|n
+state|estado|n
+quality|calidad|n
+quantity|cantidad|n
+value|valor|n
+advantage|ventaja|n
+disadvantage|desventaja|n
+benefit|beneficio|n
+risk|riesgo|n
+problem|problema|n
+difficulty|dificultad|n
+solution|solución|n
+answer|respuesta|n
+truth|verdad|n
+life|vida|n
+death|muerte|n
+world|mundo|n
+nature|naturaleza|n
+future|futuro|n
+past|pasado|n
+present|presente|n
+moment|momento|n
+period|periodo|n
+change|cambio|n
+development|desarrollo|n
+growth|crecimiento|n
+rest|resto / descanso|n
+matter|asunto|n
+point|punto / sentido|n
+sense|sentido|n
+meaning|significado|n
+feeling|sentimiento / sensación|n
+need|necesidad|n
+help|ayuda|n
+use|uso|n
+role|papel / función|n
+rule|regla|n
+order|orden|n
+control|control|n
+power|poder|n
+freedom|libertad|n
+responsibility|responsabilidad|n
+behaviour|comportamiento|n
+attitude|actitud|n
+habit|costumbre / hábito|n
+skill|habilidad|n
+ability|capacidad|n
+goal|meta|n
+dream|sueño|n
+wish|deseo|n
+luck|suerte|n
+nothing|nada|n
+something|algo|n
+anything|cualquier cosa / algo|n
+everything|todo|n
+someone|alguien|n
+anyone|cualquiera / alguien|n
+everyone|todo el mundo|n
+nobody|nadie|n
