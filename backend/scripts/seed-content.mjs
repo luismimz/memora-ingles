@@ -94,5 +94,31 @@ async function seedVerbs() {
   console.log(`✓ Verbos irregulares: ${data.verbs.length}`);
 }
 
+async function seedPhrasalVerbs() {
+  const data = JSON.parse(readFileSync(join(contentDir, 'phrasal_verbs.json'), 'utf8'));
+  const existingRows = await allRows('words', 'id,en,rank');
+  const existing = new Map(existingRows.map((w) => [w.en.toLowerCase(), w]));
+  const startRank = Math.max(10000, ...existingRows.map((w) => Number(w.rank) || 0)) + 1;
+  let created = 0, updated = 0;
+  for (const [i, [en, es, exampleEn, exampleEs, topic]] of data.verbs.entries()) {
+    const key = en.toLowerCase();
+    const row = {
+      rank: existing.get(key)?.rank ?? startRank + i,
+      day: 31,
+      en, es, pos: POS.phr, topic: `Phrasal verbs · ${topic}`,
+      kind: 'phrasal',
+      example_en: exampleEn,
+      example_es: exampleEs,
+      hint_es: 'Apréndelo como una unidad: verbo + partícula.',
+      examples: [{ en: exampleEn, es: exampleEs, source: 'phrasal-verbs' }],
+    };
+    const found = existing.get(key);
+    if (found) { await api('PATCH', `/items/words/${found.id}`, row); updated++; }
+    else { const [made] = await api('POST', '/items/words', [row]); existing.set(key, made); created++; }
+  }
+  console.log(`✓ Phrasal verbs: ${created} nuevos, ${updated} actualizados (${data.verbs.length} en el catálogo)`);
+}
+
 await seedWords();
 await seedVerbs();
+await seedPhrasalVerbs();

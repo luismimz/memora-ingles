@@ -90,6 +90,10 @@ collections.speech_cache_v2 = {
   meta: { icon: 'record_voice_over', note: 'Caché de voz natural compatible con instalaciones Directus antiguas.' },
   fields: [pk, str('cache_key'), text('text'), str('voice'), float('rate', 1), str('file_id'), created],
 };
+collections.challenge_scores = {
+  meta: { icon: 'emoji_events', note: 'Marcas de los desafíos. El progreso de estudio sigue siendo individual.' },
+  fields: [pk, owner(), str('display_name'), str('game'), int('score', 0), int('total', 0), float('accuracy', 0), int('seconds', 0), created],
+};
 
 const relations = [
   ['mnemonics', 'word', 'words', 'CASCADE'],
@@ -112,6 +116,7 @@ const relations = [
   ['pilot_reports', 'user', 'directus_users', 'CASCADE'],
   ['personal_vocabulary', 'user', 'directus_users', 'CASCADE'],
   ['speech_cache', 'file', 'directus_files', 'CASCADE'],
+  ['challenge_scores', 'user', 'directus_users', 'CASCADE'],
 ];
 
 async function ensureCollections() {
@@ -172,6 +177,10 @@ async function ensureLearnerRole() {
   for (const c of ['progress', 'attempts', 'study_days', 'sentences', 'verb_progress', 'profiles', 'mnemonic_feedback', 'pilot_reports', 'personal_vocabulary']) {
     for (const action of ['create', 'read', 'update', 'delete']) add(c, action, action === 'create' ? {} : mine);
   }
+  add('challenge_scores', 'create', {}, { presets: { user: '$CURRENT_USER' }, validation: { user: { _eq: '$CURRENT_USER' } } });
+  add('challenge_scores', 'read');
+  add('challenge_scores', 'update', { user: { _eq: '$CURRENT_USER' } });
+  add('challenge_scores', 'delete', { user: { _eq: '$CURRENT_USER' } });
   add('directus_users', 'read', { id: { _eq: '$CURRENT_USER' } }, { fields: ['id', 'email', 'first_name', 'last_name', 'role'] });
   add('directus_users', 'update', { id: { _eq: '$CURRENT_USER' } }, { fields: ['first_name', 'last_name', 'password'] });
 

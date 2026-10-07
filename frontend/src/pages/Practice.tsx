@@ -8,10 +8,13 @@ const MODES = [
   { phase: 'Usar', to: '/practica/frases', ico: '📝', title: 'Mis frases', desc: 'Tu banco de frases útiles, corregidas por la IA.' },
   { phase: 'Vivirlo', to: '/biblioteca', ico: '📚', title: 'Biblioteca de lecturas', desc: 'Lee aventuras breves, escucha cada escena y captura palabras nuevas.' },
   { phase: 'Vivirlo', to: '/practica/historia', ico: '📜', title: 'Historia del día', desc: 'Un relato continuo con lo que has aprendido.', ai: true },
+  { phase: 'Vivirlo', to: '/contenido-real', ico: '🎬', title: 'Canciones y películas', desc: 'Añade un enlace oficial y guarda frases que realmente quieras entender.' },
   { phase: 'Vivirlo', to: '/practica/conversacion', ico: '💬', title: 'Conversación', desc: 'Habla con la IA usando tus palabras.', ai: true },
   { phase: 'Comprobar', to: '/practica/dictado', ico: '🎧', title: 'Dictado', desc: 'Oye frases reales y escríbelas.' },
   { phase: 'Comprobar', to: '/practica/pronunciacion', ico: '🎤', title: 'Pronunciación', desc: 'Habla y el micrófono te corrige.' },
   { phase: 'Comprobar', to: '/practica/contrarreloj', ico: '⚡', title: 'Contrarreloj', desc: 'Empareja palabras en 60 segundos.' },
+  { phase: 'Comprobar', to: '/desafios', ico: '🎮', title: 'Desafíos y ranking', desc: 'Ordena frases, rescata historias y compite con tu familia.' },
+  { phase: 'Comprobar', to: '/phrasal-verbs', ico: '🔀', title: 'Phrasal verbs', desc: 'Las unidades que más aparecen en conversaciones reales.' },
   { phase: 'Comprobar', to: '/verbos', ico: '🔀', title: 'Verbos irregulares', desc: 'Por familias: sing-sang-sung…' },
 ];
 

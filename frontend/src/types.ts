@@ -151,3 +151,15 @@ export interface PersonalVocabulary {
   source: string | null;
   created_at?: string;
 }
+
+export interface ChallengeScore {
+  id: number;
+  user?: string;
+  display_name: string | null;
+  game: string;
+  score: number;
+  total: number;
+  accuracy: number;
+  seconds: number;
+  created_at?: string;
+}

@@ -37,6 +37,10 @@ const STEPS: PathStep[] = [
     unlock: (s) => s.learned >= 1, done: (s) => s.today >= 5,
   },
   {
+    id: 'phrasals', icon: '🔀', title: 'Entiende los phrasal verbs', description: 'Domina las unidades que más aparecen en conversaciones: give up, figure out, look after…', to: '/phrasal-verbs',
+    unlock: (s) => s.learned >= 1, done: () => false,
+  },
+  {
     id: 'stories', icon: '📚', title: 'Lee y escucha historias', description: 'Sigue una historia, toca las palabras difíciles, escucha una voz natural y guárdalas.', to: '/biblioteca',
     unlock: (s) => s.learned >= 1, done: () => false,
   },

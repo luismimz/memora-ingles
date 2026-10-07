@@ -10,7 +10,10 @@ App web (instalable en el móvil) para aprender **100 palabras al día** con el 
 | **Cada palabra** | IPA, pronunciación figurada, audio, palabra puente, escena absurda (con su versión en inglés), ejemplo real. «Hazme otra» (IA), «la mía» y generar imagen (IA). |
 | **Repaso** | Pruebas sorpresa a +1 h, +24 h, +3 d, +7 d, +14 d y +30 d. Si aciertas pero tardas más de 9 s cuenta como «dudada». Un fallo te baja un escalón y la palabra vuelve mañana. |
 | **Progreso** | Tabla del experimento por día (examen, +1 h, +24 h, +7 d, +30 d), curva global, calendario de 30 días, palabras rebeldes y lentas, exportación CSV. |
-| **Práctica** | Frase escalera (una estructura por día), Mis frases (corrección y «¿cómo se dice?» con IA), conversación con IA, historia del día, dictado, pronunciación con micrófono y contrarreloj. |
+| **Práctica** | Frase escalera (una estructura por día), Mis frases (corrección y «¿cómo se dice?» con IA), conversación con IA, historias, dictado, pronunciación, contrarreloj y **Desafíos** (ordenar frases, rescatar asociaciones, listening oculto e imagen → palabra). |
+| **Phrasal verbs** | Catálogo inicial de 80 unidades frecuentes (`give up`, `figure out`, `look after`, `put up with`…), siempre con significado, ejemplo, audio y práctica en contexto. |
+| **Contenido real** | Biblioteca de enlaces oficiales a canciones, películas y series de YouTube. El alumno escucha, escribe frases breves y las guarda en su vocabulario; no se descargan ni se copian letras completas. |
+| **Competición** | Las marcas de los desafíos se guardan en `challenge_scores` y aparecen en un ranking compartido. El progreso de vocabulario sigue siendo privado por cuenta. |
 | **Irregulares** | 101 verbos en 13 familias fonéticas (sing-sang-sung…), historias para los rebeldes y cajas de Leitner. |
 
 ## Arquitectura del método (v2)
@@ -31,7 +34,7 @@ App web (instalable en el móvil) para aprender **100 palabras al día** con el 
 backend/    Directus 11 + extensión (extensions/memora-ai: rutas, core/, providers/) + scripts
 frontend/   React + TypeScript + Vite (PWA)
 shared/     Fonética, clasificación y retención (los usan servidor y navegador)
-content/    day01-03.json, wordlist.txt (días 4-30), pilot.json, irregular_verbs.json
+content/    day01-03.json, wordlist.txt (días 4-30), phrasal_verbs.json, pilot.json, irregular_verbs.json
 ```
 
 ## Desarrollo en local
@@ -65,13 +68,13 @@ Panel de Directus: http://localhost:8055. Ahí puedes editar palabras y asociaci
    - Voz natural incluida: el `docker-compose.yml` levanta el servicio interno `tts` (Kokoro CPU). Si usas un servidor externo, cambia `TTS_PROVIDER` y `KOKORO_TTS_URL` para apuntar a un endpoint compatible con `POST /v1/audio/speech`; `KOKORO_TTS_VOICE` usa `af_heart` por defecto.
    - Recomendado: `AI_ALLOWED_EMAILS=tu@email` para que nadie más gaste tu saldo de IA
    - Para «¿Has olvidado la contraseña?»: `EMAIL_FROM`, `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD` (cualquier SMTP). Sin SMTP, la contraseña se puede cambiar desde el panel de Directus (Usuarios).
-5. Deploy. Al arrancar, Directus crea solo el esquema y carga el contenido (es idempotente).
+5. Deploy. Al arrancar, Directus crea solo el esquema y carga el contenido (es idempotente), incluidos los 80 phrasal verbs y el ranking de desafíos. Si el volumen ya existía, basta con hacer un redeploy para que `boot.mjs` ejecute las actualizaciones.
 6. El panel de Directus queda en `https://ingles.luismontalvan.com/api/admin`.
 
 ## Contenido
 
 - **Días 1-3**: 341 palabras con asociaciones escritas a mano.
-- **Días 4-30**: ~2.350 palabras frecuentes por temas. Si falta su asociación, la IA la genera al vuelo la primera vez que aparece y se guarda para siempre. Para pregenerarlas y revisarlas antes:
+- **Días 4-30**: ~2.350 palabras frecuentes por temas. El catálogo base contiene 2.595 términos únicos y ahora se amplía con 80 phrasal verbs conversacionales (el número total no equivale por sí solo a un nivel C1: la app prioriza frecuencia, estructuras y uso). Si falta una asociación, la IA la genera al vuelo la primera vez que aparece y se guarda para siempre. Para pregenerarlas y revisarlas antes:
 
   ```bash
   cd backend && npm run generate -- 4 10   # días 4 a 10

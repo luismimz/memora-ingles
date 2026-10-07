@@ -22,6 +22,9 @@ import { Match } from './pages/practice/Match';
 import { ConversationPath } from './pages/practice/ConversationPath';
 import { Path } from './pages/Path';
 import { Library } from './pages/Library';
+import { Challenges } from './pages/Challenges';
+import { PhrasalVerbs } from './pages/PhrasalVerbs';
+import { MediaLab } from './pages/MediaLab';
 import { Spinner, ToastHost } from './components/common';
 import './styles.css';
 
@@ -51,6 +54,9 @@ function Shell() {
         ))}
         <div className="nav-section-label nav-extra">EXPLORAR</div>
         <NavLink to="/biblioteca" className="nav-extra"><span className="ico">📚</span>Biblioteca</NavLink>
+        <NavLink to="/desafios" className="nav-extra"><span className="ico">🎮</span>Desafíos</NavLink>
+        <NavLink to="/phrasal-verbs" className="nav-extra"><span className="ico">🔀</span>Phrasal verbs</NavLink>
+        <NavLink to="/contenido-real" className="nav-extra"><span className="ico">🎬</span>Contenido real</NavLink>
         <NavLink to="/progreso" className="nav-extra"><span className="ico">📈</span>Progreso</NavLink>
         <NavLink to="/verbos" className="nav-extra"><span className="ico">🔀</span>Irregulares</NavLink>
         <NavLink to="/ajustes" className="nav-extra"><span className="ico">⚙️</span>Ajustes</NavLink>
@@ -62,6 +68,12 @@ function Shell() {
           <Route path="/" element={<Today />} />
           <Route path="/ruta" element={<Path />} />
           <Route path="/biblioteca" element={<Library />} />
+          <Route path="/desafios" element={<Challenges />} />
+          <Route path="/desafios/ordenar" element={<Challenges mode="scramble" />} />
+          <Route path="/desafios/historias" element={<Challenges mode="story" />} />
+          <Route path="/desafios/listening" element={<Challenges mode="listen" />} />
+          <Route path="/desafios/imagen" element={<Challenges mode="image" />} />
+          <Route path="/contenido-real" element={<MediaLab />} />
           <Route path="/sesion" element={<Session />} />
           <Route path="/repaso" element={<Review />} />
           <Route path="/practica" element={<Practice />} />
@@ -74,6 +86,7 @@ function Shell() {
           <Route path="/practica/pronunciacion" element={<Speak />} />
           <Route path="/practica/contrarreloj" element={<Match />} />
           <Route path="/verbos" element={<Verbs />} />
+          <Route path="/phrasal-verbs" element={<PhrasalVerbs />} />
           <Route path="/progreso" element={<Stats />} />
           <Route path="/palabras" element={<Words />} />
           <Route path="/ajustes" element={<Settings />} />
