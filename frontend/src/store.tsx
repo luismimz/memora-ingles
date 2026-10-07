@@ -5,7 +5,7 @@ import { localDate } from './lib/stats';
 import type { Attempt, Mnemonic, Profile, Progress, StudyDay, Word } from './types';
 
 interface User { id: string; email: string; first_name: string | null }
-interface AiInfo { enabled: boolean; models: string[]; default: string }
+interface AiInfo { enabled: boolean; models: string[]; default: string; providers?: Record<string, string>; tts?: { enabled: boolean; provider: string } }
 
 interface Store {
   ready: boolean;

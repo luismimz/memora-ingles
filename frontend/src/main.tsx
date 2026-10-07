@@ -35,7 +35,6 @@ const NAV = [
   { to: '/ruta', ico: '🧭', label: 'Ruta' },
   { to: '/repaso', ico: '🔁', label: 'Repaso' },
   { to: '/practica', ico: '🎯', label: 'Practicar' },
-  { to: '/progreso', ico: '📈', label: 'Progreso' },
   { to: '/palabras', ico: '📖', label: 'Palabras' },
 ];
 
@@ -45,15 +44,20 @@ function Shell() {
   return (
     <div className="app">
       <nav className="nav">
-        <div className="brand"><img src="/icon.svg" alt="" width={32} height={32} style={{ borderRadius: 9 }} /> Memora</div>
+        <div className="brand"><span className="brand-mark">M</span><span><b>Memora</b><small>English by memory</small></span></div>
+        <div className="nav-section-label">TU RECORRIDO</div>
         {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === '/'}><span className="ico">{n.ico}</span>{n.label}</NavLink>
         ))}
-        <NavLink to="/verbos" className="nav-extra"><span className="ico">🔀</span>Irregulares</NavLink>
+        <div className="nav-section-label nav-extra">EXPLORAR</div>
         <NavLink to="/biblioteca" className="nav-extra"><span className="ico">📚</span>Biblioteca</NavLink>
+        <NavLink to="/progreso" className="nav-extra"><span className="ico">📈</span>Progreso</NavLink>
+        <NavLink to="/verbos" className="nav-extra"><span className="ico">🔀</span>Irregulares</NavLink>
         <NavLink to="/ajustes" className="nav-extra"><span className="ico">⚙️</span>Ajustes</NavLink>
+        <div className="nav-footer nav-extra"><span className="status-dot" /> Método Memora · activo</div>
       </nav>
       <main className="main">
+        <div className="mobile-topbar"><div className="mobile-brand"><span className="brand-mark">M</span><b>Memora</b></div><NavLink to="/ajustes" className="mobile-settings" aria-label="Ajustes">⚙️</NavLink></div>
         <Routes>
           <Route path="/" element={<Today />} />
           <Route path="/ruta" element={<Path />} />

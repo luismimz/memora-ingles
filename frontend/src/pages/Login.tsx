@@ -5,16 +5,17 @@ import { ErrorBox } from '../components/common';
 
 function Brand() {
   return (
-    <div className="center">
-      <img src="/icon.svg" alt="" width={84} height={84} style={{ borderRadius: 22 }} />
-      <h1 style={{ marginTop: 12 }}>Memora</h1>
-      <p className="muted">Inglés en 30 días: 100 palabras al día con historias absurdas que no se olvidan.</p>
+    <div className="center login-brand">
+      <span className="login-mark">M</span>
+      <span className="eyebrow">MEMORA · MÉTODO DE IDIOMAS</span>
+      <h1>Aprende para usarlo</h1>
+      <p className="muted">Memoria, frases, historias y conversación en un recorrido que puedes seguir sin perderte.</p>
     </div>
   );
 }
 
 const Page = ({ children }: { children: React.ReactNode }) => (
-  <div style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 16 }}>
+  <div className="login-page" style={{ minHeight: '100dvh', display: 'grid', placeItems: 'center', padding: 16 }}>
     <div className="stack" style={{ width: '100%', maxWidth: 420 }}><Brand />{children}</div>
   </div>
 );
