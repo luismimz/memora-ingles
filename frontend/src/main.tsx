@@ -20,6 +20,8 @@ import { Dictation } from './pages/practice/Dictation';
 import { Speak } from './pages/practice/Speak';
 import { Match } from './pages/practice/Match';
 import { ConversationPath } from './pages/practice/ConversationPath';
+import { Path } from './pages/Path';
+import { Library } from './pages/Library';
 import { Spinner, ToastHost } from './components/common';
 import './styles.css';
 
@@ -30,6 +32,7 @@ try {
 
 const NAV = [
   { to: '/', ico: '🏠', label: 'Hoy' },
+  { to: '/ruta', ico: '🧭', label: 'Ruta' },
   { to: '/repaso', ico: '🔁', label: 'Repaso' },
   { to: '/practica', ico: '🎯', label: 'Practicar' },
   { to: '/progreso', ico: '📈', label: 'Progreso' },
@@ -47,11 +50,14 @@ function Shell() {
           <NavLink key={n.to} to={n.to} end={n.to === '/'}><span className="ico">{n.ico}</span>{n.label}</NavLink>
         ))}
         <NavLink to="/verbos" className="nav-extra"><span className="ico">🔀</span>Irregulares</NavLink>
+        <NavLink to="/biblioteca" className="nav-extra"><span className="ico">📚</span>Biblioteca</NavLink>
         <NavLink to="/ajustes" className="nav-extra"><span className="ico">⚙️</span>Ajustes</NavLink>
       </nav>
       <main className="main">
         <Routes>
           <Route path="/" element={<Today />} />
+          <Route path="/ruta" element={<Path />} />
+          <Route path="/biblioteca" element={<Library />} />
           <Route path="/sesion" element={<Session />} />
           <Route path="/repaso" element={<Review />} />
           <Route path="/practica" element={<Practice />} />

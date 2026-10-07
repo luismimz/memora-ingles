@@ -3,6 +3,7 @@ import { shuffle } from '../../components/common';
 import { SentenceDiff } from '../../components/SentenceDiff';
 import { sentenceScore } from '../../lib/answer';
 import { speak } from '../../lib/speech';
+import { naturalSpeech } from '../../lib/api';
 import { useStore } from '../../store';
 import { BackHeader, NeedsWords, useLearnedWords } from './shared';
 
@@ -15,6 +16,12 @@ export function Dictation() {
   const [score, setScore] = useState<number | null>(null);
   const [total, setTotal] = useState(0);
   const w = list[i];
+  const play = (text: string, rate: number) => {
+    naturalSpeech(text, { rate }).then((url) => {
+      if (url) new Audio(url).play().catch(() => speak(text, { rate }));
+      else speak(text, { rate });
+    }).catch(() => speak(text, { rate }));
+  };
 
   if (!learned.length) return <div className="stack"><BackHeader title="🎧 Dictado" /><NeedsWords /></div>;
   if (!w) {
@@ -39,8 +46,8 @@ export function Dictation() {
       <span className="small muted">{i + 1}/{list.length}</span>
       <div className="card stack">
         <div className="row" style={{ justifyContent: 'center' }}>
-          <button className="btn big secondary" onClick={() => speak(w.example_en!)}>🔊 Escuchar</button>
-          <button className="btn ghost" onClick={() => speak(w.example_en!, { rate: 0.6 })}>🐢 Despacio</button>
+          <button className="btn big secondary" onClick={() => play(w.example_en!, 1)}>🔊 Escuchar</button>
+          <button className="btn ghost" onClick={() => play(w.example_en!, .65)}>🐢 Despacio</button>
         </div>
         <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Escribe lo que oyes…" readOnly={score !== null} autoCapitalize="sentences" style={{ minHeight: 70 }} />
         {score === null ? (

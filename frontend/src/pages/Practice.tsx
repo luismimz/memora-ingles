@@ -3,6 +3,7 @@ import { structureFor } from '../data/structures';
 import { useStore } from '../store';
 
 const MODES = [
+  { to: '/biblioteca', ico: '📚', title: 'Biblioteca de lecturas', desc: 'Lee aventuras breves, escucha cada escena y captura palabras nuevas.' },
   { to: '/practica/hablar', ico: '🗣️', title: 'Hablar desde el principio', desc: 'Palabras frecuentes y patrones para responder, preguntar y ganar confianza.' },
   { to: '/practica/escalera', ico: '🪜', title: 'Frase escalera', desc: 'De «quiero» a una frase larga, pieza a pieza.' },
   { to: '/practica/frases', ico: '📝', title: 'Mis frases', desc: 'Tu banco de frases útiles, corregidas por la IA.' },
@@ -21,6 +22,7 @@ export function Practice() {
     <div className="stack">
       <h1>🎯 Practicar</h1>
       <p className="muted">Memorizar es el paso 1. Para <b>dominar</b> una palabra tienes que usarla: escuchar, escribir frases y hablar.</p>
+      <Link to="/ruta" className="card path-teaser link"><div className="path-teaser-icon">🧭</div><div className="grow"><b>¿No sabes por dónde empezar?</b><div className="small muted">La Ruta de aprendizaje ordena las actividades para ti.</div></div><span className="path-arrow">→</span></Link>
       <div className="card flat small"><b>Hoy toca:</b> {s.title} · <code>{s.pattern}</code></div>
       <div className="grid2">
         {MODES.map((m) => (

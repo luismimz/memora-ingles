@@ -74,6 +74,41 @@ p { margin: 0 0 .75rem; }
 .story-library-copy span { font-size: .9rem; color: rgba(255,255,255,.88); }
 .grammar-card { border-color: color-mix(in srgb, var(--primary) 35%, var(--border)); background: linear-gradient(135deg, var(--surface), var(--primary-soft)); }
 
+/* Ruta de aprendizaje y biblioteca */
+.path-hero { position: relative; min-height: 260px; overflow: hidden; border-radius: var(--radius); background: linear-gradient(120deg, #30106b, #6d28d9 62%, #a855f7); color: #fff; box-shadow: var(--shadow); }
+.path-hero::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(24, 8, 52, .82), rgba(24, 8, 52, .12)); pointer-events: none; }
+.path-hero img { position: absolute; right: 0; top: 0; width: 51%; height: 100%; object-fit: cover; opacity: .7; }
+.path-hero-copy { position: relative; z-index: 1; max-width: 64%; padding: 24px; display: flex; flex-direction: column; gap: .65rem; }
+.path-hero h1 { font-size: clamp(1.65rem, 4vw, 2.35rem); margin: 0; }
+.path-hero p { margin: 0; color: rgba(255,255,255,.84); max-width: 510px; }
+.path-xp, .path-streak { padding: 5px 10px; border-radius: 999px; background: rgba(255,255,255,.14); font-size: .8rem; font-weight: 800; }
+.path-grid { display: flex; flex-direction: column; gap: .65rem; }
+.path-step { display: grid; grid-template-columns: 32px 42px 1fr auto; align-items: center; gap: .75rem; padding: 14px 16px; }
+.path-step.is-done { border-color: color-mix(in srgb, var(--ok) 45%, var(--border)); background: linear-gradient(90deg, var(--ok-soft), var(--surface)); }
+.path-step.is-locked { opacity: .56; cursor: not-allowed; }
+.path-number { width: 28px; height: 28px; display: grid; place-items: center; border-radius: 999px; background: var(--surface-2); color: var(--muted); font-size: .8rem; font-weight: 900; }
+.is-done .path-number { background: var(--ok); color: #fff; }
+.path-step-icon { font-size: 1.75rem; text-align: center; }
+.path-step-copy { display: flex; flex-direction: column; gap: .15rem; }
+.path-step-copy b { font-size: 1rem; }
+.path-step-copy span { line-height: 1.35; }
+.path-arrow { font-size: 1.35rem; color: var(--primary); font-weight: 900; }
+.path-teaser { display: flex; align-items: center; gap: .75rem; padding: 13px 15px; border-color: color-mix(in srgb, var(--primary) 30%, var(--border)); background: linear-gradient(100deg, var(--primary-soft), var(--surface)); }
+.path-teaser-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 13px; background: var(--primary); color: #fff; font-size: 1.4rem; }
+.feature-card { display: flex; align-items: center; gap: .8rem; }
+.feature-icon { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 12px; background: var(--surface-2); font-size: 1.45rem; flex: none; }
+.library-note { display: flex; align-items: flex-start; gap: .75rem; background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 25%, var(--border)); }
+.library-note > span { font-size: 1.35rem; }
+.library-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: .75rem; }
+.library-card { display: flex; flex-direction: column; align-items: flex-start; gap: .45rem; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.library-card:hover { border-color: var(--primary); transform: translateY(-2px); }
+.library-cover { width: 54px; height: 54px; display: grid; place-items: center; border-radius: 16px; background: var(--primary-soft); font-size: 2rem; }
+.library-cover.small { width: 46px; height: 46px; font-size: 1.6rem; }
+.library-cta { margin-top: .35rem; color: var(--primary); font-size: .88rem; font-weight: 900; }
+.reading-heading { background: linear-gradient(115deg, var(--surface), var(--primary-soft)); }
+.reading-text { font-size: 1.1rem; line-height: 2; margin: 0; }
+.reading-card { border-left: 4px solid var(--primary); }
+
 /* Layout */
 .app { min-height: 100dvh; display: flex; }
 .nav {
@@ -100,6 +135,14 @@ p { margin: 0 0 .75rem; }
   .nav a.active { background: var(--primary-soft); }
   .nav .nav-extra { display: flex; }
   .main { padding: 28px 32px 48px; }
+}
+@media (max-width: 560px) {
+  .path-hero-copy { max-width: 86%; padding: 18px; }
+  .path-hero img { width: 70%; opacity: .28; }
+  .path-step { grid-template-columns: 28px 34px 1fr auto; gap: .5rem; padding: 12px; }
+  .path-step-icon { font-size: 1.45rem; }
+  .path-step-copy b { font-size: .95rem; }
+  .path-step-copy span { font-size: .8rem; }
 }
 
 /* Cards & buttons */

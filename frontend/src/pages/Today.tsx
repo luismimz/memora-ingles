@@ -36,6 +36,12 @@ export function Today() {
       </div>
       <ProgressBar value={Math.min(currentDay - 1, 30)} max={30} />
 
+      <Link to="/ruta" className="card path-teaser link">
+        <div className="path-teaser-icon">🧭</div>
+        <div className="grow"><span className="chip primary">Nueva ruta</span><h3 style={{ margin: '.3rem 0 .15rem' }}>Memoria → frases → historias → conversación</h3><div className="small muted">Sigue el siguiente paso en vez de abrir actividades al azar.</div></div>
+        <span className="path-arrow">→</span>
+      </Link>
+
       {/* Paso 1: repaso */}
       {due.length > 0 && (
         <Link to="/repaso" className="card link" style={{ borderColor: 'var(--accent)' }}>
@@ -69,10 +75,11 @@ export function Today() {
         <span className="chip primary" style={{ alignSelf: 'flex-start' }}>{due.length ? 'Paso 3' : 'Paso 2'} · de memorizar a hablar</span>
         <h3 style={{ margin: 0 }}>🪜 Estructura del día: {structure.title}</h3>
         <p className="muted small" style={{ margin: 0 }}>{structure.explain}</p>
-        <div className="row">
-          <Link to="/practica/escalera" className="btn small">Frase escalera</Link>
-          <Link to="/practica/historia" className="btn secondary small">📜 Historia del día</Link>
-          <Link to="/practica/conversacion" className="btn secondary small">💬 Conversar</Link>
+          <div className="row">
+            <Link to="/practica/escalera" className="btn small">Frase escalera</Link>
+            <Link to="/practica/historia" className="btn secondary small">📜 Historia del día</Link>
+            <Link to="/practica/conversacion" className="btn secondary small">💬 Conversar</Link>
+            <Link to="/biblioteca" className="btn secondary small">📚 Biblioteca</Link>
         </div>
       </div>
 
