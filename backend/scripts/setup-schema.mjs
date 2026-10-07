@@ -83,6 +83,13 @@ collections.speech_cache = {
   meta: { icon: 'record_voice_over', note: 'Audio natural generado una vez y reutilizado por texto, voz y velocidad.' },
   fields: [pk, str('cache_key'), text('text'), str('voice'), float('rate', 1), m2o('file', 'uuid'), created],
 };
+// Caché sin relación M2O: algunas instalaciones antiguas de Directus fallan al
+// reconstruir el esquema de relaciones y devuelven «reading primary». El nuevo
+// caché guarda el id del archivo como texto y evita que TTS dependa del introspector.
+collections.speech_cache_v2 = {
+  meta: { icon: 'record_voice_over', note: 'Caché de voz natural compatible con instalaciones Directus antiguas.' },
+  fields: [pk, str('cache_key'), text('text'), str('voice'), float('rate', 1), str('file_id'), created],
+};
 
 const relations = [
   ['mnemonics', 'word', 'words', 'CASCADE'],

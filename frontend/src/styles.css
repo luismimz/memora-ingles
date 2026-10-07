@@ -108,6 +108,16 @@ p { margin: 0 0 .75rem; }
 .reading-heading { background: linear-gradient(115deg, var(--surface), var(--primary-soft)); }
 .reading-text { font-size: 1.1rem; line-height: 2; margin: 0; }
 .reading-card { border-left: 4px solid var(--primary); }
+.verb-sequence-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(245px, 1fr)); gap: .7rem; }
+.verb-sequence-card { display: flex; flex-direction: column; gap: .55rem; }
+.verb-forms { display: flex; align-items: center; gap: .35rem; font-weight: 900; }
+.verb-forms span { padding: 5px 8px; border-radius: 9px; background: var(--primary-soft); color: var(--primary); }
+.verb-forms i { color: var(--muted); font-style: normal; }
+.verb-forms.large { justify-content: center; gap: .55rem; padding: 12px 0; font-size: 1.35rem; }
+.verb-forms.large span { padding: 8px 12px; }
+.verb-meaning { font-size: 1.35rem; color: var(--primary); font-weight: 900; text-align: center; }
+.verb-lesson-card { max-width: 650px; width: 100%; align-self: center; }
+.verb-lesson .progress { max-width: 650px; width: 100%; align-self: center; }
 
 /* Nuevo recorrido diario: tres fases visibles del método Memora */
 .eyebrow { display: block; color: var(--primary); font-size: .7rem; font-weight: 950; letter-spacing: .12em; }

@@ -41,6 +41,7 @@ export default {
       models: llm.models ?? [], default: llm.defaultModel ?? '', enabled: Boolean(llm.enabled),
       providers: Object.fromEntries(Object.entries(providers).map(([k, p]) => [k, p.name])), tts: { enabled: Boolean(tts?.enabled), provider: tts?.name || 'none' },
     }));
+    router.get('/voices', auth, wrap(async () => ({ provider: tts?.name || 'none', voices: tts?.enabled && tts.voices ? await tts.voices() : [] })));
 
     // ---------- Método de la palabra clave ----------
 
@@ -171,16 +172,21 @@ export default {
       const voice = String(req.body.voice || env.KOKORO_TTS_VOICE || 'af_heart');
       const rate = Math.max(.5, Math.min(1.5, Number(req.body.rate) || 1));
       const cacheKey = createHash('sha256').update(JSON.stringify({ text, voice, rate })).digest('hex');
-      const cache = await svc('speech_cache');
-      const hits = await cache.readByQuery({ filter: { cache_key: { _eq: cacheKey } }, fields: ['file'], limit: 1 });
-      if (hits[0]?.file) return { available: true, file: hits[0].file, cached: true };
+      // No dependemos de la relación antigua speech_cache.file: si el esquema
+      // de Directus tiene relaciones dañadas, TTS debe seguir pudiendo generar.
+      const cache = await svc('speech_cache_v2');
+      try {
+        const hits = await cache.readByQuery({ filter: { cache_key: { _eq: cacheKey } }, fields: ['file_id'], limit: 1 });
+        if (hits[0]?.file_id) return { available: true, file: hits[0].file_id, cached: true };
+      } catch (e) { logger.warn(e, 'memora: speech cache read skipped'); }
       const audio = await tts.generate(text, { voice, rate });
       const file = await new FilesService({ schema: await getSchema() }).uploadOne(Readable.from(audio.buffer), {
         storage: String(env.STORAGE_LOCATIONS || 'local').split(',')[0],
         filename_download: `speech-${cacheKey}.${audio.type.includes('wav') ? 'wav' : 'mp3'}`,
         type: audio.type, title: `Memora · ${text.slice(0, 80)}`,
       });
-      await cache.createOne({ cache_key: cacheKey, text, voice, rate, file });
+      try { await cache.createOne({ cache_key: cacheKey, text, voice, rate, file_id: file }); }
+      catch (e) { logger.warn(e, 'memora: speech cache write skipped'); }
       return { available: true, file, cached: false };
     }));
 

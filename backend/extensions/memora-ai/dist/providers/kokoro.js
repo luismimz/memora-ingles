@@ -6,6 +6,13 @@ export function kokoroTts(env) {
   return {
     name: 'kokoro',
     enabled: Boolean(base),
+    async voices() {
+      if (!base) return [];
+      const res = await fetch(`${base}/v1/audio/voices`);
+      if (!res.ok) throw new Error(`Kokoro voices ${res.status}`);
+      const data = await res.json();
+      return Array.isArray(data.voices) ? data.voices.map((v) => typeof v === 'string' ? { id: v, name: v } : { id: v.id, name: v.name || v.id }).filter((v) => v.id) : [];
+    },
     async generate(text, { voice, rate } = {}) {
       if (!base) throw new Error('KOKORO_TTS_URL no está configurado');
       const headers = { 'content-type': 'application/json', ...(key ? { authorization: `Bearer ${key}` } : {}) };

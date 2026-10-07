@@ -19,6 +19,12 @@ services:
     restart: unless-stopped
     expose:
       - "8880"
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:8880/v1/audio/voices', timeout=3)\" || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 12
+      start_period: 45s
 
   directus:
     build:
@@ -29,7 +35,7 @@ services:
       db:
         condition: service_healthy
       tts:
-        condition: service_started
+        condition: service_healthy
     volumes:
       - uploads:/directus/uploads
     environment:

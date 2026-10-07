@@ -3,7 +3,6 @@ import { ErrorBox, ProgressBar, Rich, shuffle, SpeakBtn, Spinner } from '../comp
 import data from '../../../content/irregular_verbs.json';
 import { items } from '../lib/api';
 import { checkAnswer } from '../lib/answer';
-import { speak } from '../lib/speech';
 import type { IrregularVerb, VerbProgress } from '../types';
 
 const FAMILIES = data.families as { key: string; name: string; pattern: string; tip: string }[];
@@ -14,7 +13,7 @@ export function Verbs() {
   const [verbs, setVerbs] = useState<IrregularVerb[] | null>(null);
   const [prog, setProg] = useState<Map<number, VerbProgress>>(new Map());
   const [family, setFamily] = useState<string | null>(null);
-  const [quiz, setQuiz] = useState<IrregularVerb[] | null>(null);
+  const [lesson, setLesson] = useState<IrregularVerb[] | null>(null);
   const [error, setError] = useState<unknown>(null);
 
   useEffect(() => {
@@ -36,7 +35,7 @@ export function Verbs() {
   const due = verbs.filter((v) => { const p = prog.get(v.id); return p && p.due_at && Date.parse(p.due_at) <= Date.now(); });
   const mastered = verbs.filter((v) => (prog.get(v.id)?.box ?? 0) >= 3).length;
 
-  if (quiz) return <VerbQuiz list={quiz} onResult={saveResult} onExit={() => setQuiz(null)} />;
+  if (lesson) return <VerbLesson list={lesson} onResult={saveResult} onExit={() => setLesson(null)} />;
 
   if (family) {
     const f = FAMILIES.find((x) => x.key === family)!;
@@ -49,24 +48,9 @@ export function Verbs() {
           <code style={{ fontSize: '1.1rem' }}>{f.pattern}</code>
           <p style={{ margin: 0 }}>{f.tip}</p>
         </div>
-        <div className="card table-wrap" style={{ padding: '8px 12px' }}>
-          <table className="data">
-            <thead><tr><th>Presente</th><th>Pasado</th><th>Participio</th><th>Significado</th><th></th></tr></thead>
-            <tbody>
-              {list.map((v) => (
-                <tr key={v.id}>
-                  <td><b>{v.base}</b></td><td>{v.past}</td><td>{v.participle}</td><td className="small muted">{v.es}</td>
-                  <td><SpeakBtn text={`${v.base}, ${v.past}, ${v.participle}`} /></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-        {list.filter((v) => v.mnemonic_es).map((v) => (
-          <div key={v.id} className="card flat small"><b>{v.base}:</b> <Rich text={v.mnemonic_es} /></div>
-        ))}
-        <p className="small muted">Truco: léelos en voz alta como una canción, 3 veces seguidas: «{list.slice(0, 3).map((v) => `${v.base}-${v.past}-${v.participle}`).join(', ')}…»</p>
-        <button className="btn big" onClick={() => setQuiz(shuffle(list))}>🎯 Ponme a prueba ({list.length})</button>
+        <div className="verb-sequence-grid">{list.map((v) => <div className="verb-sequence-card card flat" key={v.id}><div className="spread"><b>{v.base}</b><SpeakBtn text={`${v.base}, ${v.past}, ${v.participle}`} natural /></div><div className="verb-forms"><span>{v.base}</span><i>→</i><span>{v.past}</span><i>→</i><span>{v.participle}</span></div><div className="small" style={{ color: 'var(--primary)', fontWeight: 800 }}>{v.es}</div>{v.mnemonic_es && <div className="trick-box plain small"><Rich text={v.mnemonic_es} /></div>}<div className="example small">{v.example_en}</div></div>)}</div>
+        <div className="card flat small"><b>La secuencia:</b> primero mira y escucha cada familia, después tapa las formas y recupéralas con tus propias palabras.</div>
+        <button className="btn big" onClick={() => setLesson(shuffle(list))}>🧠 Empezar sesión guiada ({list.length})</button>
       </div>
     );
   }
@@ -78,7 +62,7 @@ export function Verbs() {
       <div className="card stack">
         <div className="spread"><b>Dominados</b><span>{mastered}/{verbs.length}</span></div>
         <ProgressBar value={mastered} max={verbs.length} />
-        {due.length > 0 && <button className="btn" onClick={() => setQuiz(shuffle(due))}>🔁 Repasar los pendientes ({due.length})</button>}
+        {due.length > 0 && <button className="btn" onClick={() => setLesson(shuffle(due))}>🔁 Repasar los pendientes ({due.length})</button>}
       </div>
       <div className="grid2">
         {FAMILIES.map((f) => {
@@ -96,8 +80,10 @@ export function Verbs() {
   );
 }
 
-function VerbQuiz({ list, onResult, onExit }: { list: IrregularVerb[]; onResult: (v: IrregularVerb, ok: boolean) => Promise<void>; onExit: () => void }) {
+function VerbLesson({ list, onResult, onExit }: { list: IrregularVerb[]; onResult: (v: IrregularVerb, ok: boolean) => Promise<void>; onExit: () => void }) {
   const [i, setI] = useState(0);
+  const [stage, setStage] = useState<'learn' | 'recall'>('learn');
+  const [revealed, setRevealed] = useState(false);
   const [past, setPast] = useState('');
   const [part, setPart] = useState('');
   const [res, setRes] = useState<{ past: boolean; part: boolean } | null>(null);
@@ -113,16 +99,26 @@ function VerbQuiz({ list, onResult, onExit }: { list: IrregularVerb[]; onResult:
     const r = { past: checkAnswer(past, v.past).correct, part: checkAnswer(part, v.participle).correct };
     setRes(r);
     if (r.past && r.part) setOkCount((c) => c + 1);
-    speak(`${v.base}, ${v.past}, ${v.participle}`);
-    onResult(v, r.past && r.part);
+    onResult(v, r.past && r.part).catch(() => {});
   };
+
+  const next = () => { setI(i + 1); setStage('learn'); setRevealed(false); setPast(''); setPart(''); setRes(null); };
+
+  if (stage === 'learn') return (
+    <div className="stack verb-lesson">
+      <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={onExit}>✕ Salir</button>
+      <div className="spread"><div><span className="eyebrow">FASE 1 · ASOCIAR Y ESCUCHAR</span><h1>{v.base}</h1></div><span className="chip primary">{i + 1}/{total}</span></div>
+      <ProgressBar value={i} max={total} />
+      <div className="card verb-lesson-card stack"><div className="verb-meaning">{v.es}</div><div className="small muted">Familia: {FAMILIES.find((f) => f.key === v.family)?.name}</div><button className="btn big secondary" onClick={() => setRevealed(true)}>{revealed ? '✅ Formas visibles' : '👀 Ver y escuchar la secuencia'}</button>{revealed && <><div className="verb-forms large"><span>{v.base}</span><i>→</i><span>{v.past}</span><i>→</i><span>{v.participle}</span></div><div className="row"><SpeakBtn text={`${v.base}, ${v.past}, ${v.participle}`} title="Escuchar secuencia" natural /><span className="small muted">Escúchalo dos veces como una sola unidad.</span></div>{v.mnemonic_es && <div className="trick-box"><span className="lbl">Asociación</span><Rich text={v.mnemonic_es} /></div>}<div className="example"><div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><b>{v.example_en}</b><SpeakBtn text={v.example_en} natural /></div><span className="small muted">Ahora observa la forma dentro de una frase real.</span></div><button className="btn" onClick={() => setStage('recall')}>Tapar y recuperarlo →</button></>}</div>
+    </div>
+  );
 
   return (
     <div className="stack">
       <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={onExit}>✕ Salir</button>
-      <ProgressBar value={i} max={total} />
+      <div className="spread"><div><span className="eyebrow">FASE 2 · RECUPERAR Y COMPROBAR</span><h1>{v.base}</h1></div><span className="chip primary">{i + 1}/{total}</span></div><ProgressBar value={i} max={total} />
       <div className="card stack">
-        <div className="big-prompt">{v.base}<div className="small muted">{v.es}</div></div>
+        <div className="big-prompt">{v.base}<div className="small muted">{v.es}</div><SpeakBtn text={v.base} natural /></div>
         <form className="stack" onSubmit={(e) => { e.preventDefault(); if (!res) check(); else { setI(i + 1); setPast(''); setPart(''); setRes(null); } }}>
           <label className="field">Pasado
             <input type="text" className={`answer-input ${res ? (res.past ? 'ok' : 'fail') : ''}`} value={past} onChange={(e) => setPast(e.target.value)} readOnly={!!res} autoCapitalize="off" autoComplete="off" autoFocus />
@@ -130,9 +126,9 @@ function VerbQuiz({ list, onResult, onExit }: { list: IrregularVerb[]; onResult:
           <label className="field">Participio
             <input type="text" className={`answer-input ${res ? (res.part ? 'ok' : 'fail') : ''}`} value={part} onChange={(e) => setPart(e.target.value)} readOnly={!!res} autoCapitalize="off" autoComplete="off" />
           </label>
-          {res && <div className={`feedback ${res.past && res.part ? 'ok' : 'fail'}`}>{v.base} → {v.past} → {v.participle}</div>}
-          {res && v.mnemonic_es && <div className="small"><Rich text={v.mnemonic_es} /></div>}
-          <button className="btn big">{res ? 'Siguiente →' : 'Comprobar'}</button>
+          {res && <div className={`feedback ${res.past && res.part ? 'ok' : 'fail'}`}>{res.past && res.part ? '✅ Recuperación sólida' : '🔁 Vuelve a mirar la asociación y repítelo mañana'}<br />{v.base} → {v.past} → {v.participle}</div>}
+          {res && v.mnemonic_es && <div className="trick-box plain small"><Rich text={v.mnemonic_es} /></div>}
+          {res ? <button type="button" className="btn big" onClick={next}>Siguiente →</button> : <button className="btn big">Comprobar</button>}
         </form>
       </div>
     </div>

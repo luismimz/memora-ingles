@@ -94,6 +94,12 @@ export const items = {
 export const ai = <T>(path: string, body: Record<string, unknown>) => request<T>('POST', `/memora/${path}`, body);
 
 export async function naturalSpeech(text: string, opts: { voice?: string | null; rate?: number } = {}) {
-  const out = await request<{ available: boolean; file?: string }>('POST', '/memora/speech', { text, voice: opts.voice || undefined, rate: opts.rate });
+  let preferredVoice = opts.voice || undefined;
+  if (!preferredVoice) { try { preferredVoice = localStorage.getItem('memora.kokoroVoice') || undefined; } catch { /* almacenamiento opcional */ } }
+  const out = await request<{ available: boolean; file?: string }>('POST', '/memora/speech', { text, voice: preferredVoice, rate: opts.rate });
   return out.available && out.file ? assetUrl(out.file, 'download=0') : null;
+}
+
+export async function naturalVoices() {
+  return request<{ provider: string; voices: { id: string; name: string }[] }>('GET', '/memora/voices');
 }
