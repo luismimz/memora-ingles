@@ -92,3 +92,8 @@ export const items = {
 };
 
 export const ai = <T>(path: string, body: Record<string, unknown>) => request<T>('POST', `/memora/${path}`, body);
+
+export async function naturalSpeech(text: string, opts: { voice?: string | null; rate?: number } = {}) {
+  const out = await request<{ available: boolean; file?: string }>('POST', '/memora/speech', { text, voice: opts.voice || undefined, rate: opts.rate });
+  return out.available && out.file ? assetUrl(out.file, 'download=0') : null;
+}

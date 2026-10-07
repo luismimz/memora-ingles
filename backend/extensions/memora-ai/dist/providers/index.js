@@ -11,6 +11,8 @@ import { datamuseCandidates, datamusePronunciation } from './datamuse.js';
 import { openRouterImage, openRouterLlm } from './openrouter.js';
 import { pollinationsImage } from './pollinations.js';
 import { tatoebaSentences } from './tatoeba.js';
+import { kokoroTts } from './kokoro.js';
+import { disabledTts } from './none.js';
 
 const FACTORIES = {
   llm: { openrouter: openRouterLlm },
@@ -18,9 +20,10 @@ const FACTORIES = {
   candidates: { datamuse: datamuseCandidates },
   image: { pollinations: pollinationsImage, openrouter: openRouterImage },
   sentences: { tatoeba: tatoebaSentences },
+  tts: { none: disabledTts, kokoro: kokoroTts },
 };
 
-const DEFAULTS = { llm: 'openrouter', pronunciation: 'datamuse', candidates: 'datamuse', image: 'pollinations', sentences: 'tatoeba' };
+const DEFAULTS = { llm: 'openrouter', pronunciation: 'datamuse', candidates: 'datamuse', image: 'pollinations', sentences: 'tatoeba', tts: 'none' };
 
 export function createProviders(env) {
   const out = {};

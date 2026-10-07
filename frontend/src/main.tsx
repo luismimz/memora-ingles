@@ -19,6 +19,7 @@ import { Story } from './pages/practice/Story';
 import { Dictation } from './pages/practice/Dictation';
 import { Speak } from './pages/practice/Speak';
 import { Match } from './pages/practice/Match';
+import { ConversationPath } from './pages/practice/ConversationPath';
 import { Spinner, ToastHost } from './components/common';
 import './styles.css';
 
@@ -54,6 +55,7 @@ function Shell() {
           <Route path="/sesion" element={<Session />} />
           <Route path="/repaso" element={<Review />} />
           <Route path="/practica" element={<Practice />} />
+          <Route path="/practica/hablar" element={<ConversationPath />} />
           <Route path="/practica/escalera" element={<Ladder />} />
           <Route path="/practica/frases" element={<Sentences />} />
           <Route path="/practica/conversacion" element={<Chat />} />

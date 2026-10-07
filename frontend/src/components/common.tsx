@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { speak } from '../lib/speech';
+import { naturalSpeech } from '../lib/api';
 
-export function SpeakBtn({ text, title = 'Escuchar', slow = false }: { text: string | null | undefined; title?: string; slow?: boolean }) {
+export function SpeakBtn({ text, title = 'Escuchar', slow = false, natural = false }: { text: string | null | undefined; title?: string; slow?: boolean; natural?: boolean }) {
   if (!text) return null;
   return (
     <button type="button" className="icon-btn" title={title} aria-label={title}
-      onClick={(e) => { e.stopPropagation(); speak(text, slow ? { rate: 0.6 } : {}); }}>
+      onClick={(e) => { e.stopPropagation(); if (natural) naturalSpeech(text, { rate: slow ? 0.65 : 1 }).then((url) => { if (url) { const audio = new Audio(url); audio.play().catch(() => speak(text, slow ? { rate: 0.6 } : {})); } else speak(text, slow ? { rate: 0.6 } : {}); }).catch(() => speak(text, slow ? { rate: 0.6 } : {})); else speak(text, slow ? { rate: 0.6 } : {}); }}>
       {slow ? '🐢' : '🔊'}
     </button>
   );

@@ -140,3 +140,14 @@ export interface PilotReport {
   comment: string | null;
   created_at?: string;
 }
+
+export interface PersonalVocabulary {
+  id: number;
+  term: string;
+  meaning_es: string;
+  note_es: string | null;
+  example_en: string | null;
+  context_en: string | null;
+  source: string | null;
+  created_at?: string;
+}

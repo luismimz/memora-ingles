@@ -1,6 +1,7 @@
 // Endpoints de Memora (montados en /memora). Toda llamada externa pasa por los proveedores (./providers),
 // así se pueden cambiar Datamuse, OpenRouter, Pollinations o Tatoeba sin tocar este archivo ni el núcleo.
 import { Readable } from 'node:stream';
+import { createHash } from 'node:crypto';
 import { createProviders } from './providers/index.js';
 import { generateKeywordMnemonics, phoneticsFor, scoredCandidates } from './core/keywords.js';
 import { pronunciationEs } from '../../../../shared/phonetics.mjs';
@@ -12,6 +13,7 @@ export default {
     const { ItemsService, FilesService, UsersService } = services;
     const providers = createProviders(env);
     const llm = providers.llm;
+    const tts = providers.tts;
     const allowedEmails = String(env.AI_ALLOWED_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
 
     const svc = async (collection) => new ItemsService(collection, { schema: await getSchema() });
@@ -37,7 +39,7 @@ export default {
 
     router.get('/models', (_req, res) => res.json({
       models: llm.models ?? [], default: llm.defaultModel ?? '', enabled: Boolean(llm.enabled),
-      providers: Object.fromEntries(Object.entries(providers).map(([k, p]) => [k, p.name])),
+      providers: Object.fromEntries(Object.entries(providers).map(([k, p]) => [k, p.name])), tts: { enabled: Boolean(tts?.enabled), provider: tts?.name || 'none' },
     }));
 
     // ---------- Método de la palabra clave ----------
@@ -161,8 +163,34 @@ export default {
       { role: 'user', content: String(req.body.text || '') },
     ], { model: model(req), temperature: 0.3 })));
 
+    // Audio natural opcional (Kokoro). Se guarda por texto/voz/velocidad para no regenerarlo.
+    router.post('/speech', auth, wrap(async (req) => {
+      if (!tts?.enabled) return { available: false };
+      const text = String(req.body.text || '').replace(/\*\*/g, '').trim().slice(0, 1200);
+      if (!text) return { available: false };
+      const voice = String(req.body.voice || env.KOKORO_TTS_VOICE || 'af_heart');
+      const rate = Math.max(.5, Math.min(1.5, Number(req.body.rate) || 1));
+      const cacheKey = createHash('sha256').update(JSON.stringify({ text, voice, rate })).digest('hex');
+      const cache = await svc('speech_cache');
+      const hits = await cache.readByQuery({ filter: { cache_key: { _eq: cacheKey } }, fields: ['file'], limit: 1 });
+      if (hits[0]?.file) return { available: true, file: hits[0].file, cached: true };
+      const audio = await tts.generate(text, { voice, rate });
+      const file = await new FilesService({ schema: await getSchema() }).uploadOne(Readable.from(audio.buffer), {
+        storage: String(env.STORAGE_LOCATIONS || 'local').split(',')[0],
+        filename_download: `speech-${cacheKey}.${audio.type.includes('wav') ? 'wav' : 'mp3'}`,
+        type: audio.type, title: `Memora · ${text.slice(0, 80)}`,
+      });
+      await cache.createOne({ cache_key: cacheKey, text, voice, rate, file });
+      return { available: true, file, cached: false };
+    }));
+
+    router.post('/define', paid, wrap(async (req) => llm.json([
+      { role: 'system', content: 'Profesor de inglés para un hispanohablante A2. Explica UNA palabra o bloque inglés de forma muy breve y práctica. Da su significado más útil EN EL CONTEXTO, una nota si es un falso amigo o tiene una trampa, y un ejemplo A2 corto. Responde SOLO JSON: {"term":"","meaning_es":"","note_es":"","example_en":""}.' },
+      { role: 'user', content: `Término: "${String(req.body.term || '').slice(0, 80)}"\nContexto: "${String(req.body.context || '').slice(0, 500)}"` },
+    ], { model: model(req), temperature: 0.2 })));
+
     router.post('/story', paid, wrap(async (req) => llm.json([
-      { role: 'system', content: 'Historia corta, divertida y absurda (120-180 palabras) en inglés A2 con el máximo de las palabras dadas, marcadas con **negrita**. Responde SOLO JSON: {"title":"","story_en":"","story_es":"","questions":[{"q":"","a":""}]} con 3 preguntas.' },
+      { role: 'system', content: 'Historia corta, divertida y absurda (120-180 palabras) en inglés A2 con el máximo de las palabras dadas, marcadas con **negrita**. Incluye UNA estructura gramatical útil que aparezca de verdad en la historia. Responde SOLO JSON: {"title":"","story_en":"","story_es":"","grammar_focus":{"title":"","pattern":"","explanation_es":"","examples":[{"en":"","es":""},{"en":"","es":""}]},"questions":[{"q":"","a":""}]} con 3 preguntas.' },
       { role: 'user', content: `Palabras: ${(req.body.words || []).slice(0, 40).join(', ')}` },
     ], { model: model(req) })));
 

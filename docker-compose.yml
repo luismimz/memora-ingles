@@ -12,6 +12,14 @@ services:
     expose:
       - "80"
 
+  # Voz neuronal natural para historias, frases y diálogos.
+  # La imagen CPU funciona sin GPU y el modelo viene incluido; Coolify no publica este puerto.
+  tts:
+    image: ghcr.io/remsky/kokoro-fastapi-cpu:latest
+    restart: unless-stopped
+    expose:
+      - "8880"
+
   directus:
     build:
       context: .
@@ -20,6 +28,8 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      tts:
+        condition: service_started
     volumes:
       - uploads:/directus/uploads
     environment:
@@ -46,6 +56,11 @@ services:
       CANDIDATES_PROVIDER: ${CANDIDATES_PROVIDER:-datamuse}
       IMAGE_PROVIDER: ${IMAGE_PROVIDER:-pollinations}
       SENTENCES_PROVIDER: ${SENTENCES_PROVIDER:-tatoeba}
+      TTS_PROVIDER: ${TTS_PROVIDER:-kokoro}
+      KOKORO_TTS_URL: ${KOKORO_TTS_URL:-http://tts:8880}
+      KOKORO_TTS_API_KEY: ${KOKORO_TTS_API_KEY:-}
+      KOKORO_TTS_MODEL: ${KOKORO_TTS_MODEL:-kokoro}
+      KOKORO_TTS_VOICE: ${KOKORO_TTS_VOICE:-af_heart}
       # Recuperar contraseña (email con enlace a https://tu-dominio/reset)
       PASSWORD_RESET_URL_ALLOW_LIST: ${APP_URL}/reset
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}

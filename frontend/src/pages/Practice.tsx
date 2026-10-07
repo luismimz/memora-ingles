@@ -3,6 +3,7 @@ import { structureFor } from '../data/structures';
 import { useStore } from '../store';
 
 const MODES = [
+  { to: '/practica/hablar', ico: '🗣️', title: 'Hablar desde el principio', desc: 'Palabras frecuentes y patrones para responder, preguntar y ganar confianza.' },
   { to: '/practica/escalera', ico: '🪜', title: 'Frase escalera', desc: 'De «quiero» a una frase larga, pieza a pieza.' },
   { to: '/practica/frases', ico: '📝', title: 'Mis frases', desc: 'Tu banco de frases útiles, corregidas por la IA.' },
   { to: '/practica/conversacion', ico: '💬', title: 'Conversación', desc: 'Habla con la IA usando tus palabras.', ai: true },

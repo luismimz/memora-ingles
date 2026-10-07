@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Modal, Spinner } from '../components/common';
+import { Modal, SpeakBtn, Spinner } from '../components/common';
 import { ExposureCard } from '../components/ExposureCard';
 import { items } from '../lib/api';
 import { normalize } from '../lib/answer';
 import { isLeech, STEP_LABEL } from '../lib/srs';
 import { useStore } from '../store';
-import type { Attempt, Progress, Word } from '../types';
+import type { Attempt, PersonalVocabulary, Progress, Word } from '../types';
 
 type Filter = 'mine' | 'learning' | 'mastered' | 'leech' | 'known' | 'all';
 const FILTERS: [Filter, string][] = [['mine', 'Mis palabras'], ['learning', 'Aprendiendo'], ['mastered', 'Dominadas'], ['leech', '😈 Rebeldes'], ['known', 'Ya sabía'], ['all', 'Todas']];
@@ -23,6 +23,9 @@ export function Words() {
   const [q, setQ] = useState('');
   const [filter, setFilter] = useState<Filter>('mine');
   const [open, setOpen] = useState<Word | null>(null);
+  const [captured, setCaptured] = useState<PersonalVocabulary[] | null>(null);
+
+  useEffect(() => { items.list<PersonalVocabulary>('personal_vocabulary', { sort: '-created_at' }).then(setCaptured).catch(() => setCaptured([])); }, []);
 
   const list = useMemo(() => {
     const nq = normalize(q);
@@ -48,6 +51,17 @@ export function Words() {
         ))}
       </div>
       <div className="small muted">{list.length} palabras</div>
+      {captured && captured.length > 0 && <div className="card stack">
+        <div className="spread"><h2 style={{ margin: 0 }}>📌 Mi vocabulario capturado</h2><span className="chip primary">{captured.length}</span></div>
+        <p className="small muted" style={{ margin: 0 }}>Palabras que guardaste mientras leías o escuchabas. Son las que te interesaron de verdad.</p>
+        {captured.slice(0, 30).map((entry) => <div className="list-item" key={entry.id} style={{ cursor: 'default' }}>
+          <div className="grow"><b>{entry.term}</b> <span className="muted">{entry.meaning_es}</span>
+            {entry.note_es && <div className="small muted">{entry.note_es}</div>}
+            {entry.example_en && <div className="small">{entry.example_en}</div>}
+          </div>
+          <SpeakBtn text={entry.term} />
+        </div>)}
+      </div>}
       <div className="card" style={{ padding: '4px 14px' }}>
         {list.length === 0 && <p className="muted small" style={{ padding: '10px 0' }}>Nada por aquí.</p>}
         {list.slice(0, 300).map((w) => (

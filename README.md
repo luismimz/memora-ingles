@@ -22,6 +22,7 @@ App web (instalable en el móvil) para aprender **100 palabras al día** con el 
 - **«No me funciona»**: otra asociación (IA), crear la mía (con medidor fonético y candidatas) o seguir sin mnemotecnia.
 - **Estadísticas por asociación** (`/memora/mnemonic-stats`, pestaña «Progreso → Asociaciones»): retención a +1 h, +24 h, +7 d y +30 d por asociación, por origen, por calidad del sonido, por tipo de palabra y con o sin pistas.
 - **Proveedores intercambiables** (`backend/extensions/memora-ai/dist/providers/`): LLM (OpenRouter), pronunciación y candidatas (Datamuse), imágenes (Pollinations gratis u OpenRouter), frases reales (Tatoeba) y voz (Web Speech, en `frontend/src/lib/speech.ts`). Se eligen con `*_PROVIDER`; el núcleo (`core/keywords.js`) no cambia.
+- **Voz natural opcional**: el backend admite un servidor Kokoro compatible con OpenAI (`TTS_PROVIDER=kokoro`, `KOKORO_TTS_URL=...`). Las frases se generan una vez, se guardan en caché en Directus y el navegador vuelve a Web Speech si el servicio no está disponible. La URL y la clave permanecen solo en el backend.
 - **Prueba piloto**: `content/pilot.json` (20 palabras) → informe de tiempo por palabra, recuerdo inmediato y cuestionario.
 
 ## Estructura
@@ -61,6 +62,7 @@ Panel de Directus: http://localhost:8055. Ahí puedes editar palabras y asociaci
    - `APP_URL=https://ingles.luismontalvan.com` y `PUBLIC_URL=https://ingles.luismontalvan.com/api`
    - `DIRECTUS_SECRET` (`openssl rand -hex 32`), `ADMIN_EMAIL`, `ADMIN_PASSWORD`, `DB_PASSWORD`
    - `OPENROUTER_API_KEY` (https://openrouter.ai/keys) y, si quieres, `OPENROUTER_MODELS`
+   - Voz natural incluida: el `docker-compose.yml` levanta el servicio interno `tts` (Kokoro CPU). Si usas un servidor externo, cambia `TTS_PROVIDER` y `KOKORO_TTS_URL` para apuntar a un endpoint compatible con `POST /v1/audio/speech`; `KOKORO_TTS_VOICE` usa `af_heart` por defecto.
    - Recomendado: `AI_ALLOWED_EMAILS=tu@email` para que nadie más gaste tu saldo de IA
    - Para «¿Has olvidado la contraseña?»: `EMAIL_FROM`, `EMAIL_SMTP_HOST`, `EMAIL_SMTP_PORT`, `EMAIL_SMTP_USER`, `EMAIL_SMTP_PASSWORD` (cualquier SMTP). Sin SMTP, la contraseña se puede cambiar desde el panel de Directus (Usuarios).
 5. Deploy. Al arrancar, Directus crea solo el esquema y carga el contenido (es idempotente).

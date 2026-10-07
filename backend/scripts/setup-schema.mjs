@@ -75,6 +75,14 @@ collections.pilot_reports = {
   meta: { icon: 'science', note: 'Resultados y opinión de la prueba piloto de 20 palabras.' },
   fields: [pk, owner(), json('data'), json('ratings'), text('comment'), created],
 };
+collections.personal_vocabulary = {
+  meta: { icon: 'bookmark_add', note: 'Palabras y bloques que el alumno guarda al leer o escuchar contenido.' },
+  fields: [pk, owner(), str('term'), str('meaning_es'), text('note_es'), text('example_en'), text('context_en'), str('source'), created],
+};
+collections.speech_cache = {
+  meta: { icon: 'record_voice_over', note: 'Audio natural generado una vez y reutilizado por texto, voz y velocidad.' },
+  fields: [pk, str('cache_key'), text('text'), str('voice'), float('rate', 1), m2o('file', 'uuid'), created],
+};
 
 const relations = [
   ['mnemonics', 'word', 'words', 'CASCADE'],
@@ -95,6 +103,8 @@ const relations = [
   ['mnemonic_feedback', 'word', 'words', 'CASCADE'],
   ['mnemonic_feedback', 'mnemonic', 'mnemonics', 'SET NULL'],
   ['pilot_reports', 'user', 'directus_users', 'CASCADE'],
+  ['personal_vocabulary', 'user', 'directus_users', 'CASCADE'],
+  ['speech_cache', 'file', 'directus_files', 'CASCADE'],
 ];
 
 async function ensureCollections() {
@@ -152,7 +162,7 @@ async function ensureLearnerRole() {
   add('mnemonics', 'create', {}, { presets: { owner: '$CURRENT_USER', source: 'user' }, validation: { owner: { _eq: '$CURRENT_USER' } } });
   add('mnemonics', 'update', { owner: { _eq: '$CURRENT_USER' } }, { validation: { owner: { _eq: '$CURRENT_USER' } } });
   add('mnemonics', 'delete', { owner: { _eq: '$CURRENT_USER' } });
-  for (const c of ['progress', 'attempts', 'study_days', 'sentences', 'verb_progress', 'profiles', 'mnemonic_feedback', 'pilot_reports']) {
+  for (const c of ['progress', 'attempts', 'study_days', 'sentences', 'verb_progress', 'profiles', 'mnemonic_feedback', 'pilot_reports', 'personal_vocabulary']) {
     for (const action of ['create', 'read', 'update', 'delete']) add(c, action, action === 'create' ? {} : mine);
   }
   add('directus_users', 'read', { id: { _eq: '$CURRENT_USER' } }, { fields: ['id', 'email', 'first_name', 'last_name', 'role'] });
