@@ -8,16 +8,20 @@ export function kokoroTts(env) {
     enabled: Boolean(base),
     async voices() {
       if (!base) return [];
-      const res = await fetch(`${base}/v1/audio/voices`);
-      if (!res.ok) throw new Error(`Kokoro voices ${res.status}`);
-      const data = await res.json();
-      return Array.isArray(data.voices) ? data.voices.map((v) => typeof v === 'string' ? { id: v, name: v } : { id: v.id, name: v.name || v.id }).filter((v) => v.id) : [];
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), 4_000);
+      try {
+        const res = await fetch(`${base}/v1/audio/voices`, { signal: ctrl.signal });
+        if (!res.ok) throw new Error(`Kokoro voices ${res.status}`);
+        const data = await res.json();
+        return Array.isArray(data.voices) ? data.voices.map((v) => typeof v === 'string' ? { id: v, name: v } : { id: v.id, name: v.name || v.id }).filter((v) => v.id) : [];
+      } finally { clearTimeout(timer); }
     },
     async generate(text, { voice, rate } = {}) {
       if (!base) throw new Error('KOKORO_TTS_URL no está configurado');
       const headers = { 'content-type': 'application/json', ...(key ? { authorization: `Bearer ${key}` } : {}) };
       const ctrl = new AbortController();
-      const timer = setTimeout(() => ctrl.abort(), 60_000);
+      const timer = setTimeout(() => ctrl.abort(), 20_000);
       try {
         const res = await fetch(`${base}/v1/audio/speech`, {
           method: 'POST', headers,

@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ErrorBox, ProgressBar, Rich, shuffle, SpeakBtn, Spinner } from '../components/common';
+import { ErrorBox, playNaturalFast, ProgressBar, Rich, shuffle, SpeakBtn, Spinner } from '../components/common';
 import data from '../../../content/irregular_verbs.json';
 import { items } from '../lib/api';
 import { checkAnswer } from '../lib/answer';
@@ -91,6 +91,10 @@ function VerbLesson({ list, onResult, onExit }: { list: IrregularVerb[]; onResul
   const v = list[i];
   const total = useMemo(() => list.length, [list]);
 
+  useEffect(() => {
+    if (stage === 'learn' && revealed) playNaturalFast(`${v.base}, ${v.past}, ${v.participle}`);
+  }, [stage, revealed, v]);
+
   if (!v) return (
     <div className="card center stack"><div style={{ fontSize: '2.5rem' }}>🏁</div><b>{okCount}/{total} perfectos</b><button className="btn" onClick={onExit}>Volver</button></div>
   );
@@ -109,7 +113,7 @@ function VerbLesson({ list, onResult, onExit }: { list: IrregularVerb[]; onResul
       <button className="btn ghost" style={{ alignSelf: 'flex-start' }} onClick={onExit}>✕ Salir</button>
       <div className="spread"><div><span className="eyebrow">FASE 1 · ASOCIAR Y ESCUCHAR</span><h1>{v.base}</h1></div><span className="chip primary">{i + 1}/{total}</span></div>
       <ProgressBar value={i} max={total} />
-      <div className="card verb-lesson-card stack"><div className="verb-meaning">{v.es}</div><div className="small muted">Familia: {FAMILIES.find((f) => f.key === v.family)?.name}</div><button className="btn big secondary" onClick={() => setRevealed(true)}>{revealed ? '✅ Formas visibles' : '👀 Ver y escuchar la secuencia'}</button>{revealed && <><div className="verb-forms large"><span>{v.base}</span><i>→</i><span>{v.past}</span><i>→</i><span>{v.participle}</span></div><div className="row"><SpeakBtn text={`${v.base}, ${v.past}, ${v.participle}`} title="Escuchar secuencia" natural /><span className="small muted">Escúchalo dos veces como una sola unidad.</span></div>{v.mnemonic_es && <div className="trick-box"><span className="lbl">Asociación</span><Rich text={v.mnemonic_es} /></div>}<div className="example"><div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><b>{v.example_en}</b><SpeakBtn text={v.example_en} natural /></div><span className="small muted">Ahora observa la forma dentro de una frase real.</span></div><button className="btn" onClick={() => setStage('recall')}>Tapar y recuperarlo →</button></>}</div>
+      <div className="card verb-lesson-card stack"><div className="verb-meaning">{v.es}</div><div className="small muted">Familia: {FAMILIES.find((f) => f.key === v.family)?.name}</div><button className="btn big secondary" onClick={() => setRevealed(true)}>{revealed ? '✅ Formas visibles · escuchadas' : '👀 Ver la secuencia'}</button>{revealed && <><div className="verb-forms large"><span>{v.base}</span><i>→</i><span>{v.past}</span><i>→</i><span>{v.participle}</span></div><div className="auto-listen-status">🔊 Se ha reproducido automáticamente · repítelo como una unidad</div>{v.mnemonic_es && <div className="trick-box"><span className="lbl">Asociación</span><Rich text={v.mnemonic_es} /></div>}<div className="example"><div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><b>{v.example_en}</b><SpeakBtn text={v.example_en} natural /></div><span className="small muted">Ahora observa la forma dentro de una frase real.</span></div><button className="btn" onClick={() => setStage('recall')}>Tapar y recuperarlo →</button></>}</div>
     </div>
   );
 

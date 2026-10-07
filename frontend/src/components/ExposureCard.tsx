@@ -2,10 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { KIND_LABEL } from '../../../shared/classify.mjs';
 import { englishPhones, scoreKeyword, verdictFor } from '../../../shared/phonetics.mjs';
 import { ai, assetUrl, items } from '../lib/api';
-import { speak } from '../lib/speech';
 import { USES_KEYWORD, useStore } from '../store';
 import type { Mnemonic, Word } from '../types';
-import { ErrorBox, Modal, Rich, SpeakBtn, Spinner, toast } from './common';
+import { ErrorBox, Modal, playNaturalFast, Rich, SpeakBtn, Spinner, toast } from './common';
 
 export interface MnemonicChoice { mode: 'auto' | 'none'; mnemonic: Mnemonic | null }
 
@@ -43,7 +42,7 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
   const m = noneChosen ? null : (choice?.mnemonic ?? store.activeMnemonic(word.id));
 
   useEffect(() => { started.current = Date.now(); setSecs(0); setShowEn(false); setMore(variant === 'detail'); }, [word.id, variant]);
-  useEffect(() => { if (autoSpeak) speak(word.en); }, [word.id, autoSpeak, word.en]);
+  useEffect(() => { if (autoSpeak) return playNaturalFast(word.en); return undefined; }, [word.id, autoSpeak, word.en]);
   useEffect(() => {
     if (variant !== 'learn') return;
     const t = setInterval(() => setSecs(Math.floor((Date.now() - started.current) / 1000)), 500);

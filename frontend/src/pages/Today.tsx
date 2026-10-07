@@ -20,8 +20,12 @@ export function Today() {
   const structure = structureFor(currentDay);
   const palace = palaceFor(currentDay);
   const sessionDone = learnedToday >= goal;
-  const recallDone = due.length === 0;
-  const phase = sessionDone ? (recallDone ? 3 : 1) : learnedToday > 0 ? 2 : 1;
+  const phase = due.length > 0 ? 3 : sessionDone ? 3 : learnedToday > 0 ? 2 : 1;
+  const nextAction = due.length > 0
+    ? { eyebrow: 'PASO 1 · CONSOLIDAR', title: 'Rescata lo que ya aprendiste', text: `${due.length} ${due.length === 1 ? 'unidad te espera' : 'unidades te esperan'} antes de añadir algo nuevo.`, to: '/repaso', label: 'Empezar repaso' }
+    : !sessionDone
+      ? { eyebrow: 'PASO 1 · RECORDAR', title: learnedToday ? 'Continúa donde lo dejaste' : 'Tu primera misión del día', text: learnedToday ? 'Termina la habitación actual y construye una base sólida.' : 'Diez unidades, una asociación visual y una frase que puedas usar.', to: '/sesion', label: learnedToday ? 'Continuar sesión' : 'Empezar con 10' }
+      : { eyebrow: 'PASO 2 · HACERLO TUYO', title: 'Ahora haz que salga de ti', text: 'Convierte las palabras en una respuesta, una historia y una conversación.', to: '/practica/hablar', label: 'Abrir práctica' };
 
   return (
     <div className="stack today-page">
@@ -30,6 +34,8 @@ export function Today() {
       <div className="method-rail"><div className={`method-step ${phase >= 1 ? 'active' : ''}`}><span>1</span><div><b>Recordar</b><small>asociación + imagen</small></div></div><div className="method-line" /><div className={`method-step ${phase >= 2 ? 'active' : ''}`}><span>2</span><div><b>Usar</b><small>frases + historia</small></div></div><div className="method-line" /><div className={`method-step ${phase >= 3 ? 'active' : ''}`}><span>3</span><div><b>Consolidar</b><small>repaso espaciado</small></div></div></div>
 
       {due.length > 0 && <Link to="/repaso" className="priority-banner link"><span className="priority-icon">🔁</span><div className="grow"><b>Antes de aprender algo nuevo</b><span>{due.length} {due.length === 1 ? 'palabra necesita' : 'palabras necesitan'} que compruebes si siguen en tu memoria.</span></div><strong>Repasar →</strong></Link>}
+
+      <section className="guided-start"><div className="guided-start-copy"><span className="eyebrow light">{nextAction.eyebrow}</span><h2>{nextAction.title}</h2><p>{nextAction.text}</p><Link to={nextAction.to} className="btn guided-start-action">{nextAction.label} →</Link></div><div className="guided-start-map"><div className={`guided-node ${phase >= 1 ? 'active' : ''}`}><span>🧠</span><b>Recordar</b><small>imagen + sonido</small></div><div className="guided-connector" /><div className={`guided-node ${phase >= 2 ? 'active' : ''}`}><span>🗣️</span><b>Usar</b><small>frases propias</small></div><div className="guided-connector" /><div className={`guided-node ${phase >= 3 ? 'active' : ''}`}><span>🏆</span><b>Consolidar</b><small>repaso espaciado</small></div></div></section>
 
       <section className="daily-hero"><div className="daily-hero-top"><span className="eyebrow light">FASE 1 · PALACIO DE LA MEMORIA</span><span className="hero-day">{palace.emoji} {palace.name}</span></div><h2>{sessionDone ? 'Tu sesión base está completa 🎉' : 'Construye una base que puedas usar'}</h2><p>{sessionDone ? 'Ahora conviértela en frases, escucha la historia y habla con ella.' : `${goal} unidades pequeñas: palabras, bloques y estructuras que volverán a aparecer en contexto.`}</p><div className="daily-progress"><div className="spread small"><span>{learnedToday} / {goal} unidades</span><b>{Math.round(Math.min(learnedToday / Math.max(goal, 1), 1) * 100)}%</b></div><ProgressBar value={learnedToday} max={goal} /></div><Link to="/sesion" className="btn hero-action">{sessionDone ? 'Seguir practicando →' : learnedToday ? 'Continuar sesión →' : 'Empezar sesión →'}</Link></section>
 

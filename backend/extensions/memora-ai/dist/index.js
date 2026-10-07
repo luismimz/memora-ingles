@@ -174,8 +174,9 @@ export default {
       const cacheKey = createHash('sha256').update(JSON.stringify({ text, voice, rate })).digest('hex');
       // No dependemos de la relación antigua speech_cache.file: si el esquema
       // de Directus tiene relaciones dañadas, TTS debe seguir pudiendo generar.
-      const cache = await svc('speech_cache_v2');
+      let cache = null;
       try {
+        cache = await svc('speech_cache_v2');
         const hits = await cache.readByQuery({ filter: { cache_key: { _eq: cacheKey } }, fields: ['file_id'], limit: 1 });
         if (hits[0]?.file_id) return { available: true, file: hits[0].file_id, cached: true };
       } catch (e) { logger.warn(e, 'memora: speech cache read skipped'); }
@@ -185,7 +186,7 @@ export default {
         filename_download: `speech-${cacheKey}.${audio.type.includes('wav') ? 'wav' : 'mp3'}`,
         type: audio.type, title: `Memora · ${text.slice(0, 80)}`,
       });
-      try { await cache.createOne({ cache_key: cacheKey, text, voice, rate, file_id: file }); }
+      try { if (cache) await cache.createOne({ cache_key: cacheKey, text, voice, rate, file_id: file }); }
       catch (e) { logger.warn(e, 'memora: speech cache write skipped'); }
       return { available: true, file, cached: false };
     }));

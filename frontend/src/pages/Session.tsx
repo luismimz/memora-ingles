@@ -122,6 +122,8 @@ export function Session() {
         <Link to="/" className="btn ghost" style={{ alignSelf: 'flex-start' }}>← Hoy</Link>
         <h1>🧠 Sesión del día {day?.day ?? currentDay}</h1>
 
+        <section className="session-start-banner"><div><span className="eyebrow light">RUTA RECOMENDADA · SIN PENSAR QUÉ TOCA</span><h2>Una sesión corta que termina en una victoria</h2><p>Memora te guía: primero asocias, después recuperas y al final compruebas si realmente se ha quedado.</p><div className="session-plan"><span>🧠 Asociar</span><i>→</i><span>🗣️ Usar</span><i>→</i><span>🏆 Comprobar</span></div></div><button className="btn session-start-action" onClick={() => start(false)}>Empezar recorrido →</button></section>
+
         {pilotWords.length > 0 && pilotDone === false && (
           <div className="card hero stack">
             <h2 style={{ color: '#fff', margin: 0 }}>🧪 Empieza por la prueba piloto</h2>

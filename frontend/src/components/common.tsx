@@ -2,11 +2,28 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { speak } from '../lib/speech';
 import { naturalSpeech } from '../lib/api';
 
-export function SpeakBtn({ text, title = 'Escuchar', slow = false, natural = false }: { text: string | null | undefined; title?: string; slow?: boolean; natural?: boolean }) {
+/** Voz natural sin bloquear la práctica: si Kokoro tarda, se usa el navegador. */
+export function playNaturalFast(text: string, slow = false, timeout = 1400) {
+  let fallbackUsed = false;
+  let settled = false;
+  let cancelled = false;
+  const fallback = () => { if (cancelled || settled || fallbackUsed) return; fallbackUsed = true; speak(text, slow ? { rate: 0.6 } : {}); };
+  const timer = window.setTimeout(fallback, timeout);
+  naturalSpeech(text, { rate: slow ? 0.65 : 1 }).then((url) => {
+    if (cancelled) return;
+    settled = true; window.clearTimeout(timer);
+    if (fallbackUsed) return;
+    if (url) new Audio(url).play().catch(() => speak(text, slow ? { rate: 0.6 } : {}));
+    else speak(text, slow ? { rate: 0.6 } : {});
+  }).catch(() => { if (cancelled) return; window.clearTimeout(timer); if (!fallbackUsed) fallback(); settled = true; });
+  return () => { cancelled = true; window.clearTimeout(timer); };
+}
+
+export function SpeakBtn({ text, title = 'Escuchar', slow = false, natural = true }: { text: string | null | undefined; title?: string; slow?: boolean; natural?: boolean }) {
   if (!text) return null;
   return (
     <button type="button" className="icon-btn" title={title} aria-label={title}
-      onClick={(e) => { e.stopPropagation(); if (natural) naturalSpeech(text, { rate: slow ? 0.65 : 1 }).then((url) => { if (url) { const audio = new Audio(url); audio.play().catch(() => speak(text, slow ? { rate: 0.6 } : {})); } else speak(text, slow ? { rate: 0.6 } : {}); }).catch(() => speak(text, slow ? { rate: 0.6 } : {})); else speak(text, slow ? { rate: 0.6 } : {}); }}>
+      onClick={(e) => { e.stopPropagation(); if (natural) playNaturalFast(text, slow); else speak(text, slow ? { rate: 0.6 } : {}); }}>
       {slow ? '🐢' : '🔊'}
     </button>
   );

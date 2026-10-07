@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { ErrorBox, shuffle } from '../../components/common';
-import { naturalSpeech } from '../../lib/api';
+import { ErrorBox, playNaturalFast, shuffle } from '../../components/common';
 import { sentenceScore } from '../../lib/answer';
-import { canListen, listen, speak } from '../../lib/speech';
+import { canListen, listen } from '../../lib/speech';
 import { useStore } from '../../store';
 import { BackHeader, NeedsWords, useLearnedWords } from './shared';
 import { SentenceDiff } from '../../components/SentenceDiff';
@@ -28,12 +27,7 @@ export function Speak() {
     const key = `${i}-${sentences}`;
     if (played.current === key) return;
     played.current = key;
-    let cancelled = false;
-    naturalSpeech(target).then((url) => {
-      if (cancelled) return;
-      if (url) new Audio(url).play().catch(() => speak(target)); else speak(target);
-    }).catch(() => { if (!cancelled) speak(target); });
-    return () => { cancelled = true; };
+    return playNaturalFast(target);
   }, [started, i, sentences, target, heard, listening, w]);
 
   if (!learned.length) return <div className="stack"><BackHeader title="🎤 Pronunciación" /><NeedsWords /></div>;

@@ -43,14 +43,15 @@ export const isLoggedIn = () => Boolean(tokens);
 export const assetUrl = (id: string, params = 'width=640&quality=80') =>
   `${BASE}/assets/${id}?${params}${tokens ? `&access_token=${tokens.access_token}` : ''}`;
 
-export async function request<T = unknown>(method: string, path: string, body?: unknown, retry = true): Promise<T> {
+export async function request<T = unknown>(method: string, path: string, body?: unknown, retry = true, signal?: AbortSignal): Promise<T> {
   if (tokens && Date.now() > tokens.expires_at) await refresh();
   const res = await fetch(`${BASE}${path}`, {
     method,
     headers: { 'content-type': 'application/json', ...(tokens ? { authorization: `Bearer ${tokens.access_token}` } : {}) },
     body: body === undefined ? undefined : JSON.stringify(body),
+    signal,
   });
-  if (res.status === 401 && retry && tokens && (await refresh())) return request(method, path, body, false);
+  if (res.status === 401 && retry && tokens && (await refresh())) return request(method, path, body, false, signal);
   const text = await res.text();
   const json = text ? JSON.parse(text) : {};
   if (!res.ok) {
@@ -93,13 +94,33 @@ export const items = {
 
 export const ai = <T>(path: string, body: Record<string, unknown>) => request<T>('POST', `/memora/${path}`, body);
 
+const pendingSpeech = new Map<string, Promise<string | null>>();
+const resolvedSpeech = new Map<string, string>();
 export async function naturalSpeech(text: string, opts: { voice?: string | null; rate?: number } = {}) {
   let preferredVoice = opts.voice || undefined;
   if (!preferredVoice) { try { preferredVoice = localStorage.getItem('memora.kokoroVoice') || undefined; } catch { /* almacenamiento opcional */ } }
-  const out = await request<{ available: boolean; file?: string }>('POST', '/memora/speech', { text, voice: preferredVoice, rate: opts.rate });
-  return out.available && out.file ? assetUrl(out.file, 'download=0') : null;
+  const key = JSON.stringify({ text, voice: preferredVoice, rate: opts.rate ?? 1 });
+  const cached = resolvedSpeech.get(key);
+  if (cached) return cached;
+  const current = pendingSpeech.get(key);
+  if (current) return current;
+  const run = (async () => {
+    const ctrl = new AbortController();
+    const timer = window.setTimeout(() => ctrl.abort(), 12_000);
+    try {
+      const out = await request<{ available: boolean; file?: string }>('POST', '/memora/speech', { text, voice: preferredVoice, rate: opts.rate }, true, ctrl.signal);
+      const url = out.available && out.file ? assetUrl(out.file, 'download=0') : null;
+      if (url) resolvedSpeech.set(key, url);
+      return url;
+    } finally { window.clearTimeout(timer); }
+  })();
+  pendingSpeech.set(key, run);
+  try { return await run; } finally { if (pendingSpeech.get(key) === run) pendingSpeech.delete(key); }
 }
 
 export async function naturalVoices() {
-  return request<{ provider: string; voices: { id: string; name: string }[] }>('GET', '/memora/voices');
+  const ctrl = new AbortController();
+  const timer = window.setTimeout(() => ctrl.abort(), 2500);
+  try { return await request<{ provider: string; voices: { id: string; name: string }[] }>('GET', '/memora/voices', undefined, true, ctrl.signal); }
+  finally { window.clearTimeout(timer); }
 }
