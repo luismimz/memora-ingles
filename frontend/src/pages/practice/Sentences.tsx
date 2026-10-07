@@ -56,7 +56,7 @@ export function Sentences() {
       <BackHeader title="📝 Mis frases" subtitle="Frases largas que vas a usar de verdad: trabajo, viajes, presentarte… Repítelas hasta que salgan solas." />
       <div className="card stack">
         <label className="field">¿Qué quieres saber decir? (en español)
-          <textarea value={es} onChange={(e) => setEs(e.target.value)} placeholder="Ej.: Llevo 30 días aprendiendo inglés y ya puedo pedir comida en un restaurante" style={{ minHeight: 70 }} />
+          <textarea value={es} onChange={(e) => setEs(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && store.aiInfo.enabled && es.trim()) { e.preventDefault(); translate(); } }} placeholder="Ej.: Llevo 30 días aprendiendo inglés y ya puedo pedir comida en un restaurante · Enter para traducir" style={{ minHeight: 70 }} />
         </label>
         {store.aiInfo.enabled && <button className="btn secondary" disabled={!es.trim() || !!busy} onClick={translate}>{busy === 'tr' ? '⏳' : '🤖'} ¿Cómo se dice?</button>}
         {tr && (
@@ -66,7 +66,7 @@ export function Sentences() {
           </div>
         )}
         <label className="field">Tu frase en inglés
-          <textarea value={en} onChange={(e) => { setEn(e.target.value); setFb(null); }} placeholder="Escríbela tú (o usa «¿Cómo se dice?»)" style={{ minHeight: 70 }} />
+          <textarea value={en} onChange={(e) => { setEn(e.target.value); setFb(null); }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && store.aiInfo.enabled && en.trim()) { e.preventDefault(); correct(); } }} placeholder="Escríbela tú (o usa «¿Cómo se dice?») · Enter para corregir" style={{ minHeight: 70 }} />
         </label>
         <div className="row">
           {en && <SpeakBtn text={en} />}
@@ -120,9 +120,9 @@ function Drill({ list, onExit }: { list: Sentence[]; onExit: () => void }) {
       <span className="small muted">{i + 1}/{list.length}</span>
       <div className="card stack">
         <div className="big-prompt" style={{ fontSize: '1.3rem' }}>{s.es}</div>
-        <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Dilo en voz alta y escríbelo…" readOnly={score !== null} style={{ minHeight: 70 }} />
+        <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && score === null) { e.preventDefault(); setScore(sentenceScore(answer, s.en)); speak(s.en); } }} placeholder="Dilo en voz alta y escríbelo… · Enter para validar" readOnly={score !== null} style={{ minHeight: 70 }} />
         {score === null ? (
-          <button className="btn" onClick={() => { setScore(sentenceScore(answer, s.en)); speak(s.en); }}>Comprobar</button>
+          <button className="btn" onClick={() => { setScore(sentenceScore(answer, s.en)); speak(s.en); }}>Comprobar · Enter ↵</button>
         ) : (
           <>
             <SentenceDiff given={answer} expected={s.en} />

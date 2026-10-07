@@ -240,6 +240,10 @@ p { margin: 0 0 .75rem; }
 .media-card { border-left: 4px solid var(--accent); }
 .media-frame { position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 14px; background: #171717; }
 .media-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.creative-mission { padding: 15px; border: 1px solid color-mix(in srgb, var(--accent) 45%, var(--border)); border-radius: 16px; background: linear-gradient(120deg, var(--accent-soft), var(--surface)); }
+.creative-mission h3 { color: var(--accent); }
+.pronunciation-start { max-width: 620px; align-self: center; padding: 28px 22px; background: linear-gradient(135deg, var(--primary-soft), var(--surface)); }
+.auto-listen-status { padding: 8px 12px; border-radius: 999px; background: var(--primary-soft); color: var(--primary); font-size: .82rem; font-weight: 900; }
 .page-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; padding: 8px 0; }
 .page-heading h1 { margin: .3rem 0 .35rem; }
 .page-heading p { margin: 0; }

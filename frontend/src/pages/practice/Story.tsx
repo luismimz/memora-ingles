@@ -91,7 +91,7 @@ export function Story() {
               const ok = checked && (checkAnswer(answers[i] ?? '', q.a).correct || (answers[i] ?? '').toLowerCase().includes(q.a.toLowerCase()));
               return (
                 <label key={i} className="field">{q.q}
-                  <input type="text" value={answers[i] ?? ''} onChange={(e) => setAnswers((a) => { const c = [...a]; c[i] = e.target.value; return c; })} readOnly={checked} />
+                  <input type="text" value={answers[i] ?? ''} onChange={(e) => setAnswers((a) => { const c = [...a]; c[i] = e.target.value; return c; })} onKeyDown={(e) => { if (e.key === 'Enter' && !checked) { e.preventDefault(); setChecked(true); } }} placeholder="Enter para validar" readOnly={checked} />
                   {checked && <span className={`small ${ok ? '' : 'muted'}`}>{ok ? '✅' : '💡'} {q.a}</span>}
                 </label>
               );

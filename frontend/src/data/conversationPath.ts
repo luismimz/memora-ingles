@@ -17,6 +17,7 @@ export interface ConversationLesson {
   examples: [string, string][];
   challenge: [string, string];
   say: string;
+  mission: { title: string; prompt: string; required: string[]; hint: string };
 }
 
 /**
@@ -42,6 +43,7 @@ export const CONVERSATION_PATH: ConversationLesson[] = [
     ],
     challenge: ['De verdad quiero hablar inglés.', 'I really want to speak English.'],
     say: 'I really want to improve my English.',
+    mission: { title: 'Tu objetivo secreto', prompt: 'Tu amigo te pregunta qué quieres conseguir este mes. Responde con algo que sea verdad para ti.', required: ['really', 'want', 'to'], hint: 'Empieza: I really want to…' },
   },
   {
     id: 'actually',
@@ -61,6 +63,7 @@ export const CONVERSATION_PATH: ConversationLesson[] = [
     ],
     challenge: ['En realidad, no estoy seguro.', "Actually, I'm not sure."],
     say: "Actually, I'm not sure.",
+    mission: { title: 'Giro de guion', prompt: 'Acabas de corregir una idea que alguien tiene sobre ti. Aclárala con ACTUALLY.', required: ['actually'], hint: 'Empieza: Actually, …' },
   },
   {
     id: 'think-maybe',
@@ -80,6 +83,7 @@ export const CONVERSATION_PATH: ConversationLesson[] = [
     ],
     challenge: ['Creo que es una buena idea.', "I think it's a good idea."],
     say: "I think it's a good idea.",
+    mission: { title: 'Opinión inesperada', prompt: 'Te preguntan qué piensas de aprender inglés con historias. Da tu opinión y deja espacio para matizar.', required: ['i', 'think'], hint: 'Empieza: I think… / Maybe…' },
   },
   {
     id: 'questions',
@@ -99,6 +103,7 @@ export const CONVERSATION_PATH: ConversationLesson[] = [
     ],
     challenge: ['¿Dónde trabajas?', 'Where do you work?'],
     say: 'Where do you work?',
+    mission: { title: 'Pregunta que abre una charla', prompt: 'Conoces a alguien nuevo. Hazle una pregunta sobre dónde trabaja o estudia.', required: ['where', 'do', 'you'], hint: 'Empieza: Where do you…?' },
   },
   {
     id: 'depends',
@@ -118,6 +123,7 @@ export const CONVERSATION_PATH: ConversationLesson[] = [
     ],
     challenge: ['Depende de la situación.', 'It depends on the situation.'],
     say: 'It depends on the situation.',
+    mission: { title: 'Respuesta sin bloqueo', prompt: 'Alguien te pregunta si el inglés es difícil. Responde de forma natural: no todo es sí o no.', required: ['depends', 'on'], hint: 'Empieza: It depends on…' },
   },
   {
     id: 'polite-help',
@@ -137,5 +143,6 @@ export const CONVERSATION_PATH: ConversationLesson[] = [
     ],
     challenge: ['¿Podrías repetir eso, por favor?', 'Could you repeat that, please?'],
     say: 'Could you repeat that, please?',
+    mission: { title: 'Salvavidas en una conversación', prompt: 'No has entendido una frase de una película. Pide que la repitan con educación.', required: ['could', 'you', 'please'], hint: 'Empieza: Could you… please?' },
   },
 ];

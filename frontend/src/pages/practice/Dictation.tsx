@@ -49,7 +49,7 @@ export function Dictation() {
           <button className="btn big secondary" onClick={() => play(w.example_en!, 1)}>🔊 Escuchar</button>
           <button className="btn ghost" onClick={() => play(w.example_en!, .65)}>🐢 Despacio</button>
         </div>
-        <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} placeholder="Escribe lo que oyes…" readOnly={score !== null} autoCapitalize="sentences" style={{ minHeight: 70 }} />
+        <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && score === null) { e.preventDefault(); if (answer.trim()) check(); } }} placeholder="Escribe lo que oyes… · Enter para validar" readOnly={score !== null} autoCapitalize="sentences" style={{ minHeight: 70 }} />
         {score === null ? (
           <button className="btn" disabled={!answer.trim()} onClick={check}>Comprobar</button>
         ) : (

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { BackHeader } from './shared';
 import { CONVERSATION_PATH } from '../../data/conversationPath';
 import { sentenceScore } from '../../lib/answer';
+import { normalize } from '../../lib/answer';
 import { SentenceDiff } from '../../components/SentenceDiff';
 import { ProgressBar, SpeakBtn } from '../../components/common';
 
@@ -11,12 +12,21 @@ export function ConversationPath() {
   const [lessonIdx, setLessonIdx] = useState(0);
   const [answer, setAnswer] = useState('');
   const [checked, setChecked] = useState(false);
+  const [showExamples, setShowExamples] = useState(false);
+  const [creative, setCreative] = useState('');
+  const [creativeChecked, setCreativeChecked] = useState(false);
+  const [creativePassed, setCreativePassed] = useState(false);
   const lesson = CONVERSATION_PATH[lessonIdx];
   const score = checked ? sentenceScore(answer, lesson.challenge[1]) : 0;
   const passed = score >= .8;
 
   const changeLesson = (next: number) => {
-    setLessonIdx(next); setAnswer(''); setChecked(false);
+    setLessonIdx(next); setAnswer(''); setChecked(false); setShowExamples(false); setCreative(''); setCreativeChecked(false); setCreativePassed(false);
+  };
+  const validateCreative = () => {
+    const tokens = normalize(creative).split(' ').filter(Boolean);
+    const ok = lesson.mission.required.every((word) => tokens.includes(normalize(word)));
+    setCreativePassed(ok); setCreativeChecked(true);
   };
 
   return (
@@ -47,7 +57,9 @@ export function ConversationPath() {
 
       <div className="card stack">
         <h3 style={{ margin: 0 }}>Así suena en una conversación</h3>
-        {lesson.examples.map(([en, es]) => <div key={en} className="example">
+        <p className="small muted" style={{ margin: 0 }}>Escucha las frases, quédate con el patrón y después intenta crear una respuesta que no esté escrita aquí.</p>
+        <button className="btn ghost small" style={{ alignSelf: 'flex-start' }} onClick={() => setShowExamples((v) => !v)}>{showExamples ? 'Ocultar ejemplos' : '💡 Ver ejemplos (pista)'}</button>
+        {showExamples && lesson.examples.map(([en, es]) => <div key={en} className="example">
           <div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><b>{en}</b><SpeakBtn text={en} /></div>
           <div className="small muted">{es}</div>
         </div>)}
@@ -57,15 +69,20 @@ export function ConversationPath() {
       <div className="card stack">
         <span className="chip primary" style={{ alignSelf: 'flex-start' }}>Ahora tú</span>
         <div className="big-prompt" style={{ fontSize: '1.35rem' }}>{lesson.challenge[0]}</div>
-        <input className="answer-input" value={answer} onChange={(e) => { setAnswer(e.target.value); setChecked(false); }} placeholder="Escríbelo en inglés…" autoCapitalize="off" autoComplete="off" />
-        {!checked ? <button className="btn" disabled={!answer.trim()} onClick={() => setChecked(true)}>Comprobar</button> : <>
+        <form className="stack" onSubmit={(e) => { e.preventDefault(); if (answer.trim()) setChecked(true); }}>
+          <input className="answer-input" value={answer} onChange={(e) => { setAnswer(e.target.value); setChecked(false); }} placeholder="Escríbelo en inglés…" autoCapitalize="off" autoComplete="off" />
+          {!checked && <button className="btn" disabled={!answer.trim()}>Comprobar · Enter ↵</button>}
+        </form>
+        {!checked ? null : <>
           <div className={`feedback ${passed ? 'ok' : 'doubt'}`}>{passed ? '✅ ¡Bien! Ya puedes usar esta frase.' : '🔁 Casi. Mira las piezas que faltan y vuelve a intentarlo.'}</div>
           <SentenceDiff given={answer} expected={lesson.challenge[1]} />
           <div className="row"><SpeakBtn text={lesson.challenge[1]} /><b>{lesson.challenge[1]}</b></div>
+          {passed && <div className="creative-mission stack"><div className="spread"><span className="chip accent">⚡ MISIÓN BRILLANTE · +20</span><span className="small muted">No hay una única respuesta correcta</span></div><h3 style={{ margin: 0 }}>{lesson.mission.title}</h3><p style={{ margin: 0 }}>{lesson.mission.prompt}</p><div className="small muted">Pista: {lesson.mission.hint}</div>{!creativeChecked ? <form className="stack" onSubmit={(e) => { e.preventDefault(); if (creative.trim()) validateCreative(); }}><input className="answer-input" value={creative} onChange={(e) => { setCreative(e.target.value); setCreativeChecked(false); }} placeholder="Tu respuesta, con tus palabras…" autoCapitalize="off" autoComplete="off" /><button className="btn">Validar misión · Enter ↵</button></form> : <div className={`feedback ${creativePassed ? 'ok' : 'doubt'}`}>{creativePassed ? '🌟 ¡Misión superada! Has creado una frase tuya.' : `💡 Casi: intenta incluir ${lesson.mission.required.join(', ')}.`}</div>}</div>}
           <div className="row">
-            <button className="btn secondary grow" onClick={() => { setAnswer(''); setChecked(false); }}>Intentarlo otra vez</button>
-            {lessonIdx < CONVERSATION_PATH.length - 1 && <button className="btn grow" onClick={() => changeLesson(lessonIdx + 1)}>Siguiente →</button>}
+            <button className="btn secondary grow" onClick={() => { setAnswer(''); setChecked(false); setCreative(''); setCreativeChecked(false); setCreativePassed(false); }}>Intentarlo otra vez</button>
+            {lessonIdx < CONVERSATION_PATH.length - 1 && <button className="btn grow" disabled={passed && !creativeChecked} onClick={() => changeLesson(lessonIdx + 1)}>{passed && !creativeChecked ? 'Completa tu misión →' : 'Siguiente →'}</button>}
           </div>
+          {passed && !creativeChecked && <button className="text-link" onClick={() => setCreativeChecked(true)}>Saltar misión por ahora</button>}
         </>}
       </div>
     </div>
