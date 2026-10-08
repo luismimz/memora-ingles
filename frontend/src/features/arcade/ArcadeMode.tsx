@@ -75,6 +75,7 @@ export function ArcadeMode() {
           <small>COMBO</small>
           <strong>x{combo}</strong>
         </motion.div>
+        <MissionExit />
       </header>
       <div className="arcade-time-track" aria-label={`Quedan ${Math.ceil(timeLeftMs / 1000)} segundos`}>
         <motion.div animate={{ width: `${ratio * 100}%` }} transition={{ duration: .08, ease: 'linear' }} />
@@ -114,7 +115,12 @@ export function ArcadeMode() {
 }
 
 function ArcadeShell({ children }: { children: ReactNode }) {
-  return <main className="arcade-stage arcade-stage-centered">{children}</main>;
+  return <main className="arcade-stage arcade-stage-centered"><MissionExit />{children}</main>;
+}
+
+function MissionExit() {
+  const navigate = useNavigate();
+  return <button type="button" className="mission-exit arcade-mission-exit" onClick={() => navigate('/', { replace: true, state: null })}>✕ Salir al Inicio</button>;
 }
 
 function ArcadeIntro({ totalDue, onStart }: { totalDue: number; onStart: () => void }) {

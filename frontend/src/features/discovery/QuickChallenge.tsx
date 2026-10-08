@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
+import { useNavigate } from 'react-router-dom';
 import { Rich, SpeakBtn, toast } from '../../components/common';
 import { shuffle } from '../../components/common';
 import type { RecoveryQueueItem } from './discovery.types';
@@ -18,6 +19,7 @@ type ChallengePhase = 'intro' | 'answering' | 'correct' | 'wrong';
 
 /** Micro-reto táctil de cinco segundos que convierte la asociación en recuerdo. */
 export function QuickChallenge({ item, distractors, onResolve }: QuickChallengeProps) {
+  const navigate = useNavigate();
   const [phase, setPhase] = useState<ChallengePhase>('intro');
   const [selected, setSelected] = useState<string | null>(null);
   const startedAt = useRef(0);
@@ -82,6 +84,7 @@ export function QuickChallenge({ item, distractors, onResolve }: QuickChallengeP
           <p className="discovery-brand">MEMORA <span>RECUPERACIÓN</span></p>
           <p className="discovery-challenge-caption">Una conexión que acabas de guardar</p>
         </div>
+        <button type="button" className="mission-exit" onClick={() => navigate('/', { replace: true, state: null })}>✕ Salir al Inicio</button>
         <span className={`discovery-challenge-status ${phase}`}>
           {phase === 'intro' ? 'Preparado' : phase === 'answering' ? '⚡ 5s' : phase === 'correct' ? '+10 XP' : 'Vuelve a intentarlo'}
         </span>

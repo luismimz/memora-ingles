@@ -9,7 +9,7 @@ import { DEFAULT_SENTENCE_MISSION, type SentenceMission } from './sentenceMissio
 interface SentenceTile {
   id: string;
   word: string;
-  correctIndex: number | null;
+  normalized: string;
 }
 
 export { DEFAULT_SENTENCE_MISSION } from './sentenceMission';
@@ -45,19 +45,49 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
   const completionHandled = useRef(false);
   const activeMissionRef = useRef(activeMission.id);
 
+  const acceptedSequences = useMemo(() => {
+    const raw = activeMission.acceptedSentences?.length
+      ? activeMission.acceptedSentences
+      : [activeMission.correctWords.join(' ')];
+    return raw.map(tokenizeSentence).filter((sequence) => sequence.length > 0);
+  }, [activeMission]);
+
   const tiles = useMemo(() => {
-    const correct = activeMission.correctWords.map((word, correctIndex) => ({
-      id: `${activeMission.id}-correct-${correctIndex}`,
+    const maxCounts = new Map<string, number>();
+    const display = new Map<string, string>();
+    for (const sequence of acceptedSequences) {
+      const counts = new Map<string, number>();
+      for (const word of sequence) {
+        const normalized = normalizeToken(word);
+        counts.set(normalized, (counts.get(normalized) ?? 0) + 1);
+        if (!display.has(normalized)) display.set(normalized, word);
+      }
+      for (const [normalized, count] of counts) maxCounts.set(normalized, Math.max(maxCounts.get(normalized) ?? 0, count));
+    }
+
+    const answerWords: string[] = [];
+    const usedCounts = new Map<string, number>();
+    const addAnswerWord = (word: string) => {
+      const normalized = normalizeToken(word);
+      if (!normalized || (usedCounts.get(normalized) ?? 0) >= (maxCounts.get(normalized) ?? 0)) return;
+      answerWords.push(display.get(normalized) ?? word);
+      usedCounts.set(normalized, (usedCounts.get(normalized) ?? 0) + 1);
+    };
+    for (const word of acceptedSequences[0] ?? activeMission.correctWords) addAnswerWord(word);
+    for (const sequence of acceptedSequences) for (const word of sequence) addAnswerWord(word);
+
+    const correct = answerWords.map((word, index) => ({
+      id: `${activeMission.id}-correct-${index}`,
       word,
-      correctIndex,
+      normalized: normalizeToken(word),
     }));
     const distractors = (activeMission.distractors ?? []).map((word, index) => ({
       id: `${activeMission.id}-distractor-${index}`,
       word,
-      correctIndex: null,
+      normalized: normalizeToken(word),
     }));
-    return shuffle([...correct, ...distractors]);
-  }, [activeMission]);
+    return shuffle([...correct, ...distractors.filter((tile) => !maxCounts.has(tile.normalized))]);
+  }, [acceptedSequences, activeMission]);
 
   const selectedTiles = selectedIds.flatMap((id) => {
     const tile = tiles.find((candidate) => candidate.id === id);
@@ -102,15 +132,25 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
     window.setTimeout(() => setMistake((value) => (value === tile.id ? null : value)), 620);
   };
 
+  const isAcceptedPrefix = (candidate: SentenceTile[]) => acceptedSequences.some((sequence) => (
+    candidate.length <= sequence.length
+    && candidate.every((tile, index) => tile.normalized === normalizeToken(sequence[index]))
+  ));
+
+  const isAcceptedSentence = (candidate: SentenceTile[]) => acceptedSequences.some((sequence) => (
+    candidate.length === sequence.length
+    && candidate.every((tile, index) => tile.normalized === normalizeToken(sequence[index]))
+  ));
+
   const pickTile = (tile: SentenceTile) => {
     if (completed || selectedSet.has(tile.id)) return;
-    if (tile.correctIndex !== nextIndex) {
+    const nextSelected = [...selectedTiles, tile];
+    if (!isAcceptedPrefix(nextSelected)) {
       markMistake(tile);
       return;
     }
-    const nextSelected = [...selectedIds, tile.id];
-    setSelectedIds(nextSelected);
-    if (nextSelected.length === activeMission.correctWords.length) {
+    setSelectedIds(nextSelected.map((candidate) => candidate.id));
+    if (isAcceptedSentence(nextSelected)) {
       setCompleted(true);
       if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate([35, 45, 70]);
     }
@@ -134,12 +174,13 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
   };
 
   const sentence = selectedTiles.map((tile) => tile.word).join(' ');
+  const leaveMission = () => navigate('/', { replace: true, state: null });
 
   return (
     <main className={`sentence-stage ${completed ? 'is-complete' : ''}`}>
       <div className="sentence-shell">
         <header className="sentence-topbar">
-          <button type="button" className="sentence-back" onClick={() => navigate(-1)}>← Salir</button>
+          <button type="button" className="sentence-back mission-exit" onClick={leaveMission}>✕ Salir al Inicio</button>
           <span className="sentence-xp">Frase {queueIndex + 1}/{missionQueue.length} · ⚡ +{earnedXp || activeMission.xp || 25} XP</span>
         </header>
 
@@ -174,7 +215,7 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
         </section>
 
         <p className={`sentence-feedback ${mistake ? 'is-mistake' : ''}`} role="status">
-          {mistake ? 'Casi: empieza por la palabra que completa la frase.' : completed ? `✅ ${sentence}` : `Palabra ${Math.min(nextIndex + 1, activeMission.correctWords.length)} de ${activeMission.correctWords.length}`}
+          {mistake ? 'Esa palabra no abre ninguna frase válida todavía. Prueba otra pieza.' : completed ? `✅ ${sentence}` : `Palabra ${Math.min(nextIndex + 1, acceptedSequences[0]?.length ?? activeMission.correctWords.length)} de ${acceptedSequences[0]?.length ?? activeMission.correctWords.length}`}
         </p>
 
         <section className="sentence-tile-pool" aria-label="Palabras disponibles">
@@ -203,12 +244,33 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
           <motion.div className="sentence-success" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <span>🎉</span>
             <div><strong>Conexión convertida en lenguaje.</strong><small>Kokoro acaba de leer tu frase. Repítela en voz alta una vez.</small></div>
-            {queueIndex + 1 < missionQueue.length ? <button type="button" className="btn big sentence-next" onClick={() => setQueueIndex((index) => index + 1)}>Siguiente frase →</button> : <div className="row sentence-next-actions"><button type="button" className="btn big sentence-next" onClick={() => navigate('/descubrir')}>Otra conexión →</button><button type="button" className="btn secondary" onClick={() => navigate('/galeria')}>Ver galería</button></div>}
+            {queueIndex + 1 < missionQueue.length ? <button type="button" className="btn big sentence-next" onClick={() => setQueueIndex((index) => index + 1)}>Siguiente frase →</button> : <FinalMissionSummary onDiscover={() => navigate('/descubrir', { replace: true, state: null })} onHome={leaveMission} />}
           </motion.div>
         ) : (
           <p className="sentence-hint">Puedes tocar una ficha o arrastrarla a la línea. Si te equivocas, vuelve a intentarlo sin perder la racha.</p>
         )}
       </div>
     </main>
+  );
+}
+
+function tokenizeSentence(value: string) {
+  return value.match(/[A-Za-z]+(?:'[A-Za-z]+)?[!?.,]?/g) ?? [];
+}
+
+function normalizeToken(value: string) {
+  return value.toLowerCase().replace(/[!?.,]/g, '');
+}
+
+function FinalMissionSummary({ onDiscover, onHome }: { onDiscover: () => void; onHome: () => void }) {
+  return (
+    <section className="sentence-final-summary" aria-live="polite">
+      <span className="sentence-final-icon">🏁</span>
+      <div><strong>Ronda completada</strong><small>Has convertido todas las conexiones de esta cola en frases que puedes usar.</small></div>
+      <div className="row sentence-next-actions">
+        <button type="button" className="btn big sentence-next" onClick={onDiscover}>⚡ Descubrir 10 palabras NUEVAS</button>
+        <button type="button" className="btn secondary" onClick={onHome}>🏠 Volver al Inicio</button>
+      </div>
+    </section>
   );
 }

@@ -21,7 +21,7 @@ export function AlchemyChallenge({ challenge, onComplete, onNext, onExit }: Alch
   return (
     <main className={`alchemy-stage ${status === 'success' ? 'is-success' : ''}`}>
       <header className="alchemy-topbar">
-        <button type="button" className="alchemy-exit" onClick={onExit}>← Salir</button>
+        <button type="button" className="alchemy-exit mission-exit" onClick={onExit}>✕ Salir al Inicio</button>
         <div className="alchemy-brand"><span>MEMORA</span> ALQUIMIA</div>
         <span className="alchemy-xp">⚡ +{challenge.xp} XP</span>
       </header>
@@ -101,6 +101,15 @@ function AlchemyTokenCard({ token, index, active, register, onStart, onDrop }: {
   );
 }
 
-export function AlchemyEmpty({ children }: { children?: ReactNode }) {
-  return <main className="alchemy-stage alchemy-empty"><div className="alchemy-empty-card"><span>🧪</span><h1>Aún no hay piezas para fusionar</h1><p>Cuando el catálogo phrasal esté cargado, aquí podrás convertir dos palabras en una unidad que recuerdes.</p>{children}</div></main>;
+export function AlchemyEmpty({ children, onExit }: { children?: ReactNode; onExit?: () => void }) {
+  return (
+    <main className="alchemy-stage alchemy-empty">
+      <header className="alchemy-topbar">
+        <button type="button" className="alchemy-exit mission-exit" onClick={onExit}>✕ Salir al Inicio</button>
+        <div className="alchemy-brand"><span>MEMORA</span> ALQUIMIA</div>
+        <span className="alchemy-xp">⚗️ RUTA</span>
+      </header>
+      <div className="alchemy-empty-card"><span>🧪</span><h1>Aún no hay piezas para fusionar</h1><p>Cuando el catálogo phrasal esté cargado, aquí podrás convertir dos palabras en una unidad que recuerdes.</p>{children}</div>
+    </main>
+  );
 }

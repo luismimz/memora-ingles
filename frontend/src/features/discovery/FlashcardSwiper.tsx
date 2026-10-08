@@ -37,6 +37,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
   const [shakeToken, setShakeToken] = useState(0);
   const [showExhausted, setShowExhausted] = useState(false);
+  const leaveMission = () => navigate('/', { replace: true, state: null });
 
   // La narración empieza al entrar y vuelve a empezar solo cuando cambia la
   // tarjeta/asociación, nunca por cada render de la pantalla.
@@ -84,7 +85,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
   if (status === 'idle' || status === 'loading') {
     return (
       <main className="discovery-stage" aria-busy="true">
-        <DiscoveryTopbar progress={progress} />
+        <DiscoveryTopbar progress={progress} onExit={leaveMission} />
         <div className="discovery-loading" role="status">
           <motion.div className="discovery-loading-orb" animate={{ scale: [1, 1.08, 1], opacity: [0.65, 1, 0.65] }} transition={{ repeat: Infinity, duration: 1.4 }}>
             🧠
@@ -100,6 +101,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
   if (status === 'empty') {
     return (
       <main className="discovery-stage discovery-stage-centered">
+        <button type="button" className="mission-exit discovery-screen-exit" onClick={leaveMission}>✕ Salir al Inicio</button>
         <div className="discovery-complete-card">
           <span className="discovery-complete-icon">🧭</span>
           <p className="discovery-card-kicker">RUTA EN ESPERA</p>
@@ -114,6 +116,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
   if (status === 'complete') {
     return (
       <main className="discovery-stage discovery-stage-centered">
+        <button type="button" className="mission-exit discovery-screen-exit" onClick={leaveMission}>✕ Salir al Inicio</button>
         <div className="discovery-complete-card">
           <span className="discovery-complete-icon">🏆</span>
           <p className="discovery-card-kicker">RONDA COMPLETADA</p>
@@ -129,6 +132,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
   if (status === 'error' || !current) {
     return (
       <main className="discovery-stage discovery-stage-centered">
+        <button type="button" className="mission-exit discovery-screen-exit" onClick={leaveMission}>✕ Salir al Inicio</button>
         <div className="discovery-error-card">
           <span className="discovery-complete-icon">🧩</span>
           <h1>No pudimos preparar esta conexión</h1>
@@ -144,7 +148,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
 
   return (
     <main className="discovery-stage">
-      <DiscoveryTopbar progress={progress} />
+      <DiscoveryTopbar progress={progress} onExit={leaveMission} />
       <div className="discovery-deck" aria-live="polite">
         <AnimatePresence initial={false} mode="popLayout">
           <motion.div
@@ -179,7 +183,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
   );
 }
 
-function DiscoveryTopbar({ progress }: { progress: { current: number; total: number; accepted: number } }) {
+function DiscoveryTopbar({ progress, onExit }: { progress: { current: number; total: number; accepted: number }; onExit: () => void }) {
   const percentage = progress.total ? Math.min(100, ((progress.current - 1) / progress.total) * 100) : 0;
   return (
     <header className="discovery-topbar">
@@ -187,6 +191,7 @@ function DiscoveryTopbar({ progress }: { progress: { current: number; total: num
         <p className="discovery-brand">MEMORA <span>DISCOVERY</span></p>
         <p className="discovery-progress-copy">{Math.max(0, progress.current - 1)} de {progress.total} · {progress.accepted} conectadas</p>
       </div>
+      <button type="button" className="mission-exit" onClick={onExit}>✕ Salir al Inicio</button>
       <div className="discovery-progress-track" role="progressbar" aria-valuenow={progress.current - 1} aria-valuemin={0} aria-valuemax={progress.total}>
         <motion.div animate={{ width: `${percentage}%` }} transition={{ duration: 0.35 }} />
       </div>

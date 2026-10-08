@@ -27,9 +27,13 @@ interface PreparedWord {
 }
 
 interface PersistedQueue {
-  version: 1;
+  version: 1 | 2;
   wordIds: number[];
   cursor: number;
+  /** Índice del catálogo desde el que se busca el siguiente lote nuevo. */
+  catalogCursor?: number;
+  /** Reserva palabras que ya pasaron por Descubrir aunque aún no tengan SRS. */
+  seenWordIds?: number[];
   alternativeByWord: Record<string, number>;
   rejectedByWord: Record<string, number[]>;
   recoveryQueue: RecoveryQueueItem[];
@@ -38,7 +42,7 @@ interface PersistedQueue {
 function readPersisted(key: string): PersistedQueue | null {
   try {
     const value = JSON.parse(localStorage.getItem(key) || 'null') as PersistedQueue | null;
-    return value?.version === 1 && Array.isArray(value.wordIds) ? value : null;
+    return value && (value.version === 1 || value.version === 2) && Array.isArray(value.wordIds) ? value : null;
   } catch { return null; }
 }
 
@@ -160,6 +164,8 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
   const [hydrated, setHydrated] = useState(false);
   const [wordIds, setWordIds] = useState<number[]>([]);
   const [cursor, setCursor] = useState(0);
+  const [catalogCursor, setCatalogCursor] = useState(0);
+  const [seenWordIds, setSeenWordIds] = useState<number[]>([]);
   const [alternativeByWord, setAlternativeByWord] = useState<Record<string, number>>({});
   const [rejectedByWord, setRejectedByWord] = useState<Record<string, number[]>>({});
   const [recoveryQueue, setRecoveryQueue] = useState<RecoveryQueueItem[]>([]);
@@ -170,34 +176,73 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
   preparedRef.current = prepared;
 
   // Reanuda una ronda incompleta o crea un lote real ordenado por utilidad.
+  // Cuando una ronda termina no se reutiliza su wordIds: avanzamos un cursor
+  // persistente y excluimos tanto SRS como palabras ya vistas en Descubrir.
   useEffect(() => {
     if (hydrated || !words.length) return;
     const saved = readPersisted(storageKey);
     const validSavedIds = saved?.wordIds.filter((id) => wordById.has(id)) ?? [];
-    const freshIds = words
-      .filter((word) => !progress.has(word.id) && USES_KEYWORD(word))
-      .slice(0, batchSize)
-      .map((word) => word.id);
-    const ids = validSavedIds.length ? validSavedIds : freshIds;
-    setWordIds(ids);
-    setCursor(Math.min(saved?.cursor ?? 0, ids.length));
-    setAlternativeByWord(saved?.alternativeByWord ?? {});
-    setRejectedByWord(saved?.rejectedByWord ?? {});
-    setRecoveryQueue(saved?.recoveryQueue ?? []);
+    const savedCursor = Math.max(0, saved?.catalogCursor ?? 0);
+    const savedSeen = [...new Set(saved?.seenWordIds ?? (saved?.version === 1 ? validSavedIds : []))];
+    const savedRecovery = saved?.recoveryQueue ?? [];
+    let savedQueueCursor = Math.min(saved?.cursor ?? 0, validSavedIds.length);
+    // Si otra pantalla ya consolidó la tarjeta actual mientras esta ronda
+    // estaba guardada, la damos por consumida y no la reciclamos.
+    while (savedQueueCursor < validSavedIds.length && progress.has(validSavedIds[savedQueueCursor])) savedQueueCursor += 1;
+    const resumableIds = [
+      ...validSavedIds.slice(0, savedQueueCursor),
+      ...validSavedIds.slice(savedQueueCursor).filter((id) => !progress.has(id)),
+    ];
+    const savedActive = resumableIds.length > 0 && (savedQueueCursor < resumableIds.length || savedRecovery.length > 0);
+
+    if (savedActive) {
+      setWordIds(resumableIds);
+      setCursor(Math.min(savedQueueCursor, resumableIds.length));
+      setCatalogCursor(savedCursor);
+      setSeenWordIds(savedSeen);
+      setAlternativeByWord(saved?.alternativeByWord ?? {});
+      setRejectedByWord(saved?.rejectedByWord ?? {});
+      setRecoveryQueue(savedRecovery);
+      setHydrated(true);
+      return;
+    }
+
+    const excluded = new Set<number>([
+      ...progress.keys(),
+      ...savedSeen,
+      ...savedRecovery.map((item) => item.wordId),
+    ]);
+    const freshIds: number[] = [];
+    let nextCatalogCursor = Math.min(savedCursor, words.length);
+    while (nextCatalogCursor < words.length && freshIds.length < batchSize) {
+      const word = words[nextCatalogCursor];
+      nextCatalogCursor += 1;
+      if (!excluded.has(word.id) && USES_KEYWORD(word)) freshIds.push(word.id);
+    }
+    const nextSeen = [...new Set([...savedSeen, ...freshIds])];
+    setWordIds(freshIds);
+    setCursor(0);
+    setCatalogCursor(nextCatalogCursor);
+    setSeenWordIds(nextSeen);
+    setAlternativeByWord({});
+    setRejectedByWord({});
+    setRecoveryQueue([]);
     setHydrated(true);
   }, [batchSize, hydrated, progress, storageKey, wordById, words]);
 
   useEffect(() => {
     if (!hydrated) return;
     savePersisted(storageKey, {
-      version: 1,
+      version: 2,
       wordIds,
       cursor,
+      catalogCursor,
+      seenWordIds,
       alternativeByWord,
       rejectedByWord,
       recoveryQueue,
     });
-  }, [alternativeByWord, cursor, hydrated, recoveryQueue, rejectedByWord, storageKey, wordIds]);
+  }, [alternativeByWord, catalogCursor, cursor, hydrated, recoveryQueue, rejectedByWord, seenWordIds, storageKey, wordIds]);
 
   const putPrepared = useCallback((wordId: number, value: PreparedWord) => {
     setPrepared((current) => {
