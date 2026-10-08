@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
 import { toast } from '../../components/common';
 import { FlashcardSwiperView } from './FlashcardSwiper';
@@ -21,6 +21,7 @@ export function DiscoveryPage() {
   const [activeRecoveryId, setActiveRecoveryId] = useState<number | null>(null);
   const [dismissedRecoveryId, setDismissedRecoveryId] = useState<number | null>(null);
   const [sentenceMissions, setSentenceMissions] = useState<SentenceMission[]>([]);
+  const autoLaunchRef = useRef(false);
   const dueCount = [...store.progress.values()].filter((progress) => progress.status !== 'known' && isDue(progress)).length;
 
   const ready = queue.readyForRecovery;
@@ -51,6 +52,15 @@ export function DiscoveryPage() {
     const next = ready.find((item) => item.wordId !== dismissedRecoveryId);
     if (next) setActiveRecoveryId(next.wordId);
   }, [activeRecoveryId, dismissedRecoveryId, ready]);
+
+  // Cuando la tanda ya produjo frases, el Constructor es la siguiente sala
+  // del juego. Se mantiene el CTA manual en la vista completa como respaldo
+  // para rondas sin frases o para usuarios que entren directamente a ella.
+  useEffect(() => {
+    if (autoLaunchRef.current || activeItem || queue.status !== 'complete' || !sentenceMissionsForQueue.length) return;
+    autoLaunchRef.current = true;
+    navigate('/constructor-frases', { replace: true, state: { missions: sentenceMissionsForQueue } });
+  }, [activeItem, navigate, queue.status, sentenceMissionsForQueue]);
 
   const resolveChallenge = async (result: 'ok' | 'fail', ms: number) => {
     if (!activeItem) return;
