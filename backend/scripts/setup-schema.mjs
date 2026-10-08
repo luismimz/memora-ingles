@@ -63,7 +63,7 @@ const collections = {
   profiles: {
     meta: { icon: 'person', note: 'Preferencias del alumno.' },
     fields: [pk, owner(), str('start_date'), str('level'), int('round_size', 10), int('daily_goal', 100),
-      str('ai_model'), str('voice'), float('rate', 0.95), str('answer_mode'), bool('auto_speak', true), created],
+      str('ai_model'), str('voice'), float('rate', 0.95), str('answer_mode'), bool('auto_speak', true), int('xp', 0), created],
   },
 };
 
@@ -92,7 +92,7 @@ collections.speech_cache_v2 = {
 };
 collections.challenge_scores = {
   meta: { icon: 'emoji_events', note: 'Marcas de los desafíos. El progreso de estudio sigue siendo individual.' },
-  fields: [pk, owner(), str('display_name'), str('game'), int('score', 0), int('total', 0), float('accuracy', 0), int('seconds', 0), created],
+  fields: [pk, owner(), str('display_name'), str('game'), int('score', 0), int('total', 0), float('accuracy', 0), int('max_combo', 1), int('seconds', 0), created],
 };
 
 const relations = [

@@ -1,0 +1,186 @@
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { motion } from 'framer-motion';
+import { Rich, SpeakBtn, toast } from '../../components/common';
+import { shuffle } from '../../components/common';
+import type { RecoveryQueueItem } from './discovery.types';
+
+const LIMIT_MS = 5_000;
+const FALLBACK_DISTRACTORS = ['really', 'improve', 'actually', 'enough', 'borrow', 'notice'];
+
+export interface QuickChallengeProps {
+  item: RecoveryQueueItem;
+  /** Otras palabras aceptadas en esta ronda, usadas como distractores. */
+  distractors: RecoveryQueueItem[];
+  onResolve: (result: 'ok' | 'fail', ms: number) => void;
+}
+
+type ChallengePhase = 'intro' | 'answering' | 'correct' | 'wrong';
+
+/** Micro-reto táctil de cinco segundos que convierte la asociación en recuerdo. */
+export function QuickChallenge({ item, distractors, onResolve }: QuickChallengeProps) {
+  const [phase, setPhase] = useState<ChallengePhase>('intro');
+  const [selected, setSelected] = useState<string | null>(null);
+  const startedAt = useRef(0);
+  const phaseRef = useRef<ChallengePhase>('intro');
+  const resolveTimer = useRef<number | null>(null);
+  const resolveRef = useRef(onResolve);
+  resolveRef.current = onResolve;
+
+  const distractorKey = distractors.map((entry) => `${entry.wordId}:${entry.en}`).join('|');
+  const options = useMemo(() => {
+    const words = [...distractors.map((entry) => entry.en), ...FALLBACK_DISTRACTORS]
+      .filter((word) => word.toLowerCase() !== item.en.toLowerCase());
+    const unique = [...new Set(words)];
+    // La respuesta correcta nunca se recorta: primero elegimos dos
+    // distractores y después barajamos las tres opciones completas.
+    return shuffle([item.en, ...shuffle(unique).slice(0, 2)]);
+  }, [distractorKey, item.en]);
+
+  const finish = useCallback((result: 'ok' | 'fail', answer: string | null = null) => {
+    if (phaseRef.current !== 'answering') return;
+    if (resolveTimer.current !== null) window.clearTimeout(resolveTimer.current);
+    phaseRef.current = result === 'ok' ? 'correct' : 'wrong';
+    setSelected(answer);
+    setPhase(phaseRef.current);
+    if (result === 'ok') playSuccessTone();
+    else navigator.vibrate?.([35, 30, 55]);
+    resolveTimer.current = window.setTimeout(() => {
+      resolveRef.current(result, Math.max(1, Date.now() - startedAt.current));
+    }, result === 'ok' ? 650 : 900);
+  }, []);
+
+  useEffect(() => {
+    startedAt.current = 0;
+    phaseRef.current = 'intro';
+    setPhase('intro');
+    setSelected(null);
+    return () => {
+      if (resolveTimer.current !== null) window.clearTimeout(resolveTimer.current);
+    };
+  }, [item.wordId]);
+
+  const begin = () => {
+    if (phaseRef.current !== 'intro') return;
+    startedAt.current = Date.now();
+    phaseRef.current = 'answering';
+    setPhase('answering');
+    resolveTimer.current = window.setTimeout(() => finish('fail'), LIMIT_MS);
+  };
+
+  const choose = (word: string) => {
+    if (phaseRef.current !== 'answering') return;
+    setSelected(word);
+    finish(word === item.en ? 'ok' : 'fail', word);
+  };
+
+  const scene = item.sceneEs || item.keyword || `Recupera la palabra que significa “${item.es}”.`;
+
+  return (
+    <main className="discovery-stage discovery-challenge-stage" aria-live="polite">
+      <header className="discovery-challenge-topbar">
+        <div>
+          <p className="discovery-brand">MEMORA <span>RECUPERACIÓN</span></p>
+          <p className="discovery-challenge-caption">Una conexión que acabas de guardar</p>
+        </div>
+        <span className={`discovery-challenge-status ${phase}`}>
+          {phase === 'intro' ? 'Preparado' : phase === 'answering' ? '⚡ 5s' : phase === 'correct' ? '+10 XP' : 'Vuelve a intentarlo'}
+        </span>
+      </header>
+      <div className={`discovery-fire-track ${phase === 'intro' ? 'is-ready' : ''}`} aria-label={phase === 'intro' ? 'El tiempo empieza al pulsar Estoy listo' : 'Tiempo restante'}>
+        <motion.div key={item.wordId} initial={{ width: '100%' }} animate={phase === 'answering' ? { width: '0%' } : { width: '100%' }} transition={{ duration: phase === 'answering' ? LIMIT_MS / 1000 : 0, ease: 'linear' }} />
+      </div>
+
+      <section className={`discovery-challenge-card ${phase}`}>
+        <p className="discovery-card-kicker">{phase === 'intro' ? 'ANTES DE EMPEZAR' : 'RECUERDA LA ASOCIACIÓN'}</p>
+        {phase === 'intro' ? (
+          <div className="discovery-challenge-instructions">
+            <strong>Vas a recuperar una palabra en inglés.</strong>
+            <span>Mira la escena y, cuando pulses «Estoy listo», toca la opción inglesa que corresponde. No tienes que escribir ni inventar una frase.</span>
+          </div>
+        ) : null}
+        <div className="discovery-challenge-scene">
+          <span className="discovery-challenge-emoji" aria-hidden="true">{item.keyword ? '🧠' : '🧩'}</span>
+          <div>
+            <small>La escena que acabas de conectar</small>
+            <p><Rich text={scene} /></p>
+          </div>
+        </div>
+        <div className="discovery-challenge-prompt">
+          <span>{phase === 'intro' ? 'Cuando estés listo, busca el inglés de esta escena' : 'Toca la palabra inglesa que corresponde'}</span>
+          <SpeakBtn text={item.en} title="Escuchar la palabra" />
+        </div>
+        <div className="discovery-challenge-options">
+          {options.map((word) => {
+            const correct = word === item.en;
+            const wrongPicked = phase === 'wrong' && selected === word && !correct;
+            const reveal = phase === 'wrong' && correct;
+            return (
+              <motion.button
+                key={word}
+                type="button"
+                className={`discovery-challenge-option ${phase === 'correct' && correct ? 'is-correct' : ''} ${wrongPicked ? 'is-wrong' : ''} ${reveal ? 'is-revealed' : ''}`}
+                disabled={phase !== 'answering'}
+                whileTap={phase === 'answering' ? { scale: 0.96 } : undefined}
+                animate={phase === 'correct' && correct ? { scale: [1, 1.1, 1] } : reveal ? { x: [0, -7, 7, 0] } : undefined}
+                onClick={() => choose(word)}
+              >
+                {word}
+              </motion.button>
+          );
+        })}
+      </div>
+        {phase === 'intro' ? (
+          <button type="button" className="btn big discovery-challenge-start" onClick={begin}>Estoy listo · empezar 5 s →</button>
+        ) : null}
+        {phase === 'correct' ? (
+          <motion.p className="discovery-challenge-feedback is-correct" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>🔥 ¡Conexión recuperada! +10 XP</motion.p>
+        ) : null}
+        {phase === 'wrong' ? (
+          <motion.p className="discovery-challenge-feedback is-wrong" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>La palabra era <strong>{item.en}</strong>. La volveremos a poner en tu ruta.</motion.p>
+        ) : null}
+      </section>
+      <p className="discovery-keyboard-hint">Toca una respuesta · sin escribir</p>
+      {phase === 'correct' ? <Confetti /> : null}
+    </main>
+  );
+}
+
+function Confetti() {
+  return (
+    <div className="discovery-confetti" aria-hidden="true">
+      {Array.from({ length: 14 }, (_, index) => {
+        const angle = (index / 14) * Math.PI * 2;
+        return (
+          <motion.i
+            key={index}
+            initial={{ opacity: 0, scale: 0, x: 0, y: 0, rotate: 0 }}
+            animate={{ opacity: [0, 1, 0], scale: [0, 1, .7], x: Math.cos(angle) * 150, y: Math.sin(angle) * 150, rotate: 210 }}
+            transition={{ duration: .72, delay: index * .018, ease: 'easeOut' }}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+function playSuccessTone() {
+  try {
+    const AudioContextCtor = window.AudioContext;
+    if (!AudioContextCtor) return;
+    const context = new AudioContextCtor();
+    const oscillator = context.createOscillator();
+    const gain = context.createGain();
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(660, context.currentTime);
+    oscillator.frequency.exponentialRampToValueAtTime(990, context.currentTime + .12);
+    gain.gain.setValueAtTime(.0001, context.currentTime);
+    gain.gain.exponentialRampToValueAtTime(.12, context.currentTime + .015);
+    gain.gain.exponentialRampToValueAtTime(.0001, context.currentTime + .24);
+    oscillator.connect(gain).connect(context.destination);
+    oscillator.start();
+    oscillator.stop(context.currentTime + .25);
+    window.setTimeout(() => { void context.close(); }, 350);
+  } catch {
+    toast('🔥 ¡Bien! Conexión recuperada.');
+  }
+}

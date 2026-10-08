@@ -98,6 +98,8 @@ export interface Profile {
   rate: number;
   answer_mode: 'type' | 'flash' | null;
   auto_speak: boolean | number;
+  /** XP acumulado; opcional para perfiles creados antes de la migración. */
+  xp?: number;
 }
 
 export interface Sentence {
@@ -160,6 +162,7 @@ export interface ChallengeScore {
   score: number;
   total: number;
   accuracy: number;
+  max_combo?: number;
   seconds: number;
   created_at?: string;
 }

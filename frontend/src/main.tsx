@@ -27,6 +27,10 @@ import { Challenges } from './pages/Challenges';
 import { PhrasalVerbs } from './pages/PhrasalVerbs';
 import { MediaLab } from './pages/MediaLab';
 import { PerfectWord } from './pages/PerfectWord';
+import { DiscoveryPage } from './features/discovery/DiscoveryPage';
+import { ArcadeMode } from './features/arcade/ArcadeMode';
+import { GalleryDeck } from './features/gallery/GalleryDeck';
+import { SentenceBuilder } from './features/sentences/SentenceBuilder';
 import { Spinner, ToastHost } from './components/common';
 import { installNaturalAudioUnlock } from './lib/audioPlayer';
 import './styles.css';
@@ -40,6 +44,9 @@ try {
 
 const NAV = [
   { to: '/', ico: '🧠', label: 'Aprender' },
+  { to: '/descubrir', ico: '⚡', label: 'Descubrir' },
+  { to: '/arcade', ico: '🎮', label: 'Arcade' },
+  { to: '/galeria', ico: '🃏', label: 'Galería' },
   { to: '/repaso', ico: '🔁', label: 'Repaso' },
   { to: '/biblioteca', ico: '📚', label: 'Historias' },
   { to: '/progreso', ico: '📈', label: 'Progreso' },
@@ -63,6 +70,10 @@ function Shell() {
         <div className="mobile-topbar"><div className="mobile-brand"><span className="brand-mark">M</span><b>Memora</b></div><NavLink to="/ajustes" className="mobile-settings" aria-label="Ajustes">⚙️</NavLink></div>
         <Routes>
           <Route path="/" element={<Today />} />
+          <Route path="/descubrir" element={<DiscoveryPage />} />
+          <Route path="/arcade" element={<ArcadeMode />} />
+          <Route path="/galeria" element={<GalleryDeck />} />
+          <Route path="/constructor-frases" element={<SentenceBuilder />} />
           <Route path="/ruta" element={<Path />} />
           <Route path="/recorrido" element={<Journey />} />
           <Route path="/biblioteca" element={<Library />} />

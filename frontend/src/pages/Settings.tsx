@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ErrorBox, toast } from '../components/common';
 import { playNaturalAudio } from '../lib/audioPlayer';
 import { items, logout, naturalVoices } from '../lib/api';
@@ -63,6 +64,10 @@ export function Settings() {
         </div>
         <aside className="settings-side stack"><section className="settings-card card stack"><div className="settings-card-title"><span className="settings-icon blue">🎨</span><div><h2>Ambiente</h2><p className="muted small">Elige cómo quieres sentir la sesión.</p></div></div><div className="theme-options">{[['auto', 'Sistema', '◐'], ['light', 'Claro', '☀️'], ['dark', 'Oscuro', '🌙']].map(([k, l, ico]) => <button key={k} className={theme === k ? 'theme-choice selected' : 'theme-choice'} onClick={() => applyTheme(k)}><span>{ico}</span>{l}</button>)}</div></section><section className="settings-card card stack"><div className="settings-card-title"><span className="settings-icon sand">💾</span><div><h2>Tus datos</h2><p className="muted small">Cuenta: {store.user?.email}</p></div></div><button className="btn secondary block" onClick={() => backup().catch(setError)}>Descargar copia JSON</button><button className="btn fail block" onClick={async () => { await logout(); location.href = '/'; }}>Cerrar sesión</button></section></aside>
       </div>
+      <section className="settings-card card stack">
+        <div className="settings-card-title"><span className="settings-icon purple">🧭</span><div><h2>Modo clásico</h2><p className="muted small">La sesión antigua queda aquí como alternativa, sin competir con tu misión principal.</p></div></div>
+        <Link className="btn secondary" to="/sesion">Abrir Modo clásico</Link>
+      </section>
       <ErrorBox error={error} />
     </div>
   );

@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import { ai, configureNaturalSpeech, items, request } from './lib/api';
 import { configureSpeech } from './lib/speech';
 import { localDate } from './lib/stats';
+import { readLocalXp, writeLocalXp } from './lib/xp';
 import type { Attempt, Mnemonic, Profile, Progress, StudyDay, Word } from './types';
 import { isConciseMnemonic } from '../../shared/mnemonicQuality.mjs';
 
@@ -12,6 +13,7 @@ interface Store {
   ready: boolean;
   user: User | null;
   profile: Profile | null;
+  xp: number;
   words: Word[];
   wordById: Map<number, Word>;
   progress: Map<number, Progress>;
@@ -21,6 +23,7 @@ interface Store {
   currentDay: number;
   reload(): Promise<void>;
   updateProfile(patch: Partial<Profile>): Promise<void>;
+  addXp(amount: number): Promise<number>;
   saveProgress(word: number, patch: Partial<Progress>): Promise<Progress>;
   logAttempts(list: Attempt[]): void;
   startToday(): Promise<StudyDay>;
@@ -49,6 +52,7 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
   const [ready, setReady] = useState(false);
   const [user, setUser] = useState<User | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [xp, setXp] = useState(0);
   const [words, setWords] = useState<Word[]>([]);
   const [progress, setProgress] = useState<Map<number, Progress>>(new Map());
   const [days, setDays] = useState<StudyDay[]>([]);
@@ -56,6 +60,8 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
   const [mnemonicCache, setMnemonicCache] = useState<Map<number, Mnemonic[]>>(new Map());
   const progressRef = useRef(progress);
   progressRef.current = progress;
+  const xpRef = useRef(0);
+  const xpSyncRef = useRef<Promise<void>>(Promise.resolve());
   const cacheRef = useRef(mnemonicCache);
   cacheRef.current = mnemonicCache;
 
@@ -81,7 +87,15 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
       ]);
       let prof = profs[0];
       if (!prof) prof = await items.create<Profile>('profiles', { start_date: localDate(), round_size: 10, daily_goal: 100, answer_mode: 'type', auto_speak: true, rate: 0.88 });
-      setUser(me); setProfile(prof); setWords(ws); setDays(ds); setAiInfo(aiRes);
+      const serverXp = Number(prof.xp ?? 0);
+      const localXp = readLocalXp(me.id);
+      const initialXp = Math.max(Number.isFinite(serverXp) ? serverXp : 0, localXp);
+      setUser(me); setProfile({ ...prof, xp: initialXp }); setXp(initialXp); xpRef.current = initialXp;
+      writeLocalXp(initialXp, me.id);
+      if (initialXp !== serverXp) {
+        void items.update<Profile>('profiles', prof.id, { xp: initialXp }).catch(() => {});
+      }
+      setWords(ws); setDays(ds); setAiInfo(aiRes);
       setProgress(new Map(ps.map((p) => [p.word, p])));
       configureSpeech(prof.voice, prof.rate);
       configureNaturalSpeech(prof.voice, prof.rate);
@@ -102,6 +116,27 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
     configureSpeech(next.voice, next.rate);
     configureNaturalSpeech(next.voice, next.rate);
   }, [profile]);
+
+  const addXp = useCallback((amount: number) => {
+    const gained = Math.max(0, Math.floor(Number(amount) || 0));
+    if (!gained) return Promise.resolve(xpRef.current);
+    const next = xpRef.current + gained;
+    xpRef.current = next;
+    setXp(next);
+    writeLocalXp(next, user?.id);
+    setProfile((current) => current ? { ...current, xp: next } : current);
+
+    // Las recompensas rápidas se serializan para que dos aciertos seguidos no
+    // pisen el mismo valor en Directus. La UI no espera a esta escritura.
+    if (profile?.id) {
+      const profileId = profile.id;
+      xpSyncRef.current = xpSyncRef.current.then(async () => {
+        try { await items.update<Profile>('profiles', profileId, { xp: next }); }
+        catch { /* el valor local se sincronizará en la siguiente recarga */ }
+      });
+    }
+    return xpSyncRef.current.then(() => next);
+  }, [profile?.id, user?.id]);
 
   const saveProgress = useCallback(async (word: number, patch: Partial<Progress>) => {
     const existing = progressRef.current.get(word);
@@ -210,8 +245,8 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
   const wordById = useMemo(() => new Map(words.map((w) => [w.id, w])), [words]);
 
   const value: Store = {
-    ready, user, profile, words, wordById, progress, days, aiInfo, today, currentDay,
-    reload, updateProfile, saveProgress, logAttempts, startToday, updateDay,
+    ready, user, profile, xp, words, wordById, progress, days, aiInfo, today, currentDay,
+    reload, updateProfile, addXp, saveProgress, logAttempts, startToday, updateDay,
     mnemonicsFor, mnemonicCache, addMnemonic, preferredMnemonic, activeMnemonic,
     aiModel: profile?.ai_model || undefined,
   };

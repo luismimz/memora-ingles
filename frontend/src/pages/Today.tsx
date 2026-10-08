@@ -5,7 +5,7 @@ import { localDate, streak } from '../lib/stats';
 import { useStore } from '../store';
 
 export function Today() {
-  const { user, profile, progress, days, today, currentDay, words } = useStore();
+  const { user, profile, progress, days, today, currentDay } = useStore();
   const all = [...progress.values()];
   const due = all.filter((p) => isDue(p));
   const learnedToday = all.filter((p) => today && p.study_day === today.day && p.status !== 'known').length;
@@ -13,10 +13,11 @@ export function Today() {
   const mastered = all.filter((p) => p.status === 'mastered').length;
   const goal = profile?.daily_goal ?? 100;
   const racha = streak(days.filter((d) => d.learned > 0 || d.exam_total > 0).map((d) => d.date), localDate());
-  const nextTen = Math.min(10, Math.max(0, words.length - all.length));
-  const action = due.length
-    ? { to: '/repaso', label: `Recuperar ${due.length} ${due.length === 1 ? 'recuerdo' : 'recuerdos'}`, eyebrow: 'PRIMERO · LO QUE TU MEMORIA NECESITA' }
-    : { to: '/sesion?autostart=1', label: `Crear ${nextTen || 10} asociaciones`, eyebrow: 'AHORA · TU ÚNICA MISIÓN' };
+  const action = {
+    to: '/descubrir',
+    label: due.length ? 'Continuar misión' : `Jugar Día ${currentDay}`,
+    eyebrow: due.length ? 'PRIMERO · CONTINÚA TU MISIÓN' : 'AHORA · TU ÚNICA MISIÓN',
+  };
 
   return (
     <div className="stack today-focus">
@@ -32,9 +33,9 @@ export function Today() {
       <section className="memory-mission">
         <div className="memory-mission-copy">
           <span className="eyebrow light">{action.eyebrow}</span>
-          <h2>{due.length ? 'Haz fuerte lo que ya aprendiste' : 'Convierte 10 palabras en 10 escenas'}</h2>
+          <h2>Continúa tu misión de hoy</h2>
           <p>{due.length
-            ? 'Recupéralas sin mirar. Después Memora te dará palabras nuevas.'
+            ? 'Empieza con una conexión y después recuperaremos lo que toque.'
             : 'Oyes la palabra, conectas una imagen absurda, la usas en una frase y la recuperas sin ayuda.'}</p>
           <Link className="btn memory-mission-action" to={action.to}>{action.label} →</Link>
         </div>

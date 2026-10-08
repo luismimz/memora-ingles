@@ -1,10 +1,10 @@
 {
   "note": "Prueba piloto: 20 palabras con las reglas nuevas. keyword/irregular llevan asociación (una sola imagen donde la palabra puente HACE el significado); el resto se aprende sin mnemotecnia.",
   "words": [
-    { "en": "borrow", "kind": "keyword", "keyword": "BURRO", "emoji": "🫏📱", "scene_es": "Un BURRO te PIDE PRESTADO el móvil para llamar a su madre.", "story_en": "A donkey BORROWS your phone to call its mother." },
-    { "en": "forget", "kind": "keyword", "keyword": "FOGATA", "emoji": "🔥📒", "scene_es": "Tiras tu agenda a una FOGATA y, según arde, OLVIDAS todo: hasta tu propio nombre.", "story_en": "You throw your diary into a bonfire and, as it burns, you FORGET everything, even your name." },
+    { "en": "borrow", "kind": "keyword", "keyword": "BURRO", "emoji": "🫏📱", "scene_es": "Un BURRO te PIDE PRESTADO el móvil.", "story_en": "A donkey BORROWS your phone." },
+    { "en": "forget", "kind": "keyword", "keyword": "FOGATA", "emoji": "🔥📒", "scene_es": "Tiras tu agenda a una FOGATA y OLVIDAS todo.", "story_en": "You throw your diary into a bonfire and FORGET everything." },
     { "en": "ladder", "kind": "keyword", "keyword": "LADRÓN", "emoji": "🦹🪜", "scene_es": "Un LADRÓN sube por una ESCALERA DE MANO hasta tu ventana con tu tele a cuestas.", "story_en": "A thief climbs a LADDER up to your window carrying your TV on his back." },
-    { "en": "lend", "kind": "keyword", "keyword": "LENTES", "emoji": "👓🐀", "scene_es": "LE PRESTAS tus LENTES a un topo; se las pone, te ve por primera vez y te abraza llorando.", "story_en": "You LEND your glasses to a mole; it puts them on, sees you for the first time and hugs you." },
+    { "en": "lend", "kind": "keyword", "keyword": "LENTES", "emoji": "👓🐀", "scene_es": "LE PRESTAS tus LENTES a un topo.", "story_en": "You LEND your glasses to a mole." },
     { "en": "tired", "kind": "keyword", "keyword": "TARTA", "emoji": "😴🎂", "scene_es": "Estás tan CANSADO que te duermes de pie y caes de cara en una TARTA de nata: ¡plof!", "story_en": "You are so TIRED that you fall asleep standing up and land face first in a cream cake." },
     { "en": "shelf", "kind": "keyword", "keyword": "CHELO", "emoji": "🎻📚", "scene_es": "Colocas un CHELO enorme en la BALDA de la estantería y la balda se dobla con un crujido.", "story_en": "You put a huge cello on the SHELF and the shelf bends with a loud crack." },
     { "en": "knee", "kind": "keyword", "keyword": "NIÑO", "emoji": "👶🦵", "scene_es": "Un NIÑO de cien kilos se sienta en tu RODILLA y te la aplasta como un cojín.", "story_en": "A hundred-kilo child sits on your KNEE and squashes it like a cushion." },
@@ -13,7 +13,7 @@
     { "en": "cheap", "kind": "keyword", "keyword": "CHIP", "emoji": "💾💶", "scene_es": "En el mercadillo venden CHIPS de ordenador BARATÍSIMOS, a un euro el kilo, y tú llenas un saco.", "story_en": "At the market they sell computer chips very CHEAP, one euro a kilo, and you fill a sack." },
     { "en": "hurry", "kind": "keyword", "keyword": "JERRY", "emoji": "🐭🏃", "scene_es": "JERRY, el ratón, cruza tu cocina CON PRISA; Tom lo persigue y rompe todos tus platos.", "story_en": "Jerry the mouse runs across your kitchen in a HURRY; Tom chases him and breaks all your plates." },
     { "en": "roof", "kind": "keyword", "keyword": "RUFUS", "emoji": "🐕🏠", "scene_es": "RUFUS, un perro gigante, duerme en tu TEJADO y lo hunde cuando se da la vuelta.", "story_en": "Rufus, a giant dog, sleeps on your ROOF and breaks it when he rolls over." },
-    { "en": "bring", "kind": "irregular", "keyword": "BRINCO", "emoji": "🐕🥿", "scene_es": "Tu perro te TRAE las zapatillas dando BRINCOS tan altos que toca el techo.", "story_en": "Your dog BRINGS you your slippers, jumping so high that it touches the ceiling.", "hint_es": "bring → brought → brought (familia -OUGHT: suena «brot»)" },
+    { "en": "bring", "kind": "irregular", "keyword": "BRINCO", "emoji": "🐕🥿", "scene_es": "Tu perro te TRAE zapatillas dando BRINCOS.", "story_en": "Your dog BRINGS slippers with big jumps.", "hint_es": "bring → brought → brought (familia -OUGHT: suena «brot»)" },
     { "en": "delicious", "kind": "cognate", "hint_es": "Cognado: -ous → -oso (delicious = delicioso). Ojo al sonido: di-LI-shas." },
     { "en": "prefer", "kind": "cognate", "hint_es": "Cognado: prefer = preferir. El acento va al final: pri-FER." },
     { "en": "toothbrush", "kind": "easy", "hint_es": "tooth (diente) + brush (cepillo) = cepillo de dientes." },
