@@ -28,8 +28,66 @@ const TARGET_S = 45;
 
 type UseStage = 'memory' | 'order' | 'create';
 
-function sentenceFor(word: Word) {
-  return word.example_en || `I use ${word.en} every day.`;
+type SentenceVariant = { en: string; es: string; source?: string };
+
+const VARIANT_CURSOR_KEY = 'memora.sentence-variant-cursor';
+
+function readVariantCursor(wordId: number) {
+  try {
+    const data = JSON.parse(localStorage.getItem(VARIANT_CURSOR_KEY) || '{}');
+    return Number.isFinite(data?.[wordId]) ? Math.max(0, Number(data[wordId])) : 0;
+  } catch { return 0; }
+}
+
+function advanceVariantCursor(wordId: number, count: number) {
+  if (count < 2) return;
+  try {
+    const data = JSON.parse(localStorage.getItem(VARIANT_CURSOR_KEY) || '{}');
+    data[wordId] = (Number.isFinite(data?.[wordId]) ? Number(data[wordId]) : 0) + 1;
+    localStorage.setItem(VARIANT_CURSOR_KEY, JSON.stringify(data));
+  } catch { /* el modo privado puede no tener almacenamiento */ }
+}
+
+function saveVariantCursor(wordId: number, nextIndex: number) {
+  try {
+    const data = JSON.parse(localStorage.getItem(VARIANT_CURSOR_KEY) || '{}');
+    data[wordId] = Math.max(0, nextIndex);
+    localStorage.setItem(VARIANT_CURSOR_KEY, JSON.stringify(data));
+  } catch { /* el modo privado puede no tener almacenamiento */ }
+}
+
+function shuffleIds(length: number) {
+  const ids = Array.from({ length }, (_, i) => i);
+  for (let i = ids.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [ids[i], ids[j]] = [ids[j], ids[i]];
+  }
+  return ids;
+}
+
+function sentenceVariantsFor(word: Word): SentenceVariant[] {
+  const key = word.en.trim().toLowerCase();
+  const curated: Record<string, string[]> = {
+    really: ['I really want to understand this.', 'Do you really mean it?', 'She is really good at explaining things.'],
+    improve: ['I want to improve my English.', 'Small steps improve my confidence.', 'This exercise will improve your listening.'],
+    actually: ['Actually, I agree with you.', 'I actually use this every day.', 'Well, actually, I am not sure.'],
+  };
+  const fallback = curated[key] ?? (word.kind === 'phrasal'
+    ? [`I often use “${word.en}” in conversation.`, `Can you use “${word.en}” in a sentence?`]
+    : [`I am learning how to use “${word.en}” today.`, `I can say “${word.en}” in a real conversation.`]);
+  const incoming: SentenceVariant[] = [
+    ...(word.examples ?? []),
+    ...(word.example_en ? [{ en: word.example_en, es: word.example_es ?? '', source: 'word' }] : []),
+    ...(curated[key] ?? fallback).map((en) => ({ en, es: '', source: 'guided' })),
+  ];
+  const seen = new Set<string>();
+  return incoming.filter((x) => {
+    const en = String(x.en || '').trim();
+    const id = normalize(en);
+    if (!en || seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  }).slice(0, 6);
 }
 
 function wordsForSentence(sentence: string) {
@@ -49,28 +107,55 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
   const [more, setMore] = useState(variant === 'detail');
   const [useStage, setUseStage] = useState<UseStage>('memory');
   const [ordered, setOrdered] = useState<number[]>([]);
+  const [poolOrder, setPoolOrder] = useState<number[]>([]);
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [orderChecked, setOrderChecked] = useState<boolean | null>(null);
   const [ownSentence, setOwnSentence] = useState('');
   const [ownChecked, setOwnChecked] = useState<number | null>(null);
   const [ownAccepted, setOwnAccepted] = useState(false);
   const started = useRef(Date.now());
-  const useStarted = useRef(Date.now());
+  const useStarted = useRef(0);
+  const useInProgress = useRef(false);
   const [secs, setSecs] = useState(0);
+  const [sentenceVariants, setSentenceVariants] = useState<SentenceVariant[]>(() => sentenceVariantsFor(word));
+  const [sentenceVariantIndex, setSentenceVariantIndex] = useState(() => readVariantCursor(word.id) % Math.max(sentenceVariantsFor(word).length, 1));
 
   const list = store.mnemonicCache.get(word.id) ?? [];
   const usesKeyword = USES_KEYWORD(word);
   const noneChosen = choice ? choice.mode === 'none' : store.progress.get(word.id)?.mnemonic_mode === 'none';
   const m = noneChosen ? null : (choice?.mnemonic ?? store.activeMnemonic(word.id));
 
-  const example = sentenceFor(word);
+  const example = sentenceVariants[sentenceVariantIndex]?.en || word.example_en || `I use ${word.en} every day.`;
   const exampleWords = wordsForSentence(example);
-  const tokenPool = [...exampleWords, ...(exampleWords.length > 4 ? ['really', 'today'] : ['at', 'home'])].map((text, id) => ({ id, text }));
+  const tokenPool = useMemo(() => {
+    const distractors = [
+      ['really', 'today'],
+      ['at', 'home'],
+      ['because', 'sometimes'],
+      ['for', 'tomorrow'],
+    ][sentenceVariantIndex % 4];
+    return [...exampleWords, ...distractors].map((text, id) => ({ id, text }));
+  }, [example, sentenceVariantIndex]);
 
   useEffect(() => {
-    started.current = Date.now(); useStarted.current = Date.now(); setSecs(0); setShowEn(false); setMore(variant === 'detail');
-    setUseStage('memory'); setOrdered([]); setDragIndex(null); setOrderChecked(null); setOwnSentence(''); setOwnChecked(null); setOwnAccepted(false);
+    const variants = sentenceVariantsFor(word);
+    const initialIndex = readVariantCursor(word.id) % Math.max(variants.length, 1);
+    started.current = Date.now(); useStarted.current = 0; useInProgress.current = false; setSecs(0); setShowEn(false); setMore(variant === 'detail');
+    setSentenceVariants(variants); setSentenceVariantIndex(initialIndex);
+    setUseStage('memory'); setOrdered([]); setPoolOrder(shuffleIds(variants[initialIndex] ? wordsForSentence(variants[initialIndex].en).length + 2 : 0)); setDragIndex(null); setOrderChecked(null); setOwnSentence(''); setOwnChecked(null); setOwnAccepted(false);
   }, [word.id, variant]);
+  useEffect(() => {
+    if (variant !== 'learn' || useInProgress.current || sentenceVariants.length > 3) return;
+    ai<{ examples: { en: string; es: string; source?: string }[] }>('examples', { word: word.id })
+      .then((r) => {
+        if (useInProgress.current || !r.examples?.length) return;
+        setSentenceVariants((current) => {
+          const seen = new Set(current.map((x) => normalize(x.en)));
+          const additions = r.examples.filter((x) => x.en && !seen.has(normalize(x.en)));
+          return [...current, ...additions].slice(0, 6);
+        });
+      }).catch(() => {});
+  }, [variant, word.id]);
   useEffect(() => { if (autoSpeak) return playNaturalFast(word.en); return undefined; }, [word.id, autoSpeak, word.en]);
   useEffect(() => {
     if (variant !== 'learn') return;
@@ -88,7 +173,18 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
     setNotWorking(false);
   };
 
-  const startUse = () => { useStarted.current = Date.now(); setUseStage('order'); setOrdered([]); setOrderChecked(null); playNaturalFast(example); };
+  const startUse = () => {
+    useStarted.current = Date.now(); useInProgress.current = true;
+    // Se reserva la siguiente variante al empezar: si el alumno abandona y vuelve,
+    // no se encuentra otra vez exactamente con la misma frase.
+    advanceVariantCursor(word.id, sentenceVariants.length);
+    setUseStage('order'); setOrdered([]); setPoolOrder(shuffleIds(tokenPool.length)); setOrderChecked(null); playNaturalFast(example);
+  };
+  const nextSentence = () => {
+    if (sentenceVariants.length < 2) return;
+    const next = (sentenceVariantIndex + 1) % sentenceVariants.length;
+    setSentenceVariantIndex(next); saveVariantCursor(word.id, (next + 1) % sentenceVariants.length); setOrdered([]); setPoolOrder(shuffleIds(wordsForSentence(sentenceVariants[next].en).length + 2)); setOrderChecked(null); playNaturalFast(sentenceVariants[next].en);
+  };
   const moveToken = (from: number, to: number) => {
     if (to < 0 || to >= ordered.length || from === to) return;
     setOrdered((list) => { const next = [...list]; const [token] = next.splice(from, 1); next.splice(to, 0, token); return next; });
@@ -171,9 +267,10 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
             <>
               <div className="word-use-heading"><span className="chip accent">2 · VER LA ESTRUCTURA</span><b>Ordena una frase real</b><span>Hay palabras de sobra. Toca para añadir y arrastra las fichas para cambiar el orden.</span></div>
               <div className="word-order-answer">{ordered.length ? ordered.map((tokenId, i) => <span key={tokenId} className="word-token-drag" draggable onDragStart={() => setDragIndex(i)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragIndex !== null) moveToken(dragIndex, i); setDragIndex(null); }}><button className="word-token selected" type="button" onClick={() => setOrdered((list) => list.filter((_, index) => index !== i))} title="Quitar palabra">{tokenPool[tokenId].text}</button></span>) : <span className="muted small">Toca las palabras de abajo para empezar…</span>}</div>
-              <div className="word-order-pool">{tokenPool.map((token) => !ordered.includes(token.id) && <button key={token.id} className="word-token" type="button" onClick={() => setOrdered((list) => [...list, token.id])}>{token.text}</button>)}</div>
+              <div className="word-order-pool">{(poolOrder.length ? poolOrder : tokenPool.map((token) => token.id)).map((id) => { const token = tokenPool[id]; return token && !ordered.includes(token.id) && <button key={token.id} className="word-token" type="button" onClick={() => setOrdered((list) => [...list, token.id])}>{token.text}</button>; })}</div>
               {orderChecked === false && <div className="feedback doubt">🔁 Aún no. Cambia el orden y vuelve a probar.</div>}
               <div className="row"><button className="btn secondary grow" type="button" onClick={() => { setOrdered([]); setDragIndex(null); setOrderChecked(null); }}>Vaciar</button><button className="btn grow" type="button" disabled={ordered.length < exampleWords.length} onClick={checkOrder}>Comprobar orden ↵</button></div>
+              {orderChecked === false && <button className="btn ghost small" type="button" onClick={nextSentence}>🔀 Probar otra frase ({sentenceVariantIndex + 1}/{sentenceVariants.length})</button>}
             </>
           ) : (
             <>
