@@ -43,5 +43,7 @@ export async function api(method, path, data, { allowFail = false } = {}) {
     if (allowFail) return { error: body, status: res.status };
     throw new Error(`${method} ${path} -> ${res.status}: ${JSON.stringify(body.errors ?? body)}`);
   }
-  return body.data;
+  // Directus CRUD responde con { data }, mientras que las extensiones propias
+  // (por ejemplo /memora/speech) devuelven el objeto directamente.
+  return body.data !== undefined ? body.data : body;
 }

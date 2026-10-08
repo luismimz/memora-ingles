@@ -1,5 +1,5 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { ai, items, request } from './lib/api';
+import { ai, configureNaturalSpeech, items, request } from './lib/api';
 import { configureSpeech } from './lib/speech';
 import { localDate } from './lib/stats';
 import type { Attempt, Mnemonic, Profile, Progress, StudyDay, Word } from './types';
@@ -79,10 +79,11 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
         request<AiInfo>('GET', '/memora/models').catch(() => ({ enabled: false, models: [], default: '' })),
       ]);
       let prof = profs[0];
-      if (!prof) prof = await items.create<Profile>('profiles', { start_date: localDate(), round_size: 10, daily_goal: 100, answer_mode: 'type', auto_speak: true, rate: 0.95 });
+      if (!prof) prof = await items.create<Profile>('profiles', { start_date: localDate(), round_size: 10, daily_goal: 100, answer_mode: 'type', auto_speak: true, rate: 0.88 });
       setUser(me); setProfile(prof); setWords(ws); setDays(ds); setAiInfo(aiRes);
       setProgress(new Map(ps.map((p) => [p.word, p])));
       configureSpeech(prof.voice, prof.rate);
+      configureNaturalSpeech(prof.voice, prof.rate);
       setReady(true);
       flushAttempts();
     } catch (e) {
@@ -98,6 +99,7 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
     const next = await items.update<Profile>('profiles', profile.id, patch);
     setProfile(next);
     configureSpeech(next.voice, next.rate);
+    configureNaturalSpeech(next.voice, next.rate);
   }, [profile]);
 
   const saveProgress = useCallback(async (word: number, patch: Partial<Progress>) => {

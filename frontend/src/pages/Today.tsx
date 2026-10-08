@@ -25,6 +25,8 @@ export function Today() {
   const firstWin = all.length === 0 && journeyDone === 0;
   const sessionDone = learnedToday >= goal;
   const phase = due.length > 0 ? 3 : sessionDone ? 3 : learnedToday > 0 || journeyDone > 0 ? 2 : 1;
+  let perfectWordDone = false;
+  try { perfectWordDone = Boolean(localStorage.getItem('memora.h1-perfect-word-complete')); } catch { /* almacenamiento opcional */ }
   const nextAction = due.length > 0
     ? { eyebrow: 'PASO 1 · CONSOLIDAR', title: 'Rescata lo que ya aprendiste', text: `${due.length} ${due.length === 1 ? 'unidad te espera' : 'unidades te esperan'} antes de añadir algo nuevo.`, to: '/repaso', label: 'Empezar repaso' }
     : firstWin
@@ -40,6 +42,12 @@ export function Today() {
       <div className="today-heading"><div><span className="eyebrow">MEMORA · SESIÓN GUIADA</span><h1>Hola{user?.first_name ? `, ${user.first_name}` : ''}. Hoy tienes una escena.</h1><p className="muted">No tienes que decidir qué estudiar. Sigue el siguiente paso y convierte la escena en palabras que puedas usar.</p></div><div className="day-badge"><b>DÍA</b><strong>{currentDay}</strong><span>de 30</span></div></div>
 
       <div className="method-rail"><div className={`method-step ${phase >= 1 ? 'active' : ''}`}><span>1</span><div><b>Recordar</b><small>asociación + imagen</small></div></div><div className="method-line" /><div className={`method-step ${phase >= 2 ? 'active' : ''}`}><span>2</span><div><b>Usar</b><small>frases + historia</small></div></div><div className="method-line" /><div className={`method-step ${phase >= 3 ? 'active' : ''}`}><span>3</span><div><b>Consolidar</b><small>repaso espaciado</small></div></div></div>
+
+      <Link to="/palabra-perfecta" className={`perfect-word-entry link ${perfectWordDone ? 'complete' : ''}`}>
+        <div className="perfect-word-entry-art"><img src="/images/mnemonics/borrow-donkey-phone.jpg" alt="Un burro hablando por un móvil prestado" /></div>
+        <div className="grow"><span className="eyebrow">{perfectWordDone ? 'H1 · MISIÓN COMPLETADA' : 'NUEVA EXPERIENCIA · 4–6 MIN'}</span><h2>{perfectWordDone ? 'Ya puedes recuperar y usar “borrow”' : 'Prueba una palabra perfecta'}</h2><p>{perfectWordDone ? 'Repite el circuito para comprobar si la escena sigue en tu memoria.' : 'Escucha, recuerda una escena absurda, descubre la estructura y crea una frase que sea realmente tuya.'}</p><div className="entry-proof"><span>🔊 Voz natural</span><span>🧠 Recuperación</span><span>✍️ Producción</span></div></div>
+        <strong>{perfectWordDone ? 'Repetir →' : 'Empezar →'}</strong>
+      </Link>
 
       {due.length > 0 && <Link to="/repaso" className="priority-banner link"><span className="priority-icon">🔁</span><div className="grow"><b>Antes de aprender algo nuevo</b><span>{due.length} {due.length === 1 ? 'palabra necesita' : 'palabras necesitan'} que compruebes si siguen en tu memoria.</span></div><strong>Repasar →</strong></Link>}
 

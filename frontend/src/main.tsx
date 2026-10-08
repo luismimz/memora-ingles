@@ -26,6 +26,7 @@ import { Library } from './pages/Library';
 import { Challenges } from './pages/Challenges';
 import { PhrasalVerbs } from './pages/PhrasalVerbs';
 import { MediaLab } from './pages/MediaLab';
+import { PerfectWord } from './pages/PerfectWord';
 import { Spinner, ToastHost } from './components/common';
 import './styles.css';
 
@@ -78,6 +79,7 @@ function Shell() {
           <Route path="/desafios/imagen" element={<Challenges mode="image" />} />
           <Route path="/contenido-real" element={<MediaLab />} />
           <Route path="/sesion" element={<Session />} />
+          <Route path="/palabra-perfecta" element={<PerfectWord />} />
           <Route path="/repaso" element={<Review />} />
           <Route path="/practica" element={<Practice />} />
           <Route path="/practica/hablar" element={<ConversationPath />} />

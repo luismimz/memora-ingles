@@ -94,28 +94,56 @@ export const items = {
 
 export const ai = <T>(path: string, body: Record<string, unknown>) => request<T>('POST', `/memora/${path}`, body);
 
-const pendingSpeech = new Map<string, Promise<string | null>>();
+export interface SpeechAsset {
+  file: string;
+  url: string;
+  cached: boolean;
+  requestMs: number;
+  voice: string | null;
+  rate: number;
+}
+
+let naturalSettings = { voice: null as string | null, rate: 0.88 };
+export const configureNaturalSpeech = (voice: string | null, rate: number) => {
+  naturalSettings = { voice, rate: Number.isFinite(rate) ? rate : 0.88 };
+};
+
+const pendingSpeech = new Map<string, Promise<SpeechAsset | null>>();
 const resolvedSpeech = new Map<string, string>();
-export async function naturalSpeech(text: string, opts: { voice?: string | null; rate?: number } = {}) {
-  let preferredVoice = opts.voice || undefined;
-  if (!preferredVoice) { try { preferredVoice = localStorage.getItem('memora.kokoroVoice') || undefined; } catch { /* almacenamiento opcional */ } }
-  const key = JSON.stringify({ text, voice: preferredVoice, rate: opts.rate ?? 1 });
-  const cached = resolvedSpeech.get(key);
-  if (cached) return cached;
+
+export async function naturalSpeechAsset(text: string, opts: { voice?: string | null; rate?: number; refresh?: boolean } = {}): Promise<SpeechAsset | null> {
+  const preferredVoice = opts.voice === undefined ? naturalSettings.voice : opts.voice;
+  const rate = opts.rate ?? naturalSettings.rate;
+  const key = JSON.stringify({ text, voice: preferredVoice || undefined, rate });
+  if (tokens && Date.now() > tokens.expires_at) await refresh();
+  const cachedFile = !opts.refresh ? resolvedSpeech.get(key) : undefined;
+  if (cachedFile) return { file: cachedFile, url: assetUrl(cachedFile, 'download=0'), cached: true, requestMs: 0, voice: preferredVoice, rate };
   const current = pendingSpeech.get(key);
   if (current) return current;
   const run = (async () => {
     const ctrl = new AbortController();
-    const timer = window.setTimeout(() => ctrl.abort(), 12_000);
+    const timer = window.setTimeout(() => ctrl.abort(), 30_000);
+    const started = performance.now();
     try {
-      const out = await request<{ available: boolean; file?: string }>('POST', '/memora/speech', { text, voice: preferredVoice, rate: opts.rate }, true, ctrl.signal);
-      const url = out.available && out.file ? assetUrl(out.file, 'download=0') : null;
-      if (url) resolvedSpeech.set(key, url);
-      return url;
+      const out = await request<{ available: boolean; file?: string; cached?: boolean }>('POST', '/memora/speech', { text, voice: preferredVoice, rate }, true, ctrl.signal);
+      if (!out.available || !out.file) return null;
+      resolvedSpeech.set(key, out.file);
+      return {
+        file: out.file,
+        url: assetUrl(out.file, 'download=0'),
+        cached: Boolean(out.cached),
+        requestMs: Math.round(performance.now() - started),
+        voice: preferredVoice,
+        rate,
+      };
     } finally { window.clearTimeout(timer); }
   })();
   pendingSpeech.set(key, run);
   try { return await run; } finally { if (pendingSpeech.get(key) === run) pendingSpeech.delete(key); }
+}
+
+export async function naturalSpeech(text: string, opts: { voice?: string | null; rate?: number } = {}) {
+  return (await naturalSpeechAsset(text, opts))?.url ?? null;
 }
 
 export async function naturalVoices() {

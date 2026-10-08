@@ -1,9 +1,10 @@
 import { useEffect, useState, type ReactNode } from 'react';
 import { speak } from '../lib/speech';
-import { naturalSpeech } from '../lib/api';
+import { playNaturalAudio, stopNaturalAudio } from '../lib/audioPlayer';
 
 /** Voz natural de Kokoro. El navegador solo se usa cuando se pide explícitamente. */
 export function playNaturalFast(text: string, slow = false, timeout = 8000, allowBrowserFallback = false) {
+  void timeout; // compatibilidad con llamadas antiguas: ya no se descarta un audio que sigue preparándose.
   let fallbackUsed = false;
   let cancelled = false;
   const fallback = () => {
@@ -12,15 +13,9 @@ export function playNaturalFast(text: string, slow = false, timeout = 8000, allo
     if (allowBrowserFallback) speak(text, slow ? { rate: 0.6 } : {});
     else toast('🔊 La voz natural no está disponible. Revisa Ajustes → Voces y oído.');
   };
-  const timer = window.setTimeout(fallback, timeout);
-  naturalSpeech(text, { rate: slow ? 0.65 : 1 }).then((url) => {
-    if (cancelled) return;
-    window.clearTimeout(timer);
-    if (fallbackUsed) return;
-    if (url) new Audio(url).play().catch(() => fallback());
-    else fallback();
-  }).catch(() => { if (cancelled) return; window.clearTimeout(timer); if (!fallbackUsed) fallback(); });
-  return () => { cancelled = true; window.clearTimeout(timer); };
+  playNaturalAudio(text, { rate: slow ? 0.70 : undefined })
+    .catch((error) => { if (!cancelled && (error as DOMException)?.name !== 'AbortError') fallback(); });
+  return () => { cancelled = true; stopNaturalAudio(); };
 }
 
 export function SpeakBtn({ text, title = 'Escuchar', slow = false, natural = true }: { text: string | null | undefined; title?: string; slow?: boolean; natural?: boolean }) {

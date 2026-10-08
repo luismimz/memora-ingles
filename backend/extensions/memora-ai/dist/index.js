@@ -171,16 +171,19 @@ export default {
       if (!text) return { available: false };
       const voice = String(req.body.voice || env.KOKORO_TTS_VOICE || 'af_heart');
       const rate = Math.max(.5, Math.min(1.5, Number(req.body.rate) || 1));
-      const cacheKey = createHash('sha256').update(JSON.stringify({ text, voice, rate })).digest('hex');
+      const lexiconVersion = String(env.KOKORO_LEXICON_VERSION || '1');
+      const cacheKey = createHash('sha256').update(JSON.stringify({ text, voice, rate, lexiconVersion })).digest('hex');
       // No dependemos de la relación antigua speech_cache.file: si el esquema
       // de Directus tiene relaciones dañadas, TTS debe seguir pudiendo generar.
       let cache = null;
       try {
         cache = await svc('speech_cache_v2');
         const hits = await cache.readByQuery({ filter: { cache_key: { _eq: cacheKey } }, fields: ['file_id'], limit: 1 });
-        if (hits[0]?.file_id) return { available: true, file: hits[0].file_id, cached: true };
+        if (hits[0]?.file_id) return { available: true, file: hits[0].file_id, cached: true, generation_ms: 0, lexicon_version: lexiconVersion };
       } catch (e) { logger.warn(e, 'memora: speech cache read skipped'); }
+      const generatedAt = Date.now();
       const audio = await tts.generate(text, { voice, rate });
+      const generationMs = Date.now() - generatedAt;
       const file = await new FilesService({ schema: await getSchema() }).uploadOne(Readable.from(audio.buffer), {
         storage: String(env.STORAGE_LOCATIONS || 'local').split(',')[0],
         filename_download: `speech-${cacheKey}.${audio.type.includes('wav') ? 'wav' : 'mp3'}`,
@@ -188,7 +191,7 @@ export default {
       });
       try { if (cache) await cache.createOne({ cache_key: cacheKey, text, voice, rate, file_id: file }); }
       catch (e) { logger.warn(e, 'memora: speech cache write skipped'); }
-      return { available: true, file, cached: false };
+      return { available: true, file, cached: false, generation_ms: generationMs, lexicon_version: lexiconVersion };
     }));
 
     router.post('/define', paid, wrap(async (req) => llm.json([

@@ -23,9 +23,16 @@ export function kokoroTts(env) {
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), 20_000);
       try {
+        const normalized = String(text)
+          .replace(/\*\*/g, '')
+          .replace(/\bAPI\b/g, 'A P I')
+          .replace(/\bAI\b/g, 'A I')
+          .replace(/([!?.,])(?=[A-Za-z])/g, '$1 ')
+          .replace(/\s+/g, ' ')
+          .trim();
         const res = await fetch(`${base}/v1/audio/speech`, {
           method: 'POST', headers,
-          body: JSON.stringify({ model: env.KOKORO_TTS_MODEL || 'kokoro', input: text, voice: voice || env.KOKORO_TTS_VOICE || 'af_heart', response_format: 'mp3', speed: Number(rate) || 1 }),
+          body: JSON.stringify({ model: env.KOKORO_TTS_MODEL || 'kokoro', input: normalized, voice: voice || env.KOKORO_TTS_VOICE || 'af_heart', response_format: 'mp3', speed: Number(rate) || 1 }),
           signal: ctrl.signal,
         });
         if (!res.ok) throw new Error(`Kokoro TTS ${res.status}`);

@@ -67,6 +67,7 @@ services:
       KOKORO_TTS_API_KEY: ${KOKORO_TTS_API_KEY:-}
       KOKORO_TTS_MODEL: ${KOKORO_TTS_MODEL:-kokoro}
       KOKORO_TTS_VOICE: ${KOKORO_TTS_VOICE:-af_heart}
+      KOKORO_LEXICON_VERSION: ${KOKORO_LEXICON_VERSION:-1}
       # Recuperar contraseña (email con enlace a https://tu-dominio/reset)
       PASSWORD_RESET_URL_ALLOW_LIST: ${APP_URL}/reset
       EMAIL_FROM: ${EMAIL_FROM:-no-reply@example.com}

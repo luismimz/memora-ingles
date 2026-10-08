@@ -1,7 +1,7 @@
 {
   "note": "Prueba piloto: 20 palabras con las reglas nuevas. keyword/irregular llevan asociación (una sola imagen donde la palabra puente HACE el significado); el resto se aprende sin mnemotecnia.",
   "words": [
-    { "en": "borrow", "kind": "keyword", "keyword": "BURRO", "emoji": "🫏📱", "scene_es": "Un BURRO te PIDE PRESTADO el móvil con la pezuña y se va trotando a llamar a su madre.", "story_en": "A donkey BORROWS your phone with its hoof and trots off to call its mum." },
+    { "en": "borrow", "kind": "keyword", "keyword": "BURRO", "emoji": "🫏📱", "scene_es": "Un BURRO te PIDE PRESTADO el móvil para llamar a su madre.", "story_en": "A donkey BORROWS your phone to call its mother." },
     { "en": "forget", "kind": "keyword", "keyword": "FOGATA", "emoji": "🔥📒", "scene_es": "Tiras tu agenda a una FOGATA y, según arde, OLVIDAS todo: hasta tu propio nombre.", "story_en": "You throw your diary into a bonfire and, as it burns, you FORGET everything, even your name." },
     { "en": "ladder", "kind": "keyword", "keyword": "LADRÓN", "emoji": "🦹🪜", "scene_es": "Un LADRÓN sube por una ESCALERA DE MANO hasta tu ventana con tu tele a cuestas.", "story_en": "A thief climbs a LADDER up to your window carrying your TV on his back." },
     { "en": "lend", "kind": "keyword", "keyword": "LENTES", "emoji": "👓🐀", "scene_es": "LE PRESTAS tus LENTES a un topo; se las pone, te ve por primera vez y te abraza llorando.", "story_en": "You LEND your glasses to a mole; it puts them on, sees you for the first time and hugs you." },
