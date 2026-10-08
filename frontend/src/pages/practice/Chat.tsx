@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
-import { ErrorBox, SpeakBtn } from '../../components/common';
+import { ErrorBox, playNaturalFast, SpeakBtn } from '../../components/common';
 import { ai } from '../../lib/api';
-import { canListen, listen, speak } from '../../lib/speech';
+import { canListen, listen } from '../../lib/speech';
 import { useStore } from '../../store';
 import { BackHeader, NeedsAi, useLearnedWords } from './shared';
 
@@ -34,7 +34,7 @@ export function Chat() {
         if (lastUser >= 0 && out.correction_es) copy[lastUser] = { ...copy[lastUser], fix: out.correction_es };
         return [...copy, { role: 'assistant', content: out.reply_en, es: out.reply_es }];
       });
-      speak(out.reply_en);
+      playNaturalFast(out.reply_en);
     } catch (e) { setError(e); } finally { setBusy(false); }
   };
 

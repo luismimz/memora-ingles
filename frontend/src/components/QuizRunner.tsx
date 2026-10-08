@@ -1,10 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { checkAnswer, makeCloze } from '../lib/answer';
 import { gradeByTime } from '../lib/srs';
-import { speak } from '../lib/speech';
 import { useStore } from '../store';
 import type { Mnemonic, Mode, Result, Word } from '../types';
-import { ProgressBar, Rich, shuffle, SpeakBtn } from './common';
+import { playNaturalFast, ProgressBar, Rich, shuffle, SpeakBtn } from './common';
 import { ExposureCard } from './ExposureCard';
 
 export interface QuizItem { word: Word; mode: Mode }
@@ -63,7 +62,7 @@ export function QuizRunner({ items, pool, onAnswer, onDone, retryFailed = true, 
     if (!current) return;
     started.current = Date.now();
     setAnswer(''); setRevealed(false); setFeedback(null); setHints(0);
-    if (current.mode === 'listen_type' || current.mode === 'en_es_choice') setTimeout(() => speak(current.word.en), 200);
+    if (current.mode === 'listen_type' || current.mode === 'en_es_choice') setTimeout(() => playNaturalFast(current.word.en), 200);
     setTimeout(() => inputRef.current?.focus(), 50);
   }, [idx, current]);
 
@@ -101,7 +100,7 @@ export function QuizRunner({ items, pool, onAnswer, onDone, retryFailed = true, 
       setQueue((q) => [...q.slice(0, idx + 1), ...rescue, ...q.slice(idx + 1), { word, mode: TYPED.includes(current.mode) ? current.mode : 'es_en_type', retry: true, rescue: false }]);
     }
     setFeedback({ result, typo, given });
-    if (result !== 'fail' && autoSpeak) speak(word.en);
+    if (result !== 'fail' && autoSpeak) playNaturalFast(word.en);
   };
 
   const submitTyped = () => {
@@ -132,8 +131,8 @@ export function QuizRunner({ items, pool, onAnswer, onDone, retryFailed = true, 
 
         {mode === 'es_en_type' && <div className="big-prompt">{word.es}{word.pos && <div className="small muted">({word.pos})</div>}</div>}
         {mode === 'listen_type' && (
-          <div className="center"><button className="btn big secondary" onClick={() => speak(word.en)}>🔊 Escuchar</button>
-            <button className="btn ghost" onClick={() => speak(word.en, { rate: 0.6 })}>🐢 despacio</button></div>
+          <div className="center"><button className="btn big secondary" onClick={() => playNaturalFast(word.en)}>🔊 Escuchar</button>
+            <button className="btn ghost" onClick={() => playNaturalFast(word.en, true)}>🐢 despacio</button></div>
         )}
         {mode === 'cloze' && cloze && (
           <div className="center">
@@ -176,7 +175,7 @@ export function QuizRunner({ items, pool, onAnswer, onDone, retryFailed = true, 
               const cls = feedback ? (c.id === word.id ? 'ok' : feedback.given === String(c.id) ? 'fail' : '') : '';
               return (
                 <button key={`${c.id}-${c.label}`} className={`choice ${cls}`} disabled={!!feedback}
-                  onClick={() => { if (mode === 'rescue_sound') speak(c.label); finish(c.id === word.id ? gradeByTime(true, Date.now() - started.current, 7000) : 'fail', false, String(c.id)); }}>
+                  onClick={() => { if (mode === 'rescue_sound') playNaturalFast(c.label); finish(c.id === word.id ? gradeByTime(true, Date.now() - started.current, 7000) : 'fail', false, String(c.id)); }}>
                   {c.label}
                 </button>
               );
@@ -185,7 +184,7 @@ export function QuizRunner({ items, pool, onAnswer, onDone, retryFailed = true, 
         )}
 
         {mode === 'flash' && !feedback && (
-          !revealed ? <button className="btn big" onClick={() => { setRevealed(true); speak(word.en); }}>Mostrar respuesta</button> : (
+          !revealed ? <button className="btn big" onClick={() => { setRevealed(true); playNaturalFast(word.en); }}>Mostrar respuesta</button> : (
             <div className="stack center">
               <div className="big-prompt" style={{ color: 'var(--primary)' }}>{word.en}</div>
               <div className="row">

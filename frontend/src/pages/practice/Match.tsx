@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ProgressBar, shuffle } from '../../components/common';
-import { speak } from '../../lib/speech';
+import { playNaturalFast, ProgressBar, shuffle } from '../../components/common';
 import { isDue, isLeech } from '../../lib/srs';
 import type { Progress, Word } from '../../types';
 import { useStore } from '../../store';
@@ -66,7 +65,7 @@ export function Match() {
 
   const tap = (t: Tile) => {
     if (!playing || gone.has(t.word.id)) return;
-    if (!pick) { setPick(t); if (t.side === 'en') speak(t.word.en); return; }
+    if (!pick) { setPick(t); if (t.side === 'en') playNaturalFast(t.word.en); return; }
     if (pick.key === t.key) { setPick(null); return; }
     if (pick.word.id === t.word.id && pick.side !== t.side) {
       const next = new Set(gone).add(t.word.id);

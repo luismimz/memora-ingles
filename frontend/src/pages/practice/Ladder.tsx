@@ -1,10 +1,9 @@
 import { useState } from 'react';
-import { ErrorBox, Rich, SpeakBtn, toast } from '../../components/common';
+import { ErrorBox, playNaturalFast, Rich, SpeakBtn, toast } from '../../components/common';
 import { SentenceDiff } from '../../components/SentenceDiff';
 import { STRUCTURES, structureFor } from '../../data/structures';
 import { ai, items } from '../../lib/api';
 import { sentenceScore } from '../../lib/answer';
-import { speak } from '../../lib/speech';
 import { useStore } from '../../store';
 import { BackHeader, useLearnedWords } from './shared';
 
@@ -30,7 +29,7 @@ export function Ladder() {
     const [, en] = s.ladder[step];
     const score = sentenceScore(answer, en);
     setChecked(score);
-    speak(en);
+    playNaturalFast(en);
   };
   const next = () => { setStep(step + 1); setAnswer(''); setChecked(null); };
 
@@ -81,7 +80,7 @@ export function Ladder() {
               placeholder="En inglés…" autoCapitalize="off" autoComplete="off" readOnly={checked !== null} />
             {checked === null ? (
               <div className="row">
-                <button type="button" className="btn secondary grow" onClick={() => { setAnswer(''); setChecked(0); speak(s.ladder[step][1]); }}>Ver solución</button>
+                <button type="button" className="btn secondary grow" onClick={() => { setAnswer(''); setChecked(0); playNaturalFast(s.ladder[step][1]); }}>Ver solución</button>
                 <button className="btn grow" disabled={!answer.trim()}>Comprobar</button>
               </div>
             ) : (

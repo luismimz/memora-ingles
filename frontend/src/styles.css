@@ -567,6 +567,8 @@ kbd { background: var(--surface-2); border-radius: 6px; padding: 1px 6px; font-s
 .journey-mission-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
 .journey-mission-head h2 { margin: .3rem 0 .25rem; }
 .journey-mission-head p { margin: 0; }
+.journey-challenge { margin-top: 1rem; padding: 12px 14px; border-left: 4px solid var(--accent); border-radius: 10px; background: var(--accent-soft); color: var(--text); }
+.journey-challenge b { color: var(--accent); }
 .journey-reward { padding: 7px 10px; border-radius: 999px; background: var(--doubt-soft); color: var(--doubt); font-size: .8rem; font-weight: 950; white-space: nowrap; }
 .journey-pattern { display: flex; flex-direction: column; gap: .2rem; margin: 1rem 0 .75rem; padding: 11px 13px; border-radius: 13px; background: var(--primary-soft); }
 .journey-pattern span { color: var(--muted); font-size: .7rem; font-weight: 900; text-transform: uppercase; letter-spacing: .08em; }
@@ -575,6 +577,9 @@ kbd { background: var(--surface-2); border-radius: 6px; padding: 1px 6px; font-s
 .journey-word-chips span { display: flex; flex-direction: column; gap: .05rem; padding: 7px 10px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface-2); }
 .journey-word-chips b { color: var(--text); font-size: .82rem; }
 .journey-word-chips small { color: var(--muted); font-size: .68rem; }
+.journey-constraints { display: flex; flex-wrap: wrap; gap: .45rem; margin: -.15rem 0 .85rem; color: var(--muted); font-size: .76rem; }
+.journey-constraints span { padding: 6px 9px; border-radius: 9px; background: var(--surface-2); }
+.journey-constraints b { color: var(--primary); }
 .journey-input-wrap { display: flex; gap: .55rem; }
 .journey-input-wrap input { min-width: 0; flex: 1; border: 2px solid var(--border); border-radius: 13px; padding: 11px 13px; background: var(--surface); outline: none; }
 .journey-input-wrap input:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }

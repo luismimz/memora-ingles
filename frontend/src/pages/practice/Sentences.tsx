@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
-import { ErrorBox, Rich, shuffle, SpeakBtn, Spinner, toast } from '../../components/common';
+import { ErrorBox, playNaturalFast, Rich, shuffle, SpeakBtn, Spinner, toast } from '../../components/common';
 import { ai, items } from '../../lib/api';
 import { sentenceScore } from '../../lib/answer';
-import { speak } from '../../lib/speech';
 import { useStore } from '../../store';
 import type { Sentence } from '../../types';
 import { BackHeader } from './shared';
@@ -26,7 +25,7 @@ export function Sentences() {
 
   const translate = async () => {
     setBusy('tr'); setError(null);
-    try { const out = await ai<Translation>('translate', { text: es, model: store.aiModel }); setTr(out); setEn(out.en); speak(out.en); }
+    try { const out = await ai<Translation>('translate', { text: es, model: store.aiModel }); setTr(out); setEn(out.en); playNaturalFast(out.en); }
     catch (e) { setError(e); } finally { setBusy(null); }
   };
   const correct = async () => {
@@ -120,9 +119,9 @@ function Drill({ list, onExit }: { list: Sentence[]; onExit: () => void }) {
       <span className="small muted">{i + 1}/{list.length}</span>
       <div className="card stack">
         <div className="big-prompt" style={{ fontSize: '1.3rem' }}>{s.es}</div>
-        <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && score === null) { e.preventDefault(); setScore(sentenceScore(answer, s.en)); speak(s.en); } }} placeholder="Dilo en voz alta y escríbelo… · Enter para validar" readOnly={score !== null} style={{ minHeight: 70 }} />
+        <textarea value={answer} onChange={(e) => setAnswer(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && score === null) { e.preventDefault(); setScore(sentenceScore(answer, s.en)); playNaturalFast(s.en); } }} placeholder="Dilo en voz alta y escríbelo… · Enter para validar" readOnly={score !== null} style={{ minHeight: 70 }} />
         {score === null ? (
-          <button className="btn" onClick={() => { setScore(sentenceScore(answer, s.en)); speak(s.en); }}>Comprobar · Enter ↵</button>
+          <button className="btn" onClick={() => { setScore(sentenceScore(answer, s.en)); playNaturalFast(s.en); }}>Comprobar · Enter ↵</button>
         ) : (
           <>
             <SentenceDiff given={answer} expected={s.en} />

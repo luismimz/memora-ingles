@@ -1,12 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { KIND_LABEL } from '../../../shared/classify.mjs';
-import { ErrorBox, fmtTime, ProgressBar, Rich, shuffle, SpeakBtn, Spinner, toast } from '../components/common';
+import { ErrorBox, fmtTime, playNaturalFast, ProgressBar, Rich, shuffle, SpeakBtn, Spinner, toast } from '../components/common';
 import { ExposureCard, soundBadge, type MnemonicChoice } from '../components/ExposureCard';
 import { QuizRunner, type AnswerMeta, type QuizItem, type QuizSummary } from '../components/QuizRunner';
 import { palaceFor } from '../data/palaces';
 import { ai, items } from '../lib/api';
-import { speak } from '../lib/speech';
 import { afterExam } from '../lib/srs';
 import { useStore } from '../store';
 import type { PilotReport, Result, StudyDay, Word } from '../types';
@@ -395,7 +394,7 @@ function Filter({ size, day, onKnown, onDone }: { size: number; day: StudyDay; o
   const w = candidates[i];
   const finish = (list: Word[]) => { if (!finished.current) { finished.current = true; onDone(list); } };
 
-  useEffect(() => { if (w && store.profile?.auto_speak) speak(w.en); }, [w, store.profile?.auto_speak]);
+  useEffect(() => { if (w && store.profile?.auto_speak) playNaturalFast(w.en); }, [w, store.profile?.auto_speak]);
   useEffect(() => { if (picked.length >= size || (!w && i > 0)) finish(picked); }); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!w) return <div className="card center">No quedan palabras nuevas. <button className="btn" onClick={() => finish(picked)}>Continuar con {picked.length}</button></div>;
@@ -467,7 +466,7 @@ function RoomRecall({ words, spot, day, roomKey, onNext, last }: {
         <div className="muted small">{spot} · di cada palabra en inglés y toca para comprobar.</div>
         {words.map((w) => (
           <button key={w.id} className="list-item" style={{ background: 'none', border: 0, width: '100%', textAlign: 'left' }}
-            onClick={() => { setShown((s) => new Set(s).add(w.id)); speak(w.en); }}>
+            onClick={() => { setShown((s) => new Set(s).add(w.id)); playNaturalFast(w.en); }}>
             <span style={{ fontSize: '1.3rem' }}>{store.activeMnemonic(w.id)?.emoji?.slice(0, 2) ?? '•'}</span>
             <span className="grow"><b>{w.es}</b></span>
             <span style={{ fontWeight: 900, color: shown.has(w.id) ? 'var(--primary)' : 'var(--muted)' }}>{shown.has(w.id) ? w.en : '👆 ?'}</span>

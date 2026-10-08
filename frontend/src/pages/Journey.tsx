@@ -1,11 +1,21 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ProgressBar, SpeakBtn, fmtTime, playNaturalFast } from '../components/common';
+import { ProgressBar, fmtTime, playNaturalFast } from '../components/common';
 import { SentenceDiff } from '../components/SentenceDiff';
 import { DAY_JOURNEY, journeyProgress, saveJourneyProgress } from '../data/dayJourney';
-import { sentenceScore } from '../lib/answer';
+import { normalize, sentenceScore, sentenceTokens } from '../lib/answer';
 
 const CHAPTER_SECONDS = 180;
+
+function evaluateProduction(answer: string, requiredWords: string[], minWords: number, target: string) {
+  const text = normalize(answer);
+  const words = sentenceTokens(answer);
+  const missing = requiredWords.filter((word) => !text.includes(normalize(word)));
+  const enoughWords = words.length >= minWords;
+  const canonicalScore = sentenceScore(answer, target);
+  const accepted = (missing.length === 0 && enoughWords) || canonicalScore >= 0.78;
+  return { score: accepted ? Math.max(canonicalScore, 0.75) : canonicalScore, accepted, missing, wordCount: words.length };
+}
 
 export function Journey() {
   const [chapterIndex, setChapterIndex] = useState(journeyProgress());
@@ -14,6 +24,11 @@ export function Journey() {
   const [seconds, setSeconds] = useState(CHAPTER_SECONDS);
   const [englishVisible, setEnglishVisible] = useState(false);
   const [completed, setCompleted] = useState(false);
+  const [accepted, setAccepted] = useState(false);
+  const [missing, setMissing] = useState<string[]>([]);
+  const [stage, setStage] = useState<'listen' | 'produce'>('listen');
+  const [playCount, setPlayCount] = useState(0);
+  const inputRef = useRef<HTMLInputElement>(null);
   const chapter = DAY_JOURNEY[chapterIndex];
 
   useEffect(() => {
@@ -24,8 +39,14 @@ export function Journey() {
     setSeconds(CHAPTER_SECONDS);
     setEnglishVisible(false);
     setCompleted(false);
+    setAccepted(false);
+    setMissing([]);
+    setStage('listen');
+    setPlayCount(0);
     return cancel;
   }, [chapterIndex, chapter]);
+
+  useEffect(() => { if (stage === 'produce') inputRef.current?.focus(); }, [stage]);
 
   useEffect(() => {
     if (!chapter || completed || seconds <= 0) return;
@@ -48,9 +69,11 @@ export function Journey() {
   }
 
   const check = () => {
-    const nextScore = sentenceScore(answer, chapter.target);
-    setScore(nextScore);
-    if (nextScore >= 0.68) {
+    const result = evaluateProduction(answer, chapter.requiredWords, chapter.minWords, chapter.target);
+    setScore(result.score);
+    setAccepted(result.accepted);
+    setMissing(result.missing);
+    if (result.accepted) {
       saveJourneyProgress(chapterIndex + 1);
       setCompleted(true);
     }
@@ -60,6 +83,8 @@ export function Journey() {
     setChapterIndex((value) => Math.min(value + 1, DAY_JOURNEY.length));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  const replay = () => { setPlayCount((count) => count + 1); playNaturalFast(chapter.sceneEn); };
 
   return (
     <div className="stack journey-page">
@@ -80,19 +105,22 @@ export function Journey() {
         <div className="journey-scene-copy">
           <span className="chip primary">1 · ENTRA EN LA ESCENA</span>
           <h2>{chapter.sceneEs}</h2>
-          <div className="journey-audio-row"><SpeakBtn text={chapter.sceneEn} title="Escuchar la escena" /><span>Escucha la escena completa. La voz se reproduce automáticamente.</span><button className="text-link" type="button" onClick={() => setEnglishVisible((value) => !value)}>{englishVisible ? 'Ocultar inglés' : 'Ver inglés'}</button></div>
+          <div className="journey-audio-controls"><button className="btn secondary" type="button" onClick={replay}>🔊 {playCount ? 'Repetir la frase' : 'Escuchar la frase'}</button><span>{playCount ? `La has escuchado ${playCount} ${playCount === 1 ? 'vez' : 'veces'}.` : 'Primero escucha y entiende la situación.'}</span><button className="text-link" type="button" onClick={() => setEnglishVisible((value) => !value)}>{englishVisible ? 'Ocultar inglés' : 'Ver inglés si lo necesitas'}</button></div>
           {englishVisible && <p className="journey-scene-en">{chapter.sceneEn}</p>}
         </div>
       </section>
 
-      <section className="journey-mission">
-        <div className="journey-mission-head"><div><span className="chip accent">2 · PRODUCE</span><h2>Ahora dilo tú</h2><p className="muted">No copies la escena. Usa esta pieza para construir una frase que podrías decir hoy.</p></div><span className="journey-reward">+{chapter.reward} XP</span></div>
+      {stage === 'listen' ? <section className="journey-listen-step card"><span className="chip primary">PASO 1 DE 2 · ESCUCHA Y ENTIENDE</span><h2>¿Qué está pasando en esta escena?</h2><p className="muted">No escribas todavía la frase que has oído. Puedes reproducirla de nuevo, ver el inglés si lo necesitas y pensar en la situación.</p><div className="journey-listen-check"><span>✅ Ya sabes quién habla y qué necesita hacer.</span><span>✅ Ya tienes claro qué responderías tú.</span></div><div className="row"><button className="btn" type="button" onClick={() => setStage('produce')}>Ya entiendo la situación →</button><button className="btn ghost" type="button" onClick={replay}>🔁 Escuchar otra vez</button></div></section> : <section className="journey-mission">
+        <div className="journey-mission-head"><div><span className="chip accent">2 · PRODUCE</span><h2>Ahora resuelve la situación</h2><p className="muted">No copies la frase escuchada. Responde al reto con tus propias palabras y construye una respuesta completa.</p></div><span className="journey-reward">+{chapter.reward} XP</span></div>
+        <button className="journey-back-listen" type="button" onClick={() => setStage('listen')}>← Volver a escuchar y entender</button>
+        <div className="journey-challenge"><b>🎯 Tu reto:</b> {chapter.challengeEs}</div>
         <div className="journey-pattern"><span>La estructura</span><b>{chapter.pattern}</b></div>
         <div className="journey-word-chips">{chapter.words.map(([en, es]) => <span key={en}><b>{en}</b><small>{es}</small></span>)}</div>
-        <div className="journey-input-wrap"><input autoFocus value={answer} onChange={(event) => { setAnswer(event.target.value); if (score !== null) setScore(null); }} onKeyDown={(event) => { if (event.key === 'Enter' && !completed) { event.preventDefault(); check(); } }} placeholder="Escribe tu frase en inglés · Enter para comprobar" disabled={completed} /><button className="btn" type="button" onClick={check} disabled={!answer.trim() || completed}>Comprobar ↵</button></div>
-        {score !== null && <div className={`journey-feedback ${score >= 0.68 ? 'success' : 'try-again'}`}><b>{score >= 0.68 ? '✅ Escena desbloqueada' : '🔁 Casi. Mira la estructura y vuelve a intentarlo'}</b><span>{score >= 0.68 ? 'La frase ya está disponible para usarla en tu día.' : 'No buscamos perfección: buscamos que recuerdes el patrón.'}</span><SentenceDiff given={answer} expected={chapter.target} /></div>}
+        <div className="journey-constraints"><span>Usa al menos <b>{chapter.minWords} palabras</b></span><span>Incluye: <b>{chapter.requiredWords.join(' · ')}</b></span></div>
+        <div className="journey-input-wrap"><input ref={inputRef} value={answer} onChange={(event) => { setAnswer(event.target.value); if (score !== null) { setScore(null); setAccepted(false); setMissing([]); } }} onKeyDown={(event) => { if (event.key === 'Enter' && !completed) { event.preventDefault(); check(); } }} placeholder={`Responde con ${chapter.minWords} palabras o más · Enter para comprobar`} disabled={completed} /><button className="btn" type="button" onClick={check} disabled={!answer.trim() || completed}>Comprobar ↵</button></div>
+        {score !== null && <div className={`journey-feedback ${accepted ? 'success' : 'try-again'}`}><b>{accepted ? '✅ Respuesta válida · escena desbloqueada' : '🔁 Aún falta completar el reto'}</b><span>{accepted ? `Has construido una respuesta de ${sentenceTokens(answer).length} palabras con tus propias piezas.` : `${missing.length ? `Añade: ${missing.join(', ')}.` : `Escribe al menos ${chapter.minWords} palabras.`} No copies: vuelve a intentarlo con la situación.`}</span>{!accepted && <SentenceDiff given={answer} expected={chapter.target} />}</div>}
         {completed && <div className="journey-next"><div><b>+{chapter.reward} XP · racha de aprendizaje mantenida</b><span>La siguiente escena continúa la historia.</span></div><button className="btn" type="button" onClick={next}>{chapterIndex + 1 >= DAY_JOURNEY.length ? 'Ver cierre del día →' : 'Siguiente escena →'}</button></div>}
-      </section>
+      </section>}
 
       <div className="journey-method"><span>🧠 Asociar</span><i>→</i><span>👂 Escuchar</span><i>→</i><span>🗣️ Producir</span><i>→</i><span>🏆 Desbloquear</span></div>
     </div>

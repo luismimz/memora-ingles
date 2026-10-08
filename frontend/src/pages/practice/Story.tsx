@@ -1,8 +1,7 @@
 import { useState } from 'react';
-import { ErrorBox, Modal, Rich, SpeakBtn, toast } from '../../components/common';
+import { ErrorBox, Modal, playNaturalFast, Rich, SpeakBtn, toast } from '../../components/common';
 import { ai, items } from '../../lib/api';
 import { checkAnswer } from '../../lib/answer';
-import { speak } from '../../lib/speech';
 import { useStore } from '../../store';
 import type { PersonalVocabulary } from '../../types';
 import { BackHeader, NeedsAi, NeedsWords, useLearnedWords } from './shared';
@@ -107,7 +106,7 @@ export function Story() {
           {definition.note_es && <div className="small muted"><Rich text={definition.note_es} /></div>}
           {definition.example_en && <div className="example"><div className="row" style={{ justifyContent: 'space-between', flexWrap: 'nowrap' }}><b>{definition.example_en}</b><SpeakBtn text={definition.example_en} natural /></div></div>}
           <button className="btn" disabled={saved} onClick={saveWord}>{saved ? '✅ Guardada en Mi vocabulario' : '📌 Añadir a Mi vocabulario'}</button>
-          <button className="btn secondary" onClick={() => { speak(definition.term); setDefinition(null); }}>Seguir leyendo</button>
+          <button className="btn secondary" onClick={() => { playNaturalFast(definition.term); setDefinition(null); }}>Seguir leyendo</button>
         </div>}
       </Modal>}
     </div>

@@ -1,9 +1,7 @@
 import { useMemo, useState } from 'react';
-import { shuffle } from '../../components/common';
+import { playNaturalFast, shuffle } from '../../components/common';
 import { SentenceDiff } from '../../components/SentenceDiff';
 import { sentenceScore } from '../../lib/answer';
-import { speak } from '../../lib/speech';
-import { naturalSpeech } from '../../lib/api';
 import { useStore } from '../../store';
 import { BackHeader, NeedsWords, useLearnedWords } from './shared';
 
@@ -16,12 +14,7 @@ export function Dictation() {
   const [score, setScore] = useState<number | null>(null);
   const [total, setTotal] = useState(0);
   const w = list[i];
-  const play = (text: string, rate: number) => {
-    naturalSpeech(text, { rate }).then((url) => {
-      if (url) new Audio(url).play().catch(() => speak(text, { rate }));
-      else speak(text, { rate });
-    }).catch(() => speak(text, { rate }));
-  };
+  const play = (text: string, rate: number) => playNaturalFast(text, rate < 1, 8000);
 
   if (!learned.length) return <div className="stack"><BackHeader title="🎧 Dictado" /><NeedsWords /></div>;
   if (!w) {

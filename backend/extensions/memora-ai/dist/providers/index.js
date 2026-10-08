@@ -23,12 +23,15 @@ const FACTORIES = {
   tts: { none: disabledTts, kokoro: kokoroTts },
 };
 
+// Si Coolify ya tiene KOKORO_TTS_URL, no obligamos a duplicar la configuración
+// con TTS_PROVIDER=kokoro. Solo se mantiene desactivado cuando no hay URL.
 const DEFAULTS = { llm: 'openrouter', pronunciation: 'datamuse', candidates: 'datamuse', image: 'pollinations', sentences: 'tatoeba', tts: 'none' };
 
 export function createProviders(env) {
   const out = {};
   for (const [kind, impls] of Object.entries(FACTORIES)) {
-    const name = String(env[`${kind.toUpperCase()}_PROVIDER`] || DEFAULTS[kind]).toLowerCase();
+    const automaticTts = kind === 'tts' && env.KOKORO_TTS_URL ? 'kokoro' : DEFAULTS[kind];
+    const name = String(env[`${kind.toUpperCase()}_PROVIDER`] || automaticTts).toLowerCase();
     const factory = impls[name];
     if (!factory) throw new Error(`Proveedor desconocido ${kind}=${name}. Disponibles: ${Object.keys(impls).join(', ')}`);
     out[kind] = factory(env);
