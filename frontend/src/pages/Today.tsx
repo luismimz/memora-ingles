@@ -44,7 +44,7 @@ export function Today() {
       <div className="method-rail"><div className={`method-step ${phase >= 1 ? 'active' : ''}`}><span>1</span><div><b>Recordar</b><small>asociación + imagen</small></div></div><div className="method-line" /><div className={`method-step ${phase >= 2 ? 'active' : ''}`}><span>2</span><div><b>Usar</b><small>frases + historia</small></div></div><div className="method-line" /><div className={`method-step ${phase >= 3 ? 'active' : ''}`}><span>3</span><div><b>Consolidar</b><small>repaso espaciado</small></div></div></div>
 
       <Link to="/palabra-perfecta" className={`perfect-word-entry link ${perfectWordDone ? 'complete' : ''}`}>
-        <div className="perfect-word-entry-art"><img src="/images/mnemonics/borrow-donkey-phone.jpg" alt="Un burro hablando por un móvil prestado" /></div>
+        <div className="perfect-word-entry-art"><img src="/images/mnemonics/borrow-donkey-phone-h1-v1.jpg" alt="Un burro hablando por un móvil prestado" /></div>
         <div className="grow"><span className="eyebrow">{perfectWordDone ? 'H1 · MISIÓN COMPLETADA' : 'NUEVA EXPERIENCIA · 4–6 MIN'}</span><h2>{perfectWordDone ? 'Ya puedes recuperar y usar “borrow”' : 'Prueba una palabra perfecta'}</h2><p>{perfectWordDone ? 'Repite el circuito para comprobar si la escena sigue en tu memoria.' : 'Escucha, recuerda una escena absurda, descubre la estructura y crea una frase que sea realmente tuya.'}</p><div className="entry-proof"><span>🔊 Voz natural</span><span>🧠 Recuperación</span><span>✍️ Producción</span></div></div>
         <strong>{perfectWordDone ? 'Repetir →' : 'Empezar →'}</strong>
       </Link>
