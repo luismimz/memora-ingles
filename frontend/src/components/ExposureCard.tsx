@@ -30,6 +30,14 @@ type UseStage = 'memory' | 'order' | 'create';
 
 export type SentenceVariant = { en: string; es: string; source?: string };
 
+interface SentenceReview {
+  correct: boolean;
+  corrected: string;
+  explanation_es: string;
+  natural: string;
+  score: number;
+}
+
 const VARIANT_CURSOR_KEY = 'memora.sentence-variant-cursor';
 
 function readVariantCursor(wordId: number) {
@@ -132,6 +140,9 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
   const [ownChecked, setOwnChecked] = useState(false);
   const [ownIssues, setOwnIssues] = useState<string[]>([]);
   const [ownAccepted, setOwnAccepted] = useState(false);
+  const [ownReview, setOwnReview] = useState<SentenceReview | null>(null);
+  const [ownReviewBusy, setOwnReviewBusy] = useState(false);
+  const [ownReviewError, setOwnReviewError] = useState<string | null>(null);
   const started = useRef(Date.now());
   const useStarted = useRef(0);
   const useInProgress = useRef(false);
@@ -161,7 +172,7 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
     const initialIndex = readVariantCursor(word.id) % Math.max(variants.length, 1);
     started.current = Date.now(); useStarted.current = 0; useInProgress.current = false; setSecs(0); setShowEn(false); setMore(variant === 'detail');
     setSentenceVariants(variants); setSentenceVariantIndex(initialIndex);
-    setUseStage('memory'); setOrdered([]); setPoolOrder(shuffleIds(variants[initialIndex] ? wordsForSentence(variants[initialIndex].en).length + 2 : 0)); setDragIndex(null); setOrderChecked(null); setOwnSentence(''); setOwnChecked(false); setOwnIssues([]); setOwnAccepted(false);
+    setUseStage('memory'); setOrdered([]); setPoolOrder(shuffleIds(variants[initialIndex] ? wordsForSentence(variants[initialIndex].en).length + 2 : 0)); setDragIndex(null); setOrderChecked(null); setOwnSentence(''); setOwnChecked(false); setOwnIssues([]); setOwnAccepted(false); setOwnReview(null); setOwnReviewBusy(false); setOwnReviewError(null);
   }, [word.id, variant]);
   useEffect(() => { if (autoSpeak) return playNaturalFast(word.en); return undefined; }, [word.id, autoSpeak, word.en]);
   useEffect(() => {
@@ -202,11 +213,38 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
     setOrderChecked(correct);
     if (correct) setUseStage('create');
   };
-  const checkOwn = () => {
+  const checkOwn = async () => {
     const issues = creativeSentenceIssues(word, ownSentence, example);
     setOwnChecked(true);
     setOwnIssues(issues);
-    setOwnAccepted(issues.length === 0);
+    setOwnReview(null);
+    setOwnReviewError(null);
+    setOwnAccepted(false);
+    if (issues.length) return;
+
+    // La longitud y la palabra objetivo solo demuestran que se intentó el reto.
+    // «Correcta» se concede después de revisar gramática, sentido y naturalidad.
+    if (!store.aiInfo.enabled) {
+      setOwnAccepted(true);
+      setOwnReviewError('Has completado el reto, pero la revisión gramatical profunda no está disponible ahora mismo.');
+      return;
+    }
+
+    setOwnReviewBusy(true);
+    try {
+      const review = await ai<SentenceReview>('correct', {
+        sentence: ownSentence.trim(),
+        intended: `Una frase personal distinta que use “${word.en}” con el significado “${word.es}”. No debe copiar la frase modelo “${example}”.`,
+        words: [word.en],
+        model: store.aiModel,
+      });
+      setOwnReview(review);
+      setOwnAccepted(Boolean(review.correct));
+    } catch (error) {
+      setOwnReviewError(error instanceof Error ? error.message : 'No he podido revisar la frase. Inténtalo otra vez.');
+    } finally {
+      setOwnReviewBusy(false);
+    }
   };
 
   const finishUse = () => onDone?.(Math.max(Date.now() - started.current, Date.now() - useStarted.current));
@@ -278,9 +316,13 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
           ) : (
             <>
               <div className="word-use-heading"><span className="chip accent">3 · CREAR OTRA</span><b>Ahora crea una frase propia</b><span>Ya reconstruiste <q>{example}</q> Ahora escribe una frase diferente y verdadera para ti usando <strong>{word.en}</strong>.</span><small className="muted">Aquí no existe una respuesta modelo: comprobamos tu frase, no la comparamos con la anterior.</small></div>
-              <textarea value={ownSentence} onChange={(e) => { setOwnSentence(e.target.value); setOwnChecked(false); setOwnIssues([]); setOwnAccepted(false); }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !ownAccepted) { e.preventDefault(); checkOwn(); } }} placeholder={`Una frase nueva con “${word.en}” · mínimo 5 palabras · Enter`} disabled={ownAccepted} />
-              {ownChecked && <div className={`feedback ${ownAccepted ? 'ok' : 'doubt'}`}><b>{ownAccepted ? '✅ Esta frase sí es tuya' : '🔁 Solo falta esto'}</b>{ownAccepted ? <span>Has usado la palabra en una idea diferente. No había una frase exacta que copiar.</span> : <ul className="own-issues">{ownIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}</div>}
-              <div className="row"><button className="btn secondary grow" type="button" onClick={() => { setUseStage('order'); setOrdered([]); setOrderChecked(null); }}>← Volver a ordenar</button>{ownAccepted ? <button className="btn grow" type="button" onClick={finishUse}>Siguiente palabra →</button> : <button className="btn grow" type="button" disabled={!ownSentence.trim()} onClick={checkOwn}>Comprobar frase ↵</button>}</div>
+              <textarea value={ownSentence} onChange={(e) => { setOwnSentence(e.target.value); setOwnChecked(false); setOwnIssues([]); setOwnAccepted(false); setOwnReview(null); setOwnReviewError(null); }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !ownAccepted && !ownReviewBusy) { e.preventDefault(); void checkOwn(); } }} placeholder={`Una frase nueva con “${word.en}” · mínimo 5 palabras · Enter`} disabled={ownAccepted || ownReviewBusy} />
+              {ownReviewBusy && <div className="feedback doubt"><b>🤖 Revisando tu inglés…</b><span>Compruebo gramática, significado y si suena natural.</span></div>}
+              {ownChecked && !ownReviewBusy && ownIssues.length > 0 && <div className="feedback doubt"><b>🔁 Solo falta esto</b><ul className="own-issues">{ownIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul></div>}
+              {ownChecked && !ownReviewBusy && ownIssues.length === 0 && ownReview?.correct && <div className="feedback ok"><b>✅ Suena bien</b><span>{ownReview.explanation_es || `Has usado “${word.en}” correctamente en una idea tuya.`}</span>{ownReview.natural && normalize(ownReview.natural) !== normalize(ownSentence) && <span>Una forma aún más natural: <strong>{ownReview.natural}</strong> <SpeakBtn text={ownReview.natural} /></span>}</div>}
+              {ownChecked && !ownReviewBusy && ownIssues.length === 0 && ownReview && !ownReview.correct && <div className="feedback doubt"><b>✏️ Vamos a mejorarla</b><span><Rich text={ownReview.explanation_es || 'La idea se entiende, pero hay que ajustar la frase.'} /></span>{(ownReview.corrected || ownReview.natural) && <span>Prueba así: <strong>{ownReview.corrected || ownReview.natural}</strong> <SpeakBtn text={ownReview.corrected || ownReview.natural} /></span>}<button className="btn secondary small" type="button" onClick={() => { setOwnSentence(ownReview.corrected || ownReview.natural); setOwnChecked(false); setOwnReview(null); setOwnReviewError(null); }}>Usar la corrección y revisarla</button></div>}
+              {ownChecked && !ownReviewBusy && ownIssues.length === 0 && ownReviewError && <div className={`feedback ${ownAccepted ? 'doubt' : 'fail'}`}><b>{ownAccepted ? '⚠️ Reto completado sin revisión profunda' : '⚠️ No he podido revisar la frase'}</b><span>{ownReviewError}</span></div>}
+              <div className="row"><button className="btn secondary grow" type="button" onClick={() => { setUseStage('order'); setOrdered([]); setOrderChecked(null); }}>← Volver a ordenar</button>{ownAccepted ? <button className="btn grow" type="button" onClick={finishUse}>Siguiente palabra →</button> : <button className="btn grow" type="button" disabled={!ownSentence.trim() || ownReviewBusy} onClick={() => void checkOwn()}>{ownReviewBusy ? 'Revisando…' : 'Comprobar frase ↵'}</button>}</div>
             </>
           )}
         </div>

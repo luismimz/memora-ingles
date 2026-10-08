@@ -5,7 +5,7 @@ import { ErrorBox, ProgressBar, Spinner, toast } from '../components/common';
 import { normalize } from '../lib/answer';
 import { playNaturalAudio, prefetchNaturalAudio, stopNaturalAudio, type AudioTiming } from '../lib/audioPlayer';
 import { afterExam } from '../lib/srs';
-import { items } from '../lib/api';
+import { ai, items } from '../lib/api';
 import { useStore } from '../store';
 import type { Mnemonic, Result } from '../types';
 
@@ -21,6 +21,7 @@ const STEPS = ['Escuchar', 'Asociar', 'Recuperar', 'Escena inglesa', 'Estructura
 const ORDER_POOL = ['charger', 'for', 'Can', 'really', 'minute', 'borrow', 'your', 'a', 'I', 'do'];
 
 type AudioState = 'idle' | 'loading' | 'playing' | 'error';
+interface SentenceReview { correct: boolean; corrected: string; explanation_es: string; natural: string; score: number }
 
 export function PerfectWord() {
   const store = useStore();
@@ -44,6 +45,8 @@ export function PerfectWord() {
   const [transformCorrect, setTransformCorrect] = useState<boolean | null>(null);
   const [ownSentence, setOwnSentence] = useState('');
   const [ownCorrect, setOwnCorrect] = useState<boolean | null>(null);
+  const [ownReview, setOwnReview] = useState<SentenceReview | null>(null);
+  const [ownReviewBusy, setOwnReviewBusy] = useState(false);
   const [sceneRecall, setSceneRecall] = useState('');
   const [sceneCorrect, setSceneCorrect] = useState<boolean | null>(null);
   const [finishing, setFinishing] = useState(false);
@@ -124,10 +127,27 @@ export function PerfectWord() {
 
   const checkTransformation = () => setTransformCorrect(normalize(transformation) === normalize(expectedTransformation));
 
-  const checkOwn = () => {
+  const checkOwn = async () => {
     const answer = normalize(ownSentence);
-    const correct = answer.split(' ').length >= 5 && answer.includes('borrow') && answer !== normalize(EXAMPLE) && answer !== normalize(expectedTransformation);
-    setOwnCorrect(correct);
+    const attempted = answer.split(' ').filter(Boolean).length >= 5 && answer.split(' ').includes('borrow') && answer !== normalize(EXAMPLE) && answer !== normalize(expectedTransformation);
+    setOwnReview(null);
+    setError(null);
+    if (!attempted) { setOwnCorrect(false); return; }
+    if (!store.aiInfo.enabled) { setOwnCorrect(true); return; }
+    setOwnReviewBusy(true);
+    try {
+      const review = await ai<SentenceReview>('correct', {
+        sentence: ownSentence.trim(),
+        intended: `Una frase personal que use “borrow” con el significado “pedir o tomar prestado”, distinta de “${EXAMPLE}”.`,
+        words: ['borrow'],
+        model: store.aiModel,
+      });
+      setOwnReview(review);
+      setOwnCorrect(Boolean(review.correct));
+    } catch (reviewError) {
+      setOwnCorrect(null);
+      setError(reviewError);
+    } finally { setOwnReviewBusy(false); }
   };
 
   const checkScene = () => {
@@ -206,7 +226,7 @@ export function PerfectWord() {
 
         {step === 6 && <section className="h1-card pop"><span className="eyebrow">TRANSFORMA · NO REPITAS</span><h1>Cambia <em>charger</em> por otro objeto</h1><div className="replacement-options">{['phone', 'pen', 'car'].map((object) => <button key={object} className={replacement === object ? 'selected' : ''} onClick={() => { setReplacement(object); setTransformation(''); setTransformCorrect(null); }}>{object}</button>)}</div><p className="small muted">Escribe la frase completa con <strong>{replacement}</strong>. Enter comprueba.</p><form onSubmit={(event) => { event.preventDefault(); checkTransformation(); }} className="stack"><input className="answer-input" autoFocus value={transformation} onChange={(event) => { setTransformation(event.target.value); setTransformCorrect(null); }} placeholder={`Can I borrow your ${replacement}…`} />{transformCorrect !== null && <div className={`feedback ${transformCorrect ? 'ok' : 'fail'}`}>{transformCorrect ? <>✅ Acabas de demostrar que entiendes el patrón.<button type="button" className="icon-btn" onClick={() => play(expectedTransformation)}>🔊</button></> : <>Revisa las cuatro piezas: <b>Can I + borrow + objeto + for a minute?</b></>}</div>}<button className="btn block" disabled={!transformation.trim()} type="submit">Comprobar ↵</button></form>{transformCorrect && <button className="btn big block" onClick={next}>Ahora una frase que sea tuya →</button>}</section>}
 
-        {step === 7 && <section className="h1-card pop"><span className="eyebrow">PRODUCCIÓN PERSONAL</span><h1>Usa <em>borrow</em> para decir algo verdadero o útil para ti</h1><p>No copies el cargador ni el objeto anterior. Puedes pedir una chaqueta, dinero, una herramienta, un libro…</p><form onSubmit={(event) => { event.preventDefault(); checkOwn(); }} className="stack"><textarea autoFocus value={ownSentence} onChange={(event) => { setOwnSentence(event.target.value); setOwnCorrect(null); }} placeholder="Escribe al menos cinco palabras · Enter para comprobar" onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); checkOwn(); } }} />{ownCorrect !== null && <div className={`feedback ${ownCorrect ? 'ok' : 'fail'}`}>{ownCorrect ? <>✅ Ya no estás copiando: <em>borrow</em> forma parte de una idea tuya.<button type="button" className="icon-btn" onClick={() => play(ownSentence)}>🔊</button></> : 'Necesitas usar borrow, escribir al menos cinco palabras y no copiar las frases anteriores.'}</div>}<button className="btn block" type="submit" disabled={!ownSentence.trim()}>Comprobar ↵</button></form>{ownCorrect && <button className="btn big block" onClick={next}>Última prueba de memoria →</button>}</section>}
+        {step === 7 && <section className="h1-card pop"><span className="eyebrow">PRODUCCIÓN PERSONAL</span><h1>Usa <em>borrow</em> para decir algo verdadero o útil para ti</h1><p>No copies el cargador ni el objeto anterior. Puedes pedir una chaqueta, dinero, una herramienta, un libro…</p><form onSubmit={(event) => { event.preventDefault(); void checkOwn(); }} className="stack"><textarea autoFocus value={ownSentence} disabled={ownReviewBusy || ownCorrect === true} onChange={(event) => { setOwnSentence(event.target.value); setOwnCorrect(null); setOwnReview(null); setError(null); }} placeholder="Escribe al menos cinco palabras · Enter para comprobar" onKeyDown={(event) => { if (event.key === 'Enter' && !event.shiftKey && !ownReviewBusy) { event.preventDefault(); void checkOwn(); } }} />{ownReviewBusy && <div className="feedback doubt">🤖 Revisando gramática, significado y naturalidad…</div>}{ownCorrect === false && !ownReview && <div className="feedback fail">Necesitas usar <em>borrow</em>, escribir al menos cinco palabras y crear una idea diferente.</div>}{ownReview && <div className={`feedback ${ownReview.correct ? 'ok' : 'doubt'}`}><b>{ownReview.correct ? '✅ Suena bien' : '✏️ Vamos a mejorarla'}</b><span>{ownReview.explanation_es}</span>{!ownReview.correct && (ownReview.corrected || ownReview.natural) && <><span>Prueba así: <strong>{ownReview.corrected || ownReview.natural}</strong></span><button type="button" className="btn secondary small" onClick={() => { setOwnSentence(ownReview.corrected || ownReview.natural); setOwnReview(null); setOwnCorrect(null); }}>Usar la corrección y revisarla</button></>}</div>}{ownCorrect === true && !ownReview && <div className="feedback doubt">⚠️ Has completado el reto, pero la revisión gramatical profunda no está disponible.</div>}<button className="btn block" type="submit" disabled={!ownSentence.trim() || ownReviewBusy || ownCorrect === true}>{ownReviewBusy ? 'Revisando…' : 'Comprobar ↵'}</button><ErrorBox error={error} /></form>{ownCorrect && <button className="btn big block" onClick={next}>Última prueba de memoria →</button>}</section>}
 
         {step === 8 && <section className="h1-card pop"><span className="eyebrow">RECUPERACIÓN FINAL · LA IMAGEN YA NO ESTÁ</span><h1>¿Qué pasaba en la escena de <em>borrow</em>?</h1><p>Cuéntala con tus palabras. No necesitas escribirla exactamente igual; recupera al menos los elementos importantes.</p><textarea autoFocus value={sceneRecall} onChange={(event) => { setSceneRecall(event.target.value); setSceneCorrect(null); }} placeholder="Recuerdo que…" />{sceneCorrect !== null && <div className={`feedback ${sceneCorrect ? 'ok' : 'fail'}`}>{sceneCorrect ? '✅ La escena sigue en tu memoria sin verla.' : '💡 Busca quién aparecía, qué pedía prestado o para qué lo quería.'}</div>}<div className="row"><button className="btn secondary" onClick={() => { setHintUsed(true); toast('Pista: el personaje era un animal que suena como borrow.'); }}>💡 Pista</button><button className="btn grow" disabled={!sceneRecall.trim()} onClick={checkScene}>Comprobar</button></div>{sceneCorrect && <button className="btn big block" disabled={finishing} onClick={finish}>{finishing ? 'Guardando progreso…' : 'Completar misión →'}</button>}<ErrorBox error={error} /></section>}
 

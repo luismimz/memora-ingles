@@ -168,7 +168,7 @@ export default {
     ], { model: model(req) })));
 
     router.post('/correct', paid, wrap(async (req) => llm.json([
-      { role: 'system', content: 'Profesor de inglés paciente para un hispanohablante A2. Corrige la frase. Responde SOLO JSON: {"correct":true|false,"corrected":"","explanation_es":"explicación breve de cada error (o elogio)","natural":"cómo lo diría un nativo","score":0-10}' },
+      { role: 'system', content: 'Eres profesor de inglés paciente para un hispanohablante A2. Evalúa gramática, significado solicitado y naturalidad. Marca correct=true SOLO si la frase ya es correcta, usa la palabra objetivo con el sentido solicitado y se entiende de forma natural. No exijas que copie ningún ejemplo. Si hay un error, conserva la idea del alumno en corrected y explica en español una sola mejora concreta. natural es una alternativa opcional, no una frase que el alumno deba copiar. Responde SOLO JSON: {"correct":true|false,"corrected":"","explanation_es":"explicación breve y específica","natural":"cómo también lo diría un nativo","score":0-10}' },
       { role: 'user', content: `Frase: "${req.body.sentence}"${req.body.intended ? `\nQuería decir: "${req.body.intended}"` : ''}${req.body.words?.length ? `\nPalabras objetivo: ${req.body.words.join(', ')}` : ''}` },
     ], { model: model(req), temperature: 0.3 })));
 
