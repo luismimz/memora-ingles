@@ -18,7 +18,7 @@ declare module '*shared/phonetics.mjs' {
 }
 
 declare module '*shared/classify.mjs' {
-  export type Kind = 'cognate' | 'easy' | 'keyword' | 'chunk' | 'phrasal' | 'irregular';
+  export type Kind = 'cognate' | 'easy' | 'keyword' | 'chunk' | 'phrasal' | 'phrasal_verb' | 'compound' | 'irregular';
   export const KINDS: Kind[];
   export const KIND_LABEL: Record<Kind, string>;
   export const PARTICLES: Record<string, string>;

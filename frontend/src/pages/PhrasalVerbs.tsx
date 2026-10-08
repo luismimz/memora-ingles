@@ -27,12 +27,12 @@ export function PhrasalVerbs() {
   const [q, setQ] = useState('');
   const list = useMemo(() => {
     const query = normalize(q);
-    return words.filter((w) => w.kind === 'phrasal' && (!query || normalize(`${w.en} ${w.es} ${w.topic || ''}`).includes(query)));
+    return words.filter((w) => (w.kind === 'phrasal' || w.kind === 'phrasal_verb') && (!query || normalize(`${w.en} ${w.es} ${w.topic || ''}`).includes(query)));
   }, [words, q]);
   return (
     <div className="stack">
       <div className="page-heading"><div><span className="eyebrow">ENTENDER A LOS NATIVOS</span><h1>🔀 Phrasal verbs</h1><p className="muted">Verbo + partícula = una unidad nueva. Estúdialos en frases completas, no como listas aisladas.</p></div><div className="settings-orb">💬</div></div>
-      <div className="card phrasal-intro"><b>La ruta corta para las conversaciones</b><span>Empieza por los más frecuentes. Cuando aparezcan en una historia o canción, guárdalos en <Link to="/palabras">Mi vocabulario</Link> y vuelve a producirlos.</span></div>
+      <div className="card phrasal-intro"><b>La ruta corta para las conversaciones</b><span>Empieza por los más frecuentes. Cuando aparezcan en una historia o canción, guárdalos en <Link to="/palabras">Mi vocabulario</Link> y vuelve a producirlos.</span><Link className="btn" to="/alquimia">⚗️ Jugar a Alquimia</Link></div>
       <div className="row"><input className="grow" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Buscar: give up, buscar, informática…" /><span className="chip primary">{list.length} unidades</span></div>
       <div className="small muted">Cada tarjeta incluye pronunciación natural y una frase que podrás reutilizar.</div>
       <div className="phrasal-grid">{list.slice(0, 120).map((w) => <PhrasalCard key={w.id} word={w} />)}</div>

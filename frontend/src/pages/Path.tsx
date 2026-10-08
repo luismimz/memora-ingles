@@ -47,6 +47,10 @@ const STEPS: PathStep[] = [
     unlock: (s) => s.learned >= 1, done: () => false,
   },
   {
+    id: 'alchemy', icon: '⚗️', title: 'Fusiona palabras', description: 'Une las piezas de un phrasal verb y conviértelo en una unidad que reconoces al instante.', to: '/alquimia',
+    unlock: (s) => s.learned >= 1, done: () => false,
+  },
+  {
     id: 'stories', icon: '📚', title: 'Lee y escucha historias', description: 'Sigue una historia, toca las palabras difíciles, escucha una voz natural y guárdalas.', to: '/biblioteca',
     unlock: (s) => s.learned >= 1, done: () => false,
   },

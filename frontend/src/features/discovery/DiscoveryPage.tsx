@@ -99,6 +99,7 @@ export function DiscoveryPage() {
             <FlashcardSwiperView
               queue={queue}
               onContinueToSentences={() => navigate('/constructor-frases', { state: { missions: sentenceMissionsForQueue } })}
+              onOpenAlchemy={() => navigate('/alquimia')}
             />
           </motion.div>
         )}

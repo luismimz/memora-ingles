@@ -1,7 +1,7 @@
 export type Result = 'ok' | 'doubt' | 'fail';
 export type Status = 'known' | 'learning' | 'review' | 'mastered';
 export type Mode = 'es_en_type' | 'en_es_choice' | 'listen_type' | 'cloze' | 'flash' | 'rescue_keyword' | 'rescue_sound';
-export type Kind = 'cognate' | 'easy' | 'keyword' | 'chunk' | 'phrasal' | 'irregular';
+export type Kind = 'cognate' | 'easy' | 'keyword' | 'chunk' | 'phrasal' | 'phrasal_verb' | 'compound' | 'irregular';
 
 export interface Word {
   id: number;

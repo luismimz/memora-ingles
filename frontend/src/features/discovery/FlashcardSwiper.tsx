@@ -14,22 +14,24 @@ export interface FlashcardSwiperProps {
   onSkipAssociation?: (card: DiscoveryCard) => void;
   /** Salida directa hacia la misión de frase construida con la ronda. */
   onContinueToSentences?: () => void;
+  /** Nodo especial para convertir un phrasal verb en una fusión jugable. */
+  onOpenAlchemy?: () => void;
   batchSize?: number;
 }
 
 const SPRING = { type: 'spring' as const, stiffness: 300, damping: 24 };
 
 /** Pantalla inmersiva de descubrimiento, sin esperas entre una tarjeta y la siguiente. */
-export function FlashcardSwiper({ onCreateOwn, onSkipAssociation, onContinueToSentences, batchSize = 10 }: FlashcardSwiperProps) {
+export function FlashcardSwiper({ onCreateOwn, onSkipAssociation, onContinueToSentences, onOpenAlchemy, batchSize = 10 }: FlashcardSwiperProps) {
   const queue = useDiscoveryQueue({ batchSize, preloadAhead: 3, minimumAlternatives: 2 });
-  return <FlashcardSwiperView queue={queue} onCreateOwn={onCreateOwn} onSkipAssociation={onSkipAssociation} onContinueToSentences={onContinueToSentences} />;
+  return <FlashcardSwiperView queue={queue} onCreateOwn={onCreateOwn} onSkipAssociation={onSkipAssociation} onContinueToSentences={onContinueToSentences} onOpenAlchemy={onOpenAlchemy} />;
 }
 
 /**
  * Vista pura del swiper. DiscoveryPage la usa para compartir exactamente la
  * misma cola con el interceptor de recuperación, sin montar dos hooks.
  */
-export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onContinueToSentences }: FlashcardSwiperProps & { queue: DiscoveryQueueResult }) {
+export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onContinueToSentences, onOpenAlchemy }: FlashcardSwiperProps & { queue: DiscoveryQueueResult }) {
   const navigate = useNavigate();
   const { current, status, error, progress, preloaded, swipeRight, swipeLeft, skipCurrent, retryPreload } = queue;
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
@@ -118,6 +120,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
           <h1>Tu cerebro ya tiene nuevas conexiones.</h1>
           <p>Ahora conviértelas en una frase que puedas usar de verdad. Así la asociación deja de ser una imagen y pasa a formar parte de tu inglés.</p>
           <SentenceLaunch onContinue={onContinueToSentences ?? (() => navigate('/constructor-frases'))} />
+          {onOpenAlchemy ? <button type="button" className="btn secondary alchemy-discovery-link" onClick={onOpenAlchemy}>⚗️ Fusionar un phrasal verb</button> : null}
         </div>
       </main>
     );
