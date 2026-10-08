@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { arpabetPhones, ipaPhones, pronunciationEs, render, scoreKeyword, spanishPhones, stressedFocus } from '../../../shared/phonetics.mjs';
 import { classifyWord, cognateRule } from '../../../shared/classify.mjs';
 import { bucketOf, retentionBy } from '../../../shared/retention.mjs';
+import { isConciseMnemonic, mnemonicIssues, mnemonicWordCount } from '../../../shared/mnemonicQuality.mjs';
 
 const P = (a: string) => arpabetPhones(a);
 
@@ -64,5 +65,15 @@ describe('retención compartida', () => {
     expect(by.get(7)!.exam).toEqual({ n: 1, rate: 1 });
     expect(by.get(7)!['1h']).toEqual({ n: 1, rate: 0.5 });
     expect(by.get(8)!.exam.rate).toBe(0);
+  });
+});
+
+describe('calidad de asociaciones', () => {
+  it('acepta una conexión corta y rechaza relleno narrativo', () => {
+    expect(mnemonicWordCount('JUAN CUELGA tu mochila.')).toBe(4);
+    expect(isConciseMnemonic({ scene_es: 'JUAN CUELGA tu mochila.', story_en: 'JUAN HANGS your backpack.' })).toBe(true);
+    const bad = { scene_es: '¡Cuidado! Un GIGANTE JUAN (como el nombre) te persigue y quiere COLGAR tu mochila en el tendedero más alto. ¡Corres muy rápido!', story_en: '' };
+    expect(mnemonicIssues(bad)).toContain('escena larga');
+    expect(isConciseMnemonic(bad)).toBe(false);
   });
 });

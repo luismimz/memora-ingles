@@ -104,15 +104,17 @@ export interface SpeechAsset {
 }
 
 let naturalSettings = { voice: null as string | null, rate: 0.88 };
+const kokoroVoice = (voice: string | null | undefined) => voice && /^[a-z]{2}_[a-z0-9_]+$/i.test(voice) ? voice : null;
 export const configureNaturalSpeech = (voice: string | null, rate: number) => {
-  naturalSettings = { voice, rate: Number.isFinite(rate) ? rate : 0.88 };
+  // Descarta nombres heredados de Web Speech (Samantha, Google US English…).
+  naturalSettings = { voice: kokoroVoice(voice), rate: Number.isFinite(rate) ? rate : 0.88 };
 };
 
 const pendingSpeech = new Map<string, Promise<SpeechAsset | null>>();
 const resolvedSpeech = new Map<string, string>();
 
 export async function naturalSpeechAsset(text: string, opts: { voice?: string | null; rate?: number; refresh?: boolean } = {}): Promise<SpeechAsset | null> {
-  const preferredVoice = opts.voice === undefined ? naturalSettings.voice : opts.voice;
+  const preferredVoice = opts.voice === undefined ? naturalSettings.voice : kokoroVoice(opts.voice);
   const rate = opts.rate ?? naturalSettings.rate;
   const key = JSON.stringify({ text, voice: preferredVoice || undefined, rate });
   if (tokens && Date.now() > tokens.expires_at) await refresh();

@@ -30,12 +30,23 @@ export function kokoroTts(env) {
           .replace(/([!?.,])(?=[A-Za-z])/g, '$1 ')
           .replace(/\s+/g, ' ')
           .trim();
-        const res = await fetch(`${base}/v1/audio/speech`, {
+        const fallbackVoice = env.KOKORO_TTS_VOICE || 'af_heart';
+        const requestedVoice = voice || fallbackVoice;
+        const requestAudio = (selectedVoice) => fetch(`${base}/v1/audio/speech`, {
           method: 'POST', headers,
-          body: JSON.stringify({ model: env.KOKORO_TTS_MODEL || 'kokoro', input: normalized, voice: voice || env.KOKORO_TTS_VOICE || 'af_heart', response_format: 'mp3', speed: Number(rate) || 1 }),
+          body: JSON.stringify({ model: env.KOKORO_TTS_MODEL || 'kokoro', input: normalized, voice: selectedVoice, response_format: 'mp3', speed: Number(rate) || 1 }),
           signal: ctrl.signal,
         });
-        if (!res.ok) throw new Error(`Kokoro TTS ${res.status}`);
+        let res = await requestAudio(requestedVoice);
+        // Perfiles antiguos guardaban voces del navegador (Samantha, Google…).
+        // Si Kokoro no reconoce ese nombre, reintenta con su voz oficial.
+        if (!res.ok && requestedVoice !== fallbackVoice && (res.status === 400 || res.status === 404 || res.status === 422)) {
+          res = await requestAudio(fallbackVoice);
+        }
+        if (!res.ok) {
+          const detail = (await res.text().catch(() => '')).replace(/\s+/g, ' ').slice(0, 180);
+          throw new Error(`Kokoro TTS ${res.status}${detail ? `: ${detail}` : ''}`);
+        }
         const type = res.headers.get('content-type') || 'audio/mpeg';
         return { buffer: Buffer.from(await res.arrayBuffer()), type: type.split(';')[0] };
       } finally { clearTimeout(timer); }

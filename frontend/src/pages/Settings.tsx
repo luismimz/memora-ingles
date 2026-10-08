@@ -17,7 +17,13 @@ export function Settings() {
   const naturalReady = Boolean(store.aiInfo.tts?.enabled);
   const naturalProvider = store.aiInfo.tts?.provider || 'none';
 
-  useEffect(() => { naturalVoices().then((out) => setNaturalVoiceList(out.voices || [])).catch(() => setNaturalVoiceList([])); }, []);
+  useEffect(() => {
+    naturalVoices().then((out) => {
+      const voices = out.voices || [];
+      setNaturalVoiceList(voices);
+      if (p.voice && !voices.some((voice) => voice.id === p.voice)) store.updateProfile({ voice: null }).catch(() => {});
+    }).catch(() => setNaturalVoiceList([]));
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = async (patch: Partial<Profile>) => {
     try { await store.updateProfile(patch); } catch (e) { setError(e); }
@@ -45,7 +51,7 @@ export function Settings() {
     <div className="stack settings-page">
       <div className="page-heading"><div><span className="eyebrow">PERSONALIZA TU MÉTODO</span><h1>Ajustes</h1><p className="muted">Haz que Memora se adapte a tu ritmo, tu oído y tu forma de recordar.</p></div><div className="settings-orb">⚙️</div></div>
 
-      <div className="settings-status"><div><span className="eyebrow">ESTADO DEL ENTORNO</span><h3>Todo listo para tu próxima sesión</h3></div><div className="status-list"><span className={naturalReady ? 'status-ok' : 'status-warn'}><i /> Voz natural: {!ttsReported ? 'backend sin actualizar' : naturalReady ? naturalProvider : 'Kokoro no disponible'}</span><span className={store.aiInfo.enabled ? 'status-ok' : 'status-warn'}><i /> IA: {store.aiInfo.enabled ? 'conectada' : 'desactivada'}</span></div></div>
+      <div className="settings-status"><div><span className="eyebrow">ESTADO DEL ENTORNO</span><h3>Todo listo para tu próxima sesión</h3></div><div className="status-list"><span className={naturalReady ? 'status-ok' : 'status-warn'}><i /> Voz natural: {!ttsReported ? 'backend sin actualizar' : naturalReady ? `${naturalProvider} configurado` : 'Kokoro no disponible'}</span><span className={store.aiInfo.enabled ? 'status-ok' : 'status-warn'}><i /> IA: {store.aiInfo.enabled ? 'conectada' : 'desactivada'}</span></div></div>
 
       <div className="settings-layout">
         <div className="settings-main stack">

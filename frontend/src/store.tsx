@@ -3,6 +3,7 @@ import { ai, configureNaturalSpeech, items, request } from './lib/api';
 import { configureSpeech } from './lib/speech';
 import { localDate } from './lib/stats';
 import type { Attempt, Mnemonic, Profile, Progress, StudyDay, Word } from './types';
+import { isConciseMnemonic } from '../../shared/mnemonicQuality.mjs';
 
 interface User { id: string; email: string; first_name: string | null }
 interface AiInfo { enabled: boolean; models: string[]; default: string; providers?: Record<string, string>; tts?: { enabled: boolean; provider: string } }
@@ -188,7 +189,7 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
   }, [aiInfo.enabled, profile?.ai_model]);
 
   const preferredMnemonic = useCallback((wordId: number) => {
-    const list = mnemonicCache.get(wordId) ?? [];
+    const list = (mnemonicCache.get(wordId) ?? []).filter((m) => m.source !== 'ai' || isConciseMnemonic(m));
     const chosen = progress.get(wordId)?.mnemonic;
     return list.find((m) => m.id === chosen)
       ?? list.find((m) => m.source === 'user')

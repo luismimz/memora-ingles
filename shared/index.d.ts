@@ -39,3 +39,8 @@ declare module '*shared/retention.mjs' {
     groupFn: (a: any) => T,
   ): Map<T, Record<Bucket['key'], { n: number; rate: number | null }>>;
 }
+declare module '*shared/mnemonicQuality.mjs' {
+  export function mnemonicWordCount(text: string | null | undefined): number;
+  export function mnemonicIssues(mnemonic: { scene_es?: string | null; story_en?: string | null }): string[];
+  export function isConciseMnemonic(mnemonic: { scene_es?: string | null; story_en?: string | null }): boolean;
+}

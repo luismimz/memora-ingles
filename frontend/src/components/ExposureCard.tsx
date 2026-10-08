@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KIND_LABEL } from '../../../shared/classify.mjs';
+import { isConciseMnemonic, mnemonicWordCount } from '../../../shared/mnemonicQuality.mjs';
 import { englishPhones, scoreKeyword, verdictFor } from '../../../shared/phonetics.mjs';
 import { ai, assetUrl, items } from '../lib/api';
-import { normalize, sentenceScore } from '../lib/answer';
+import { normalize } from '../lib/answer';
 import { USES_KEYWORD, useStore } from '../store';
 import type { Mnemonic, Word } from '../types';
 import { ErrorBox, Modal, playNaturalFast, Rich, SpeakBtn, Spinner, toast } from './common';
-import { SentenceDiff } from './SentenceDiff';
 
 export interface MnemonicChoice { mode: 'auto' | 'none'; mnemonic: Mnemonic | null }
 
@@ -28,7 +28,7 @@ const TARGET_S = 45;
 
 type UseStage = 'memory' | 'order' | 'create';
 
-type SentenceVariant = { en: string; es: string; source?: string };
+export type SentenceVariant = { en: string; es: string; source?: string };
 
 const VARIANT_CURSOR_KEY = 'memora.sentence-variant-cursor';
 
@@ -65,20 +65,22 @@ function shuffleIds(length: number) {
   return ids;
 }
 
-function sentenceVariantsFor(word: Word): SentenceVariant[] {
+export function sentenceVariantsFor(word: Word): SentenceVariant[] {
   const key = word.en.trim().toLowerCase();
   const curated: Record<string, string[]> = {
     really: ['I really want to understand this.', 'Do you really mean it?', 'She is really good at explaining things.'],
     improve: ['I want to improve my English.', 'Small steps improve my confidence.', 'This exercise will improve your listening.'],
     actually: ['Actually, I agree with you.', 'I actually use this every day.', 'Well, actually, I am not sure.'],
   };
-  const fallback = curated[key] ?? (word.kind === 'phrasal'
+  const fallback = word.kind === 'phrasal'
     ? [`I often use “${word.en}” in conversation.`, `Can you use “${word.en}” in a sentence?`]
-    : [`I am learning how to use “${word.en}” today.`, `I can say “${word.en}” in a real conversation.`]);
+    : [`I am learning how to use “${word.en}” today.`, `I can say “${word.en}” in a real conversation.`];
+  const guided = curated[key] ?? (word.example_en || word.examples?.length ? [] : fallback);
+  const changesMeaning = (sentence: string) => key === 'hang' && /\bhang\s+(on|out|around)\b/i.test(sentence);
   const incoming: SentenceVariant[] = [
-    ...(word.examples ?? []),
     ...(word.example_en ? [{ en: word.example_en, es: word.example_es ?? '', source: 'word' }] : []),
-    ...(curated[key] ?? fallback).map((en) => ({ en, es: '', source: 'guided' })),
+    ...(word.examples ?? []).filter((item) => !changesMeaning(item.en)),
+    ...guided.map((en) => ({ en, es: '', source: 'guided' })),
   ];
   const seen = new Set<string>();
   return incoming.filter((x) => {
@@ -92,6 +94,22 @@ function sentenceVariantsFor(word: Word): SentenceVariant[] {
 
 function wordsForSentence(sentence: string) {
   return sentence.replace(/[.?!,;:]/g, '').split(/\s+/).filter(Boolean);
+}
+
+export function creativeSentenceIssues(word: Pick<Word, 'en'>, ownSentence: string, example: string) {
+  const answer = normalize(ownSentence);
+  const answerWords = answer.split(' ').filter(Boolean);
+  const target = normalize(word.en);
+  const usesWord = target.includes(' ') ? ` ${answer} `.includes(` ${target} `) : answerWords.includes(target);
+  const enough = answerWords.length >= 5;
+  const copied = answer === normalize(example);
+  const wrongHangSense = target === 'hang' && /\bhang\s+(on|out|around)\b/.test(answer);
+  return [
+    ...(!usesWord ? [`Incluye la palabra «${word.en}».`] : []),
+    ...(!enough ? [`Llevas ${answerWords.length} ${answerWords.length === 1 ? 'palabra' : 'palabras'}: añade quién, qué, dónde o cuándo hasta llegar a cinco.`] : []),
+    ...(copied ? ['La frase modelo ya está superada: cambia al menos la persona, el objeto, el lugar o el momento.'] : []),
+    ...(wrongHangSense ? ['«Hang on» significa «espera». Para practicar hang = colgar, usa hang + un objeto: coat, picture, bag…'] : []),
+  ];
 }
 
 export function soundBadge(score: number | null | undefined) {
@@ -111,7 +129,8 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
   const [dragIndex, setDragIndex] = useState<number | null>(null);
   const [orderChecked, setOrderChecked] = useState<boolean | null>(null);
   const [ownSentence, setOwnSentence] = useState('');
-  const [ownChecked, setOwnChecked] = useState<number | null>(null);
+  const [ownChecked, setOwnChecked] = useState(false);
+  const [ownIssues, setOwnIssues] = useState<string[]>([]);
   const [ownAccepted, setOwnAccepted] = useState(false);
   const started = useRef(Date.now());
   const useStarted = useRef(0);
@@ -120,7 +139,7 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
   const [sentenceVariants, setSentenceVariants] = useState<SentenceVariant[]>(() => sentenceVariantsFor(word));
   const [sentenceVariantIndex, setSentenceVariantIndex] = useState(() => readVariantCursor(word.id) % Math.max(sentenceVariantsFor(word).length, 1));
 
-  const list = store.mnemonicCache.get(word.id) ?? [];
+  const list = (store.mnemonicCache.get(word.id) ?? []).filter((item) => item.source !== 'ai' || isConciseMnemonic(item));
   const usesKeyword = USES_KEYWORD(word);
   const noneChosen = choice ? choice.mode === 'none' : store.progress.get(word.id)?.mnemonic_mode === 'none';
   const m = noneChosen ? null : (choice?.mnemonic ?? store.activeMnemonic(word.id));
@@ -142,20 +161,8 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
     const initialIndex = readVariantCursor(word.id) % Math.max(variants.length, 1);
     started.current = Date.now(); useStarted.current = 0; useInProgress.current = false; setSecs(0); setShowEn(false); setMore(variant === 'detail');
     setSentenceVariants(variants); setSentenceVariantIndex(initialIndex);
-    setUseStage('memory'); setOrdered([]); setPoolOrder(shuffleIds(variants[initialIndex] ? wordsForSentence(variants[initialIndex].en).length + 2 : 0)); setDragIndex(null); setOrderChecked(null); setOwnSentence(''); setOwnChecked(null); setOwnAccepted(false);
+    setUseStage('memory'); setOrdered([]); setPoolOrder(shuffleIds(variants[initialIndex] ? wordsForSentence(variants[initialIndex].en).length + 2 : 0)); setDragIndex(null); setOrderChecked(null); setOwnSentence(''); setOwnChecked(false); setOwnIssues([]); setOwnAccepted(false);
   }, [word.id, variant]);
-  useEffect(() => {
-    if (variant !== 'learn' || useInProgress.current || sentenceVariants.length > 3) return;
-    ai<{ examples: { en: string; es: string; source?: string }[] }>('examples', { word: word.id })
-      .then((r) => {
-        if (useInProgress.current || !r.examples?.length) return;
-        setSentenceVariants((current) => {
-          const seen = new Set(current.map((x) => normalize(x.en)));
-          const additions = r.examples.filter((x) => x.en && !seen.has(normalize(x.en)));
-          return [...current, ...additions].slice(0, 6);
-        });
-      }).catch(() => {});
-  }, [variant, word.id]);
   useEffect(() => { if (autoSpeak) return playNaturalFast(word.en); return undefined; }, [word.id, autoSpeak, word.en]);
   useEffect(() => {
     if (variant !== 'learn') return;
@@ -196,13 +203,10 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
     if (correct) setUseStage('create');
   };
   const checkOwn = () => {
-    const answer = normalize(ownSentence);
-    const usesWord = answer.includes(normalize(word.en));
-    const enough = answer.split(' ').filter(Boolean).length >= 5;
-    const copied = answer === normalize(example);
-    const score = sentenceScore(ownSentence, example);
-    setOwnChecked(score);
-    setOwnAccepted(usesWord && enough && !copied);
+    const issues = creativeSentenceIssues(word, ownSentence, example);
+    setOwnChecked(true);
+    setOwnIssues(issues);
+    setOwnAccepted(issues.length === 0);
   };
 
   const finishUse = () => onDone?.(Math.max(Date.now() - started.current, Date.now() - useStarted.current));
@@ -264,7 +268,7 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
         <div className="word-use-flow">
           {useStage === 'order' ? (
             <>
-              <div className="word-use-heading"><span className="chip accent">2 · VER LA ESTRUCTURA</span><b>Ordena una frase real</b><span>Hay palabras de sobra. Toca para añadir y arrastra las fichas para cambiar el orden.</span><small className="muted">Variante {sentenceVariantIndex + 1} de {sentenceVariants.length} · la próxima vez cambiará</small></div>
+              <div className="word-use-heading"><span className="chip accent">2 · RECONSTRUIR</span><b>Reproduce exactamente la frase modelo</b><span>Hay palabras de sobra. Toca solo las necesarias y colócalas en el orden exacto.</span><small className="muted">Variante {sentenceVariantIndex + 1} de {sentenceVariants.length} · la próxima vez cambiará</small></div>
               <div className="word-order-answer">{ordered.length ? ordered.map((tokenId, i) => <span key={tokenId} className="word-token-drag" draggable onDragStart={() => setDragIndex(i)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragIndex !== null) moveToken(dragIndex, i); setDragIndex(null); }}><button className="word-token selected" type="button" onClick={() => setOrdered((list) => list.filter((_, index) => index !== i))} title="Quitar palabra">{tokenPool[tokenId].text}</button></span>) : <span className="muted small">Toca las palabras de abajo para empezar…</span>}</div>
               <div className="word-order-pool">{(poolOrder.length ? poolOrder : tokenPool.map((token) => token.id)).map((id) => { const token = tokenPool[id]; return token && !ordered.includes(token.id) && <button key={token.id} className="word-token" type="button" onClick={() => setOrdered((list) => [...list, token.id])}>{token.text}</button>; })}</div>
               {orderChecked === false && <div className="feedback doubt">🔁 Aún no. Cambia el orden y vuelve a probar.</div>}
@@ -273,9 +277,9 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
             </>
           ) : (
             <>
-              <div className="word-use-heading"><span className="chip accent">3 · HACERLA TUYA</span><b>Ahora crea una frase propia</b><span>No copies el ejemplo. Di algo verdadero para ti usando <strong>{word.en}</strong> y al menos cinco palabras.</span></div>
-              <textarea value={ownSentence} onChange={(e) => { setOwnSentence(e.target.value); setOwnChecked(null); setOwnAccepted(false); }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !ownAccepted) { e.preventDefault(); checkOwn(); } }} placeholder={`Escribe una frase tuya con “${word.en}” · Enter para comprobar`} disabled={ownAccepted} />
-              {ownChecked !== null && <div className={`feedback ${ownAccepted ? 'ok' : 'doubt'}`}><b>{ownAccepted ? '✅ Tu frase es válida' : '🔁 Cambia algo y vuelve a intentarlo'}</b><span>{ownAccepted ? 'La palabra ya ha salido de la tarjeta y forma parte de una idea tuya.' : 'Necesitas usar la palabra, escribir cinco palabras o más y no copiar el ejemplo.'}</span>{!ownAccepted && <SentenceDiff given={ownSentence} expected={example} />}</div>}
+              <div className="word-use-heading"><span className="chip accent">3 · CREAR OTRA</span><b>Ahora crea una frase propia</b><span>Ya reconstruiste <q>{example}</q> Ahora escribe una frase diferente y verdadera para ti usando <strong>{word.en}</strong>.</span><small className="muted">Aquí no existe una respuesta modelo: comprobamos tu frase, no la comparamos con la anterior.</small></div>
+              <textarea value={ownSentence} onChange={(e) => { setOwnSentence(e.target.value); setOwnChecked(false); setOwnIssues([]); setOwnAccepted(false); }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !ownAccepted) { e.preventDefault(); checkOwn(); } }} placeholder={`Una frase nueva con “${word.en}” · mínimo 5 palabras · Enter`} disabled={ownAccepted} />
+              {ownChecked && <div className={`feedback ${ownAccepted ? 'ok' : 'doubt'}`}><b>{ownAccepted ? '✅ Esta frase sí es tuya' : '🔁 Solo falta esto'}</b>{ownAccepted ? <span>Has usado la palabra en una idea diferente. No había una frase exacta que copiar.</span> : <ul className="own-issues">{ownIssues.map((issue) => <li key={issue}>{issue}</li>)}</ul>}</div>}
               <div className="row"><button className="btn secondary grow" type="button" onClick={() => { setUseStage('order'); setOrdered([]); setOrderChecked(null); }}>← Volver a ordenar</button>{ownAccepted ? <button className="btn grow" type="button" onClick={finishUse}>Siguiente palabra →</button> : <button className="btn grow" type="button" disabled={!ownSentence.trim()} onClick={checkOwn}>Comprobar frase ↵</button>}</div>
             </>
           )}
@@ -366,6 +370,7 @@ function NotWorking({ word, current, onApply }: { word: Word; current: Mnemonic 
     setTab('another'); setBusy(true); setError(null); setProposal(null);
     try {
       const out = await ai<Mnemonic>('keyword', { word: word.id, model: store.aiModel, avoid: tried.current });
+      if (!isConciseMnemonic(out)) throw new Error('La propuesta era demasiado larga. Pide otra y Memora la reducirá.');
       tried.current.push(out.keyword ?? '');
       setProposal(out);
     } catch (e) { setError(e); } finally { setBusy(false); }
@@ -421,6 +426,7 @@ function OwnKeyword({ word, onSaved, onBack }: { word: Word; onSaved: (m: Mnemon
   const [error, setError] = useState<unknown>(null);
   const phones = useMemo(() => englishPhones(word), [word]);
   const sc = keyword.trim() && phones.length ? scoreKeyword(phones, keyword) : null;
+  const sceneWords = mnemonicWordCount(scene);
 
   useEffect(() => {
     ai<{ candidates: { word: string; score: number; noun: boolean }[]; focus: string }>('candidates', { word: word.id })
@@ -444,7 +450,7 @@ function OwnKeyword({ word, onSaved, onBack }: { word: Word; onSaved: (m: Mnemon
       <ol className="small muted" style={{ margin: 0, paddingLeft: '1.1rem' }}>
         <li>Busca una palabra española <b>que suene</b> como la sílaba fuerte.</li>
         <li>Que se pueda <b>ver</b>: un objeto, un animal o un personaje.</li>
-        <li>Una sola escena donde esa palabra <b>haga</b> «{word.es}», exagerada y contigo dentro.</li>
+        <li>Una sola acción donde esa palabra <b>haga</b> «{word.es}». Máximo 14 palabras.</li>
       </ol>
       {cands === null ? <Spinner /> : cands.length > 0 && (
         <div className="row">{cands.map((c) => (
@@ -462,12 +468,13 @@ function OwnKeyword({ word, onSaved, onBack }: { word: Word; onSaved: (m: Mnemon
         </div>
       )}
       <label className="field">Tu escena (una imagen)
-        <textarea value={scene} onChange={(e) => setScene(e.target.value)} placeholder={`Ej.: Tiras tu agenda a una FOGATA y, según arde, OLVIDAS todo.`} />
+        <textarea value={scene} maxLength={120} onChange={(e) => setScene(e.target.value)} placeholder={word.en === 'hang' ? 'JUAN CUELGA tu mochila.' : 'Una acción corta: palabra puente + significado.'} />
       </label>
+      <div className={`small ${sceneWords > 14 ? 'fail-text' : 'muted'}`}>{sceneWords}/14 palabras</div>
       <ErrorBox error={error} />
       <div className="row">
         <button className="btn ghost" onClick={onBack}>← Volver</button>
-        <button className="btn grow" disabled={!keyword.trim() || !scene.trim()} onClick={save}>
+        <button className="btn grow" disabled={!keyword.trim() || !scene.trim() || sceneWords > 14} onClick={save}>
           {sc?.verdict === 'bad' ? 'Guardar igualmente' : 'Guardar mi asociación'}
         </button>
       </div>

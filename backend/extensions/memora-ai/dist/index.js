@@ -6,6 +6,7 @@ import { createProviders } from './providers/index.js';
 import { generateKeywordMnemonics, phoneticsFor, scoredCandidates } from './core/keywords.js';
 import { pronunciationEs } from '../../../../shared/phonetics.mjs';
 import { BUCKETS, retentionBy } from '../../../../shared/retention.mjs';
+import { isConciseMnemonic } from '../../../../shared/mnemonicQuality.mjs';
 
 export default {
   id: 'memora',
@@ -83,11 +84,23 @@ export default {
         }
         if (Object.keys(patch).length) { await wordsSvc.updateOne(w.id, patch); Object.assign(w, patch); }
       }
-      const have = new Set((await mnemonics.readByQuery({ filter: { word: { _in: ids }, owner: { _null: true } }, fields: ['word'], limit: -1 })).map((m) => m.word));
-      const todo = words.filter((w) => !have.has(w.id) && (!w.kind || w.kind === 'keyword' || w.kind === 'irregular'));
+      const shared = await mnemonics.readByQuery({ filter: { word: { _in: ids }, owner: { _null: true } }, fields: ['id', 'word', 'source', 'keyword', 'scene_es', 'story_en'], limit: -1 });
+      const byWord = new Map();
+      for (const m of shared) byWord.set(m.word, [...(byWord.get(m.word) || []), m]);
+      const todo = words.filter((w) => {
+        if (w.kind && w.kind !== 'keyword' && w.kind !== 'irregular') return false;
+        const list = byWord.get(w.id) || [];
+        return !list.some((m) => isConciseMnemonic(m));
+      });
       if (!todo.length) return { filled: 0 };
-      const made = await generateKeywordMnemonics(todo, providers, { model: model(req), saveWord });
-      for (const m of made) await mnemonics.createOne({ ...m, owner: null, source: 'ai' });
+      const staleByWord = new Map(todo.map((w) => [w.id, (byWord.get(w.id) || []).find((x) => !isConciseMnemonic(x))]).filter(([, stale]) => stale));
+      const fixedKeywords = Object.fromEntries([...staleByWord].map(([word, stale]) => [word, stale.keyword]).filter(([, keyword]) => keyword));
+      const made = await generateKeywordMnemonics(todo, providers, { model: model(req), fixedKeywords, saveWord });
+      for (const m of made) {
+        const stale = staleByWord.get(m.word);
+        if (stale) await mnemonics.updateOne(stale.id, { ...m, owner: null, source: stale.source || 'ai' });
+        else await mnemonics.createOne({ ...m, owner: null, source: 'ai' });
+      }
       return { filled: made.length };
     }));
 

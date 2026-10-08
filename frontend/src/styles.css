@@ -686,6 +686,8 @@ kbd { background: var(--surface-2); border-radius: 6px; padding: 1px 6px; font-s
 .preparing-memory h2 { margin-bottom: 0; }
 .word-card .trick-box { border: 2px solid color-mix(in srgb, var(--primary) 30%, transparent); padding: 16px; }
 .word-card .trick-box .lbl { color: var(--primary); letter-spacing: .075em; }
+.own-issues { margin: .35rem 0 0; padding-left: 1.15rem; text-align: left; }
+.own-issues li + li { margin-top: .3rem; }
 
 @media (max-width: 720px) {
   .focus-heading { align-items: flex-start; }.focus-streak { min-width: 72px; }

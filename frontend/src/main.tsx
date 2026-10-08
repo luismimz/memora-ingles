@@ -28,7 +28,10 @@ import { PhrasalVerbs } from './pages/PhrasalVerbs';
 import { MediaLab } from './pages/MediaLab';
 import { PerfectWord } from './pages/PerfectWord';
 import { Spinner, ToastHost } from './components/common';
+import { installNaturalAudioUnlock } from './lib/audioPlayer';
 import './styles.css';
+
+installNaturalAudioUnlock();
 
 try {
   const theme = localStorage.getItem('memora.theme');

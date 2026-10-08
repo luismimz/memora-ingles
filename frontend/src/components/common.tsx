@@ -7,14 +7,14 @@ export function playNaturalFast(text: string, slow = false, timeout = 8000, allo
   void timeout; // compatibilidad con llamadas antiguas: ya no se descarta un audio que sigue preparándose.
   let fallbackUsed = false;
   let cancelled = false;
-  const fallback = () => {
+  const fallback = (error?: unknown) => {
     if (cancelled || fallbackUsed) return;
     fallbackUsed = true;
     if (allowBrowserFallback) speak(text, slow ? { rate: 0.6 } : {});
-    else toast('🔊 La voz natural no está disponible. Revisa Ajustes → Voces y oído.');
+    else toast(`🔊 ${error instanceof Error ? error.message : 'La voz natural no está disponible.'}`);
   };
   playNaturalAudio(text, { rate: slow ? 0.70 : undefined })
-    .catch((error) => { if (!cancelled && (error as DOMException)?.name !== 'AbortError') fallback(); });
+    .catch((error) => { if (!cancelled && (error as DOMException)?.name !== 'AbortError') fallback(error); });
   return () => { cancelled = true; stopNaturalAudio(); };
 }
 
