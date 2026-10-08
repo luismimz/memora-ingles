@@ -3,6 +3,7 @@ import { ProgressBar } from '../components/common';
 import { localDate, streak } from '../lib/stats';
 import { isDue } from '../lib/srs';
 import { useStore } from '../store';
+import { DAY_JOURNEY, journeyProgress } from '../data/dayJourney';
 
 interface PathStep {
   id: string;
@@ -21,12 +22,17 @@ interface PathStats {
   today: number;
   days: number;
   currentDay: number;
+  journey: number;
 }
 
 const STEPS: PathStep[] = [
   {
-    id: 'memory', icon: '🧠', title: 'Construye tu memoria', description: 'Aprende palabras y bloques con una imagen, una historia absurda y una escena en inglés.', to: '/sesion',
-    unlock: () => true, done: (s) => s.learned >= 10,
+    id: 'journey', icon: '🌅', title: 'Vive la escena del día', description: 'Una historia cotidiana une la imagen, el audio, la estructura y la frase que produces tú.', to: '/recorrido',
+    unlock: () => true, done: (s) => s.journey >= 1,
+  },
+  {
+    id: 'memory', icon: '🧠', title: 'Construye tu memoria', description: 'Añade palabras y bloques de la escena con una asociación visual y una frase en inglés.', to: '/sesion',
+    unlock: (s) => s.journey >= 1, done: (s) => s.learned >= 10,
   },
   {
     id: 'review', icon: '🔁', title: 'Fija lo aprendido', description: 'Recupera las palabras justo antes de olvidarlas. La repetición se adapta a tus fallos.', to: '/repaso',
@@ -68,6 +74,7 @@ export function Path() {
     today: all.filter((p) => today && p.study_day === today.day && p.status !== 'known').length,
     days: streak(days.filter((d) => d.learned > 0 || d.exam_total > 0).map((d) => d.date), localDate()),
     currentDay,
+    journey: journeyProgress(),
   };
   const goal = profile?.daily_goal ?? 100;
   const dailyProgress = Math.min(stats.today / Math.max(goal, 1), 1);
@@ -81,7 +88,7 @@ export function Path() {
         <div className="path-hero-copy">
           <span className="chip" style={{ background: 'rgba(255,255,255,.18)', color: '#fff' }}>Día {currentDay} · ruta personal</span>
           <h1>Tu camino para hablar inglés</h1>
-          <p>Memoria → patrones → historias → conversación. Cada paso usa lo anterior para que avances sin saturarte.</p>
+          <p>Una escena cotidiana → memoria → patrones → conversación. Cada paso usa lo anterior para que avances sin perderte.</p>
           <div className="row"><span className="path-xp">⚡ {xp} puntos de impulso</span><span className="path-streak">🔥 {stats.days} {stats.days === 1 ? 'día' : 'días'} de racha</span></div>
         </div>
         <img src="/images/story-library-cover.png" alt="Libro abierto que conduce a un palacio de la memoria" />
@@ -91,6 +98,7 @@ export function Path() {
         <div className="spread"><div><span className="chip primary">Tu siguiente paso</span><h2 style={{ margin: '.35rem 0 0' }}>{next ? `${next.icon} ${next.title}` : '🎉 Ruta completada por hoy'}</h2></div><b>{completed}/{STEPS.length}</b></div>
         <p className="muted small" style={{ margin: 0 }}>{next?.description ?? 'Vuelve mañana para consolidar y desbloquear nuevos retos.'}</p>
         {next && <Link className="btn" to={next.to}>Continuar la ruta →</Link>}
+        <div className="journey-path-progress"><span>Historia cotidiana · {stats.journey}/{DAY_JOURNEY.length} escenas</span><ProgressBar value={stats.journey} max={DAY_JOURNEY.length} /></div>
         <div className="small muted">Progreso de hoy · {stats.today} / {goal} unidades</div>
         <ProgressBar value={stats.today} max={goal} />
       </div>

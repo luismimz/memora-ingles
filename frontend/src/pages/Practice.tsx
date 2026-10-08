@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { structureFor } from '../data/structures';
 import { useStore } from '../store';
+import { DAY_JOURNEY, journeyProgress } from '../data/dayJourney';
 
 const MODES = [
   { phase: 'Usar', to: '/practica/hablar', ico: '🗣️', title: 'Hablar desde el principio', desc: 'Palabras frecuentes y patrones para responder, preguntar y ganar confianza.' },
@@ -12,7 +13,7 @@ const MODES = [
   { phase: 'Vivirlo', to: '/practica/conversacion', ico: '💬', title: 'Conversación', desc: 'Habla con la IA usando tus palabras.', ai: true },
   { phase: 'Comprobar', to: '/practica/dictado', ico: '🎧', title: 'Dictado', desc: 'Oye frases reales y escríbelas.' },
   { phase: 'Comprobar', to: '/practica/pronunciacion', ico: '🎤', title: 'Pronunciación', desc: 'Habla y el micrófono te corrige.' },
-  { phase: 'Comprobar', to: '/practica/contrarreloj', ico: '⚡', title: 'Contrarreloj', desc: 'Empareja palabras en 60 segundos.' },
+  { phase: 'Comprobar', to: '/practica/contrarreloj', ico: '🌧️', title: 'Lluvia de parejas', desc: 'Empareja palabras en 60 segundos y supera tu récord.' },
   { phase: 'Comprobar', to: '/desafios', ico: '🎮', title: 'Desafíos y ranking', desc: 'Ordena frases, rescata historias y compite con tu familia.' },
   { phase: 'Comprobar', to: '/phrasal-verbs', ico: '🔀', title: 'Phrasal verbs', desc: 'Las unidades que más aparecen en conversaciones reales.' },
   { phase: 'Comprobar', to: '/verbos', ico: '🔀', title: 'Verbos irregulares', desc: 'Por familias: sing-sang-sung…' },
@@ -21,11 +22,14 @@ const MODES = [
 export function Practice() {
   const { currentDay, aiInfo } = useStore();
   const s = structureFor(currentDay);
+  const chapter = DAY_JOURNEY[journeyProgress()];
   return (
     <div className="stack practice-page">
       <div className="page-heading"><div><span className="eyebrow">FASE 2 · TRANSFERENCIA</span><h1>Practicar para que salga de ti</h1><p className="muted">Memorizar es el paso 1. Ahora escucha, construye, lee y habla con lo que acabas de aprender.</p></div><div className="settings-orb">🎯</div></div>
-      <Link to="/ruta" className="card path-teaser link"><div className="path-teaser-icon">🧭</div><div className="grow"><b>¿No sabes por dónde empezar?</b><div className="small muted">La Ruta de aprendizaje ordena las actividades para ti.</div></div><span className="path-arrow">→</span></Link>
+      <Link to={chapter ? '/recorrido' : '/practica/conversacion'} className="practice-next card link"><div className="practice-next-art">{chapter?.emoji ?? '🏆'}</div><div className="grow"><span className="eyebrow">TU MISIÓN RECOMENDADA</span><b>{chapter ? `${chapter.moment}: ${chapter.title}` : 'Elige una conversación para seguir creciendo'}</b><div className="small muted">{chapter ? `${chapter.sceneEs} · Patrón: ${chapter.pattern}` : 'Has completado las escenas base. Ahora usa tus frases con otra persona.'}</div></div><span className="btn small-btn">{chapter ? 'Continuar →' : 'Practicar →'}</span></Link>
+      <Link to="/ruta" className="card path-teaser link"><div className="path-teaser-icon">🧭</div><div className="grow"><b>La Ruta decide el orden por ti</b><div className="small muted">Consulta qué has desbloqueado y cuál es el siguiente paso, sin perderte entre herramientas.</div></div><span className="path-arrow">→</span></Link>
       <div className="card flat small"><b>Hoy toca:</b> {s.title} · <code>{s.pattern}</code></div>
+      <div className="practice-toolbox-label"><span className="eyebrow">CAJA DE HERRAMIENTAS</span><p className="muted small">Estas actividades refuerzan la misión recomendada. Úsalas después o cuando quieras variar.</p></div>
       {['Usar', 'Vivirlo', 'Comprobar'].map((phase) => <section className="practice-section" key={phase}><div className="section-heading"><div><span className="eyebrow">{phase === 'Usar' ? 'PATRONES Y PRODUCCIÓN' : phase === 'Vivirlo' ? 'CONTEXTO Y CONEXIÓN' : 'OÍDO Y EVIDENCIA'}</span><h2>{phase}</h2></div><span className="small muted">{MODES.filter((m) => m.phase === phase).length} actividades</span></div><div className="grid2">{MODES.filter((m) => m.phase === phase).map((m) => <Link key={m.to} to={m.to} className="card link practice-mode-card"><span className="practice-mode-icon">{m.ico}</span><div><b>{m.title}</b>{m.ai && !aiInfo.enabled && <span className="chip">requiere IA</span>}<div className="small muted">{m.desc}</div></div><span className="path-arrow">→</span></Link>)}</div></section>)}
     </div>
   );

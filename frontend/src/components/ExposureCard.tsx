@@ -131,7 +131,7 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
           )}
         </div>
       )}
-      {variant === 'detail' && m && !m.image && <ImageButton mnemonic={m} onDone={(img) => apply({ mode: 'auto', mnemonic: img }, 'pick')} />}
+      {variant !== 'compact' && m && !m.image && <ImageButton mnemonic={m} onDone={(img) => apply({ mode: 'auto', mnemonic: img }, 'pick')} />}
 
       {notWorking && (
         <Modal onClose={() => setNotWorking(false)}>

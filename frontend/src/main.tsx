@@ -21,6 +21,7 @@ import { Speak } from './pages/practice/Speak';
 import { Match } from './pages/practice/Match';
 import { ConversationPath } from './pages/practice/ConversationPath';
 import { Path } from './pages/Path';
+import { Journey } from './pages/Journey';
 import { Library } from './pages/Library';
 import { Challenges } from './pages/Challenges';
 import { PhrasalVerbs } from './pages/PhrasalVerbs';
@@ -35,7 +36,8 @@ try {
 
 const NAV = [
   { to: '/', ico: '🏠', label: 'Hoy' },
-  { to: '/ruta', ico: '🧭', label: 'Ruta' },
+  { to: '/recorrido', ico: '🌅', label: 'Historia' },
+  { to: '/ruta', ico: '🧭', label: 'Plan' },
   { to: '/repaso', ico: '🔁', label: 'Repaso' },
   { to: '/practica', ico: '🎯', label: 'Practicar' },
   { to: '/palabras', ico: '📖', label: 'Palabras' },
@@ -67,6 +69,7 @@ function Shell() {
         <Routes>
           <Route path="/" element={<Today />} />
           <Route path="/ruta" element={<Path />} />
+          <Route path="/recorrido" element={<Journey />} />
           <Route path="/biblioteca" element={<Library />} />
           <Route path="/desafios" element={<Challenges />} />
           <Route path="/desafios/ordenar" element={<Challenges mode="scramble" />} />
