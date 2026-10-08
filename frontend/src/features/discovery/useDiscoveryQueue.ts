@@ -20,6 +20,10 @@ const DEFAULT_BATCH_SIZE = 10;
 const DEFAULT_PRELOAD_AHEAD = 3;
 const DEFAULT_MINIMUM_ALTERNATIVES = 2;
 
+function isAlchemyWord(word: Pick<Word, 'kind'>) {
+  return word.kind === 'phrasal' || word.kind === 'phrasal_verb' || word.kind === 'compound';
+}
+
 interface PreparedWord {
   associations: DiscoveryAssociation[];
   audioReady: boolean;
@@ -155,6 +159,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
   const batchSize = Math.max(1, options.batchSize ?? DEFAULT_BATCH_SIZE);
   const preloadAhead = Math.max(3, options.preloadAhead ?? DEFAULT_PRELOAD_AHEAD);
   const minimumAlternatives = Math.max(1, options.minimumAlternatives ?? DEFAULT_MINIMUM_ALTERNATIVES);
+  const startNewBatch = Boolean(options.startNewBatch);
   const store = useStore();
   // La cola pertenece a una cuenta. La versión anterior usaba una clave
   // global y podía presentar en una cuenta nueva recuerdos aceptados por otra.
@@ -195,7 +200,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     ];
     const savedActive = resumableIds.length > 0 && (savedQueueCursor < resumableIds.length || savedRecovery.length > 0);
 
-    if (savedActive) {
+    if (savedActive && !startNewBatch) {
       setWordIds(resumableIds);
       setCursor(Math.min(savedQueueCursor, resumableIds.length));
       setCatalogCursor(savedCursor);
@@ -217,7 +222,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     while (nextCatalogCursor < words.length && freshIds.length < batchSize) {
       const word = words[nextCatalogCursor];
       nextCatalogCursor += 1;
-      if (!excluded.has(word.id) && USES_KEYWORD(word)) freshIds.push(word.id);
+      if (!excluded.has(word.id) && (USES_KEYWORD(word) || isAlchemyWord(word))) freshIds.push(word.id);
     }
     const nextSeen = [...new Set([...savedSeen, ...freshIds])];
     setWordIds(freshIds);
@@ -226,9 +231,12 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     setSeenWordIds(nextSeen);
     setAlternativeByWord({});
     setRejectedByWord({});
-    setRecoveryQueue([]);
+    // Una palabra que falló en un micro-reto sigue viva: se conserva fuera
+    // de la baraja nueva y podrá reaparecer cuando su índice de desbloqueo
+    // se alcance, en lugar de perderse al encadenar rondas.
+    setRecoveryQueue(savedRecovery);
     setHydrated(true);
-  }, [batchSize, hydrated, progress, storageKey, wordById, words]);
+  }, [batchSize, hydrated, progress, startNewBatch, storageKey, wordById, words]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -258,6 +266,26 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     if (!word) return;
     preparing.current.add(wordId);
     try {
+      if (isAlchemyWord(word)) {
+        const audioReady = await prefetchNaturalAudio(word.en).then(() => true).catch(() => false);
+        putPrepared(wordId, {
+          associations: [{
+            id: -word.id,
+            keyword: word.en,
+            sceneEs: `Fusiona las piezas para recordar «${word.es}».`,
+            storyEn: word.example_en,
+            emoji: word.kind === 'compound' ? '🧩' : '⚗️',
+            imageId: null,
+            imageUrl: null,
+            phoneticScore: null,
+            focus: null,
+            source: 'seed',
+          }],
+          audioReady,
+          error: null,
+        });
+        return;
+      }
       const selectedId = progress.get(wordId)?.mnemonic ?? null;
       const cache = await mnemonicsFor([wordId], { fill: true });
       const raw = [...(cache.get(wordId) ?? [])];
@@ -329,6 +357,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
       alternativesTotal: ready.associations.length,
       audioText: word.en,
       audioReady: ready.audioReady,
+      special: isAlchemyWord(word) ? 'alchemy' : undefined,
     };
   }, [alternativeByWord, prepared, wordById, wordIds]);
 
@@ -476,6 +505,13 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     setRevision((value) => value + 1);
   }, [cursor, wordIds]);
 
+  const completeAlchemy = useCallback(async () => {
+    if (status !== 'ready' || !current || current.special !== 'alchemy') return { type: 'not-ready' } as const;
+    const nextCursor = cursor + 1;
+    setCursor(nextCursor);
+    return { type: 'accepted', wordId: current.word.id, associationId: current.association.id, batchComplete: nextCursor >= wordIds.length } as const;
+  }, [current, cursor, status, wordIds.length]);
+
   const readyForRecovery = useMemo(
     () => recoveryQueue.filter((item) => cursor >= item.unlockAfterIndex),
     [cursor, recoveryQueue],
@@ -494,5 +530,6 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     skipCurrent,
     resolveRecovery,
     retryPreload,
+    completeAlchemy,
   };
 }

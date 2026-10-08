@@ -6,6 +6,8 @@ import type { DiscoveryCard, DiscoveryQueueResult } from './discovery.types';
 import { AssociationCard } from './AssociationCard';
 import { SentenceLaunch } from '../sentences/SentenceLaunch';
 import { useNavigate } from 'react-router-dom';
+import { AlchemyChallenge } from '../alchemy/AlchemyChallenge';
+import { alchemyChallengeFromWord } from '../alchemy/alchemy.types';
 
 export interface FlashcardSwiperProps {
   /** Se llama al pulsar “Crear la mía”; la pantalla padre decide dónde abrir el editor. */
@@ -143,6 +145,10 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
     );
   }
 
+  if (current.special === 'alchemy') {
+    return <DiscoveryAlchemyCard card={current} onComplete={queue.completeAlchemy} onExit={leaveMission} />;
+  }
+
   const cardKey = `${current.unitId}-${current.association.id}`;
   const exitX = exitDirection === 'right' ? 600 : exitDirection === 'left' ? -600 : 0;
 
@@ -179,6 +185,27 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
         ) : null}
       </AnimatePresence>
       <p className="discovery-keyboard-hint">Desliza o usa <kbd>←</kbd> <kbd>→</kbd></p>
+    </main>
+  );
+}
+
+function DiscoveryAlchemyCard({ card, onComplete, onExit }: { card: DiscoveryCard; onComplete: DiscoveryQueueResult['completeAlchemy']; onExit: () => void }) {
+  const challenge = alchemyChallengeFromWord({
+    id: card.word.id,
+    en: card.word.en,
+    es: card.word.es,
+    kind: card.word.kind,
+    example_en: card.word.exampleEn,
+  });
+  return (
+    <main className="discovery-stage discovery-alchemy-stage">
+      <DiscoveryTopbar progress={{ current: card.position + 1, total: card.total, accepted: 0 }} onExit={onExit} />
+      <AlchemyChallenge
+        challenge={challenge}
+        onComplete={() => toast(`⚗️ ${challenge.targetEn} preparado para tu memoria.`)}
+        onNext={() => { void onComplete().then(() => toast(`🔥 ${challenge.targetEn} conectado. Sigue con la siguiente tarjeta.`)); }}
+        onExit={onExit}
+      />
     </main>
   );
 }

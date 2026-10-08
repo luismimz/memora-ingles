@@ -5,6 +5,7 @@ import { playNaturalFast } from '../../components/common';
 import { shuffle } from '../../components/common';
 import { useStore } from '../../store';
 import { DEFAULT_SENTENCE_MISSION, type SentenceMission } from './sentenceMission';
+import { QuickScenario, scenarioFromSentence } from '../scenarios/QuickScenario';
 
 interface SentenceTile {
   id: string;
@@ -40,7 +41,9 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mistake, setMistake] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
+  const [scenarioDone, setScenarioDone] = useState(false);
   const [earnedXp, setEarnedXp] = useState(0);
+  const [roundXp, setRoundXp] = useState(0);
   const dropzoneRef = useRef<HTMLDivElement>(null);
   const completionHandled = useRef(false);
   const activeMissionRef = useRef(activeMission.id);
@@ -104,6 +107,7 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
     setSelectedIds([]);
     setMistake(null);
     setCompleted(false);
+    setScenarioDone(false);
     setEarnedXp(0);
     completionHandled.current = false;
   }, [activeMission.id]);
@@ -120,6 +124,7 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
     completionHandled.current = true;
     const xp = activeMission.xp ?? 25;
     setEarnedXp(xp);
+    setRoundXp((value) => value + xp);
     void store.addXp(xp);
     const stopAudio = playNaturalFast(activeMission.correctWords.join(' '));
     onComplete?.(xp);
@@ -174,7 +179,13 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
   };
 
   const sentence = selectedTiles.map((tile) => tile.word).join(' ');
+  const scenario = useMemo(() => scenarioFromSentence(activeMission), [activeMission]);
   const leaveMission = () => navigate('/', { replace: true, state: null });
+  const completeScenario = (xp: number) => {
+    setScenarioDone(true);
+    setRoundXp((value) => value + xp);
+    void store.addXp(xp);
+  };
 
   return (
     <main className={`sentence-stage ${completed ? 'is-complete' : ''}`}>
@@ -196,6 +207,7 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
           {activeMission.sourceWord ? <span className="sentence-source">Conexión activa: <b>{activeMission.sourceWord}</b></span> : null}
         </section>
 
+        {completed && !scenarioDone ? <QuickScenario mission={scenario} onComplete={completeScenario} onExit={leaveMission} /> : <>
         <section ref={dropzoneRef} className={`sentence-dropzone ${completed ? 'is-complete' : ''}`} aria-label="Zona para ordenar la frase">
           {selectedTiles.length ? selectedTiles.map((tile) => (
             <motion.button
@@ -244,11 +256,12 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
           <motion.div className="sentence-success" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <span>🎉</span>
             <div><strong>Conexión convertida en lenguaje.</strong><small>Kokoro acaba de leer tu frase. Repítela en voz alta una vez.</small></div>
-            {queueIndex + 1 < missionQueue.length ? <button type="button" className="btn big sentence-next" onClick={() => setQueueIndex((index) => index + 1)}>Siguiente frase →</button> : <FinalMissionSummary onDiscover={() => navigate('/descubrir', { replace: true, state: null })} onHome={leaveMission} />}
+            {queueIndex + 1 < missionQueue.length ? <button type="button" className="btn big sentence-next" onClick={() => setQueueIndex((index) => index + 1)}>Siguiente frase →</button> : <FinalMissionSummary words={missionQueue.length} xp={roundXp} onDiscover={() => navigate('/descubrir', { replace: true, state: { startNewRound: true } })} onHome={leaveMission} />}
           </motion.div>
         ) : (
           <p className="sentence-hint">Puedes tocar una ficha o arrastrarla a la línea. Si te equivocas, vuelve a intentarlo sin perder la racha.</p>
         )}
+        </>}
       </div>
     </main>
   );
@@ -262,13 +275,13 @@ function normalizeToken(value: string) {
   return value.toLowerCase().replace(/[!?.,]/g, '');
 }
 
-function FinalMissionSummary({ onDiscover, onHome }: { onDiscover: () => void; onHome: () => void }) {
+function FinalMissionSummary({ words, xp, onDiscover, onHome }: { words: number; xp: number; onDiscover: () => void; onHome: () => void }) {
   return (
     <section className="sentence-final-summary" aria-live="polite">
       <span className="sentence-final-icon">🏁</span>
-      <div><strong>Ronda completada</strong><small>Has convertido todas las conexiones de esta cola en frases que puedes usar.</small></div>
+      <div><strong>Ronda completada</strong><small>{words} palabras usadas · +{xp} XP · la siguiente ronda ya está lista.</small></div>
       <div className="row sentence-next-actions">
-        <button type="button" className="btn big sentence-next" onClick={onDiscover}>⚡ Descubrir 10 palabras NUEVAS</button>
+        <button type="button" className="btn big sentence-next" onClick={onDiscover}>🔥 SIGUIENTE RONDA (+10 NUEVAS)</button>
         <button type="button" className="btn secondary" onClick={onHome}>🏠 Volver al Inicio</button>
       </div>
     </section>

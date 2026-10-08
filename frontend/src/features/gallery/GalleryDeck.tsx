@@ -3,14 +3,20 @@ import { AnimatePresence, motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { ErrorBox, Rich, SpeakBtn, playNaturalFast } from '../../components/common';
 import { useGallery, type GalleryItem, type GalleryState } from './useGallery';
+import { localDate, streak } from '../../lib/stats';
+import { useStore } from '../../store';
 
 type GalleryFilter = 'all' | GalleryState;
 
 /** Álbum visual de asociaciones: el resultado que el usuario quiere completar. */
 export function GalleryDeck() {
+  const store = useStore();
   const gallery = useGallery();
   const [filter, setFilter] = useState<GalleryFilter>('all');
   const [selected, setSelected] = useState<GalleryItem | null>(null);
+  const currentStreak = streak(store.days.filter((day) => day.learned > 0 || day.exam_total > 0).map((day) => day.date), localDate());
+  const level = Math.max(1, Math.floor(store.xp / 500) + 1);
+  const trophies = [gallery.counts.mastered >= 1, gallery.counts.mastered >= 10, currentStreak >= 3, store.xp >= 500].filter(Boolean).length;
 
   const visible = filter === 'all' ? gallery.items : gallery.items.filter((item) => item.state === filter);
 
@@ -40,6 +46,12 @@ export function GalleryDeck() {
         </div>
         <div className="gallery-hero-badge">🧠<strong>{gallery.items.length}</strong><span>conexiones</span></div>
       </header>
+
+      <section className="gallery-profile-strip" aria-label="Perfil Memora">
+        <div className="gallery-profile-main"><span className="gallery-profile-avatar">{store.user?.first_name?.slice(0, 1).toUpperCase() || 'M'}</span><div><strong>{store.user?.first_name || 'Alumno Memora'}</strong><small>Nivel {level} · ⚡ {store.xp} XP</small></div></div>
+        <div className="gallery-profile-stat"><b>🔥 {currentStreak}</b><small>racha</small></div>
+        <div className="gallery-profile-stat"><b>🏆 {trophies}</b><small>trofeos</small></div>
+      </section>
 
       <div className="gallery-stats" aria-label="Progreso del álbum">
         <GalleryStat icon="🌑" label="Descubiertas" value={gallery.counts.discovered} active={filter === 'discovered'} onClick={() => setFilter('discovered')} />

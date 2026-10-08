@@ -24,7 +24,7 @@ export interface AlchemyChallenge {
  * Agrupamos todo lo que va después del primer verbo/palabra en la segunda
  * ficha para que incluso «run out of» conserve una interacción de dos piezas.
  */
-export function alchemyChallengeFromWord(word: Word): AlchemyChallenge {
+export function alchemyChallengeFromWord(word: Pick<Word, 'id' | 'en' | 'es' | 'kind' | 'example_en'>): AlchemyChallenge {
   const parts = word.en.trim().split(/\s+/).filter(Boolean);
   const left = parts[0] || word.en;
   const right = parts.slice(1).join(' ') || parts[0] || word.en;

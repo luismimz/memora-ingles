@@ -5,17 +5,23 @@ import { FlashcardSwiperView } from './FlashcardSwiper';
 import { QuickChallenge } from './QuickChallenge';
 import { useDiscoveryQueue } from './useDiscoveryQueue';
 import { useStore } from '../../store';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { sentenceMissionFromWord, type SentenceMission } from '../sentences/sentenceMission';
+import { isDue } from '../../lib/srs';
 
 /** Controlador de la ruta: alterna asociación y recuperación sin duplicar la cola. */
 export function DiscoveryPage() {
   const store = useStore();
   const navigate = useNavigate();
-  const queue = useDiscoveryQueue({ batchSize: 10, preloadAhead: 3, minimumAlternatives: 2 });
+  const location = useLocation();
+  const routeState = location.state as { startNewRound?: boolean; warmupDone?: boolean } | null;
+  const startNewRound = Boolean(routeState?.startNewRound);
+  const warmupDone = Boolean(routeState?.warmupDone || startNewRound);
+  const queue = useDiscoveryQueue({ batchSize: 10, preloadAhead: 3, minimumAlternatives: 2, startNewBatch: startNewRound });
   const [activeRecoveryId, setActiveRecoveryId] = useState<number | null>(null);
   const [dismissedRecoveryId, setDismissedRecoveryId] = useState<number | null>(null);
   const [sentenceMissions, setSentenceMissions] = useState<SentenceMission[]>([]);
+  const dueCount = [...store.progress.values()].filter((progress) => progress.status !== 'known' && isDue(progress)).length;
 
   const ready = queue.readyForRecovery;
   const activeItem = ready.find((item) => item.wordId === activeRecoveryId) ?? null;
@@ -72,6 +78,10 @@ export function DiscoveryPage() {
     }
   };
 
+  if (dueCount > 0 && !warmupDone) {
+    return <MissionWarmup dueCount={dueCount} onStart={() => navigate('/arcade')} onExit={() => navigate('/', { replace: true, state: null })} />;
+  }
+
   return (
     <div className="discovery-page-controller">
       <div className="discovery-xp-pill" aria-label={`${store.xp} puntos de experiencia`}>⚡ {store.xp} XP</div>
@@ -105,5 +115,20 @@ export function DiscoveryPage() {
         )}
       </AnimatePresence>
     </div>
+  );
+}
+
+function MissionWarmup({ dueCount, onStart, onExit }: { dueCount: number; onStart: () => void; onExit: () => void }) {
+  return (
+    <main className="discovery-stage discovery-stage-centered mission-warmup">
+      <button type="button" className="mission-exit discovery-screen-exit" onClick={onExit}>✕ Salir al Inicio</button>
+      <section className="discovery-complete-card mission-warmup-card">
+        <span className="discovery-complete-icon">🔁</span>
+        <p className="discovery-card-kicker">MICRO-CALENTAMIENTO</p>
+        <h1>Primero recuperamos lo que ya aprendiste.</h1>
+        <p>Tienes <strong>{dueCount} {dueCount === 1 ? 'palabra vencida' : 'palabras vencidas'}</strong>. Una ráfaga de 60 segundos las reactiva y después desbloqueamos palabras nuevas.</p>
+        <button type="button" className="btn big sentence-next" onClick={onStart}>🎮 Calentar en Arcade →</button>
+      </section>
+    </main>
   );
 }

@@ -44,28 +44,23 @@ try {
 } catch { /* sin almacenamiento */ }
 
 const NAV = [
-  { to: '/', ico: '🧠', label: 'Aprender' },
-  { to: '/descubrir', ico: '⚡', label: 'Descubrir' },
+  { to: '/descubrir', ico: '⚡', label: 'Misión' },
   { to: '/arcade', ico: '🎮', label: 'Arcade' },
-  { to: '/alquimia', ico: '⚗️', label: 'Alquimia' },
-  { to: '/galeria', ico: '🃏', label: 'Galería' },
-  { to: '/repaso', ico: '🔁', label: 'Repaso' },
-  { to: '/biblioteca', ico: '📚', label: 'Historias' },
-  { to: '/progreso', ico: '📈', label: 'Progreso' },
-  { to: '/ajustes', ico: '⚙️', label: 'Ajustes' },
+  { to: '/galeria', ico: '🃏', label: 'Colección' },
 ];
 
 function Shell() {
   const { ready } = useStore();
   if (!ready) return <div style={{ paddingTop: '40vh' }}><Spinner /></div>;
   return (
-    <div className="app">
+    <div className="app app-immersive">
       <nav className="nav">
         <div className="brand"><span className="brand-mark">M</span><span><b>Memora</b><small>English by memory</small></span></div>
-        <div className="nav-section-label">TU APRENDIZAJE</div>
+        <div className="nav-section-label">TU RUTA</div>
         {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === '/'}><span className="ico">{n.ico}</span>{n.label}</NavLink>
         ))}
+        <NavLink to="/ajustes" className="nav-settings"><span className="ico">⚙️</span>Ajustes</NavLink>
         <div className="nav-footer nav-extra"><span className="status-dot" /> Método Memora · activo</div>
       </nav>
       <main className="main">

@@ -36,6 +36,8 @@ export interface DiscoveryCard {
   alternativesTotal: number;
   audioText: string;
   audioReady: boolean;
+  /** Las unidades phrasal/compound se abren como una fusión dentro del mazo. */
+  special?: 'alchemy';
 }
 
 export interface RecoveryQueueItem {
@@ -73,6 +75,8 @@ export interface DiscoveryQueueOptions {
   /** Alternativas preparadas por palabra, incluida la asociación inicial. */
   minimumAlternatives?: number;
   storageKey?: string;
+  /** Ignora la ronda guardada y abre el siguiente lote del cursor. */
+  startNewBatch?: boolean;
 }
 
 export interface DiscoveryQueueResult {
@@ -91,4 +95,5 @@ export interface DiscoveryQueueResult {
   /** Consolida o vuelve a poner en cola una palabra aceptada tras el micro-reto. */
   resolveRecovery(wordId: number, result: 'ok' | 'fail', ms: number): Promise<RecoveryResolution>;
   retryPreload(): void;
+  completeAlchemy(): Promise<DiscoverySwipeResult>;
 }
