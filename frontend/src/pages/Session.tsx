@@ -169,6 +169,7 @@ export function Session() {
     <div className="spread">
       <button className="btn ghost" onClick={() => { if (confirm('¿Salir de la sesión? Perderás esta ronda.')) nav('/'); }}>✕</button>
       {pilot && <span className="chip accent">🧪 Piloto</span>}
+      <div className="session-stepper" aria-label="Progreso de la sesión"><span className={phase === 'learn' ? 'active' : ''}>🧠 Asociar</span><i>→</i><span className={phase === 'room' || phase === 'recall' ? 'active' : ''}>🧩 Ordenar</span><i>→</i><span className={phase === 'exam' || phase === 'result' ? 'active' : ''}>✍️ Producir</span></div>
       <span className={`timer chip ${elapsed > POMODORO ? 'fail' : 'primary'}`}>⏱️ {elapsed > POMODORO ? `+${fmtTime(elapsed - POMODORO)}` : fmtTime(POMODORO - elapsed)}</span>
     </div>
   );

@@ -2,9 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { KIND_LABEL } from '../../../shared/classify.mjs';
 import { englishPhones, scoreKeyword, verdictFor } from '../../../shared/phonetics.mjs';
 import { ai, assetUrl, items } from '../lib/api';
+import { normalize, sentenceScore } from '../lib/answer';
 import { USES_KEYWORD, useStore } from '../store';
 import type { Mnemonic, Word } from '../types';
 import { ErrorBox, Modal, playNaturalFast, Rich, SpeakBtn, Spinner, toast } from './common';
+import { SentenceDiff } from './SentenceDiff';
 
 export interface MnemonicChoice { mode: 'auto' | 'none'; mnemonic: Mnemonic | null }
 
@@ -20,7 +22,19 @@ interface Props {
   onDone?: (ms: number) => void;
 }
 
-const TARGET_S = 15;
+// La asociación inicial es rápida; la producción necesita tiempo para ordenar
+// y crear una frase propia, así que el aviso de ritmo no penaliza esos pasos.
+const TARGET_S = 45;
+
+type UseStage = 'memory' | 'order' | 'create';
+
+function sentenceFor(word: Word) {
+  return word.example_en || `I use ${word.en} every day.`;
+}
+
+function wordsForSentence(sentence: string) {
+  return sentence.replace(/[.?!,;:]/g, '').split(/\s+/).filter(Boolean);
+}
 
 export function soundBadge(score: number | null | undefined) {
   if (score == null) return null;
@@ -33,7 +47,15 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
   const [notWorking, setNotWorking] = useState(false);
   const [showEn, setShowEn] = useState(false);
   const [more, setMore] = useState(variant === 'detail');
+  const [useStage, setUseStage] = useState<UseStage>('memory');
+  const [ordered, setOrdered] = useState<number[]>([]);
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [orderChecked, setOrderChecked] = useState<boolean | null>(null);
+  const [ownSentence, setOwnSentence] = useState('');
+  const [ownChecked, setOwnChecked] = useState<number | null>(null);
+  const [ownAccepted, setOwnAccepted] = useState(false);
   const started = useRef(Date.now());
+  const useStarted = useRef(Date.now());
   const [secs, setSecs] = useState(0);
 
   const list = store.mnemonicCache.get(word.id) ?? [];
@@ -41,7 +63,14 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
   const noneChosen = choice ? choice.mode === 'none' : store.progress.get(word.id)?.mnemonic_mode === 'none';
   const m = noneChosen ? null : (choice?.mnemonic ?? store.activeMnemonic(word.id));
 
-  useEffect(() => { started.current = Date.now(); setSecs(0); setShowEn(false); setMore(variant === 'detail'); }, [word.id, variant]);
+  const example = sentenceFor(word);
+  const exampleWords = wordsForSentence(example);
+  const tokenPool = [...exampleWords, ...(exampleWords.length > 4 ? ['really', 'today'] : ['at', 'home'])].map((text, id) => ({ id, text }));
+
+  useEffect(() => {
+    started.current = Date.now(); useStarted.current = Date.now(); setSecs(0); setShowEn(false); setMore(variant === 'detail');
+    setUseStage('memory'); setOrdered([]); setDragIndex(null); setOrderChecked(null); setOwnSentence(''); setOwnChecked(null); setOwnAccepted(false);
+  }, [word.id, variant]);
   useEffect(() => { if (autoSpeak) return playNaturalFast(word.en); return undefined; }, [word.id, autoSpeak, word.en]);
   useEffect(() => {
     if (variant !== 'learn') return;
@@ -58,6 +87,29 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
     else if (store.progress.has(word.id)) await store.saveProgress(word.id, { mnemonic_mode: c.mode, mnemonic: c.mnemonic?.id ?? null });
     setNotWorking(false);
   };
+
+  const startUse = () => { useStarted.current = Date.now(); setUseStage('order'); setOrdered([]); setOrderChecked(null); playNaturalFast(example); };
+  const moveToken = (from: number, to: number) => {
+    if (to < 0 || to >= ordered.length || from === to) return;
+    setOrdered((list) => { const next = [...list]; const [token] = next.splice(from, 1); next.splice(to, 0, token); return next; });
+    setOrderChecked(null);
+  };
+  const checkOrder = () => {
+    const correct = normalize(ordered.map((id) => tokenPool[id].text).join(' ')) === normalize(example);
+    setOrderChecked(correct);
+    if (correct) setUseStage('create');
+  };
+  const checkOwn = () => {
+    const answer = normalize(ownSentence);
+    const usesWord = answer.includes(normalize(word.en));
+    const enough = answer.split(' ').filter(Boolean).length >= 5;
+    const copied = answer === normalize(example);
+    const score = sentenceScore(ownSentence, example);
+    setOwnChecked(score);
+    setOwnAccepted(usesWord && enough && !copied);
+  };
+
+  const finishUse = () => onDone?.(Math.max(Date.now() - started.current, Date.now() - useStarted.current));
 
   return (
     <div className={`card word-card ${variant === 'learn' ? 'pop' : ''}`}>
@@ -107,10 +159,31 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
 
       {m && word.kind === 'irregular' && word.hint_es && <div className="small muted" style={{ marginTop: '.5rem' }}>🔀 {word.hint_es}</div>}
 
-      {/* Ejemplo: en la primera exposición va plegado para no pasar de 15 s */}
-      {(more || word.kind === 'chunk' || word.kind === 'phrasal') && <Examples word={word} full={variant === 'detail'} />}
-      {!more && variant === 'learn' && word.kind !== 'chunk' && word.kind !== 'phrasal' && word.example_en && (
+      {/* El ejemplo no aparece automáticamente: primero se fija la asociación. */}
+      {useStage === 'memory' && (more || word.kind === 'chunk' || word.kind === 'phrasal') && <Examples word={word} full={variant === 'detail'} />}
+      {useStage === 'memory' && !more && variant === 'learn' && word.kind !== 'chunk' && word.kind !== 'phrasal' && word.example_en && (
         <button className="btn ghost small" onClick={() => setMore(true)}>＋ Ver ejemplo</button>
+      )}
+
+      {variant === 'learn' && onDone && useStage !== 'memory' && (
+        <div className="word-use-flow">
+          {useStage === 'order' ? (
+            <>
+              <div className="word-use-heading"><span className="chip accent">2 · VER LA ESTRUCTURA</span><b>Ordena una frase real</b><span>Hay palabras de sobra. Toca para añadir y arrastra las fichas para cambiar el orden.</span></div>
+              <div className="word-order-answer">{ordered.length ? ordered.map((tokenId, i) => <span key={tokenId} className="word-token-drag" draggable onDragStart={() => setDragIndex(i)} onDragOver={(e) => e.preventDefault()} onDrop={() => { if (dragIndex !== null) moveToken(dragIndex, i); setDragIndex(null); }}><button className="word-token selected" type="button" onClick={() => setOrdered((list) => list.filter((_, index) => index !== i))} title="Quitar palabra">{tokenPool[tokenId].text}</button></span>) : <span className="muted small">Toca las palabras de abajo para empezar…</span>}</div>
+              <div className="word-order-pool">{tokenPool.map((token) => !ordered.includes(token.id) && <button key={token.id} className="word-token" type="button" onClick={() => setOrdered((list) => [...list, token.id])}>{token.text}</button>)}</div>
+              {orderChecked === false && <div className="feedback doubt">🔁 Aún no. Cambia el orden y vuelve a probar.</div>}
+              <div className="row"><button className="btn secondary grow" type="button" onClick={() => { setOrdered([]); setDragIndex(null); setOrderChecked(null); }}>Vaciar</button><button className="btn grow" type="button" disabled={ordered.length < exampleWords.length} onClick={checkOrder}>Comprobar orden ↵</button></div>
+            </>
+          ) : (
+            <>
+              <div className="word-use-heading"><span className="chip accent">3 · HACERLA TUYA</span><b>Ahora crea una frase propia</b><span>No copies el ejemplo. Di algo verdadero para ti usando <strong>{word.en}</strong> y al menos cinco palabras.</span></div>
+              <textarea value={ownSentence} onChange={(e) => { setOwnSentence(e.target.value); setOwnChecked(null); setOwnAccepted(false); }} onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey && !ownAccepted) { e.preventDefault(); checkOwn(); } }} placeholder={`Escribe una frase tuya con “${word.en}” · Enter para comprobar`} disabled={ownAccepted} />
+              {ownChecked !== null && <div className={`feedback ${ownAccepted ? 'ok' : 'doubt'}`}><b>{ownAccepted ? '✅ Tu frase es válida' : '🔁 Cambia algo y vuelve a intentarlo'}</b><span>{ownAccepted ? 'La palabra ya ha salido de la tarjeta y forma parte de una idea tuya.' : 'Necesitas usar la palabra, escribir cinco palabras o más y no copiar el ejemplo.'}</span>{!ownAccepted && <SentenceDiff given={ownSentence} expected={example} />}</div>}
+              <div className="row"><button className="btn secondary grow" type="button" onClick={() => { setUseStage('order'); setOrdered([]); setOrderChecked(null); }}>← Volver a ordenar</button>{ownAccepted ? <button className="btn grow" type="button" onClick={finishUse}>Siguiente palabra →</button> : <button className="btn grow" type="button" disabled={!ownSentence.trim()} onClick={checkOwn}>Comprobar frase ↵</button>}</div>
+            </>
+          )}
+        </div>
       )}
 
       {variant === 'detail' && list.length > 1 && (
@@ -123,14 +196,12 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
         </div>
       )}
 
-      {variant !== 'compact' && (
+      {variant !== 'compact' && variant !== 'learn' && (
         <div className="row" style={{ marginTop: '.75rem' }}>
           <button className="btn secondary grow" onClick={() => setNotWorking(true)}>😕 No me funciona</button>
-          {variant === 'learn' && onDone && (
-            <button className="btn big grow" onClick={() => onDone(Date.now() - started.current)} autoFocus>Lo tengo ✓</button>
-          )}
         </div>
       )}
+      {variant === 'learn' && onDone && useStage === 'memory' && <div className="row" style={{ marginTop: '.75rem' }}><button className="btn secondary grow" onClick={() => setNotWorking(true)}>😕 No me funciona</button><button className="btn big grow" onClick={startUse} autoFocus>Usar esta palabra →</button></div>}
       {variant !== 'compact' && m && !m.image && <ImageButton mnemonic={m} onDone={(img) => apply({ mode: 'auto', mnemonic: img }, 'pick')} />}
 
       {notWorking && (

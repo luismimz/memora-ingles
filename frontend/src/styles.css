@@ -261,6 +261,10 @@ p { margin: 0 0 .75rem; }
 .session-start-banner h2 { margin: .4rem 0 .35rem; font-size: clamp(1.25rem, 3vw, 1.7rem); }
 .session-start-banner p { max-width: 580px; margin: 0 0 .8rem; color: rgba(255,255,255,.8); }
 .session-start-banner .eyebrow { color: rgba(255,255,255,.74); }
+.session-stepper { display: flex; align-items: center; gap: .28rem; margin-left: auto; color: var(--muted); font-size: .68rem; font-weight: 900; white-space: nowrap; }
+.session-stepper span { padding: 4px 6px; border-radius: 8px; }
+.session-stepper span.active { background: var(--primary-soft); color: var(--primary); }
+.session-stepper i { color: var(--border); font-style: normal; }
 .session-start-action { flex: none; background: #fff; color: #4b1d74; }
 .session-plan { display: flex; align-items: center; gap: .45rem; flex-wrap: wrap; font-size: .78rem; font-weight: 900; }
 .session-plan span { padding: 5px 9px; border-radius: 999px; background: rgba(255,255,255,.14); }
@@ -518,6 +522,21 @@ kbd { background: var(--surface-2); border-radius: 6px; padding: 1px 6px; font-s
 .dw.wrong, .dw.missing { background: var(--ok-soft); color: var(--ok); font-weight: 900; }
 .dw.wrong s, .dw.extra s { color: var(--fail); font-weight: 600; }
 .dw.extra { background: var(--fail-soft); }
+
+/* Microcircuito de cada palabra: recordar → ordenar → producir. */
+.word-use-flow { display: flex; flex-direction: column; gap: .7rem; margin-top: 1rem; padding: 14px; border: 2px solid color-mix(in srgb, var(--primary) 28%, var(--border)); border-radius: 16px; background: linear-gradient(135deg, var(--primary-soft), var(--surface)); }
+.word-use-heading { display: flex; flex-direction: column; gap: .2rem; }
+.word-use-heading b { font-size: 1.08rem; }
+.word-use-heading > span:last-child { color: var(--muted); font-size: .82rem; }
+.word-order-answer { display: flex; align-items: center; flex-wrap: wrap; gap: .4rem; min-height: 54px; padding: 9px; border: 2px dashed color-mix(in srgb, var(--primary) 38%, var(--border)); border-radius: 12px; background: var(--surface); }
+.word-order-pool { display: flex; flex-wrap: wrap; gap: .4rem; }
+.word-token-drag { display: inline-flex; cursor: grab; }
+.word-token-drag:active { cursor: grabbing; }
+.word-token { border: 1px solid var(--border); border-radius: 10px; padding: 8px 11px; background: var(--surface); cursor: pointer; font-weight: 800; }
+.word-token:hover, .word-token.selected { border-color: var(--primary); background: var(--primary-soft); color: var(--primary); }
+.word-use-flow textarea { min-height: 78px; resize: vertical; border: 2px solid var(--border); border-radius: 12px; padding: 11px 12px; background: var(--surface); outline: none; }
+.word-use-flow textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.word-use-flow .feedback { display: flex; flex-direction: column; gap: .25rem; }
 
 /* Recorrido diario: convierte las herramientas en una sola misión con principio y final. */
 .first-win { display: flex; align-items: center; gap: 1rem; padding: 18px 20px; border-color: color-mix(in srgb, var(--accent) 34%, var(--border)); background: linear-gradient(110deg, var(--accent-soft), var(--surface)); }

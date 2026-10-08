@@ -91,3 +91,11 @@ Panel de Directus: http://localhost:8055. Ahí puedes editar palabras y asociaci
 3. **Recuperar**: examen con todo cerrado. Nada de releer.
 4. **Espaciar**: pruebas justo antes de olvidar.
 5. **Usar**: frases largas, escuchar y hablar. Así la imagen deja de hacer falta y la palabra sale sola.
+
+### Microcircuito de una palabra
+
+La primera exposición no termina con «Lo tengo». La unidad sigue un circuito corto y visible:
+
+`asociación absurda → audio → ordenar una frase con fichas → frase propia → siguiente palabra`
+
+La frase de ordenación muestra la estructura con palabras de sobra y permite arrastrarlas. Después el alumno debe escribir una idea propia con la palabra objetivo; copiar el ejemplo no completa la unidad.
