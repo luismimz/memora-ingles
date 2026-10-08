@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { assetUrl, items, naturalSpeech } from '../lib/api';
+import { assetUrl, items } from '../lib/api';
+import { playNaturalAudio } from '../lib/audioPlayer';
 import { ErrorBox, Rich, SpeakBtn, shuffle } from '../components/common';
 import { sentenceScore } from '../lib/answer';
 import { structureFor } from '../data/structures';
@@ -79,7 +80,7 @@ function Listening({ image }: { image: boolean }) {
   const { words, mnemonicsFor, user } = useStore(); const list = useMemo(() => shuffle(words.filter((w) => w.example_en)).slice(0, 8), [words]); const [i, setI] = useState(0); const [answer, setAnswer] = useState(''); const [checked, setChecked] = useState<number | null>(null); const [total, setTotal] = useState(0); const [error, setError] = useState<unknown>(null); const [mnemonics, setMnemonics] = useState<Map<number, Mnemonic[]>>(new Map()); const word = list[i];
   useEffect(() => { if (image && list.length) mnemonicsFor(list.map((w) => w.id), { fill: true }).then(setMnemonics).catch(() => {}); }, [image, list, mnemonicsFor]);
   const target = image ? word?.en : word?.example_en;
-  const play = async () => { if (!target) return; setError(null); try { const url = await naturalSpeech(target); if (url) new Audio(url).play(); else throw new Error('La voz natural no está disponible'); } catch (e) { setError(e); } };
+  const play = async () => { if (!target) return; setError(null); try { await playNaturalAudio(target); } catch (e) { setError(e); } };
   const check = () => { if (!target) return; const score = sentenceScore(answer, target); setChecked(score); setTotal((n) => n + score); };
   if (!word) return <div className="stack"><Header title={image ? '🖼️ Imagen → palabra' : '🎧 Listening oculto'} /><div className="card center stack"><div style={{ fontSize: '3rem' }}>{image ? '🖼️' : '🎧'}</div><h2>Resultado: {Math.round((total / Math.max(list.length, 1)) * 100)}%</h2><Link className="btn" to="/desafios">Elegir otro desafío</Link></div></div>;
   const mnemonic = mnemonics.get(word.id)?.[0] || null;

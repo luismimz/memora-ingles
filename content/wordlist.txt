@@ -1,4 +1,4 @@
-# Lista base de los días 4-30 (sin mnemotecnia: la IA la genera al vuelo o con scripts/generate-mnemonics.mjs).
+# Lista base de los días 4-30. Al desplegar, Memora prepara en segundo plano las escenas de todas las palabras que necesitan palabra puente.
 # Formato:  "## día | tema"  y luego una palabra por línea:  inglés|español|tipo
 # Tipos: n (sustantivo), v (verbo), adj, adv, prep, conj, phr (expresión)
 

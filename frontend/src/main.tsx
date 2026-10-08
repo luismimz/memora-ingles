@@ -36,12 +36,11 @@ try {
 } catch { /* sin almacenamiento */ }
 
 const NAV = [
-  { to: '/', ico: '🏠', label: 'Hoy' },
-  { to: '/recorrido', ico: '🌅', label: 'Historia' },
-  { to: '/ruta', ico: '🧭', label: 'Plan' },
+  { to: '/', ico: '🧠', label: 'Aprender' },
   { to: '/repaso', ico: '🔁', label: 'Repaso' },
-  { to: '/practica', ico: '🎯', label: 'Practicar' },
-  { to: '/palabras', ico: '📖', label: 'Palabras' },
+  { to: '/biblioteca', ico: '📚', label: 'Historias' },
+  { to: '/progreso', ico: '📈', label: 'Progreso' },
+  { to: '/ajustes', ico: '⚙️', label: 'Ajustes' },
 ];
 
 function Shell() {
@@ -51,18 +50,10 @@ function Shell() {
     <div className="app">
       <nav className="nav">
         <div className="brand"><span className="brand-mark">M</span><span><b>Memora</b><small>English by memory</small></span></div>
-        <div className="nav-section-label">TU RECORRIDO</div>
+        <div className="nav-section-label">TU APRENDIZAJE</div>
         {NAV.map((n) => (
           <NavLink key={n.to} to={n.to} end={n.to === '/'}><span className="ico">{n.ico}</span>{n.label}</NavLink>
         ))}
-        <div className="nav-section-label nav-extra">EXPLORAR</div>
-        <NavLink to="/biblioteca" className="nav-extra"><span className="ico">📚</span>Biblioteca</NavLink>
-        <NavLink to="/desafios" className="nav-extra"><span className="ico">🎮</span>Desafíos</NavLink>
-        <NavLink to="/phrasal-verbs" className="nav-extra"><span className="ico">🔀</span>Phrasal verbs</NavLink>
-        <NavLink to="/contenido-real" className="nav-extra"><span className="ico">🎬</span>Contenido real</NavLink>
-        <NavLink to="/progreso" className="nav-extra"><span className="ico">📈</span>Progreso</NavLink>
-        <NavLink to="/verbos" className="nav-extra"><span className="ico">🔀</span>Irregulares</NavLink>
-        <NavLink to="/ajustes" className="nav-extra"><span className="ico">⚙️</span>Ajustes</NavLink>
         <div className="nav-footer nav-extra"><span className="status-dot" /> Método Memora · activo</div>
       </nav>
       <main className="main">

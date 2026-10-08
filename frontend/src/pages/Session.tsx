@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { KIND_LABEL } from '../../../shared/classify.mjs';
 import { ErrorBox, fmtTime, playNaturalFast, ProgressBar, Rich, shuffle, SpeakBtn, Spinner, toast } from '../components/common';
 import { ExposureCard, soundBadge, type MnemonicChoice } from '../components/ExposureCard';
@@ -13,6 +13,7 @@ import type { PilotReport, Result, StudyDay, Word } from '../types';
 type Phase = 'setup' | 'filter' | 'preparing' | 'learn' | 'room' | 'recall' | 'exam' | 'result';
 const SIZES = [10, 25, 50, 100];
 const POMODORO = 25 * 60;
+const RECENT_ROUNDS_KEY = 'memora.association-recent-words';
 
 interface WordLog { exposeMs: number; choice?: MnemonicChoice; action?: string; exam?: { result: Result; ms: number; hints: number }; rescues: number }
 
@@ -20,9 +21,10 @@ export function Session() {
   const store = useStore();
   const { profile, words, progress, today, currentDay } = store;
   const nav = useNavigate();
+  const [searchParams] = useSearchParams();
+  const autoStarted = useRef(false);
   const [phase, setPhase] = useState<Phase>('setup');
   const [size, setSize] = useState(profile?.round_size ?? 10);
-  const [skipFilter, setSkipFilter] = useState(false);
   const [pilot, setPilot] = useState(false);
   const [pilotDone, setPilotDone] = useState<boolean | null>(null);
   const [day, setDay] = useState<StudyDay | null>(today);
@@ -55,7 +57,23 @@ export function Session() {
   }, [selected, profile?.answer_mode]);
   const pool = useMemo(() => words.slice(0, 600), [words]);
 
-  const start = async (asPilot = false) => {
+  const nextUnseenWords = (count: number) => {
+    const available = words.filter((w) => !progress.has(w.id));
+    if (!available.length) return [];
+    let recent: number[] = [];
+    try { recent = JSON.parse(localStorage.getItem(RECENT_ROUNDS_KEY) || '[]'); } catch { /* almacenamiento opcional */ }
+    const recentSet = new Set(recent);
+    let candidates = available.filter((w) => !recentSet.has(w.id));
+    if (candidates.length < Math.min(count, available.length)) candidates = available;
+    const list = candidates.slice(0, count);
+    try {
+      const keep = Math.min(200, Math.max(20, available.length - count));
+      localStorage.setItem(RECENT_ROUNDS_KEY, JSON.stringify([...recent, ...list.map((w) => w.id)].slice(-keep)));
+    } catch { /* almacenamiento opcional */ }
+    return list;
+  };
+
+  const start = async (asPilot = false, direct = false) => {
     setError(null);
     try {
       const d = await store.startToday();
@@ -65,11 +83,17 @@ export function Session() {
       logs.current = new Map();
       setSelected([]); setKnownNow(0); setRoomIdx(0); setWordIdx(0);
       if (asPilot) await prepare(pilotWords);
-      else if (skipFilter) await prepare(words.filter((w) => !progress.has(w.id)).slice(0, size));
+      else if (direct) await prepare(nextUnseenWords(size));
       else setPhase('filter');
       if (!asPilot && size !== profile?.round_size) store.updateProfile({ round_size: size }).catch(() => {});
     } catch (e) { setError(e); }
   };
+
+  useEffect(() => {
+    if (searchParams.get('autostart') !== '1' || autoStarted.current || phase !== 'setup' || !words.length) return;
+    autoStarted.current = true;
+    void start(false, true);
+  }, [searchParams, phase, words.length]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const prepare = async (list: Word[]) => {
     if (!list.length) { setError(new Error('No quedan palabras nuevas en la lista.')); setPhase('setup'); return; }
@@ -117,53 +141,39 @@ export function Session() {
   // ---------- Pantallas ----------
   if (phase === 'setup') {
     return (
-      <div className="stack">
-        <Link to="/" className="btn ghost" style={{ alignSelf: 'flex-start' }}>← Hoy</Link>
-        <h1>🧠 Sesión del día {day?.day ?? currentDay}</h1>
+      <div className="stack association-start">
+        <Link to="/" className="btn ghost" style={{ alignSelf: 'flex-start' }}>← Inicio</Link>
+        <section className="association-start-card">
+          <span className="eyebrow light">DÍA {day?.day ?? currentDay} · RONDA RECOMENDADA</span>
+          <div className="association-start-icon">🧠</div>
+          <h1>Diez palabras. Diez conexiones.</h1>
+          <p>No tienes que configurar nada: primero crearás la imagen mental, después usarás cada palabra y al final la recuperarás sin mirar.</p>
+          <div className="session-plan"><span>🧠 Asociación</span><i>→</i><span>💬 Frase</span><i>→</i><span>⚡ Recuerdo</span></div>
+          <button className="btn big association-start-action" onClick={() => start(false, true)}>Empezar 10 asociaciones →</button>
+        </section>
 
-        <section className="session-start-banner"><div><span className="eyebrow light">RUTA RECOMENDADA · SIN PENSAR QUÉ TOCA</span><h2>Una sesión corta que termina en una victoria</h2><p>Memora te guía: primero asocias, después recuperas y al final compruebas si realmente se ha quedado.</p><div className="session-plan"><span>🧠 Asociar</span><i>→</i><span>🗣️ Usar</span><i>→</i><span>🏆 Comprobar</span></div></div><button className="btn session-start-action" onClick={() => start(false)}>Empezar recorrido →</button></section>
-
-        {pilotWords.length > 0 && pilotDone === false && (
-          <div className="card hero stack">
-            <h2 style={{ color: '#fff', margin: 0 }}>🧪 Empieza por la prueba piloto</h2>
-            <p className="muted" style={{ margin: 0 }}>20 palabras para comprobar el método contigo: cuánto tardas en cada una, cuántas recuerdas en el examen y qué asociaciones te funcionan. Hay de todo: palabras clave, cognados, compuestas, bloques y un phrasal verb.</p>
-            <button className="btn white big" onClick={() => start(true)}>Empezar la prueba (20 palabras)</button>
-          </div>
-        )}
-
-        <div className="card stack">
-          <div className="spread"><b>Hoy llevas</b><span>{learnedToday} / {goal}</span></div>
+        <div className="card stack compact-progress">
+          <div className="spread"><b>Hoy</b><span>{learnedToday} / {goal}</span></div>
           <ProgressBar value={learnedToday} max={goal} />
-          <div className="spread small muted"><span>⏱️ Hoy: {fmtTime(elapsed)}</span><span>Palacio: {palace.emoji} {palace.name}</span></div>
+          <span className="small muted">{palace.emoji} Tus escenas se guardarán en {palace.name}.</span>
         </div>
-        <div className="card stack">
-          <h3>¿Cuántas palabras en esta ronda?</h3>
-          <p className="small muted" style={{ margin: 0 }}>Empieza con 10. Si aciertas 9 de 10, sube a 25, luego a 50 y después a 100.</p>
-          <div className="row">
-            {SIZES.map((n) => <button key={n} className={`btn ${size === n ? '' : 'secondary'} grow`} onClick={() => setSize(n)}>{n}</button>)}
+
+        <details className="card round-options">
+          <summary>Opciones de la ronda</summary>
+          <div className="stack small">
+            <span>Palabras por ronda</span>
+            <div className="row">{SIZES.map((n) => <button key={n} className={`btn small ${size === n ? '' : 'secondary'} grow`} onClick={() => setSize(n)}>{n}</button>)}</div>
+            <button className="btn secondary" onClick={() => start(false, false)}>Filtrar primero las que ya conozco</button>
+            {pilotWords.length > 0 && pilotDone === false && <button className="btn ghost" onClick={() => start(true)}>Abrir prueba piloto</button>}
           </div>
-          <label className="row small" style={{ cursor: 'pointer' }}>
-            <input type="checkbox" checked={skipFilter} onChange={(e) => setSkipFilter(e.target.checked)} /> Saltar el filtro «¿la conoces?»
-          </label>
-        </div>
-        <div className="card flat stack small">
-          <b>Cómo funciona</b>
-          <ol style={{ margin: 0, paddingLeft: '1.2rem' }}>
-            <li><b>Una mirada por palabra (10-15 s):</b> la oyes, ves su pronunciación real y, si hace falta, un truco: palabra puente + una escena.</li>
-            <li>Muchas <b>no necesitan truco</b>: cognados (delicious = delicioso), compuestas (week + end) o bloques.</li>
-            <li>¿El truco no te dice nada? <b>«No me funciona»</b>: otro, el tuyo o sin truco.</li>
-            <li><b>Examen</b> al final. Si fallas, mini-retos de rescate y pistas.</li>
-            <li><b>Pruebas sorpresa</b> a +1 h, +24 h, +7 días y +30 días.</li>
-          </ol>
-        </div>
+        </details>
         <ErrorBox error={error} />
-        <button className="btn big block" onClick={() => start(false)}>🚀 Empezar ronda de {size}</button>
       </div>
     );
   }
 
   if (phase === 'filter') return <Filter size={size} day={day!} onKnown={() => setKnownNow((k) => k + 1)} onDone={prepare} />;
-  if (phase === 'preparing') return <div className="stack center" style={{ paddingTop: '20vh' }}><Spinner /><p className="muted">Preparando pronunciaciones y trucos…</p></div>;
+  if (phase === 'preparing') return <div className="stack center preparing-memory" style={{ paddingTop: '20vh' }}><Spinner /><h2>Preparando tus conexiones…</h2><p className="muted">Cada palabra entrará con una asociación, una frase y su audio natural.</p></div>;
 
   const Header = (
     <div className="spread">

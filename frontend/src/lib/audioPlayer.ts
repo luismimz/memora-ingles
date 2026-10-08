@@ -13,6 +13,8 @@ let sequence = 0;
 
 export function stopNaturalAudio() {
   sequence += 1;
+  // Kokoro y la voz del navegador nunca deben sonar a la vez.
+  if (typeof window !== 'undefined' && 'speechSynthesis' in window) window.speechSynthesis.cancel();
   if (!active) return;
   active.pause();
   active.removeAttribute('src');

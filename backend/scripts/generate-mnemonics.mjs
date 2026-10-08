@@ -6,10 +6,12 @@ import { api } from './lib.mjs';
 
 const from = Number(process.argv[2] || 4);
 const to = Number(process.argv[3] || from);
-const words = await api('GET', `/items/words?limit=-1&fields=id,en,day&filter[day][_between]=${from},${to}&sort=rank`);
+const words = await api('GET', `/items/words?limit=-1&fields=id,en,day,kind&filter[day][_between]=${from},${to}&sort=rank`);
 const have = new Set((await api('GET', '/items/mnemonics?limit=-1&fields=word&filter[owner][_null]=true')).map((m) => m.word));
-const todo = words.filter((w) => !have.has(w.id));
-console.log(`Días ${from}-${to}: ${words.length} palabras, ${todo.length} sin asociación`);
+// Cognados, compuestas, chunks y phrasal verbs ya tienen una conexión determinista en hint_es.
+// La escena absurda se prepara para todas las palabras que sí necesitan palabra puente.
+const todo = words.filter((w) => (!w.kind || w.kind === 'keyword' || w.kind === 'irregular') && !have.has(w.id));
+console.log(`Días ${from}-${to}: ${words.length} palabras · ${todo.length} escenas absurdas pendientes`);
 
 for (let i = 0; i < todo.length; i += 10) {
   const chunk = todo.slice(i, i + 10);

@@ -210,7 +210,7 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
   return (
     <div className={`card word-card ${variant === 'learn' ? 'pop' : ''}`}>
       <div className="spread small">
-        <span className="chip">{KIND_LABEL[word.kind ?? 'keyword']}</span>
+        <span className="chip">🧠 {KIND_LABEL[word.kind ?? 'keyword']}</span>
         {spot && <span className="spot">📍 {spot}</span>}
         {variant === 'learn' && <span className={`chip ${secs > TARGET_S ? 'doubt' : ''}`}>⏱ {secs}s</span>}
       </div>
@@ -218,23 +218,22 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
       <div className="en" style={{ marginTop: '.4rem' }}>{word.en}</div>
       <div className="es" style={{ margin: '.1rem 0 .6rem' }}>{word.es}</div>
 
-      {/* Pronunciación REAL: nunca se mezcla con el truco */}
+      {/* Un único control de Kokoro: evita dos voces y separa sonido de asociación. */}
       <div className="pron-box">
-        <div className="lbl">🗣️ Pronunciación real</div>
+        <div className="lbl">1 · ESCUCHA EL SONIDO REAL</div>
         <div className="row" style={{ justifyContent: 'center' }}>
           {word.ipa && <span className="chip">{word.ipa}</span>}
           {word.pron_es && <span className="pron">≈ {word.pron_es}</span>}
-          <SpeakBtn text={word.en} />
-          <SpeakBtn text={word.en} slow title="Escuchar despacio" />
+          <SpeakBtn text={word.en} title="Volver a escuchar" />
         </div>
       </div>
 
       {/* Truco para recordar */}
       {m ? (
         <div className="trick-box">
-          <div className="lbl">🧠 Truco para recordar · <span className="muted">no es la pronunciación</span></div>
+          <div className="lbl">2 · CREA LA CONEXIÓN MENTAL</div>
           <div className="row" style={{ justifyContent: 'center' }}>
-            <span className="small muted">Palabra puente</span>
+            <span className="small muted">El sonido te lleva a</span>
             <span className="keyword">{m.keyword}</span>
             {soundBadge(m.phon_score)}
           </div>
@@ -246,11 +245,11 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
         </div>
       ) : word.hint_es ? (
         <div className="trick-box plain">
-          <div className="lbl">{word.kind === 'cognate' ? '🔗 Ya la conoces' : word.kind === 'easy' ? '🧩 Piezas que ya sabes' : word.kind === 'chunk' ? '📦 Bloque' : word.kind === 'phrasal' ? '➕ Phrasal verb' : '💡 Clave'}</div>
+          <div className="lbl">2 · {word.kind === 'cognate' ? 'CONEXIÓN CON EL ESPAÑOL' : word.kind === 'easy' ? 'CONEXIÓN POR PIEZAS' : word.kind === 'chunk' ? 'CONEXIÓN CON UNA SITUACIÓN' : word.kind === 'phrasal' ? 'CONEXIÓN CON MOVIMIENTO' : 'CONEXIÓN MENTAL'}</div>
           <div className="scene-text"><Rich text={word.hint_es} /></div>
         </div>
       ) : usesKeyword && !noneChosen ? (
-        <div className="trick-box plain muted small">{store.aiInfo.enabled ? 'Preparando la asociación…' : 'Sin asociación todavía: créala tú con «No me funciona → Crear la mía».'}</div>
+        <div className="trick-box plain"><div className="lbl">2 · CREA LA CONEXIÓN MENTAL</div><div className="scene-text">Relaciona el sonido <b>{word.pron_es || word.en}</b> con una imagen exagerada que signifique <b>{word.es}</b>. Puedes crear una asociación mejor con «No me funciona».</div></div>
       ) : null}
 
       {m && word.kind === 'irregular' && word.hint_es && <div className="small muted" style={{ marginTop: '.5rem' }}>🔀 {word.hint_es}</div>}
@@ -298,7 +297,7 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
           <button className="btn secondary grow" onClick={() => setNotWorking(true)}>😕 No me funciona</button>
         </div>
       )}
-      {variant === 'learn' && onDone && useStage === 'memory' && <div className="row" style={{ marginTop: '.75rem' }}><button className="btn secondary grow" onClick={() => setNotWorking(true)}>😕 No me funciona</button><button className="btn big grow" onClick={startUse} autoFocus>Usar esta palabra →</button></div>}
+      {variant === 'learn' && onDone && useStage === 'memory' && <div className="row" style={{ marginTop: '.75rem' }}><button className="btn secondary grow" onClick={() => setNotWorking(true)}>Cambiar asociación</button><button className="btn big grow" onClick={startUse} autoFocus>Ya la veo · usarla →</button></div>}
       {variant !== 'compact' && m && !m.image && <ImageButton mnemonic={m} onDone={(img) => apply({ mode: 'auto', mnemonic: img }, 'pick')} />}
 
       {notWorking && (
