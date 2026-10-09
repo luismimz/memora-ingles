@@ -291,7 +291,18 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
   // persistente y excluimos tanto SRS como palabras ya vistas en Descubrir.
   useEffect(() => {
     const initializationKey = `${storageKey}:${batchKey}`;
-    if ((hydrated && initializedKey.current === initializationKey) || !words.length) return;
+    if (hydrated && initializedKey.current === initializationKey) return;
+    // Directus puede devolver un catálogo vacío durante los primeros
+    // instantes de un redeploy. Marcamos la cola como vacía para mostrar un
+    // diagnóstico accionable (en vez de dejar el spinner infinito), pero no
+    // fijamos la clave: cuando lleguen las palabras el mismo efecto volverá a
+    // construir la tanda automáticamente.
+    if (!words.length) {
+      setWordIds([]);
+      setCursor(0);
+      setHydrated(true);
+      return;
+    }
     initializedKey.current = initializationKey;
     setPrepared(new Map());
     preparedRef.current = new Map();
@@ -438,7 +449,12 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     preparing.current.add(wordId);
     try {
       const selectedId = progress.get(wordId)?.mnemonic ?? null;
-      const cache = await mnemonicsFor([wordId], { fill: true });
+      // El contenido canónico ya vive en `words`. No bloqueamos la primera
+      // tarjeta lanzando un enriquecimiento de IA desde el navegador: si una
+      // cuenta todavía no tiene permiso o Kokoro está calentando, la misión
+      // debe poder empezar igualmente. Las asociaciones existentes se
+      // consultan en modo lectura y las alternativas se generan bajo demanda.
+      const cache = await mnemonicsFor([wordId], { fill: false });
       const raw = [...(cache.get(wordId) ?? [])];
       const visualMnemonic = raw.find((mnemonic) => mnemonic.id === selectedId && (mnemonic.image || mnemonic.emoji))
         ?? raw.find((mnemonic) => mnemonic.image || mnemonic.emoji)
@@ -483,11 +499,12 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
         }
       }
 
-      const [audioResult] = await Promise.all([
-        prefetchNaturalAudio(word.en, undefined, word.audio_url).then(() => true).catch(() => false),
-        ...associations.map((association) => preloadImage(association.imageUrl)),
-      ]);
-      putPrepared(wordId, { associations, audioReady: audioResult === true, error: null });
+      // La voz y las ilustraciones son mejoras progresivas. Prepararlas en
+      // segundo plano evita que una petición TTS lenta deje la pantalla en
+      // «Calentando tu primera conexión» durante minutos.
+      void prefetchNaturalAudio(word.en, undefined, word.audio_url).catch(() => {});
+      void Promise.all(associations.map((association) => preloadImage(association.imageUrl))).catch(() => {});
+      putPrepared(wordId, { associations, audioReady: true, error: null });
     } catch (cause) {
       putPrepared(wordId, {
         associations: [],
@@ -532,7 +549,6 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     .map((_wordId, offset) => cardAt(cursor + offset + 1))
     .filter((card): card is DiscoveryCard => card !== null), [cardAt, cursor, preloadAhead, wordIds]);
 
-  const expectedPreloaded = Math.min(preloadAhead, Math.max(0, wordIds.length - cursor - 1));
   const currentPrepared = wordIds[cursor] === undefined ? null : prepared.get(wordIds[cursor]);
   const status: DiscoveryQueueStatus = !hydrated
     ? 'idle'
@@ -542,7 +558,11 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
         ? 'complete'
         : currentPrepared?.error || (currentPrepared && !currentPrepared.associations.length)
           ? 'error'
-          : current && preloaded.length >= expectedPreloaded
+          : current
+            // Las tres siguientes continúan precargándose, pero no deben
+            // bloquear el inicio. Si alguna red tarda, la tarjeta visible ya
+            // es jugable y el siguiente salto mostrará el loader solo si lo
+            // necesita de verdad.
             ? 'ready'
             : 'loading';
   const error = status === 'error' ? new Error(currentPrepared?.error || 'La tarjeta no está preparada.') : null;

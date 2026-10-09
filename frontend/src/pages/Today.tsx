@@ -6,7 +6,7 @@ import { useStore } from '../store';
 import { EbbinghausExperiment } from '../features/ebbinghaus/EbbinghausExperiment';
 
 export function Today() {
-  const { user, profile, progress, days, today, currentDay, wordById } = useStore();
+  const { user, profile, words, progress, days, today, currentDay, wordById } = useStore();
   const all = [...progress.values()];
   const due = all.filter((p) => isDue(p));
   const learnedToday = all.filter((p) => today && p.study_day === today.day && p.status !== 'known').length;
@@ -22,11 +22,25 @@ export function Today() {
   const absentFor72Hours = !lastActivityMs || Date.now() - lastActivityMs >= 72 * 3600_000;
   const absentDays = lastActivityMs ? Math.max(1, Math.floor((Date.now() - lastActivityMs) / 86_400_000)) : 3;
   const experimentWords = due.map((item) => wordById.get(item.word)).filter((word): word is NonNullable<typeof word> => Boolean(word)).slice(0, 10);
-  const action = {
-    to: '/descubrir',
-    label: due.length ? 'Continuar misión' : `Jugar Día ${currentDay}`,
-    eyebrow: due.length ? 'PRIMERO · CONTINÚA TU MISIÓN' : 'AHORA · TU ÚNICA MISIÓN',
-  };
+  const catalogReady = words.some((word) => Boolean(
+    ['published', 'active', 'true', 1].includes(word.status as string | number)
+      && word.bridge_word?.trim()
+      && word.scene_es?.trim()
+      && word.target_sentence_en?.trim()
+      && word.target_sentence_es?.trim()
+      && word.distractor?.trim(),
+  ));
+  const action = catalogReady
+    ? {
+      to: '/descubrir',
+      label: due.length ? 'Continuar misión' : `Jugar Día ${currentDay}`,
+      eyebrow: due.length ? 'PRIMERO · CONTINÚA TU MISIÓN' : 'AHORA · TU ÚNICA MISIÓN',
+    }
+    : {
+      to: '/ajustes',
+      label: 'Revisar catálogo →',
+      eyebrow: 'CATÁLOGO · AÚN PREPARÁNDOSE',
+    };
 
   return (
     <div className="stack today-focus">
@@ -43,7 +57,9 @@ export function Today() {
         <div className="memory-mission-copy">
           <span className="eyebrow light">{action.eyebrow}</span>
           <h2>Continúa tu misión de hoy</h2>
-          <p>{due.length
+          <p>{!catalogReady
+            ? 'El catálogo todavía se está sincronizando. Puedes comprobar su estado en Ajustes y volver cuando haya contenido listo.'
+            : due.length
             ? 'Empieza con una conexión y después recuperaremos lo que toque.'
             : 'Oyes la palabra, conectas una imagen absurda, la usas en una frase y la recuperas sin ayuda.'}</p>
           <Link className="btn memory-mission-action" to={action.to}>{action.label} →</Link>

@@ -56,6 +56,37 @@ export default {
       const current = [...discoveryJobs.values()].sort((a, b) => b.startedAt - a.startedAt)[0];
       res.json(current || { status: 'idle', message: 'No hay ningún lote en ejecución.' });
     });
+    // Métricas de catálogo para que el usuario pueda comprobar qué ha
+    // producido realmente OpenRouter/fal.ai. No expone contenido privado ni
+    // modifica Directus: solo cuenta filas publicadas y recursos asociados.
+    router.get('/discovery/stats', auth, wrap(async () => {
+      const words = await (await svc('words')).readByQuery({
+        fields: ['id', 'status', 'bridge_word', 'scene_es', 'target_sentence_en', 'target_sentence_es', 'distractor'],
+        limit: -1,
+      });
+      const mnemonics = await (await svc('mnemonics')).readByQuery({
+        fields: ['id', 'word', 'source', 'owner', 'image'],
+        limit: -1,
+      });
+      const published = words.filter((word) => ['published', 'active', 'true', '1'].includes(String(word.status ?? 'published').toLowerCase()));
+      const complete = published.filter((word) => word.bridge_word && word.scene_es && word.target_sentence_en && word.target_sentence_es && word.distractor);
+      const withImages = mnemonics.filter((mnemonic) => Boolean(mnemonic.image));
+      const sharedAi = mnemonics.filter((mnemonic) => mnemonic.source === 'ai' && !mnemonic.owner);
+      const sharedSeed = mnemonics.filter((mnemonic) => mnemonic.source === 'seed' && !mnemonic.owner);
+      const current = [...discoveryJobs.values()].sort((a, b) => b.startedAt - a.startedAt)[0] || null;
+      return {
+        words_total: words.length,
+        words_published: published.length,
+        words_complete: complete.length,
+        words_missing_content: Math.max(0, published.length - complete.length),
+        mnemonics_total: mnemonics.length,
+        ai_mnemonics: sharedAi.length,
+        seed_mnemonics: sharedSeed.length,
+        images_total: withImages.length,
+        images_pending: Math.max(0, published.length - withImages.length),
+        last_job: current,
+      };
+    }));
     router.post('/discovery/enrich', auth, (req, res) => {
       if (!req.accountability?.admin) return res.status(403).json({ error: 'Solo un administrador puede generar el catálogo compartido.' });
       const textMode = String(req.body?.text_mode || env.DISCOVERY_TEXT_MODE || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto';

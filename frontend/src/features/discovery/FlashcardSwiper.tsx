@@ -8,6 +8,7 @@ import { SentenceLaunch } from '../sentences/SentenceLaunch';
 import { useNavigate } from 'react-router-dom';
 import { AlchemyChallenge } from '../alchemy/AlchemyChallenge';
 import { alchemyChallengeFromWord } from '../alchemy/alchemy.types';
+import { useStore } from '../../store';
 
 export interface FlashcardSwiperProps {
   /** Se llama al pulsar “Crear la mía”; la pantalla padre decide dónde abrir el editor. */
@@ -33,6 +34,7 @@ export function FlashcardSwiper({ onCreateOwn, onSkipAssociation, onContinueToSe
  */
 export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onContinueToSentences }: FlashcardSwiperProps & { queue: DiscoveryQueueResult }) {
   const navigate = useNavigate();
+  const { words } = useStore();
   const { current, status, error, progress, preloaded, swipeRight, swipeLeft, skipCurrent, retryPreload, generateAlternative } = queue;
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
   const [shakeToken, setShakeToken] = useState(0);
@@ -117,6 +119,8 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
   }
 
   if (status === 'empty') {
+    const published = words.filter((word) => ['published', 'active', 'true', '1'].includes(String(word.status ?? 'published').toLowerCase())).length;
+    const readyCatalog = words.filter((word) => Boolean(word.bridge_word && word.scene_es && word.target_sentence_en && word.target_sentence_es && word.distractor)).length;
     return (
       <main className="discovery-stage discovery-stage-centered">
         <button type="button" className="mission-exit discovery-screen-exit" onClick={leaveMission}>✕ Salir al Inicio</button>
@@ -124,9 +128,9 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
           <span className="discovery-complete-icon">🧭</span>
           <p className="discovery-card-kicker">CATÁLOGO EN REVISIÓN</p>
           <h1>Estamos preparando tu siguiente tanda.</h1>
-          <p>La misión no se ha perdido: vuelve a intentarlo o revisa Hoy mientras se sincroniza tu catálogo.</p>
+          <p>La misión no se ha perdido. Directus ha cargado {published} palabras publicadas y {readyCatalog} tienen la ficha completa necesaria para jugar. Si el servidor acaba de desplegarse, espera a que termine la sincronización y vuelve a cargar.</p>
           <div className="row">
-            <button type="button" className="btn primary" onClick={() => navigate('/descubrir', { replace: true, state: { startNewRound: true } })}>Reintentar misión →</button>
+            <button type="button" className="btn primary" onClick={() => window.location.reload()}>Reintentar misión →</button>
             <button type="button" className="btn secondary" onClick={() => navigate('/')}>Ir a Hoy</button>
           </div>
         </div>
