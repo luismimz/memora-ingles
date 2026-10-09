@@ -139,6 +139,8 @@ export interface Profile {
   rate: number;
   answer_mode: 'type' | 'flash' | null;
   auto_speak: boolean | number;
+  discovery_text_mode?: 'auto' | 'manual' | null;
+  discovery_image_mode?: 'auto' | 'manual' | null;
   /** XP acumulado; opcional para perfiles creados antes de la migración. */
   xp?: number;
 }

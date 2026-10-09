@@ -286,6 +286,11 @@ p { margin: 0 0 .75rem; }
 .settings-card-title { display: flex; align-items: flex-start; gap: .75rem; }
 .settings-card-title h2 { margin: .2rem 0 .15rem; }
 .settings-card-title p { margin: 0; }
+.generation-control { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; align-items: center; gap: .75rem; padding: .8rem 0; border-bottom: 1px solid var(--border); }
+.generation-control > div { display: grid; gap: .2rem; }
+.generation-control select { min-width: 0; }
+.generation-actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
+@media (max-width: 680px) { .generation-control { grid-template-columns: 1fr; } }
 .settings-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 13px; font-size: 1.25rem; flex: none; }
 .settings-icon.teal { background: var(--primary-soft); }
 .settings-icon.orange { background: var(--accent-soft); }

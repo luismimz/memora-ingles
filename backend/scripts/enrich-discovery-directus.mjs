@@ -19,8 +19,14 @@ function numericFlag(name, fallback) {
 
 const LIMIT = numericFlag('limit', 10);
 const BATCH = numericFlag('batch', LIMIT);
+const modeFlag = (name, envName, fallback) => {
+  const raw = process.argv.find((arg) => arg.startsWith(`--${name}=`))?.split('=')[1] || process.env[envName] || fallback;
+  return String(raw).toLowerCase() === 'manual' ? 'manual' : 'auto';
+};
+const TEXT_MODE = modeFlag('text-mode', 'DISCOVERY_TEXT_MODE', 'auto');
+const IMAGE_MODE = modeFlag('image-mode', 'DISCOVERY_IMAGE_MODE', 'auto');
 
-if (!process.env.OPENROUTER_API_KEY) {
+if (TEXT_MODE === 'auto' && !process.env.OPENROUTER_API_KEY) {
   throw new Error('Falta OPENROUTER_API_KEY. Añádela en backend/.env antes de enriquecer el catálogo.');
 }
 
@@ -45,11 +51,12 @@ for (const [wordId, mnemonics] of mnemonicForWord) {
 }
 const needsImage = (word) => !imageForWord.has(word.id);
 const pending = words
-  .filter((word) => needsContent(word) || needsImage(word))
+  .filter((word) => (TEXT_MODE === 'auto' && needsContent(word))
+    || (IMAGE_MODE === 'auto' && needsImage(word) && !needsContent(word)))
   .sort((a, b) => (Number(a.rank) || a.id) - (Number(b.rank) || b.id))
   .slice(0, LIMIT);
 
-if (pending.length && !process.env.FAL_KEY) {
+if (pending.length && IMAGE_MODE === 'auto' && !process.env.FAL_KEY) {
   throw new Error('Falta FAL_KEY. Añádela en backend/.env para generar las imágenes con fal.ai.');
 }
 
@@ -251,6 +258,20 @@ async function falImage(prompt) {
   throw new Error('fal.ai agotó el tiempo de espera de 60 segundos.');
 }
 
+function existingContentResult(word) {
+  const mnemonic = (mnemonicForWord.get(word.id) || []).find((item) => item.source === 'ai' && !item.owner)
+    || (mnemonicForWord.get(word.id) || []).find((item) => !item.owner);
+  return {
+    bridge_word: word.bridge_word || mnemonic?.keyword || 'MEMORA',
+    scene_es: word.scene_es || mnemonic?.scene_es || `Una escena física y divertida representa ${word.en}.`,
+    target_sentence_es: word.target_sentence_es || word.example_es || `Usamos ${word.en} en una situación real.`,
+    target_sentence_en: word.target_sentence_en || word.example_en || `We use ${word.en} in a real situation today.`,
+    distractor: word.distractor || 'notice',
+    emoji: mnemonic?.emoji || '🎬',
+    image_prompt: `${IMAGE_STYLE}, depicting ${word.scene_es || mnemonic?.scene_es || `a funny physical action representing ${word.en}`}`,
+  };
+}
+
 function extractImageUrl(payload) {
   return payload?.images?.[0]?.url
     || payload?.data?.images?.[0]?.url
@@ -317,6 +338,7 @@ async function uploadDirectusImage(buffer, contentType, word) {
 }
 
 async function generateAndStoreImage(word, result) {
+  if (IMAGE_MODE !== 'auto') return { id: imageForWord.get(word.id) || null, status: 'manual' };
   const existingImage = imageForWord.get(word.id);
   if (existingImage) return { id: existingImage, status: 'reutilizada' };
   const imageUrl = await falImage(result.image_prompt);
@@ -365,7 +387,7 @@ async function save(word, result, { writeContent }) {
   return { mnemonicId: mnemonic.id, imageId };
 }
 
-console.log(`Catálogo pendiente: ${pending.length} palabras · modelo ${MODEL} · imágenes ${FAL_MODEL} · lote ${BATCH}`);
+console.log(`Catálogo pendiente: ${pending.length} palabras · texto ${TEXT_MODE} · imágenes ${IMAGE_MODE} · modelo ${MODEL} · ${FAL_MODEL} · lote ${BATCH}`);
 let saved = 0;
 const generated = [];
 const runStartedAt = Date.now();
@@ -376,13 +398,13 @@ for (let offset = 0; offset < pending.length; offset += BATCH) {
     const index = offset + batchIndex;
     if (index > 0) await sleep(IMAGE_DELAY_MS);
     const startedAt = Date.now();
-    const writeContent = needsContent(word);
+    const writeContent = TEXT_MODE === 'auto' && needsContent(word);
     let result = null;
     let lastError = null;
     let textStatus = writeContent ? 'pendiente' : 'reutilizado';
     let imageStatus = needsImage(word) ? 'pendiente' : 'reutilizada';
     for (let attempt = 0; attempt < 3 && !result; attempt++) {
-      try { result = await generate(word, attempt); }
+      try { result = writeContent ? await generate(word, attempt) : existingContentResult(word); }
       catch (error) { lastError = error; }
     }
     if (!result) {

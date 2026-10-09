@@ -25,3 +25,23 @@ if (process.env.OPENROUTER_API_KEY && process.env.PREPARE_ALL_ASSOCIATIONS !== '
   if (r.status !== 0) console.error('[memora] la preparación de asociaciones continuará en el próximo despliegue');
   else console.log('[memora] catálogo de asociaciones preparado');
 }
+
+// Enriquecimiento de la misión nueva (texto + imágenes FLUX). Es opt-in por
+// variable de entorno, pero queda activo por defecto en Coolify. El script es
+// idempotente: cada redeploy solo toma el siguiente lote que aún falta.
+const textMode = String(process.env.DISCOVERY_TEXT_MODE || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto';
+const imageMode = String(process.env.DISCOVERY_IMAGE_MODE || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto';
+const discoveryOnBoot = process.env.DISCOVERY_ENRICH_ON_BOOT !== 'false';
+const discoveryLimit = Number(process.env.DISCOVERY_ENRICH_LIMIT || 10);
+const discoveryBatch = Number(process.env.DISCOVERY_ENRICH_BATCH || 2);
+const canRunText = textMode === 'auto' && Boolean(process.env.OPENROUTER_API_KEY);
+const canRunImage = imageMode === 'auto' && Boolean(process.env.FAL_KEY);
+if (discoveryOnBoot && (canRunText || canRunImage)) {
+  console.log(`[memora] enriquecimiento Discovery · texto:${textMode} · imágenes:${imageMode} · lote:${discoveryLimit}`);
+  const args = [join(here, 'enrich-discovery-directus.mjs'), `--limit=${discoveryLimit}`, `--batch=${discoveryBatch}`, `--text-mode=${canRunText ? textMode : 'manual'}`, `--image-mode=${canRunImage ? imageMode : 'manual'}`];
+  const r = spawnSync(process.execPath, args, { stdio: 'inherit', env: process.env });
+  if (r.status !== 0) console.error('[memora] el enriquecimiento Discovery continuará en el próximo despliegue');
+  else console.log('[memora] lote Discovery preparado');
+} else if (discoveryOnBoot) {
+  console.log('[memora] Discovery automático omitido: faltan OPENROUTER_API_KEY o FAL_KEY');
+}

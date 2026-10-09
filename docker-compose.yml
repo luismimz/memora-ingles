@@ -53,11 +53,18 @@ services:
       TELEMETRY: "false"
       PUBLIC_REGISTRATION: ${PUBLIC_REGISTRATION:-true}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-deepseek/deepseek-chat-v3.1}
-      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-deepseek/deepseek-chat-v3.1,google/gemini-2.5-flash,openai/gpt-4o-mini,anthropic/claude-haiku-4.5}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-deepseek/deepseek-chat}
+      OPENROUTER_MODELS: ${OPENROUTER_MODELS:-deepseek/deepseek-chat,google/gemini-2.5-flash,openai/gpt-4o-mini,anthropic/claude-haiku-4.5}
       OPENROUTER_IMAGE_MODEL: ${OPENROUTER_IMAGE_MODEL:-google/gemini-2.5-flash-image}
-      # Prepara las escenas absurdas fuera de la sesión; es idempotente y solo genera las que faltan.
+      FAL_KEY: ${FAL_KEY:-}
+      FAL_MODEL: ${FAL_MODEL:-fal-ai/flux/schnell}
+      # Prepara las escenas absurdas y sus imágenes fuera de la sesión; es idempotente y solo genera las que faltan.
       PREPARE_ALL_ASSOCIATIONS: ${PREPARE_ALL_ASSOCIATIONS:-true}
+      DISCOVERY_ENRICH_ON_BOOT: ${DISCOVERY_ENRICH_ON_BOOT:-true}
+      DISCOVERY_TEXT_MODE: ${DISCOVERY_TEXT_MODE:-auto}
+      DISCOVERY_IMAGE_MODE: ${DISCOVERY_IMAGE_MODE:-auto}
+      DISCOVERY_ENRICH_LIMIT: ${DISCOVERY_ENRICH_LIMIT:-10}
+      DISCOVERY_ENRICH_BATCH: ${DISCOVERY_ENRICH_BATCH:-2}
       AI_ALLOWED_EMAILS: ${AI_ALLOWED_EMAILS:-}
       LLM_PROVIDER: ${LLM_PROVIDER:-openrouter}
       PRONUNCIATION_PROVIDER: ${PRONUNCIATION_PROVIDER:-datamuse}

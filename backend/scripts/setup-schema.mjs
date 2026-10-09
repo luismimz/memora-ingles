@@ -70,7 +70,8 @@ const collections = {
   profiles: {
     meta: { icon: 'person', note: 'Preferencias del alumno.' },
     fields: [pk, owner(), str('start_date'), str('level'), int('round_size', 10), int('daily_goal', 100),
-      str('ai_model'), str('voice'), float('rate', 0.95), str('answer_mode'), bool('auto_speak', true), int('xp', 0), created],
+      str('ai_model'), str('voice'), float('rate', 0.95), str('answer_mode'), bool('auto_speak', true),
+      str('discovery_text_mode'), str('discovery_image_mode'), int('xp', 0), created],
   },
 };
 collections.grammar_challenges = {

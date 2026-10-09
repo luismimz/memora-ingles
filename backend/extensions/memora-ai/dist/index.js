@@ -2,6 +2,9 @@
 // así se pueden cambiar Datamuse, OpenRouter, Pollinations o Tatoeba sin tocar este archivo ni el núcleo.
 import { Readable } from 'node:stream';
 import { createHash } from 'node:crypto';
+import { spawn } from 'node:child_process';
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import { createProviders } from './providers/index.js';
 import { generateKeywordMnemonics, phoneticsFor, scoredCandidates } from './core/keywords.js';
 import { pronunciationEs } from '../../../../shared/phonetics.mjs';
@@ -16,6 +19,7 @@ export default {
     const llm = providers.llm;
     const tts = providers.tts;
     const allowedEmails = String(env.AI_ALLOWED_EMAILS || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean);
+    const discoveryJobs = new Map();
 
     const svc = async (collection) => new ItemsService(collection, { schema: await getSchema() });
 
@@ -37,6 +41,41 @@ export default {
     };
     const model = (req) => req.body?.model || undefined;
     const saveWord = async (id, patch) => (await svc('words')).updateOne(id, patch);
+
+    function discoveryScriptPath() {
+      const configured = env.DISCOVERY_ENRICH_SCRIPT || process.env.DISCOVERY_ENRICH_SCRIPT;
+      if (configured) return configured;
+      const local = join(process.cwd(), 'scripts', 'enrich-discovery-directus.mjs');
+      return existsSync(local) ? local : '/directus/memora/scripts/enrich-discovery-directus.mjs';
+    }
+
+    // El catálogo es compartido: solo un administrador puede iniciar un lote
+    // global desde Ajustes. El alumno puede cambiar sus preferencias, pero no
+    // provocar llamadas de pago para todas las cuentas.
+    router.get('/discovery/status', auth, (req, res) => {
+      const current = [...discoveryJobs.values()].sort((a, b) => b.startedAt - a.startedAt)[0];
+      res.json(current || { status: 'idle', message: 'No hay ningún lote en ejecución.' });
+    });
+    router.post('/discovery/enrich', auth, (req, res) => {
+      if (!req.accountability?.admin) return res.status(403).json({ error: 'Solo un administrador puede generar el catálogo compartido.' });
+      const textMode = String(req.body?.text_mode || env.DISCOVERY_TEXT_MODE || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto';
+      const imageMode = String(req.body?.image_mode || env.DISCOVERY_IMAGE_MODE || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto';
+      const limit = Math.max(1, Math.min(100, Number(req.body?.limit) || Number(env.DISCOVERY_ENRICH_LIMIT) || 10));
+      const batch = Math.max(1, Math.min(limit, Number(req.body?.batch) || Number(env.DISCOVERY_ENRICH_BATCH) || 2));
+      const running = [...discoveryJobs.values()].find((job) => ['queued', 'running'].includes(job.status));
+      if (running) return res.status(409).json({ ...running, message: 'Ya hay un lote de catálogo en ejecución.' });
+      const id = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+      const job = { id, status: 'queued', textMode, imageMode, limit, batch, startedAt: Date.now(), message: 'Lote en cola.' };
+      discoveryJobs.set(id, job);
+      const childEnv = { ...process.env, ...env, DISCOVERY_TEXT_MODE: textMode, DISCOVERY_IMAGE_MODE: imageMode };
+      const child = spawn(process.execPath, [discoveryScriptPath(), `--limit=${limit}`, `--batch=${batch}`, `--text-mode=${textMode}`, `--image-mode=${imageMode}`], { env: childEnv, stdio: ['ignore', 'pipe', 'pipe'] });
+      job.status = 'running'; job.message = 'Procesando palabras y recursos en segundo plano.';
+      child.stdout.on('data', (chunk) => { job.message = String(chunk).trim().split('\n').filter(Boolean).at(-1) || job.message; });
+      child.stderr.on('data', (chunk) => { job.message = String(chunk).trim().split('\n').filter(Boolean).at(-1) || job.message; });
+      child.on('error', (error) => { job.status = 'failed'; job.message = error.message; job.finishedAt = Date.now(); });
+      child.on('close', (code) => { job.status = code === 0 ? 'completed' : 'failed'; job.message = code === 0 ? 'Lote completado.' : `El lote terminó con código ${code}.`; job.finishedAt = Date.now(); });
+      return res.status(202).json(job);
+    });
 
     router.get('/models', (_req, res) => {
       const ttsConfigured = Boolean(env.KOKORO_TTS_URL);

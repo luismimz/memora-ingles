@@ -118,7 +118,7 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
         request<AiInfo>('GET', '/memora/models').catch(() => ({ enabled: false, models: [], default: '' })),
       ]);
       let prof = profs[0];
-      if (!prof) prof = await items.create<Profile>('profiles', { start_date: localDate(), round_size: 10, daily_goal: 100, answer_mode: 'type', auto_speak: true, rate: 0.88 });
+      if (!prof) prof = await items.create<Profile>('profiles', { start_date: localDate(), round_size: 10, daily_goal: 100, answer_mode: 'type', auto_speak: true, rate: 0.88, discovery_text_mode: 'auto', discovery_image_mode: 'auto' });
       const serverXp = Number(prof.xp ?? 0);
       const localXp = readLocalXp(me.id);
       const initialXp = Math.max(Number.isFinite(serverXp) ? serverXp : 0, localXp);
