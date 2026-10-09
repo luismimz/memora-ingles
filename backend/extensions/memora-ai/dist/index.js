@@ -68,7 +68,7 @@ export default {
         fields: ['id', 'word', 'source', 'owner', 'image'],
         limit: -1,
       });
-      const published = words.filter((word) => ['published', 'active', 'true', '1'].includes(String(word.status ?? 'published').toLowerCase()));
+      const published = words.filter((word) => ['published', 'active', 'true', '1'].includes(String(word.status ?? '').toLowerCase()));
       const complete = published.filter((word) => word.bridge_word && word.scene_es && word.target_sentence_en && word.target_sentence_es && word.distractor);
       const withImages = mnemonics.filter((mnemonic) => Boolean(mnemonic.image));
       const sharedAi = mnemonics.filter((mnemonic) => mnemonic.source === 'ai' && !mnemonic.owner);

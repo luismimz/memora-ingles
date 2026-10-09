@@ -119,7 +119,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
   }
 
   if (status === 'empty') {
-    const published = words.filter((word) => ['published', 'active', 'true', '1'].includes(String(word.status ?? 'published').toLowerCase())).length;
+    const published = words.filter((word) => ['published', 'active', 'true', '1'].includes(String(word.status ?? '').toLowerCase())).length;
     const readyCatalog = words.filter((word) => Boolean(word.bridge_word && word.scene_es && word.target_sentence_en && word.target_sentence_es && word.distractor)).length;
     return (
       <main className="discovery-stage discovery-stage-centered">
