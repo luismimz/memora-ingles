@@ -166,6 +166,6 @@ export async function naturalSpeech(text: string, opts: { voice?: string | null;
 export async function naturalVoices() {
   const ctrl = new AbortController();
   const timer = window.setTimeout(() => ctrl.abort(), 2500);
-  try { return await request<{ provider: string; voices: { id: string; name: string }[] }>('GET', '/memora/voices', undefined, true, ctrl.signal); }
+  try { return await request<{ provider: string; voices: { id: string; name: string }[]; available?: boolean; error?: string }>('GET', '/memora/voices', undefined, true, ctrl.signal); }
   finally { window.clearTimeout(timer); }
 }

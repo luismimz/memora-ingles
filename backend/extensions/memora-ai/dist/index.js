@@ -87,6 +87,25 @@ export default {
         last_job: current,
       };
     }));
+    // Lectura autenticada del catálogo compartido. Algunas instalaciones
+    // antiguas conservaron un rol Learner sin permisos de campos nuevos y
+    // Directus devolvía una lista vacía aunque las palabras existieran. Estas
+    // rutas aplican una lectura explícita desde la extensión, sin exponer
+    // perfiles ni permitir escrituras.
+    router.get('/catalog/words', auth, wrap(async (req) => {
+      const limit = Math.max(1, Math.min(5000, Number(req.query?.limit) || 5000));
+      return (await svc('words')).readByQuery({ limit, sort: ['rank', 'id'], fields: ['*'] });
+    }));
+    router.get('/catalog/mnemonics', auth, wrap(async (req) => {
+      const ids = String(req.query?.word_ids || '').split(',').map((value) => Number(value)).filter((value) => Number.isInteger(value) && value > 0).slice(0, 250);
+      if (!ids.length) return [];
+      return (await svc('mnemonics')).readByQuery({
+        limit: -1,
+        fields: ['id', 'word', 'owner', 'source', 'image', 'keyword', 'scene_es', 'story_en', 'emoji', 'phon_score', 'focus'],
+        filter: { word: { _in: ids }, _or: [{ owner: { _null: true } }, { owner: { _eq: req.accountability.user } }] },
+        sort: ['id'],
+      });
+    }));
     router.post('/discovery/enrich', auth, (req, res) => {
       if (!req.accountability?.admin) return res.status(403).json({ error: 'Solo un administrador puede generar el catálogo compartido.' });
       const textMode = String(req.body?.text_mode || env.DISCOVERY_TEXT_MODE || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto';
@@ -124,7 +143,16 @@ export default {
         },
       });
     });
-    router.get('/voices', auth, wrap(async () => ({ provider: tts?.name || 'none', voices: tts?.enabled && tts.voices ? await tts.voices() : [] })));
+    router.get('/voices', auth, async (_req, res) => {
+      if (!tts?.enabled || !tts.voices) return res.json({ provider: tts?.name || 'none', voices: [], available: false, error: 'Kokoro no está configurado en este servidor.' });
+      try {
+        const voices = await tts.voices();
+        return res.json({ provider: tts.name, voices, available: true });
+      } catch (error) {
+        logger.warn(error, 'memora: Kokoro no responde al listar voces');
+        return res.json({ provider: tts.name, voices: [], available: false, error: error instanceof Error ? error.message : 'No se pudo contactar con Kokoro.' });
+      }
+    });
 
     // ---------- Método de la palabra clave ----------
 

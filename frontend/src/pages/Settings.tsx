@@ -47,7 +47,7 @@ export function Settings() {
     naturalVoices().then((out) => {
       const voices = out.voices || [];
       setNaturalVoiceList(voices);
-      setNaturalHealth(out.provider === 'kokoro' ? 'ok' : 'offline');
+      setNaturalHealth(out.provider === 'kokoro' && out.available !== false ? 'ok' : 'offline');
       if (p.voice && !voices.some((voice) => voice.id === p.voice)) store.updateProfile({ voice: null }).catch(() => {});
     }).catch(() => { setNaturalVoiceList([]); setNaturalHealth('offline'); });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

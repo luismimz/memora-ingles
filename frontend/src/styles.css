@@ -289,6 +289,7 @@ p { margin: 0 0 .75rem; }
 .generation-control { display: grid; grid-template-columns: minmax(0, 1fr) 150px auto; align-items: center; gap: .75rem; padding: .8rem 0; border-bottom: 1px solid var(--border); }
 .generation-control > div { display: grid; gap: .2rem; }
 .generation-control select { min-width: 0; }
+.generation-control select option { background: #0d2821; color: #effff8; }
 .generation-actions { display: flex; align-items: center; gap: .75rem; flex-wrap: wrap; }
 .catalog-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .6rem; }
 .catalog-stats > div { display: grid; gap: .15rem; min-width: 0; padding: .75rem .8rem; border: 1px solid var(--border); border-radius: 14px; background: rgba(255,255,255,.035); }
@@ -296,6 +297,23 @@ p { margin: 0 0 .75rem; }
 .catalog-stats span { color: var(--muted); font-size: .73rem; line-height: 1.25; }
 @media (max-width: 680px) { .generation-control { grid-template-columns: 1fr; } }
 @media (max-width: 680px) { .catalog-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 680px) {
+  .settings-page { width: 100%; padding-inline: .1rem; }
+  .page-heading { align-items: center; gap: .6rem; }
+  .page-heading h1 { font-size: clamp(1.65rem, 8vw, 2.2rem); }
+  .settings-orb { width: 48px; height: 48px; border-radius: 15px; font-size: 1.35rem; }
+  .settings-card { padding: 14px; border-radius: 18px; }
+  .settings-card-title { gap: .55rem; }
+  .settings-card-title h2 { font-size: 1.05rem; }
+  .voice-provider { align-items: flex-start; flex-wrap: wrap; }
+  .voice-provider .grow { min-width: 0; flex: 1 1 calc(100% - 52px); }
+  .voice-provider > .btn { width: 100%; }
+  .generation-control { gap: .5rem; padding: .75rem 0; }
+  .generation-control select, .generation-control .btn, .generation-actions .btn { width: 100%; min-height: 44px; }
+  .generation-actions { align-items: stretch; flex-direction: column; gap: .5rem; }
+  .speed-options { gap: .35rem; }
+  .speed-options .choice { min-height: 54px; padding: 8px 4px; }
+}
 .settings-icon { width: 40px; height: 40px; display: grid; place-items: center; border-radius: 13px; font-size: 1.25rem; flex: none; }
 .settings-icon.teal { background: var(--primary-soft); }
 .settings-icon.orange { background: var(--accent-soft); }

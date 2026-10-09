@@ -104,14 +104,33 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
   const reload = useCallback(async () => {
     try {
       const me = await request<User>('GET', '/users/me?fields=id,email,first_name');
+      const loadWords = async () => {
+        try {
+          const direct = await request<Word[]>('GET', '/memora/catalog/words?limit=5000');
+          if (direct.length) return direct;
+        } catch { /* backend antiguo: seguimos con Directus REST */ }
+        const loaders = [
+          () => items.list<Word>('words', { fields: WORD_FIELDS, sort: 'rank' }),
+          () => items.list<Word>('words', { fields: WORD_FIELDS_CURATED_FALLBACK, sort: 'rank' }),
+          () => items.list<Word>('words', { fields: WORD_FIELDS_LEGACY, sort: 'rank' }),
+        ];
+        for (const load of loaders) {
+          try {
+            const result = await load();
+            // Un 200 con una lista vacía también puede ser una instalación
+            // con permisos antiguos. Probamos la lectura autenticada de la
+            // extensión antes de aceptar que el catálogo está vacío.
+            if (result.length) return result;
+          } catch { /* probamos el siguiente contrato */ }
+        }
+        return request<Word[]>('GET', '/memora/catalog/words?limit=5000');
+      };
       const [ws, ps, ds, profs, aiRes] = await Promise.all([
         // Durante un redeploy puede arrancar el frontend antes de que el
         // script de esquema haya añadido los campos técnicos. En ese caso
         // cargamos el catálogo legado y la aplicación sigue siendo utilizable
         // mientras se completa la migración, en vez de bloquear todo el login.
-        items.list<Word>('words', { fields: WORD_FIELDS, sort: 'rank' })
-          .catch(() => items.list<Word>('words', { fields: WORD_FIELDS_CURATED_FALLBACK, sort: 'rank' }))
-          .catch(() => items.list<Word>('words', { fields: WORD_FIELDS_LEGACY, sort: 'rank' })),
+        loadWords(),
         items.list<Progress>('progress', { fields: '*' }),
         items.list<StudyDay>('study_days', { sort: 'day' }),
         items.list<Profile>('profiles'),
@@ -226,7 +245,11 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
       if (!ids.length) return [] as Mnemonic[];
       const out: Mnemonic[] = [];
       for (let i = 0; i < ids.length; i += 150) {
-        out.push(...await items.list<Mnemonic>('mnemonics', { filter: { word: { _in: ids.slice(i, i + 150) } }, sort: 'id' }));
+        const group = ids.slice(i, i + 150);
+        let result: Mnemonic[] = [];
+        try { result = await items.list<Mnemonic>('mnemonics', { filter: { word: { _in: group } }, sort: 'id' }); } catch { /* fallback de extensión */ }
+        if (!result.length) result = await request<Mnemonic[]>('GET', `/memora/catalog/mnemonics?word_ids=${encodeURIComponent(group.join(','))}`).catch(() => []);
+        out.push(...result);
       }
       return out;
     };
