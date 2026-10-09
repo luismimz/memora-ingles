@@ -38,10 +38,22 @@ export default {
     const model = (req) => req.body?.model || undefined;
     const saveWord = async (id, patch) => (await svc('words')).updateOne(id, patch);
 
-    router.get('/models', (_req, res) => res.json({
-      models: llm.models ?? [], default: llm.defaultModel ?? '', enabled: Boolean(llm.enabled),
-      providers: Object.fromEntries(Object.entries(providers).map(([k, p]) => [k, p.name])), tts: { enabled: Boolean(tts?.enabled), provider: tts?.name || 'none' },
-    }));
+    router.get('/models', (_req, res) => {
+      const ttsConfigured = Boolean(env.KOKORO_TTS_URL);
+      const ttsEnabled = Boolean(tts?.enabled);
+      res.json({
+        models: llm.models ?? [], default: llm.defaultModel ?? '', enabled: Boolean(llm.enabled),
+        providers: Object.fromEntries(Object.entries(providers).map(([k, p]) => [k, p.name])),
+        // `configured` permite distinguir una variable ausente de un servidor
+        // Kokoro que está configurado pero temporalmente no responde.
+        tts: {
+          enabled: ttsEnabled,
+          configured: ttsConfigured,
+          provider: tts?.name || 'none',
+          status: !ttsConfigured ? 'not_configured' : ttsEnabled ? 'configured' : 'unavailable',
+        },
+      });
+    });
     router.get('/voices', auth, wrap(async () => ({ provider: tts?.name || 'none', voices: tts?.enabled && tts.voices ? await tts.voices() : [] })));
 
     // ---------- Método de la palabra clave ----------

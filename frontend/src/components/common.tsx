@@ -2,27 +2,41 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { speak } from '../lib/speech';
 import { playNaturalAudio, stopNaturalAudio } from '../lib/audioPlayer';
 
-/** Voz natural de Kokoro. El navegador solo se usa cuando se pide explícitamente. */
-export function playNaturalFast(text: string, slow = false, timeout = 8000, allowBrowserFallback = false) {
-  void timeout; // compatibilidad con llamadas antiguas: ya no se descarta un audio que sigue preparándose.
+/** Kokoro es la voz preferente; el navegador evita que una incidencia deje la app en silencio. */
+export function playNaturalFast(text: string, slow = false, timeout = 8000, allowBrowserFallback = true, audioUrl?: string | null) {
   let fallbackUsed = false;
   let cancelled = false;
+  let fallbackTimer: number | null = null;
   const fallback = (error?: unknown) => {
     if (cancelled || fallbackUsed) return;
     fallbackUsed = true;
+    if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+    // Si Kokoro estaba esperando una respuesta lenta, invalida su secuencia
+    // antes de hablar con el dispositivo. Así nunca se oyen las dos voces.
+    stopNaturalAudio();
     if (allowBrowserFallback) speak(text, slow ? { rate: 0.6 } : {});
     else toast(`🔊 ${error instanceof Error ? error.message : 'La voz natural no está disponible.'}`);
   };
-  playNaturalAudio(text, { rate: slow ? 0.70 : undefined })
+  playNaturalAudio(text, { rate: slow ? 0.70 : undefined, audioUrl })
+    .then(() => {
+      if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+      fallbackTimer = null;
+    })
     .catch((error) => { if (!cancelled && (error as DOMException)?.name !== 'AbortError') fallback(error); });
-  return () => { cancelled = true; stopNaturalAudio(); };
+  if (timeout > 0) fallbackTimer = window.setTimeout(() => fallback(new Error('La voz natural está tardando demasiado.')), timeout);
+  return () => {
+    cancelled = true;
+    if (fallbackTimer !== null) window.clearTimeout(fallbackTimer);
+    fallbackTimer = null;
+    stopNaturalAudio();
+  };
 }
 
-export function SpeakBtn({ text, title = 'Escuchar', slow = false, natural = true }: { text: string | null | undefined; title?: string; slow?: boolean; natural?: boolean }) {
+export function SpeakBtn({ text, title = 'Escuchar', slow = false, natural = true, allowBrowserFallback = true, audioUrl }: { text: string | null | undefined; title?: string; slow?: boolean; natural?: boolean; allowBrowserFallback?: boolean; audioUrl?: string | null }) {
   if (!text) return null;
   return (
     <button type="button" className="icon-btn" title={title} aria-label={title}
-      onClick={(e) => { e.stopPropagation(); if (natural) playNaturalFast(text, slow); else speak(text, slow ? { rate: 0.6 } : {}); }}>
+      onClick={(e) => { e.stopPropagation(); if (natural) playNaturalFast(text, slow, 8000, allowBrowserFallback, audioUrl); else speak(text, slow ? { rate: 0.6 } : {}); }}>
       {slow ? '🐢' : '🔊'}
     </button>
   );

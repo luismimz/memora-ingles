@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { assetUrl } from '../../lib/api';
+import { assetUrl, items as apiItems } from '../../lib/api';
 import { CHECKPOINTS_H, MASTERED_STEP, STEP_LABEL } from '../../lib/srs';
 import { useStore } from '../../store';
 import type { Mnemonic, Progress, Word } from '../../types';
@@ -30,6 +30,9 @@ export interface GalleryResult {
   items: GalleryItem[];
   counts: Record<GalleryState, number>;
   error: Error | null;
+  /** Exposiciones de Descubrir (o feedback histórico en cuentas antiguas). */
+  repeatTotal: number;
+  repeatedWords: { wordId: number; count: number }[];
   retry(): void;
 }
 
@@ -39,6 +42,8 @@ export function useGallery(): GalleryResult {
   const [status, setStatus] = useState<GalleryStatus>('loading');
   const [items, setItems] = useState<GalleryItem[]>([]);
   const [error, setError] = useState<Error | null>(null);
+  const [repeatTotal, setRepeatTotal] = useState(0);
+  const [repeatedWords, setRepeatedWords] = useState<{ wordId: number; count: number }[]>([]);
   const [revision, setRevision] = useState(0);
   const loadedRevision = useRef<number | null>(null);
   const loading = useRef(false);
@@ -54,11 +59,26 @@ export function useGallery(): GalleryResult {
         .sort((a, b) => Date.parse(b.learned_at ?? '') - Date.parse(a.learned_at ?? ''));
       if (!progressList.length) {
         setItems([]);
+        setRepeatTotal(0);
+        setRepeatedWords([]);
         setStatus('empty');
         loadedRevision.current = revision;
         return;
       }
-      const cache = await store.mnemonicsFor(progressList.map((progress) => progress.word));
+      const [cache, exposureHistory, feedbackHistory] = await Promise.all([
+        store.mnemonicsFor(progressList.map((progress) => progress.word)),
+        apiItems.list<{ word: number }>('attempts', { fields: 'word', filter: { kind: { _eq: 'expose' } } }).catch(() => []),
+        apiItems.list<{ word: number }>('mnemonic_feedback', { fields: 'word' }).catch(() => []),
+      ]);
+      const exposureCounts = countWords(exposureHistory);
+      const feedbackCounts = countWords(feedbackHistory);
+      const historyCounts = new Map<number, number>(feedbackCounts);
+      // Cuando ya existen exposiciones nuevas, son la fuente precisa. Para
+      // cuentas antiguas usamos el feedback de asociación como respaldo.
+      for (const [wordId, count] of exposureCounts) historyCounts.set(wordId, count);
+      const historyRows = [...historyCounts.entries()].map(([wordId, count]) => ({ wordId, count })).sort((a, b) => b.count - a.count);
+      setRepeatTotal(historyRows.reduce((total, row) => total + row.count, 0));
+      setRepeatedWords(historyRows.filter((row) => row.count > 1).slice(0, 8));
       const next = progressList.map((progress) => {
         const word = store.wordById.get(progress.word)!;
         const association = chooseAssociation(cache.get(progress.word) ?? [], progress.mnemonic);
@@ -90,11 +110,19 @@ export function useGallery(): GalleryResult {
     items,
     counts,
     error,
+    repeatTotal,
+    repeatedWords,
     retry: () => {
       loadedRevision.current = null;
       setRevision((value) => value + 1);
     },
   };
+}
+
+function countWords(rows: { word: number }[]) {
+  const counts = new Map<number, number>();
+  for (const row of rows) counts.set(row.word, (counts.get(row.word) ?? 0) + 1);
+  return counts;
 }
 
 function chooseAssociation(list: Mnemonic[], selectedId: number | null): Mnemonic | null {
@@ -134,4 +162,3 @@ function makeGalleryItem(word: Word, progress: Progress, association: Mnemonic |
     recentFailures: progress.fail,
   };
 }
-

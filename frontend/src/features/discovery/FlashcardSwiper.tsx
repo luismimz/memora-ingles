@@ -16,53 +16,56 @@ export interface FlashcardSwiperProps {
   onSkipAssociation?: (card: DiscoveryCard) => void;
   /** Salida directa hacia la misión de frase construida con la ronda. */
   onContinueToSentences?: () => void;
-  /** Nodo especial para convertir un phrasal verb en una fusión jugable. */
-  onOpenAlchemy?: () => void;
   batchSize?: number;
 }
 
 const SPRING = { type: 'spring' as const, stiffness: 300, damping: 24 };
 
 /** Pantalla inmersiva de descubrimiento, sin esperas entre una tarjeta y la siguiente. */
-export function FlashcardSwiper({ onCreateOwn, onSkipAssociation, onContinueToSentences, onOpenAlchemy, batchSize = 10 }: FlashcardSwiperProps) {
+export function FlashcardSwiper({ onCreateOwn, onSkipAssociation, onContinueToSentences, batchSize = 10 }: FlashcardSwiperProps) {
   const queue = useDiscoveryQueue({ batchSize, preloadAhead: 3, minimumAlternatives: 2 });
-  return <FlashcardSwiperView queue={queue} onCreateOwn={onCreateOwn} onSkipAssociation={onSkipAssociation} onContinueToSentences={onContinueToSentences} onOpenAlchemy={onOpenAlchemy} />;
+  return <FlashcardSwiperView queue={queue} onCreateOwn={onCreateOwn} onSkipAssociation={onSkipAssociation} onContinueToSentences={onContinueToSentences} />;
 }
 
 /**
  * Vista pura del swiper. DiscoveryPage la usa para compartir exactamente la
  * misma cola con el interceptor de recuperación, sin montar dos hooks.
  */
-export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onContinueToSentences, onOpenAlchemy }: FlashcardSwiperProps & { queue: DiscoveryQueueResult }) {
+export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onContinueToSentences }: FlashcardSwiperProps & { queue: DiscoveryQueueResult }) {
   const navigate = useNavigate();
-  const { current, status, error, progress, preloaded, swipeRight, swipeLeft, skipCurrent, retryPreload } = queue;
+  const { current, status, error, progress, preloaded, swipeRight, swipeLeft, skipCurrent, retryPreload, generateAlternative } = queue;
   const [exitDirection, setExitDirection] = useState<'left' | 'right' | null>(null);
   const [shakeToken, setShakeToken] = useState(0);
   const [showExhausted, setShowExhausted] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
   const leaveMission = () => navigate('/', { replace: true, state: null });
 
   // La narración empieza al entrar y vuelve a empezar solo cuando cambia la
   // tarjeta/asociación, nunca por cada render de la pantalla.
   useEffect(() => {
     if (status !== 'ready' || !current) return undefined;
-    return playNaturalFast(current.audioText);
-  }, [current?.association.id, current?.unitId, status]);
+    // Kokoro sigue siendo la primera opción; si el endpoint no está
+    // configurado o el navegador bloquea el autoplay, la primera interacción
+    // debe dejar oír la palabra con una voz disponible en el dispositivo.
+    return playNaturalFast(current.audioText, false, 8000, true, current.word.audioUrl);
+  }, [current?.association.id, current?.unitId, current?.word.audioUrl, status]);
 
   useEffect(() => {
     setShowExhausted(false);
+    setIsGenerating(false);
     setExitDirection(null);
   }, [current?.association.id, current?.unitId]);
 
   const decide = (direction: 'left' | 'right') => {
     if (!current || status !== 'ready') return;
     setExitDirection(direction);
-    if (direction === 'right') {
-      const result = swipeRight();
+    if (direction === 'left') {
+      const result = swipeLeft();
       if (result.type === 'accepted') toast('🔥 Asociación conectada. La pondremos a prueba más adelante.');
       return;
     }
 
-    const result = swipeLeft();
+    const result = swipeRight();
     if (result.type === 'alternatives-exhausted') {
       setExitDirection(null);
       setShakeToken((value) => value + 1);
@@ -82,6 +85,19 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
     if (!current) return;
     if (onCreateOwn) onCreateOwn(current);
     else toast('Aquí podrás crear una asociación que tenga sentido para ti.');
+  };
+
+  const generateWithAI = async () => {
+    if (isGenerating) return;
+    setIsGenerating(true);
+    const result = await generateAlternative();
+    setIsGenerating(false);
+    if (result.type === 'generated') {
+      setShowExhausted(false);
+      toast('✨ Nueva asociación generada. Revísala y decide si conecta contigo.');
+    } else {
+      toast(result.reason);
+    }
   };
 
   if (status === 'idle' || status === 'loading') {
@@ -106,10 +122,13 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
         <button type="button" className="mission-exit discovery-screen-exit" onClick={leaveMission}>✕ Salir al Inicio</button>
         <div className="discovery-complete-card">
           <span className="discovery-complete-icon">🧭</span>
-          <p className="discovery-card-kicker">RUTA EN ESPERA</p>
-          <h1>Aún no hay conexiones listas.</h1>
-          <p>Vuelve a Hoy para preparar tu siguiente lote de palabras.</p>
-          <button type="button" className="btn primary" onClick={() => navigate('/')}>Ir a Hoy →</button>
+          <p className="discovery-card-kicker">CATÁLOGO EN REVISIÓN</p>
+          <h1>Estamos preparando tu siguiente tanda.</h1>
+          <p>La misión no se ha perdido: vuelve a intentarlo o revisa Hoy mientras se sincroniza tu catálogo.</p>
+          <div className="row">
+            <button type="button" className="btn primary" onClick={() => navigate('/descubrir', { replace: true, state: { startNewRound: true } })}>Reintentar misión →</button>
+            <button type="button" className="btn secondary" onClick={() => navigate('/')}>Ir a Hoy</button>
+          </div>
         </div>
       </main>
     );
@@ -124,8 +143,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
           <p className="discovery-card-kicker">RONDA COMPLETADA</p>
           <h1>Tu cerebro ya tiene nuevas conexiones.</h1>
           <p>Ahora conviértelas en una frase que puedas usar de verdad. Así la asociación deja de ser una imagen y pasa a formar parte de tu inglés.</p>
-          <SentenceLaunch onContinue={onContinueToSentences ?? (() => navigate('/constructor-frases'))} />
-          {onOpenAlchemy ? <button type="button" className="btn secondary alchemy-discovery-link" onClick={onOpenAlchemy}>⚗️ Fusionar un phrasal verb</button> : null}
+          <SentenceLaunch onContinue={onContinueToSentences ?? (() => navigate('/descubrir'))} />
         </div>
       </main>
     );
@@ -165,7 +183,7 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
             exit={{ opacity: 0, scale: 0.94, x: exitX, rotate: exitDirection === 'right' ? 12 : -12 }}
             transition={SPRING}
           >
-            <AssociationCard card={current} onDecision={decide} shakeToken={shakeToken} />
+            <AssociationCard card={current} onDecision={decide} shakeToken={shakeToken} onAudioUnlock={() => playNaturalFast(current.audioText, false, 8000, true, current.word.audioUrl)} />
           </motion.div>
         </AnimatePresence>
         <div className="discovery-preload-dots" aria-label={`${preloaded.length} tarjetas precargadas`}>
@@ -178,7 +196,8 @@ export function FlashcardSwiperView({ queue, onCreateOwn, onSkipAssociation, onC
           <motion.div className="discovery-contextual-action" initial={{ opacity: 0, y: 18 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 12 }}>
             <p>Esta asociación no te ayuda todavía.</p>
             <div>
-              <button type="button" className="btn primary" onClick={createOwn}>✍️ Crear la mía</button>
+              <button type="button" className="btn primary" onClick={generateWithAI} disabled={isGenerating}>{isGenerating ? 'Generando…' : '✨ Generar con IA'}</button>
+              <button type="button" className="btn secondary" onClick={createOwn}>✍️ Crear la mía</button>
               <button type="button" className="btn ghost" onClick={skip}>Sin asociación</button>
             </div>
           </motion.div>
@@ -195,13 +214,14 @@ function DiscoveryAlchemyCard({ card, onComplete, onExit }: { card: DiscoveryCar
     en: card.word.en,
     es: card.word.es,
     kind: card.word.kind,
-    example_en: card.word.exampleEn,
+    target_sentence_en: card.word.targetSentenceEn,
   });
   return (
     <main className="discovery-stage discovery-alchemy-stage">
       <DiscoveryTopbar progress={{ current: card.position + 1, total: card.total, accepted: 0 }} onExit={onExit} />
       <AlchemyChallenge
         challenge={challenge}
+        showDock={false}
         onComplete={() => toast(`⚗️ ${challenge.targetEn} preparado para tu memoria.`)}
         onNext={() => { void onComplete().then(() => toast(`🔥 ${challenge.targetEn} conectado. Sigue con la siguiente tarjeta.`)); }}
         onExit={onExit}

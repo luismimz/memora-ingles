@@ -1,6 +1,9 @@
-import type { Kind, Mnemonic } from '../../types';
+import type { IrregularFormExamples, IrregularForms, Kind, Mnemonic } from '../../types';
 
 export type DiscoveryQueueStatus = 'idle' | 'loading' | 'ready' | 'complete' | 'empty' | 'error';
+
+/** Fases mutuamente excluyentes del bucle principal de Memora. */
+export type MissionPhase = 'WARMUP' | 'DISCOVERY' | 'SENTENCE' | 'ARCADE' | 'LOOT';
 
 export interface DiscoveryWord {
   id: number;
@@ -10,6 +13,18 @@ export interface DiscoveryWord {
   pronEs: string | null;
   kind: Kind | null;
   exampleEn: string | null;
+  exampleEs?: string | null;
+  audioUrl?: string | null;
+  bridgeWord: string | null;
+  sceneEs: string | null;
+  targetSentenceEs: string | null;
+  targetSentenceEn: string | null;
+  distractor: string | null;
+  irregularForms: IrregularForms | null;
+  irregularExamples: IrregularFormExamples | null;
+  verbFamily: string | null;
+  definitionEn: string | null;
+  hintEs: string | null;
 }
 
 export interface DiscoveryAssociation {
@@ -47,10 +62,18 @@ export interface RecoveryQueueItem {
   en: string;
   es: string;
   exampleEn?: string | null;
+  exampleEs?: string | null;
+  audioUrl?: string | null;
+  ipa?: string | null;
   /** Datos de la escena que el reto debe recuperar sin volver a consultar Directus. */
   keyword?: string;
   sceneEs?: string;
   storyEn?: string | null;
+  bridgeWord?: string | null;
+  targetSentenceEs?: string | null;
+  targetSentenceEn?: string | null;
+  distractor?: string | null;
+  irregularForms?: IrregularForms | null;
   acceptedAt: string;
   /** Índice de descubrimiento a partir del cual puede aparecer el reto sorpresa. */
   unlockAfterIndex: number;
@@ -68,6 +91,11 @@ export type DiscoverySwipeResult =
   | { type: 'skipped'; wordId: number; associationId: number; batchComplete: boolean }
   | { type: 'not-ready' };
 
+export type DiscoveryGenerationResult =
+  | { type: 'generated'; wordId: number; associationId: number }
+  | { type: 'unavailable'; wordId: number; reason: string }
+  | { type: 'error'; wordId: number; reason: string };
+
 export interface DiscoveryQueueOptions {
   batchSize?: number;
   /** Número de tarjetas posteriores que deben estar preparadas. */
@@ -77,6 +105,8 @@ export interface DiscoveryQueueOptions {
   storageKey?: string;
   /** Ignora la ronda guardada y abre el siguiente lote del cursor. */
   startNewBatch?: boolean;
+  /** Identifica cada petición de ronda nueva aunque la ruta no se desmonte. */
+  batchKey?: string;
 }
 
 export interface DiscoveryQueueResult {
@@ -94,6 +124,8 @@ export interface DiscoveryQueueResult {
   skipCurrent(): DiscoverySwipeResult;
   /** Consolida o vuelve a poner en cola una palabra aceptada tras el micro-reto. */
   resolveRecovery(wordId: number, result: 'ok' | 'fail', ms: number): Promise<RecoveryResolution>;
+  /** Genera una asociación adicional sin abandonar la tarjeta actual. */
+  generateAlternative(): Promise<DiscoveryGenerationResult>;
   retryPreload(): void;
   completeAlchemy(): Promise<DiscoverySwipeResult>;
 }

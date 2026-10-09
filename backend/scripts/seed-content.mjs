@@ -9,6 +9,39 @@ const contentDir = process.env.CONTENT_DIR || join(dirname(fileURLToPath(import.
 const WORDS_PER_DAY_SLOT = 200; // rank = (day-1)*200 + posición: deja hueco para ampliar un día sin reordenar
 const POS = { n: 'noun', v: 'verb', adj: 'adjective', adv: 'adverb', prep: 'preposition', conj: 'conjunction', phr: 'phrase' };
 
+// El constructor necesita una ficha errónea coherente para poder crear la
+// frase. En los packs antiguos no existía esa columna, así que elegimos otra
+// palabra del mismo pack que no aparezca en la frase objetivo. Nunca se usa
+// para la escena mnemotécnica y nunca puede sustituir al verbo aprendido.
+function distractorFor(row, rows) {
+  const sentence = String(sentenceFor(row).en || '').toLowerCase();
+  return rows
+    .map((candidate) => candidate.en)
+    .find((candidate) => candidate && candidate.toLowerCase() !== String(row.en).toLowerCase() && !sentence.includes(candidate.toLowerCase()))
+    ?? 'maybe';
+}
+
+function wordCount(value) {
+  return String(value || '').match(/[A-Za-zÁÉÍÓÚáéíóúÑñ]+(?:'[A-Za-zÁÉÍÓÚáéíóúÑñ]+)?/g)?.length ?? 0;
+}
+
+/**
+ * Los packs antiguos traen dos capas: un ejemplo práctico (a veces muy
+ * corto) y una historia absurda traducida. Para la misión necesitamos una
+ * frase completa, pero no queremos inventar una plantilla como «You WORD.».
+ * Cuando el ejemplo no llega a cinco palabras usamos la historia bilingüe,
+ * que ya contiene el puente, la acción y el significado en una imagen única.
+ */
+function sentenceFor(row) {
+  const practicalEn = String(row.example_en || '').trim();
+  const practicalEs = String(row.example_es || '').trim();
+  if (wordCount(practicalEn) >= 5 && practicalEs) return { en: practicalEn, es: practicalEs };
+  const storyEn = String(row.story_en || '').trim();
+  const storyEs = String(row.scene_es || practicalEs).trim();
+  if (wordCount(storyEn) >= 5 && storyEs) return { en: storyEn, es: storyEs };
+  return { en: practicalEn, es: practicalEs };
+}
+
 async function allRows(collection, fields, filter = '') {
   return api('GET', `/items/${collection}?limit=-1&fields=${fields}${filter}`);
 }
@@ -25,11 +58,21 @@ async function seedWords() {
     const data = JSON.parse(readFileSync(join(contentDir, file), 'utf8'));
     const f = data.fields;
     const toCreate = [];
-    const rows = data.words.map((arr, i) => {
-      const o = Object.fromEntries(f.map((k, j) => [k, arr[j]]));
+    const sourceRows = data.words.map((arr) => Object.fromEntries(f.map((k, j) => [k, arr[j]])));
+    const rows = sourceRows.map((o, i) => {
+      const sentence = sentenceFor(o);
       return { o, word: {
         rank: (data.day - 1) * WORDS_PER_DAY_SLOT + i + 1, day: data.day, en: o.en, es: o.es, pos: o.pos,
         ipa: o.ipa, pron_es: o.pron_es, example_en: o.example_en, example_es: o.example_es, topic: data.topic,
+        // Los packs day01–03 ya traen asociaciones y ejemplos revisados por
+        // humanos. Los exponemos al nuevo contrato de Misión para que no
+        // dependan de una constante local del frontend.
+        bridge_word: o.keyword || null,
+        scene_es: o.scene_es || null,
+        target_sentence_en: sentence.en || null,
+        target_sentence_es: sentence.es || null,
+        distractor: o.distractor || distractorFor(o, sourceRows),
+        status: o.keyword && o.scene_es && wordCount(sentence.en) >= 5 && sentence.es ? 'published' : 'draft',
       } };
     });
     for (const { o, word } of rows) {

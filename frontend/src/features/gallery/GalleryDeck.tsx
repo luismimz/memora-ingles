@@ -19,6 +19,9 @@ export function GalleryDeck() {
   const trophies = [gallery.counts.mastered >= 1, gallery.counts.mastered >= 10, currentStreak >= 3, store.xp >= 500].filter(Boolean).length;
 
   const visible = filter === 'all' ? gallery.items : gallery.items.filter((item) => item.state === filter);
+  const repeated = gallery.repeatedWords
+    .map((entry) => ({ ...entry, word: store.wordById.get(entry.wordId) }))
+    .filter((entry): entry is typeof entry & { word: NonNullable<typeof entry.word> } => Boolean(entry.word));
 
   useEffect(() => {
     if (!selected) return undefined;
@@ -29,10 +32,10 @@ export function GalleryDeck() {
 
   useEffect(() => {
     if (!selected) return undefined;
-    return playNaturalFast(selected.word.en);
+    return playNaturalFast(selected.word.en, false, 8000, true, selected.word.audio_url);
   }, [selected?.id]);
 
-  if (gallery.status === 'loading') return <GalleryLoading />;
+  if (gallery.status === 'loading') return <div className="gallery-page"><GalleryLoading /></div>;
   if (gallery.status === 'error') return <div className="gallery-page gallery-centered"><div className="gallery-empty-card"><span>🧩</span><h1>No pudimos abrir tu álbum</h1><ErrorBox error={gallery.error} /><button type="button" className="btn primary" onClick={gallery.retry}>Reintentar</button></div></div>;
   if (gallery.status === 'empty') return <div className="gallery-page gallery-centered"><div className="gallery-empty-card"><span>📖</span><h1>Tu galería está esperando su primera palabra</h1><p>Primero ve a Descubrir, elige una asociación y supera su mini-reto. Después volverás aquí para verla crecer.</p><Link to="/descubrir" className="btn primary">Empezar en Descubrir →</Link></div></div>;
 
@@ -51,7 +54,10 @@ export function GalleryDeck() {
         <div className="gallery-profile-main"><span className="gallery-profile-avatar">{store.user?.first_name?.slice(0, 1).toUpperCase() || 'M'}</span><div><strong>{store.user?.first_name || 'Alumno Memora'}</strong><small>Nivel {level} · ⚡ {store.xp} XP</small></div></div>
         <div className="gallery-profile-stat"><b>🔥 {currentStreak}</b><small>racha</small></div>
         <div className="gallery-profile-stat"><b>🏆 {trophies}</b><small>trofeos</small></div>
+        <div className="gallery-profile-stat"><b>🔁 {gallery.repeatTotal}</b><small>interacciones</small></div>
       </section>
+
+      {repeated.length ? <section className="gallery-repeat-card" aria-label="Palabras con más exposiciones"><div><strong>🔁 Seguimiento de repeticiones</strong><small>Estas asociaciones han vuelto a aparecer durante tu recorrido.</small></div><div className="gallery-repeat-list">{repeated.slice(0, 5).map((entry) => <span key={entry.wordId}><b>{entry.word.en}</b> · {entry.count} veces</span>)}</div></section> : null}
 
       <div className="gallery-stats" aria-label="Progreso del álbum">
         <GalleryStat icon="🌑" label="Descubiertas" value={gallery.counts.discovered} active={filter === 'discovered'} onClick={() => setFilter('discovered')} />

@@ -3,6 +3,7 @@
 import { api } from './lib.mjs';
 
 const pk = { field: 'id', type: 'integer', meta: { hidden: true, readonly: true }, schema: { is_primary_key: true, has_auto_increment: true } };
+const uuidPk = { field: 'id', type: 'uuid', meta: { hidden: true, readonly: true }, schema: { is_primary_key: true } };
 const str = (field, extra = {}) => ({ field, type: 'string', meta: { interface: 'input' }, schema: {}, ...extra });
 const text = (field) => ({ field, type: 'text', meta: { interface: 'input-multiline' }, schema: {} });
 const int = (field, def = null) => ({ field, type: 'integer', meta: { interface: 'input' }, schema: { default_value: def } });
@@ -22,8 +23,13 @@ const collections = {
   words: {
     meta: { icon: 'translate', note: 'Vocabulario ordenado por utilidad (rank). day = día sugerido.' },
     fields: [pk, int('rank'), int('day'), str('en'), str('es'), str('pos'), str('ipa'), str('pron_es'),
-      text('example_en'), text('example_es'), str('topic'),
-      str('kind'), text('hint_es'), str('arpabet'), json('examples'), int('pilot')],
+      text('example_en'), text('example_es'), text('audio_url'),
+      // Contenido pedagógico curado: Directus es la fuente única de verdad
+      // para la asociación, la escena y el constructor de frases.
+      str('bridge_word'), text('scene_es'), text('target_sentence_es'), text('target_sentence_en'),
+      str('distractor'), str('verb_family'), json('irregular_forms'), json('irregular_examples'),
+      str('topic'), str('kind'), text('hint_es'), text('definition_en'), str('cefr_level'), json('domains'), str('status'),
+      str('arpabet'), json('examples'), int('pilot')],
   },
   mnemonics: {
     meta: { icon: 'psychology', note: 'Asociaciones: seed (curadas), ai (generadas) o user (propias).' },
@@ -32,7 +38,8 @@ const collections = {
   },
   progress: {
     meta: { icon: 'trending_up', note: 'Estado de cada palabra para cada usuario (repetición espaciada).' },
-    fields: [pk, owner(), m2o('word'), str('status'), int('study_day'), int('step', 0), ts('learned_at'), ts('due_at'),
+    fields: [pk, owner(), m2o('word'), str('status'), int('study_day'), int('step', 0), ts('learned_at'), ts('due_at'), ts('next_review_at'),
+      int('interval_step', 0), float('retention_rate', 1),
       ts('relearn_at'), int('reps', 0), int('lapses', 0), int('ok', 0), int('doubt', 0), int('fail', 0), int('avg_ms'),
       ts('last_seen'), m2o('mnemonic'), str('mnemonic_mode'), created],
   },
@@ -65,6 +72,11 @@ const collections = {
     fields: [pk, owner(), str('start_date'), str('level'), int('round_size', 10), int('daily_goal', 100),
       str('ai_model'), str('voice'), float('rate', 0.95), str('answer_mode'), bool('auto_speak', true), int('xp', 0), created],
   },
+};
+collections.grammar_challenges = {
+  meta: { icon: 'school', note: 'Preguntas tipo examen ILERNA DAM/DAW por Resultado de Aprendizaje.' },
+  fields: [uuidPk, str('ra_module'), str('topic'), text('question'), json('options'), int('correct_index', 0),
+    text('rule_hint'), text('trap_warning'), str('source'), str('status')],
 };
 
 collections.mnemonic_feedback = {
@@ -152,10 +164,25 @@ async function ensureLearnerRole() {
     policy = await api('POST', '/policies', { name: 'Learner', icon: 'school', app_access: false, admin_access: false, description: 'Alumnos de Memora' });
     console.log('+ policy Learner');
   }
-  let [role] = await api('GET', '/roles?filter[name][_eq]=Learner');
+  // Pedimos la policy anidada: `policies` sin expansión devuelve los ids de
+  // la tabla puente, no el id real de la policy, y parecería que el rol está
+  // desincronizado en cada ejecución.
+  let [role] = await api('GET', '/roles?filter[name][_eq]=Learner&fields=id,name,policies.policy');
   if (!role) {
     role = await api('POST', '/roles', { name: 'Learner', icon: 'school', policies: [{ policy: policy.id }] });
     console.log('+ rol Learner');
+  } else {
+    // Una instalación anterior podía conservar el rol con una policy borrada
+    // o con una policy Learner antigua. En ese caso Directus autentica al
+    // usuario, pero la lectura de `words` termina en 403 y la misión parece
+    // vacía. Reasignamos siempre el rol a la policy que acabamos de preparar.
+    const linkedPolicies = Array.isArray(role.policies)
+      ? role.policies.map((entry) => typeof entry === 'string' ? entry : entry?.policy ?? entry?.id).filter(Boolean)
+      : [];
+    if (linkedPolicies.length !== 1 || linkedPolicies[0] !== policy.id) {
+      role = await api('PATCH', `/roles/${role.id}`, { policies: [{ policy: policy.id }] });
+      console.log('↻ rol Learner reasignado a la policy actual');
+    }
   }
 
   // Reemplaza por completo los permisos de la policy para que el script sea reproducible.
@@ -168,6 +195,7 @@ async function ensureLearnerRole() {
     perms.push({ policy: policy.id, collection, action, permissions, validation: {}, presets: {}, fields: ['*'], ...extra });
 
   add('words', 'read');
+  add('grammar_challenges', 'read', { status: { _eq: 'published' } });
   add('irregular_verbs', 'read');
   add('directus_files', 'read');
   add('mnemonics', 'read', { _or: [{ owner: { _null: true } }, { owner: { _eq: '$CURRENT_USER' } }] });

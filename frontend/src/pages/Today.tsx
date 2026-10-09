@@ -3,9 +3,10 @@ import { ProgressBar } from '../components/common';
 import { isDue } from '../lib/srs';
 import { localDate, streak } from '../lib/stats';
 import { useStore } from '../store';
+import { EbbinghausExperiment } from '../features/ebbinghaus/EbbinghausExperiment';
 
 export function Today() {
-  const { user, profile, progress, days, today, currentDay } = useStore();
+  const { user, profile, progress, days, today, currentDay, wordById } = useStore();
   const all = [...progress.values()];
   const due = all.filter((p) => isDue(p));
   const learnedToday = all.filter((p) => today && p.study_day === today.day && p.status !== 'known').length;
@@ -13,6 +14,14 @@ export function Today() {
   const mastered = all.filter((p) => p.status === 'mastered').length;
   const goal = profile?.daily_goal ?? 100;
   const racha = streak(days.filter((d) => d.learned > 0 || d.exam_total > 0).map((d) => d.date), localDate());
+  const lastActivityMs = Math.max(
+    ...days.flatMap((day) => [day.started_at, day.finished_at]).filter(Boolean).map((value) => Date.parse(value as string)),
+    ...all.flatMap((item) => [item.last_seen, item.learned_at]).filter(Boolean).map((value) => Date.parse(value as string)),
+    0,
+  );
+  const absentFor72Hours = !lastActivityMs || Date.now() - lastActivityMs >= 72 * 3600_000;
+  const absentDays = lastActivityMs ? Math.max(1, Math.floor((Date.now() - lastActivityMs) / 86_400_000)) : 3;
+  const experimentWords = due.map((item) => wordById.get(item.word)).filter((word): word is NonNullable<typeof word> => Boolean(word)).slice(0, 10);
   const action = {
     to: '/descubrir',
     label: due.length ? 'Continuar misión' : `Jugar Día ${currentDay}`,
@@ -54,6 +63,8 @@ export function Today() {
         <p className="small muted">Cada unidad cuenta solo cuando la has visto, usado y comprobado. No por abrir una tarjeta.</p>
       </section>
 
+      {absentFor72Hours && experimentWords.length ? <EbbinghausExperiment words={experimentWords} absentDays={absentDays} /> : null}
+
       <div className="focus-stats">
         <div><span>🧠</span><strong>{learnedTotal}</strong><small>aprendidas</small></div>
         <div><span>🏆</span><strong>{mastered}</strong><small>dominadas</small></div>
@@ -61,9 +72,8 @@ export function Today() {
       </div>
 
       <div className="focus-secondary">
-        <Link to="/palabras">Ver mis asociaciones</Link><span>·</span>
-        <Link to="/biblioteca">Leer una historia</Link><span>·</span>
-        <Link to="/progreso">Comprobar mi progreso</Link>
+        <Link to="/galeria">Ver mi colección</Link><span>·</span>
+        <Link to="/arcade">Abrir Arcade</Link>
       </div>
     </div>
   );

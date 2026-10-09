@@ -1,11 +1,11 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { AnimatePresence, motion, type PanInfo } from 'framer-motion';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { playNaturalFast } from '../../components/common';
 import { shuffle } from '../../components/common';
 import { useStore } from '../../store';
-import { DEFAULT_SENTENCE_MISSION, type SentenceMission } from './sentenceMission';
-import { QuickScenario, scenarioFromSentence } from '../scenarios/QuickScenario';
+import type { SentenceMission } from './sentenceMission';
+import { haptic, playSentenceSound } from './sentenceGameFeel';
 
 interface SentenceTile {
   id: string;
@@ -13,45 +13,49 @@ interface SentenceTile {
   normalized: string;
 }
 
-export { DEFAULT_SENTENCE_MISSION } from './sentenceMission';
 export type { SentenceMission } from './sentenceMission';
 
 interface SentenceBuilderProps {
   mission?: SentenceMission;
+  missions?: SentenceMission[];
   onComplete?: (xp: number) => void;
+  onExit?: () => void;
+  /** Cuando existe, el controlador de Misión toma el relevo en la fase LOOT. */
+  onRoundComplete?: (mission: SentenceMission, xp: number) => void;
 }
 
 /**
  * Constructor táctil: el usuario ordena fichas para producir una frase útil.
- * Se puede abrir directamente o recibir una misión futura mediante location.state.
+ * Puede funcionar como componente autónomo o como fase controlada por la misión.
  */
-export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete }: SentenceBuilderProps) {
+export function SentenceBuilder({ mission, missions, onComplete, onExit, onRoundComplete }: SentenceBuilderProps) {
   const store = useStore();
-  const location = useLocation();
   const navigate = useNavigate();
   const missionQueue = useMemo(() => {
-    const state = location.state as { mission?: SentenceMission; missions?: SentenceMission[] } | null;
-    const supplied = state?.missions?.length ? state.missions : state?.mission ? [state.mission] : [];
-    return (supplied.length ? supplied : [mission])
+    const supplied = missions?.length ? missions : [];
+    return (supplied.length ? supplied : mission ? [mission] : [])
       .filter((candidate, index, all) => all.findIndex((item) => item.id === candidate.id) === index)
       .slice(0, 3);
-  }, [location.state, mission]);
+  }, [mission, missions]);
   const [queueIndex, setQueueIndex] = useState(0);
-  const activeMission = missionQueue[Math.min(queueIndex, missionQueue.length - 1)] ?? mission;
+  const activeMission = missionQueue[Math.min(queueIndex, missionQueue.length - 1)] ?? null;
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [mistake, setMistake] = useState<string | null>(null);
   const [completed, setCompleted] = useState(false);
-  const [scenarioDone, setScenarioDone] = useState(false);
   const [earnedXp, setEarnedXp] = useState(0);
   const [roundXp, setRoundXp] = useState(0);
+  const [combo, setCombo] = useState(0);
   const dropzoneRef = useRef<HTMLDivElement>(null);
   const completionHandled = useRef(false);
-  const activeMissionRef = useRef(activeMission.id);
+  const activeMissionRef = useRef(activeMission?.id ?? '');
+  const lastCorrectAt = useRef<number | null>(null);
+  const comboRef = useRef(0);
+  const comboBonus = useRef(0);
 
   const acceptedSequences = useMemo(() => {
-    const raw = activeMission.acceptedSentences?.length
+    const raw = activeMission?.acceptedSentences?.length
       ? activeMission.acceptedSentences
-      : [activeMission.correctWords.join(' ')];
+      : activeMission ? [activeMission.targetSentenceEn] : [];
     return raw.map(tokenizeSentence).filter((sequence) => sequence.length > 0);
   }, [activeMission]);
 
@@ -76,16 +80,16 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
       answerWords.push(display.get(normalized) ?? word);
       usedCounts.set(normalized, (usedCounts.get(normalized) ?? 0) + 1);
     };
-    for (const word of acceptedSequences[0] ?? activeMission.correctWords) addAnswerWord(word);
+    for (const word of acceptedSequences[0] ?? activeMission?.correctWords ?? []) addAnswerWord(word);
     for (const sequence of acceptedSequences) for (const word of sequence) addAnswerWord(word);
 
     const correct = answerWords.map((word, index) => ({
-      id: `${activeMission.id}-correct-${index}`,
+      id: `${activeMission?.id ?? 'empty'}-correct-${index}`,
       word,
       normalized: normalizeToken(word),
     }));
-    const distractors = (activeMission.distractors ?? []).map((word, index) => ({
-      id: `${activeMission.id}-distractor-${index}`,
+    const distractors = (activeMission?.distractors ?? []).map((word, index) => ({
+      id: `${activeMission?.id ?? 'empty'}-distractor-${index}`,
       word,
       normalized: normalizeToken(word),
     }));
@@ -100,40 +104,42 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
   const nextIndex = selectedIds.length;
 
   useEffect(() => {
-    setQueueIndex(0);
-  }, [location.key]);
-
-  useEffect(() => {
     setSelectedIds([]);
     setMistake(null);
     setCompleted(false);
-    setScenarioDone(false);
     setEarnedXp(0);
+    setCombo(0);
+    comboRef.current = 0;
+    lastCorrectAt.current = null;
+    comboBonus.current = 0;
     completionHandled.current = false;
-  }, [activeMission.id]);
+  }, [activeMission?.id]);
 
   useEffect(() => {
     // Al pasar a la siguiente misión todavía hay un render intermedio con
     // `completed=true`; no debemos premiar dos veces antes de que el reset
     // de la nueva tarjeta se aplique.
+    if (!activeMission) return;
     if (activeMissionRef.current !== activeMission.id) {
       activeMissionRef.current = activeMission.id;
       return;
     }
-    if (!completed || completionHandled.current) return;
+    if (!activeMission || !completed || completionHandled.current) return;
     completionHandled.current = true;
-    const xp = activeMission.xp ?? 25;
+    const xp = (activeMission.xp ?? 25) + comboBonus.current;
     setEarnedXp(xp);
     setRoundXp((value) => value + xp);
     void store.addXp(xp);
-    const stopAudio = playNaturalFast(activeMission.correctWords.join(' '));
+    playSentenceSound('fanfare');
+    const stopAudio = playNaturalFast(activeMission.targetSentenceEn);
     onComplete?.(xp);
     return stopAudio;
   }, [activeMission, completed, onComplete, store.addXp]);
 
   const markMistake = (tile: SentenceTile) => {
     setMistake(tile.id);
-    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate(55);
+    playSentenceSound('wrong');
+    haptic(35);
     window.setTimeout(() => setMistake((value) => (value === tile.id ? null : value)), 620);
   };
 
@@ -154,12 +160,24 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
       markMistake(tile);
       return;
     }
+    const now = Date.now();
+    const nextCombo = lastCorrectAt.current !== null && now - lastCorrectAt.current < 2500
+      ? Math.min(comboRef.current + 1, 5)
+      : 1;
+    lastCorrectAt.current = now;
+    comboRef.current = nextCombo;
+    setCombo(nextCombo);
+    comboBonus.current = Math.min(Math.max(nextCombo - 1, 0) * 5, 25);
+    playSentenceSound('snap');
+    haptic(15);
     setSelectedIds(nextSelected.map((candidate) => candidate.id));
     if (isAcceptedSentence(nextSelected)) {
       setCompleted(true);
-      if (typeof navigator !== 'undefined' && 'vibrate' in navigator) navigator.vibrate([35, 45, 70]);
+      haptic([35, 45, 70]);
     }
   };
+
+  const liftTile = () => playSentenceSound('lift');
 
   const removeTile = (tileId: string) => {
     if (completed) return;
@@ -179,35 +197,49 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
   };
 
   const sentence = selectedTiles.map((tile) => tile.word).join(' ');
-  const scenario = useMemo(() => scenarioFromSentence(activeMission), [activeMission]);
-  const leaveMission = () => navigate('/', { replace: true, state: null });
-  const completeScenario = (xp: number) => {
-    setScenarioDone(true);
-    setRoundXp((value) => value + xp);
-    void store.addXp(xp);
-  };
+  const leaveMission = onExit ?? (() => navigate('/', { replace: true, state: null }));
+
+  if (!activeMission) {
+    return (
+      <main className="sentence-stage sentence-stage-empty">
+        <div className="sentence-shell">
+          <header className="sentence-topbar">
+            <button type="button" className="sentence-back mission-exit" onClick={leaveMission}>✕ Salir al Inicio</button>
+          </header>
+          <section className="sentence-final-summary" aria-live="polite">
+            <strong>No hay frases preparadas todavía.</strong>
+            <p>Completa una conexión enriquecida en Directus para desbloquear el constructor.</p>
+          </section>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className={`sentence-stage ${completed ? 'is-complete' : ''}`}>
       <div className="sentence-shell">
         <header className="sentence-topbar">
           <button type="button" className="sentence-back mission-exit" onClick={leaveMission}>✕ Salir al Inicio</button>
-          <span className="sentence-xp">Frase {queueIndex + 1}/{missionQueue.length} · ⚡ +{earnedXp || activeMission.xp || 25} XP</span>
+          <div className="sentence-topbar-right">
+            {combo > 0 ? <motion.span className={`sentence-combo-hud ${combo >= 3 ? 'is-hot' : ''}`} animate={{ scale: combo >= 2 ? [1, 1.12, 1] : 1 }} transition={{ duration: .35 }}>COMBO x{combo}{combo >= 3 ? ' 🔥' : ''}</motion.span> : null}
+            <span className="sentence-xp">Frase {queueIndex + 1}/{missionQueue.length} · ⚡ +{earnedXp || activeMission.xp || 25} XP</span>
+          </div>
         </header>
 
         <section className="sentence-hero" aria-live="polite">
           <p className="sentence-eyebrow">OUTPUT MAGNÉTICO · PASO 5</p>
-          <h1>{completed ? '¡La frase ya es tuya!' : 'Construye una frase real.'}</h1>
-          <p className="sentence-context">{activeMission.context ?? 'Convierte la conexión en una frase que puedas usar.'}</p>
+          <h1>{completed ? '¡La frase ya es tuya!' : 'Pon la escena en orden.'}</h1>
+          <p className="sentence-context">Toca o arrastra cada ficha para decir exactamente lo que ocurre. Sin copiar: tú controlas el ritmo.</p>
         </section>
 
         <section className="sentence-mission-card">
-          <span className="sentence-mission-label">DI ESTO EN INGLÉS</span>
+          <span className="sentence-mission-label">🎬 ESCENA CÓMICA · DI ESTO EXACTAMENTE</span>
+          <em>{activeMission.context}</em>
           <strong>{activeMission.promptEs}</strong>
           {activeMission.sourceWord ? <span className="sentence-source">Conexión activa: <b>{activeMission.sourceWord}</b></span> : null}
         </section>
 
-        {completed && !scenarioDone ? <QuickScenario mission={scenario} onComplete={completeScenario} onExit={leaveMission} /> : <>
+        <>
         <section ref={dropzoneRef} className={`sentence-dropzone ${completed ? 'is-complete' : ''}`} aria-label="Zona para ordenar la frase">
           {selectedTiles.length ? selectedTiles.map((tile) => (
             <motion.button
@@ -216,7 +248,8 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
               layoutId={tile.id}
               className="sentence-answer-token"
               initial={{ scale: 0.72, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
+              animate={{ scale: [0.72, 1.12, 1], opacity: 1 }}
+              transition={{ type: 'spring', stiffness: 450, damping: 25 }}
               whileTap={{ scale: 0.94 }}
               onClick={() => removeTile(tile.id)}
               title="Toca para devolver esta palabra"
@@ -243,7 +276,8 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
                 dragElastic={0.16}
                 whileDrag={{ scale: 1.08, rotate: 2, zIndex: 10 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => pickTile(tile)}
+                onClick={() => { liftTile(); pickTile(tile); }}
+                onDragStart={liftTile}
                 onDragEnd={(_, info) => handleDrop(tile, info)}
               >
                 {tile.word}
@@ -256,12 +290,18 @@ export function SentenceBuilder({ mission = DEFAULT_SENTENCE_MISSION, onComplete
           <motion.div className="sentence-success" initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }}>
             <span>🎉</span>
             <div><strong>Conexión convertida en lenguaje.</strong><small>Kokoro acaba de leer tu frase. Repítela en voz alta una vez.</small></div>
-            {queueIndex + 1 < missionQueue.length ? <button type="button" className="btn big sentence-next" onClick={() => setQueueIndex((index) => index + 1)}>Siguiente frase →</button> : <FinalMissionSummary words={missionQueue.length} xp={roundXp} onDiscover={() => navigate('/descubrir', { replace: true, state: { startNewRound: true } })} onHome={leaveMission} />}
+            {combo >= 2 ? <div className="sentence-combo-reward">⚡ Racha rápida: +{comboBonus.current} XP</div> : null}
+            {combo >= 2 ? <div className="sentence-combo-sparks" aria-hidden="true">{[0, 1, 2, 3, 4].map((spark) => <i key={spark} style={{ '--spark': spark } as CSSProperties}>✦</i>)}</div> : null}
+            {queueIndex + 1 < missionQueue.length
+              ? <button type="button" className="btn big sentence-next" onClick={() => setQueueIndex((index) => index + 1)}>Siguiente frase →</button>
+              : onRoundComplete
+                ? <button type="button" className="btn big sentence-next" onClick={() => onRoundComplete(activeMission, roundXp || earnedXp)}>Abrir sobre de colección →</button>
+                : <LootPack mission={activeMission} words={missionQueue.length} xp={roundXp} onDiscover={() => navigate('/descubrir', { replace: true, state: { startNewRound: true } })} onHome={leaveMission} />}
           </motion.div>
         ) : (
           <p className="sentence-hint">Puedes tocar una ficha o arrastrarla a la línea. Si te equivocas, vuelve a intentarlo sin perder la racha.</p>
         )}
-        </>}
+        </>
       </div>
     </main>
   );
@@ -275,11 +315,45 @@ function normalizeToken(value: string) {
   return value.toLowerCase().replace(/[!?.,]/g, '');
 }
 
-function FinalMissionSummary({ words, xp, onDiscover, onHome }: { words: number; xp: number; onDiscover: () => void; onHome: () => void }) {
+export function LootPack({ mission, words, xp, onDiscover, onHome }: { mission: SentenceMission; words: number; xp: number; onDiscover: () => void; onHome: () => void }) {
+  const [opened, setOpened] = useState(false);
+  const rarity = mission.rarity ?? 'common';
+  const rarityLabel = rarity === 'legendary' ? 'Legendaria holográfica' : rarity === 'rare' ? 'Rara' : 'Común';
+
+  useEffect(() => {
+    if (!opened) return;
+    return playNaturalFast(mission.targetSentenceEn, false, 8000, true);
+  }, [mission, opened]);
+
   return (
-    <section className="sentence-final-summary" aria-live="polite">
-      <span className="sentence-final-icon">🏁</span>
-      <div><strong>Ronda completada</strong><small>{words} palabras usadas · +{xp} XP · la siguiente ronda ya está lista.</small></div>
+    <section className={`sentence-final-summary ${opened ? 'is-open' : ''}`} aria-live="polite">
+      <div className="sentence-loot-heading">
+        <span className="sentence-final-icon">🏁</span>
+        <div><strong>Ronda completada</strong><small>{words} palabras usadas · +{xp} XP · has desbloqueado un sobre.</small></div>
+      </div>
+      {!opened ? (
+        <motion.button
+          type="button"
+          className="sentence-loot-pack"
+          onClick={() => { setOpened(true); haptic([18, 35, 18]); playSentenceSound('fanfare'); }}
+          animate={{ y: [0, -4, 0], rotate: [-1, 1, -1] }}
+          transition={{ duration: 1.2, repeat: Infinity, ease: 'easeInOut' }}
+          aria-label="Abrir sobre de colección"
+        >
+          <span className="sentence-loot-seal">M</span>
+          <b>Sobre de colección</b>
+          <small>Toca para abrir tu recompensa</small>
+        </motion.button>
+      ) : (
+        <motion.div className={`sentence-loot-card rarity-${rarity}`} initial={{ opacity: 0, scale: .75, rotateY: -16 }} animate={{ opacity: 1, scale: 1, rotateY: 0 }} transition={{ type: 'spring', stiffness: 280, damping: 18 }}>
+          <div className="sentence-loot-particles" aria-hidden="true">{Array.from({ length: 14 }, (_, index) => <i key={index} style={{ '--particle': index } as CSSProperties}>✦</i>)}</div>
+          <span className="sentence-loot-rarity">{rarityLabel}</span>
+          <span className="sentence-loot-art">{mission.illustration ?? '🧠'}</span>
+          <strong>{mission.sourceWord ?? mission.correctWords[0]}</strong>
+          <small>{mission.pronunciation ?? mission.correctWords.join(' ')}</small>
+          <em>Escena recuperada · audio reproducido</em>
+        </motion.div>
+      )}
       <div className="row sentence-next-actions">
         <button type="button" className="btn big sentence-next" onClick={onDiscover}>🔥 SIGUIENTE RONDA (+10 NUEVAS)</button>
         <button type="button" className="btn secondary" onClick={onHome}>🏠 Volver al Inicio</button>

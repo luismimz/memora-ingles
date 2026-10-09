@@ -11,7 +11,7 @@ for (let i = 0; i < 120; i++) {
   try { if ((await fetch(`${url}/server/health`)).ok) break; } catch { /* aún arrancando */ }
   await new Promise((r) => setTimeout(r, 2000));
 }
-for (const script of ['setup-schema.mjs', 'seed-content.mjs', 'enrich-words.mjs', 'prepare-h1-assets.mjs']) {
+for (const script of ['setup-schema.mjs', 'seed-content.mjs', 'seed-curated-directus.mjs', 'enrich-words.mjs', 'prepare-h1-assets.mjs']) {
   const r = spawnSync(process.execPath, [join(here, script)], { stdio: 'inherit', env: process.env });
   if (r.status !== 0) { console.error(`[memora] ${script} falló`); break; }
 }

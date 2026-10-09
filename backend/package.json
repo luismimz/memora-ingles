@@ -6,11 +6,15 @@
     "bootstrap": "directus bootstrap",
     "setup": "node scripts/setup-schema.mjs",
     "seed": "node scripts/seed-content.mjs",
+    "seed:curated": "node scripts/seed-curated-directus.mjs",
     "generate": "node scripts/generate-mnemonics.mjs",
-    "enrich": "node scripts/enrich-words.mjs"
+    "enrich": "node scripts/enrich-words.mjs",
+    "enrich:discovery": "node scripts/enrich-discovery-directus.mjs",
+    "ingest-tech": "node scripts/ingest-tech-vocabulary.mjs"
   },
   "type": "module",
   "dependencies": {
+    "@fal-ai/serverless-client": "^0.15.0",
     "directus": "^11.17.4"
   },
   "private": true

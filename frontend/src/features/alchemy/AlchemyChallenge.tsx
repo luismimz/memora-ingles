@@ -9,6 +9,8 @@ export interface AlchemyChallengeProps {
   onComplete?: (challenge: AlchemyChallengeData) => void;
   onNext?: () => void;
   onExit?: () => void;
+  /** Discovery already mounts the dock at controller level. */
+  showDock?: boolean;
 }
 
 const TOKEN_SPRINGS = { type: 'spring' as const, stiffness: 420, damping: 24 };

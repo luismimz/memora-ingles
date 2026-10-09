@@ -174,7 +174,7 @@ export function ExposureCard({ word, spot, variant = 'learn', autoSpeak, choice,
     setSentenceVariants(variants); setSentenceVariantIndex(initialIndex);
     setUseStage('memory'); setOrdered([]); setPoolOrder(shuffleIds(variants[initialIndex] ? wordsForSentence(variants[initialIndex].en).length + 2 : 0)); setDragIndex(null); setOrderChecked(null); setOwnSentence(''); setOwnChecked(false); setOwnIssues([]); setOwnAccepted(false); setOwnReview(null); setOwnReviewBusy(false); setOwnReviewError(null);
   }, [word.id, variant]);
-  useEffect(() => { if (autoSpeak) return playNaturalFast(word.en); return undefined; }, [word.id, autoSpeak, word.en]);
+  useEffect(() => { if (autoSpeak) return playNaturalFast(word.en, false, 8000, true, word.audio_url); return undefined; }, [word.id, autoSpeak, word.en, word.audio_url]);
   useEffect(() => {
     if (variant !== 'learn') return;
     const t = setInterval(() => setSecs(Math.floor((Date.now() - started.current) / 1000)), 500);

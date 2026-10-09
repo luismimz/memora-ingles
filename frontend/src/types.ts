@@ -1,7 +1,29 @@
 export type Result = 'ok' | 'doubt' | 'fail';
 export type Status = 'known' | 'learning' | 'review' | 'mastered';
 export type Mode = 'es_en_type' | 'en_es_choice' | 'listen_type' | 'cloze' | 'flash' | 'rescue_keyword' | 'rescue_sound';
-export type Kind = 'cognate' | 'easy' | 'keyword' | 'chunk' | 'phrasal' | 'phrasal_verb' | 'compound' | 'irregular';
+export type Kind = 'cognate' | 'easy' | 'keyword' | 'chunk' | 'phrasal' | 'phrasal_verb' | 'compound' | 'irregular' | 'feynman_model';
+
+export interface IrregularForms {
+  v1?: string;
+  v2?: string;
+  v3?: string;
+}
+
+/** Ejemplo contextual de cada forma de un verbo irregular. */
+export interface IrregularFormExample {
+  en: string;
+  es: string;
+  /** Datos opcionales específicos de la forma activa. */
+  ipa?: string | null;
+  bridge_word?: string | null;
+  scene_es?: string | null;
+}
+
+export interface IrregularFormExamples {
+  v1?: IrregularFormExample;
+  v2?: IrregularFormExample;
+  v3?: IrregularFormExample;
+}
 
 export interface Word {
   id: number;
@@ -14,6 +36,21 @@ export interface Word {
   pron_es: string | null;
   example_en: string | null;
   example_es: string | null;
+  /** URL estática opcional de Directus; evita generar TTS para esta palabra. */
+  audio_url?: string | null;
+  /** Contenido curado del ciclo Discovery -> Sentence Builder, servido por Directus. */
+  bridge_word?: string | null;
+  scene_es?: string | null;
+  target_sentence_es?: string | null;
+  target_sentence_en?: string | null;
+  distractor?: string | null;
+  verb_family?: string | null;
+  irregular_forms?: IrregularForms | null;
+  irregular_examples?: IrregularFormExamples | null;
+  definition_en?: string | null;
+  cefr_level?: 'A1' | 'A2' | 'B1' | 'B2' | 'C1' | string | null;
+  domains?: string[] | null;
+  status?: string | null;
   topic: string | null;
   kind: Kind | null;
   hint_es: string | null;
@@ -55,6 +92,10 @@ export interface Progress {
   last_seen: string | null;
   mnemonic: number | null;
   mnemonic_mode: 'auto' | 'none' | null;
+  /** Campos Ebbinghaus; opcionales para filas creadas antes de la migración. */
+  next_review_at?: string | null;
+  interval_step?: number | null;
+  retention_rate?: number | null;
 }
 
 export interface Attempt {

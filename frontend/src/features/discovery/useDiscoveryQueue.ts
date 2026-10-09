@@ -2,8 +2,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { isConciseMnemonic } from '../../../../shared/mnemonicQuality.mjs';
 import { ai, assetUrl, items } from '../../lib/api';
 import { prefetchNaturalAudio } from '../../lib/audioPlayer';
-import { USES_KEYWORD, useStore } from '../../store';
-import { afterExam } from '../../lib/srs';
+import { useStore } from '../../store';
+import { afterExam, isDue } from '../../lib/srs';
+import { sentenceContainsSource } from '../sentences/sentenceMission';
 import type { Mnemonic, Word } from '../../types';
 import type {
   DiscoveryAssociation,
@@ -14,6 +15,8 @@ import type {
   RecoveryQueueItem,
   RecoveryResolution,
 } from './discovery.types';
+
+export type { MissionPhase } from './discovery.types';
 
 const DEFAULT_STORAGE_KEY = 'memora.discovery.queue.v2';
 const DEFAULT_BATCH_SIZE = 10;
@@ -64,9 +67,8 @@ function associationPriority(mnemonic: Mnemonic, selectedId: number | null) {
 /**
  * Las primeras semillas de Memora fueron más narrativas de lo que pide el
  * método actual. Las compactamos en memoria para que una entrada antigua no
- * bloquee la ronda ni vuelva a mostrar una historia larga. Conservamos la
- * escena hasta la última palabra resaltada (puente + significado) y
- * eliminamos aclaraciones entre paréntesis.
+ * bloquee la ronda ni vuelva a mostrar una historia larga. Conservamos una
+ * escena completa y autocontenida, eliminando aclaraciones entre paréntesis.
  */
 function compactMnemonicText(value: string | null | undefined, maxWords: number) {
   const clean = String(value || '')
@@ -77,11 +79,11 @@ function compactMnemonicText(value: string | null | undefined, maxWords: number)
     .trim();
   if (!clean) return '';
 
-  const upper = [...clean.matchAll(/[A-ZÁÉÍÓÚÑÜ][A-ZÁÉÍÓÚÑÜ0-9'¡!-]*/g)];
-  const end = upper.length ? (upper.at(-1)?.index ?? clean.length) + (upper.at(-1)?.[0].length ?? 0) : clean.length;
-  let compact = clean.slice(0, end).trim();
-  // Si la palabra resaltada estaba muy avanzada, corta en la primera pausa
-  // natural antes de recurrir a un límite duro de palabras.
+  // No cortamos después de la última palabra en mayúsculas: muchas escenas
+  // resaltan el puente y el significado antes de completar la acción (por
+  // ejemplo «Tu perro FIEL SIENTE que estás triste…»). El final omitido
+  // destruía precisamente la relación que había que recordar.
+  let compact = clean;
   if (wordCount(compact) > maxWords) {
     const beforePause = compact.split(/[;:…]/, 1)[0].trim();
     compact = wordCount(beforePause) <= maxWords ? beforePause : compact.split(/\s+/).slice(0, maxWords).join(' ');
@@ -91,6 +93,74 @@ function compactMnemonicText(value: string | null | undefined, maxWords: number)
 
 function wordCount(value: string) {
   return (value.match(/[\p{L}\p{N}]+/gu) || []).length;
+}
+
+const MIN_DISCOVERY_EXAMPLE_WORDS = 5;
+const MAX_DISCOVERY_EXAMPLE_WORDS = 24;
+
+/**
+ * Directus puede devolver campos legacy en camelCase (o con mayúsculas si la
+ * instalación se creó con un importador antiguo). Normalizamos una sola vez
+ * antes de aplicar filtros para no perder una palabra válida por el nombre de
+ * la columna.
+ */
+function normalizeDirectusWord(input: Word): Word {
+  const record = input as unknown as Record<string, unknown>;
+  const fields = new Map(Object.entries(record).map(([key, value]) => [key.toLowerCase(), value]));
+  const pick = (...keys: string[]) => keys.map((key) => fields.get(key.toLowerCase())).find((value) => value !== undefined);
+  const text = (value: unknown): string | null => value === null || value === undefined || String(value).trim() === '' ? null : String(value);
+  const irregularValue = pick('irregular_forms', 'irregularForms');
+  let irregularForms = irregularValue;
+  if (typeof irregularValue === 'string') {
+    try { irregularForms = JSON.parse(irregularValue); } catch { irregularForms = null; }
+  }
+  const irregularExamplesValue = pick('irregular_examples', 'irregularExamples', 'form_examples', 'formExamples');
+  let irregularExamples = irregularExamplesValue;
+  if (typeof irregularExamplesValue === 'string') {
+    try { irregularExamples = JSON.parse(irregularExamplesValue); } catch { irregularExamples = null; }
+  }
+  const kind = text(pick('kind', 'type')) as Word['kind'];
+  return {
+    ...input,
+    en: text(pick('en', 'word')) ?? input.en,
+    es: text(pick('es', 'meaning_es', 'translation')) ?? input.es,
+    kind: kind ?? input.kind,
+    status: text(pick('status')) ?? input.status,
+    audio_url: text(pick('audio_url', 'audioUrl')),
+    bridge_word: text(pick('bridge_word', 'bridgeWord')),
+    scene_es: text(pick('scene_es', 'sceneEs')),
+    target_sentence_es: text(pick('target_sentence_es', 'targetSentenceEs')),
+    target_sentence_en: text(pick('target_sentence_en', 'targetSentenceEn')),
+    distractor: text(pick('distractor', 'distractors')),
+    verb_family: text(pick('verb_family', 'verbFamily')),
+    irregular_forms: irregularForms && typeof irregularForms === 'object' ? irregularForms as Word['irregular_forms'] : null,
+    irregular_examples: irregularExamples && typeof irregularExamples === 'object' ? irregularExamples as Word['irregular_examples'] : null,
+  };
+}
+
+/** Solo las palabras enriquecidas por Directus pueden entrar en Descubrir. */
+function hasDiscoveryExample(word: Pick<Word, 'en' | 'status' | 'bridge_word' | 'scene_es' | 'target_sentence_es' | 'target_sentence_en' | 'distractor' | 'irregular_forms'>) {
+  const sentenceEn = String(word.target_sentence_en || '').trim();
+  const sentenceEs = String(word.target_sentence_es || '').trim();
+  const bridge = String(word.bridge_word || '').trim();
+  const scene = String(word.scene_es || '').trim();
+  const distractor = String(word.distractor || '').trim();
+  const tokens = sentenceEn.match(/[A-Za-z]+(?:'[A-Za-z]+)?/g) || [];
+  const containsSource = sentenceContainsSource(sentenceEn, word.en, word.irregular_forms);
+  const status = String(word.status || 'published').toLowerCase();
+  return Boolean(
+    // Algunas instalaciones antiguas exponen el booleano publicado como
+    // `true`/`1` en vez de la etiqueta Directus `published`.
+    (status === 'published' || status === 'active' || status === 'true' || status === '1') &&
+    bridge &&
+    scene &&
+    sentenceEn &&
+    sentenceEs &&
+    distractor &&
+    tokens.length >= MIN_DISCOVERY_EXAMPLE_WORDS &&
+    tokens.length <= MAX_DISCOVERY_EXAMPLE_WORDS &&
+    containsSource,
+  );
 }
 
 function toAssociations(list: Mnemonic[], selectedId: number | null): DiscoveryAssociation[] {
@@ -144,27 +214,61 @@ function publicWord(word: Word) {
     pronEs: word.pron_es,
     kind: word.kind,
     exampleEn: word.example_en,
+    exampleEs: word.example_es,
+    audioUrl: word.audio_url,
+    bridgeWord: word.bridge_word ?? null,
+    sceneEs: word.scene_es ?? null,
+    targetSentenceEs: word.target_sentence_es ?? null,
+    targetSentenceEn: word.target_sentence_en ?? null,
+    distractor: word.distractor ?? null,
+    irregularForms: word.irregular_forms ?? null,
+    irregularExamples: word.irregular_examples ?? null,
+    verbFamily: word.verb_family ?? null,
+    definitionEn: word.definition_en ?? null,
+    hintEs: word.hint_es ?? null,
+  };
+}
+
+function directusAssociation(word: Word, visualMnemonic: Mnemonic | null = null): DiscoveryAssociation | null {
+  if (!word.bridge_word?.trim() || !word.scene_es?.trim() || !word.target_sentence_es?.trim() || !word.target_sentence_en?.trim() || !word.distractor?.trim()) return null;
+  return {
+    id: -word.id,
+    keyword: word.bridge_word.trim(),
+    sceneEs: compactMnemonicText(word.scene_es, 18),
+    storyEn: word.target_sentence_en.trim(),
+    // La escena/frase canónica vive en `words`, pero el visual revisado puede
+    // seguir viviendo en la asociación seed/AI. No lo descartamos al montar
+    // la tarjeta: era la regresión que convertía todas las imágenes en «✨».
+    emoji: visualMnemonic?.emoji ?? null,
+    imageId: visualMnemonic?.image ?? null,
+    imageUrl: visualMnemonic?.image ? assetUrl(visualMnemonic.image) : null,
+    phoneticScore: null,
+    focus: null,
+    source: 'seed',
   };
 }
 
 /**
  * Cerebro de la fase de descubrimiento.
  *
- * - Solo selecciona palabras nuevas que usan el método de palabra clave.
+ * - Selecciona palabras nuevas del catálogo y excluye cualquier unidad con SRS.
  * - Prepara la tarjeta visible y las siguientes antes de exponerlas a la UI.
  * - Aceptar el truco NO crea progreso: primero debe superarse la recuperación.
- * - Rechazar conserva la misma palabra y cambia a una alternativa ya cargada.
+ * - Pedir otra opción conserva la misma palabra y cambia a una alternativa ya cargada.
  */
 export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): DiscoveryQueueResult {
   const batchSize = Math.max(1, options.batchSize ?? DEFAULT_BATCH_SIZE);
   const preloadAhead = Math.max(3, options.preloadAhead ?? DEFAULT_PRELOAD_AHEAD);
   const minimumAlternatives = Math.max(1, options.minimumAlternatives ?? DEFAULT_MINIMUM_ALTERNATIVES);
   const startNewBatch = Boolean(options.startNewBatch);
+  const batchKey = options.batchKey ?? (startNewBatch ? 'fresh' : 'resume');
   const store = useStore();
   // La cola pertenece a una cuenta. La versión anterior usaba una clave
   // global y podía presentar en una cuenta nueva recuerdos aceptados por otra.
   const storageKey = options.storageKey ?? `${DEFAULT_STORAGE_KEY}.${store.user?.id ?? 'anonymous'}`;
-  const { words, wordById, progress, aiInfo, aiModel, mnemonicsFor, addMnemonic, saveProgress, logAttempts, today } = store;
+  const { words, progress, aiInfo, aiModel, mnemonicsFor, addMnemonic, saveProgress, logAttempts, today } = store;
+  const catalogWords = useMemo(() => words.map(normalizeDirectusWord), [words]);
+  const catalogById = useMemo(() => new Map(catalogWords.map((word) => [word.id, word])), [catalogWords]);
 
   const [hydrated, setHydrated] = useState(false);
   const [wordIds, setWordIds] = useState<number[]>([]);
@@ -177,6 +281,8 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
   const [prepared, setPrepared] = useState<Map<number, PreparedWord>>(new Map());
   const [revision, setRevision] = useState(0);
   const preparing = useRef(new Set<number>());
+  const initializedKey = useRef<string | null>(null);
+  const exposureKeys = useRef(new Set<string>());
   const preparedRef = useRef(prepared);
   preparedRef.current = prepared;
 
@@ -184,12 +290,23 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
   // Cuando una ronda termina no se reutiliza su wordIds: avanzamos un cursor
   // persistente y excluimos tanto SRS como palabras ya vistas en Descubrir.
   useEffect(() => {
-    if (hydrated || !words.length) return;
+    const initializationKey = `${storageKey}:${batchKey}`;
+    if ((hydrated && initializedKey.current === initializationKey) || !words.length) return;
+    initializedKey.current = initializationKey;
+    setPrepared(new Map());
+    preparedRef.current = new Map();
+    exposureKeys.current.clear();
     const saved = readPersisted(storageKey);
-    const validSavedIds = saved?.wordIds.filter((id) => wordById.has(id)) ?? [];
+    const validSavedIds = saved?.wordIds.filter((id) => {
+      const word = catalogById.get(id);
+      return Boolean(word && hasDiscoveryExample(word));
+    }) ?? [];
     const savedCursor = Math.max(0, saved?.catalogCursor ?? 0);
     const savedSeen = [...new Set(saved?.seenWordIds ?? (saved?.version === 1 ? validSavedIds : []))];
-    const savedRecovery = saved?.recoveryQueue ?? [];
+    const savedRecovery = (saved?.recoveryQueue ?? []).filter((item) => {
+      const word = catalogById.get(item.wordId);
+      return Boolean(word && hasDiscoveryExample(word));
+    });
     let savedQueueCursor = Math.min(saved?.cursor ?? 0, validSavedIds.length);
     // Si otra pantalla ya consolidó la tarjeta actual mientras esta ronda
     // estaba guardada, la damos por consumida y no la reciclamos.
@@ -198,7 +315,13 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
       ...validSavedIds.slice(0, savedQueueCursor),
       ...validSavedIds.slice(savedQueueCursor).filter((id) => !progress.has(id)),
     ];
-    const savedActive = resumableIds.length > 0 && (savedQueueCursor < resumableIds.length || savedRecovery.length > 0);
+    // Una recuperación pendiente no debe bloquear el catálogo nuevo. El
+    // micro-reto puede viajar con la siguiente tanda y aparecer cuando su
+    // índice de desbloqueo llegue; mientras tanto el alumno sigue avanzando.
+    // Antes este `|| savedRecovery.length > 0` dejaba al usuario atrapado en
+    // la última palabra aceptada y daba la sensación de que solo existían
+    // diez o doce palabras.
+    const savedActive = resumableIds.length > 0 && savedQueueCursor < resumableIds.length;
 
     if (savedActive && !startNewBatch) {
       setWordIds(resumableIds);
@@ -218,14 +341,62 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
       ...savedRecovery.map((item) => item.wordId),
     ]);
     const freshIds: number[] = [];
-    let nextCatalogCursor = Math.min(savedCursor, words.length);
-    while (nextCatalogCursor < words.length && freshIds.length < batchSize) {
-      const word = words[nextCatalogCursor];
+    let nextCatalogCursor = Math.min(savedCursor, catalogWords.length);
+    while (nextCatalogCursor < catalogWords.length && freshIds.length < batchSize) {
+      const word = catalogWords[nextCatalogCursor];
       nextCatalogCursor += 1;
-      if (!excluded.has(word.id) && (USES_KEYWORD(word) || isAlchemyWord(word))) freshIds.push(word.id);
+      // Una unidad sin ejemplo bilingüe completo no entra en Descubrir:
+      // mostrar «You WORD.» destruye la recuperación activa y no enseña uso.
+      if (!excluded.has(word.id) && hasDiscoveryExample(word)) freshIds.push(word.id);
     }
-    const nextSeen = [...new Set([...savedSeen, ...freshIds])];
-    setWordIds(freshIds);
+    let selectedIds = freshIds;
+    let fallbackMode: 'fresh' | 'due' | 'practice' = 'fresh';
+
+    // Si el catálogo nuevo ya fue visto, la misión se convierte de inmediato
+    // en una ronda de recuperación. Así «Continuar misión» nunca desemboca en
+    // una cola vacía solo porque el usuario tenga progreso residual.
+    if (!selectedIds.length) {
+      const dueIds = [...progress.values()]
+        .filter((entry) => entry.status !== 'known' && isDue(entry))
+        .sort((a, b) => Date.parse(a.next_review_at ?? a.due_at ?? '') - Date.parse(b.next_review_at ?? b.due_at ?? ''))
+        .map((entry) => entry.word)
+        .filter((id, index, all) => all.indexOf(id) === index && !savedRecovery.some((item) => item.wordId === id))
+        .filter((id) => {
+          const word = catalogById.get(id);
+          return Boolean(word && hasDiscoveryExample(word));
+        });
+      if (dueIds.length) {
+        selectedIds = dueIds.slice(0, batchSize);
+        nextCatalogCursor = catalogWords.length
+          ? (savedCursor + selectedIds.length) % catalogWords.length
+          : savedCursor;
+        fallbackMode = 'due';
+      }
+    }
+
+    // Último respaldo: práctica libre sobre el catálogo enriquecido. Se rota
+    // con catalogCursor para no mostrar siempre las primeras palabras.
+    if (!selectedIds.length && catalogWords.length) {
+      const eligible = catalogWords.filter((word) => hasDiscoveryExample(word));
+      if (eligible.length) {
+        const start = savedCursor % eligible.length;
+        const rotated = [...eligible.slice(start), ...eligible.slice(0, start)];
+        // La práctica libre es el último salvavidas, no una ronda nueva:
+        // cuando ya no quedan unidades nuevas ni repasos vencidos, muestra
+        // todo el catálogo enriquecido disponible para que el usuario pueda
+        // seguir entrenando sin caer en una cola vacía.
+        selectedIds = rotated.map((word) => word.id);
+        const last = selectedIds.at(-1);
+        const lastIndex = last === undefined ? start : catalogWords.findIndex((word) => word.id === last);
+        nextCatalogCursor = lastIndex >= 0 ? (lastIndex + 1) % Math.max(catalogWords.length, 1) : start;
+        fallbackMode = 'practice';
+      }
+    }
+
+    const nextSeen = fallbackMode === 'practice'
+      ? savedSeen
+      : [...new Set([...savedSeen, ...selectedIds])];
+    setWordIds(selectedIds);
     setCursor(0);
     setCatalogCursor(nextCatalogCursor);
     setSeenWordIds(nextSeen);
@@ -236,7 +407,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     // se alcance, en lugar de perderse al encadenar rondas.
     setRecoveryQueue(savedRecovery);
     setHydrated(true);
-  }, [batchSize, hydrated, progress, startNewBatch, storageKey, wordById, words]);
+  }, [batchKey, batchSize, catalogById, catalogWords, hydrated, progress, startNewBatch, storageKey, words]);
 
   useEffect(() => {
     if (!hydrated) return;
@@ -262,36 +433,35 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
 
   const prepareWord = useCallback(async (wordId: number) => {
     if (preparedRef.current.has(wordId) || preparing.current.has(wordId)) return;
-    const word = wordById.get(wordId);
+    const word = catalogById.get(wordId);
     if (!word) return;
     preparing.current.add(wordId);
     try {
+      const selectedId = progress.get(wordId)?.mnemonic ?? null;
+      const cache = await mnemonicsFor([wordId], { fill: true });
+      const raw = [...(cache.get(wordId) ?? [])];
+      const visualMnemonic = raw.find((mnemonic) => mnemonic.id === selectedId && (mnemonic.image || mnemonic.emoji))
+        ?? raw.find((mnemonic) => mnemonic.image || mnemonic.emoji)
+        ?? null;
+      const directAssociation = directusAssociation(word, visualMnemonic);
+      if (!directAssociation) {
+        putPrepared(wordId, { associations: [], audioReady: false, error: 'Esta palabra aún no tiene contenido pedagógico completo en Directus.' });
+        return;
+      }
       if (isAlchemyWord(word)) {
-        const audioReady = await prefetchNaturalAudio(word.en).then(() => true).catch(() => false);
+        const audioReady = await prefetchNaturalAudio(word.en, undefined, word.audio_url).then(() => true).catch(() => false);
         putPrepared(wordId, {
-          associations: [{
-            id: -word.id,
-            keyword: word.en,
-            sceneEs: `Fusiona las piezas para recordar «${word.es}».`,
-            storyEn: word.example_en,
-            emoji: word.kind === 'compound' ? '🧩' : '⚗️',
-            imageId: null,
-            imageUrl: null,
-            phoneticScore: null,
-            focus: null,
-            source: 'seed',
-          }],
+          associations: [directAssociation],
           audioReady,
           error: null,
         });
         return;
       }
-      const selectedId = progress.get(wordId)?.mnemonic ?? null;
-      const cache = await mnemonicsFor([wordId], { fill: true });
-      const raw = [...(cache.get(wordId) ?? [])];
-      let associations = toAssociations(raw, selectedId);
+      // La asociación curada en `words` siempre es la primera tarjeta. Las
+      // mnemotecnias históricas/IA quedan como alternativas, nunca como SSOT.
+      let associations = [directAssociation, ...toAssociations(raw, selectedId)];
 
-      // Se prepara fuera del gesto. Si el usuario desliza a la izquierda,
+      // Se prepara fuera del gesto. Si el usuario desliza a la derecha,
       // la segunda asociación ya existe y no se abre una espera en pantalla.
       if (aiInfo.enabled && associations.length < minimumAlternatives) {
         const attempts = minimumAlternatives - associations.length;
@@ -304,7 +474,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
             });
             raw.push(made);
             addMnemonic(made);
-            associations = toAssociations(raw, selectedId);
+            associations = [directAssociation, ...toAssociations(raw, selectedId)];
           } catch {
             // Cuentas sin permiso de IA pueden usar la asociación compartida.
             // La UI recibirá alternatives-exhausted si intenta rechazar la última.
@@ -313,13 +483,8 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
         }
       }
 
-      if (!associations.length) {
-        putPrepared(wordId, { associations: [], audioReady: false, error: `No hay una asociación breve preparada para “${word.en}”.` });
-        return;
-      }
-
       const [audioResult] = await Promise.all([
-        prefetchNaturalAudio(word.en).then(() => true).catch(() => false),
+        prefetchNaturalAudio(word.en, undefined, word.audio_url).then(() => true).catch(() => false),
         ...associations.map((association) => preloadImage(association.imageUrl)),
       ]);
       putPrepared(wordId, { associations, audioReady: audioResult === true, error: null });
@@ -332,7 +497,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     } finally {
       preparing.current.delete(wordId);
     }
-  }, [addMnemonic, aiInfo.enabled, aiModel, minimumAlternatives, mnemonicsFor, progress, putPrepared, wordById]);
+  }, [addMnemonic, aiInfo.enabled, aiModel, catalogById, minimumAlternatives, mnemonicsFor, progress, putPrepared]);
 
   // Mantiene materializadas la tarjeta actual y, como mínimo, las tres siguientes.
   useEffect(() => {
@@ -342,7 +507,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
 
   const cardAt = useCallback((position: number): DiscoveryCard | null => {
     const wordId = wordIds[position];
-    const word = wordById.get(wordId);
+    const word = catalogById.get(wordId);
     const ready = prepared.get(wordId);
     if (!word || !ready?.associations.length) return null;
     const wanted = alternativeByWord[String(wordId)] ?? 0;
@@ -359,7 +524,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
       audioReady: ready.audioReady,
       special: isAlchemyWord(word) ? 'alchemy' : undefined,
     };
-  }, [alternativeByWord, prepared, wordById, wordIds]);
+  }, [alternativeByWord, catalogById, prepared, wordIds]);
 
   const current = useMemo(() => cardAt(cursor), [cardAt, cursor]);
   const preloaded = useMemo(() => wordIds
@@ -382,7 +547,32 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
             : 'loading';
   const error = status === 'error' ? new Error(currentPrepared?.error || 'La tarjeta no está preparada.') : null;
 
-  const swipeRight = useCallback(() => {
+  // Cada exposición queda registrada de forma independiente de la respuesta.
+  // Así podemos distinguir una repetición real de una simple revisión SRS y
+  // detectar si la cola está reciclando una palabra antes de tiempo.
+  useEffect(() => {
+    if (status !== 'ready' || !current) return;
+    const key = `${current.word.id}:${current.association.id}`;
+    if (exposureKeys.current.has(key)) return;
+    exposureKeys.current.add(key);
+    logAttempts([{
+      word: current.word.id,
+      study_day: today?.day ?? null,
+      step: null,
+      kind: 'expose',
+      mode: 'discovery',
+      result: 'doubt',
+      ms: 0,
+      hours_since_learned: null,
+      // Las tarjetas de arranque usan ids negativos locales: no deben
+      // enviarse como FK a Directus mientras el usuario decide o genera una
+      // asociación real.
+      mnemonic: current.association.id > 0 ? current.association.id : null,
+    }]);
+  }, [current, logAttempts, status, today?.day]);
+
+  /** Deslizar a la izquierda: acepta la asociación y avanza. */
+  const swipeLeft = useCallback(() => {
     if (status !== 'ready' || !current) return { type: 'not-ready' } as const;
     const item: RecoveryQueueItem = {
       unitId: current.unitId,
@@ -391,6 +581,14 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
       en: current.word.en,
       es: current.word.es,
       exampleEn: current.word.exampleEn,
+      exampleEs: current.word.exampleEs,
+      audioUrl: current.word.audioUrl,
+      ipa: current.word.ipa,
+      bridgeWord: current.word.bridgeWord,
+      targetSentenceEs: current.word.targetSentenceEs,
+      targetSentenceEn: current.word.targetSentenceEn,
+      distractor: current.word.distractor,
+      irregularForms: current.word.irregularForms,
       keyword: current.association.keyword,
       sceneEs: current.association.sceneEs,
       storyEn: current.association.storyEn,
@@ -398,11 +596,13 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
       unlockAfterIndex: Math.min(wordIds.length, cursor + 3),
     };
     setRecoveryQueue((queue) => [...queue.filter((entry) => entry.wordId !== item.wordId), item]);
-    void items.create('mnemonic_feedback', {
-      word: current.word.id,
-      mnemonic: current.association.id,
-      action: 'pick',
-    }).catch(() => {});
+    if (current.association.id > 0) {
+      void items.create('mnemonic_feedback', {
+        word: current.word.id,
+        mnemonic: current.association.id,
+        action: 'pick',
+      }).catch(() => {});
+    }
     const nextCursor = cursor + 1;
     setCursor(nextCursor);
     return {
@@ -426,7 +626,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
       result,
       ms,
       hours_since_learned: null,
-      mnemonic: item.associationId,
+      mnemonic: item.associationId > 0 ? item.associationId : null,
     }]);
 
     if (result === 'fail') {
@@ -442,7 +642,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     await saveProgress(item.wordId, {
       ...afterExam('ok', ms, now),
       study_day: today?.day ?? null,
-      mnemonic: item.associationId,
+      mnemonic: item.associationId > 0 ? item.associationId : null,
       mnemonic_mode: 'auto',
       last_seen: new Date(now).toISOString(),
     });
@@ -450,7 +650,8 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     return { type: 'recovered', wordId, xp: 10 };
   }, [cursor, logAttempts, recoveryQueue, saveProgress, today?.day]);
 
-  const swipeLeft = useCallback(() => {
+  /** Deslizar a la derecha: pide otra asociación para la misma palabra. */
+  const swipeRight = useCallback(() => {
     if (status !== 'ready' || !current) return { type: 'not-ready' } as const;
     const key = String(current.word.id);
     const nextIndex = current.alternativeIndex + 1;
@@ -458,11 +659,13 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
       ...all,
       [key]: [...new Set([...(all[key] ?? []), current.association.id])],
     }));
-    void items.create('mnemonic_feedback', {
-      word: current.word.id,
-      mnemonic: current.association.id,
-      action: 'another',
-    }).catch(() => {});
+    if (current.association.id > 0) {
+      void items.create('mnemonic_feedback', {
+        word: current.word.id,
+        mnemonic: current.association.id,
+        action: 'another',
+      }).catch(() => {});
+    }
     if (nextIndex >= current.alternativesTotal) {
       return {
         type: 'alternatives-exhausted',
@@ -480,17 +683,50 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     } as const;
   }, [current, prepared, status]);
 
+  const generateAlternative = useCallback(async () => {
+    if (status !== 'ready' || !current) return { type: 'error', wordId: current?.word.id ?? 0, reason: 'La tarjeta todavía no está lista.' } as const;
+    if (!aiInfo.enabled) return { type: 'unavailable', wordId: current.word.id, reason: 'La IA no está conectada en este entorno.' } as const;
+    try {
+      const ready = prepared.get(current.word.id);
+      const cache = await mnemonicsFor([current.word.id], { fill: true });
+      const raw = [...(cache.get(current.word.id) ?? [])];
+      const made = await ai<Mnemonic>('keyword', {
+        word: current.word.id,
+        model: aiModel,
+        avoid: [...raw.map((mnemonic) => mnemonic.keyword).filter(Boolean), current.association.keyword],
+      });
+      if (!made?.id || !made.keyword || !made.scene_es) return { type: 'error', wordId: current.word.id, reason: 'La IA no devolvió una asociación utilizable.' } as const;
+      addMnemonic(made);
+      const visualMnemonic = raw.find((mnemonic) => mnemonic.id === (progress.get(current.word.id)?.mnemonic ?? null) && (mnemonic.image || mnemonic.emoji))
+        ?? raw.find((mnemonic) => mnemonic.image || mnemonic.emoji)
+        ?? null;
+      const primary = directusAssociation(catalogById.get(current.word.id)!, visualMnemonic);
+      const associations = primary
+        ? [primary, ...toAssociations([...raw, made], progress.get(current.word.id)?.mnemonic ?? null)]
+        : toAssociations([...raw, made], progress.get(current.word.id)?.mnemonic ?? null);
+      const generatedIndex = associations.findIndex((association) => association.id === made.id);
+      if (generatedIndex < 0) return { type: 'error', wordId: current.word.id, reason: 'La asociación generada no pasó el filtro de calidad.' } as const;
+      putPrepared(current.word.id, { ...(ready ?? { audioReady: false, error: null }), associations });
+      setAlternativeByWord((all) => ({ ...all, [String(current.word.id)]: generatedIndex }));
+      return { type: 'generated', wordId: current.word.id, associationId: made.id } as const;
+    } catch (cause) {
+      return { type: 'error', wordId: current.word.id, reason: cause instanceof Error ? cause.message : 'No se pudo generar la asociación.' } as const;
+    }
+  }, [addMnemonic, aiInfo.enabled, aiModel, catalogById, current, mnemonicsFor, prepared, progress, putPrepared, status]);
+
   const skipCurrent = useCallback(() => {
     if (status !== 'ready' || !current) return { type: 'not-ready' } as const;
-    const nextCursor = cursor + 1;
-    setCursor(nextCursor);
+    // «Sin asociación» no borra una palabra del método: la mueve al final de
+    // la tanda para que pueda recibir otra alternativa sin bloquear el flujo.
+    setWordIds((ids) => [...ids.slice(0, cursor), ...ids.slice(cursor + 1), current.word.id]);
+    setCursor(cursor);
     return {
       type: 'skipped',
       wordId: current.word.id,
       associationId: current.association.id,
-      batchComplete: nextCursor >= wordIds.length,
+      batchComplete: false,
     } as const;
-  }, [current, cursor, status, wordIds.length]);
+  }, [current, cursor, status]);
 
   const retryPreload = useCallback(() => {
     const wordId = wordIds[cursor];
@@ -529,6 +765,7 @@ export function useDiscoveryQueue(options: DiscoveryQueueOptions = {}): Discover
     swipeLeft,
     skipCurrent,
     resolveRecovery,
+    generateAlternative,
     retryPreload,
     completeAlchemy,
   };

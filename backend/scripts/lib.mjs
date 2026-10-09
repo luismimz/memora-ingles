@@ -15,7 +15,9 @@ if (existsSync(envPath)) {
 }
 
 export const URL_BASE = process.env.DIRECTUS_URL || process.env.PUBLIC_URL || 'http://localhost:8055';
-let token = process.env.DIRECTUS_TOKEN || null;
+// Acepta tanto el nombre histórico como el explícito usado por los jobs de
+// administración. Nunca se imprime este valor ni se expone al frontend.
+let token = process.env.DIRECTUS_TOKEN || process.env.DIRECTUS_ADMIN_TOKEN || null;
 
 export async function login() {
   if (token) return token;
@@ -41,7 +43,9 @@ export async function api(method, path, data, { allowFail = false } = {}) {
   const body = text ? JSON.parse(text) : {};
   if (!res.ok) {
     if (allowFail) return { error: body, status: res.status };
-    throw new Error(`${method} ${path} -> ${res.status}: ${JSON.stringify(body.errors ?? body)}`);
+    const error = new Error(`${method} ${path} -> ${res.status}: ${JSON.stringify(body.errors ?? body)}`);
+    error.status = res.status;
+    throw error;
   }
   // Directus CRUD responde con { data }, mientras que las extensiones propias
   // (por ejemplo /memora/speech) devuelven el objeto directamente.

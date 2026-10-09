@@ -113,13 +113,28 @@ export const configureNaturalSpeech = (voice: string | null, rate: number) => {
 const pendingSpeech = new Map<string, Promise<SpeechAsset | null>>();
 const resolvedSpeech = new Map<string, string>();
 
-export async function naturalSpeechAsset(text: string, opts: { voice?: string | null; rate?: number; refresh?: boolean } = {}): Promise<SpeechAsset | null> {
+function speechSettings(text: string, opts: { voice?: string | null; rate?: number } = {}) {
   const preferredVoice = opts.voice === undefined ? naturalSettings.voice : kokoroVoice(opts.voice);
   const rate = opts.rate ?? naturalSettings.rate;
-  const key = JSON.stringify({ text, voice: preferredVoice || undefined, rate });
+  return { preferredVoice, rate, key: JSON.stringify({ text, voice: preferredVoice || undefined, rate }) };
+}
+
+/** Devuelve un recurso Kokoro ya resuelto sin introducir una espera async. */
+export function cachedNaturalSpeechAsset(text: string, opts: { voice?: string | null; rate?: number } = {}): SpeechAsset | null {
+  const { preferredVoice, rate, key } = speechSettings(text, opts);
+  const cachedFile = resolvedSpeech.get(key);
+  return cachedFile
+    ? { file: cachedFile, url: assetUrl(cachedFile, 'download=0'), cached: true, requestMs: 0, voice: preferredVoice, rate }
+    : null;
+}
+
+export async function naturalSpeechAsset(text: string, opts: { voice?: string | null; rate?: number; refresh?: boolean } = {}): Promise<SpeechAsset | null> {
+  const { preferredVoice, rate, key } = speechSettings(text, opts);
   if (tokens && Date.now() > tokens.expires_at) await refresh();
-  const cachedFile = !opts.refresh ? resolvedSpeech.get(key) : undefined;
-  if (cachedFile) return { file: cachedFile, url: assetUrl(cachedFile, 'download=0'), cached: true, requestMs: 0, voice: preferredVoice, rate };
+  if (!opts.refresh) {
+    const cached = cachedNaturalSpeechAsset(text, opts);
+    if (cached) return cached;
+  }
   const current = pendingSpeech.get(key);
   if (current) return current;
   const run = (async () => {

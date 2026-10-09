@@ -7,6 +7,7 @@ import type { RecoveryQueueItem } from './discovery.types';
 
 const LIMIT_MS = 5_000;
 const FALLBACK_DISTRACTORS = ['really', 'improve', 'actually', 'enough', 'borrow', 'notice'];
+const FALLBACK_ANCHORS = ['JAIBA', 'JARDÍN', 'JALEA', 'JOLÍN', 'PUCHERO', 'PULPO'];
 
 export interface QuickChallengeProps {
   item: RecoveryQueueItem;
@@ -15,13 +16,15 @@ export interface QuickChallengeProps {
   onResolve: (result: 'ok' | 'fail', ms: number) => void;
 }
 
-type ChallengePhase = 'intro' | 'answering' | 'correct' | 'wrong';
+type ChallengePhase = 'intro' | 'anchor' | 'anchor-correct' | 'anchor-wrong' | 'answering' | 'correct' | 'wrong';
 
 /** Micro-reto táctil de cinco segundos que convierte la asociación en recuerdo. */
 export function QuickChallenge({ item, distractors, onResolve }: QuickChallengeProps) {
   const navigate = useNavigate();
   const [phase, setPhase] = useState<ChallengePhase>('intro');
   const [selected, setSelected] = useState<string | null>(null);
+  const [selectedAnchor, setSelectedAnchor] = useState<string | null>(null);
+  const [showHint, setShowHint] = useState(false);
   const startedAt = useRef(0);
   const phaseRef = useRef<ChallengePhase>('intro');
   const resolveTimer = useRef<number | null>(null);
@@ -38,6 +41,12 @@ export function QuickChallenge({ item, distractors, onResolve }: QuickChallengeP
     return shuffle([item.en, ...shuffle(unique).slice(0, 2)]);
   }, [distractorKey, item.en]);
 
+  const anchor = item.keyword?.trim() || item.es;
+  const anchorOptions = useMemo(() => {
+    const distractorAnchors = FALLBACK_ANCHORS.filter((word) => word.toLowerCase() !== anchor.toLowerCase());
+    return shuffle([anchor, ...shuffle(distractorAnchors).slice(0, 2)]);
+  }, [anchor]);
+
   const finish = useCallback((result: 'ok' | 'fail', answer: string | null = null) => {
     if (phaseRef.current !== 'answering') return;
     if (resolveTimer.current !== null) window.clearTimeout(resolveTimer.current);
@@ -51,11 +60,23 @@ export function QuickChallenge({ item, distractors, onResolve }: QuickChallengeP
     }, result === 'ok' ? 650 : 900);
   }, []);
 
+  const startAnswering = useCallback(() => {
+    if (resolveTimer.current !== null) window.clearTimeout(resolveTimer.current);
+    startedAt.current = Date.now();
+    phaseRef.current = 'answering';
+    setPhase('answering');
+    setSelected(null);
+    setShowHint(false);
+    resolveTimer.current = window.setTimeout(() => finish('fail'), LIMIT_MS);
+  }, [finish]);
+
   useEffect(() => {
     startedAt.current = 0;
     phaseRef.current = 'intro';
     setPhase('intro');
     setSelected(null);
+    setSelectedAnchor(null);
+    setShowHint(false);
     return () => {
       if (resolveTimer.current !== null) window.clearTimeout(resolveTimer.current);
     };
@@ -63,10 +84,19 @@ export function QuickChallenge({ item, distractors, onResolve }: QuickChallengeP
 
   const begin = () => {
     if (phaseRef.current !== 'intro') return;
-    startedAt.current = Date.now();
-    phaseRef.current = 'answering';
-    setPhase('answering');
-    resolveTimer.current = window.setTimeout(() => finish('fail'), LIMIT_MS);
+    phaseRef.current = 'anchor';
+    setPhase('anchor');
+  };
+
+  const chooseAnchor = (value: string) => {
+    if (phaseRef.current !== 'anchor') return;
+    const isCorrect = value.toLowerCase() === anchor.toLowerCase();
+    setSelectedAnchor(value);
+    phaseRef.current = isCorrect ? 'anchor-correct' : 'anchor-wrong';
+    setPhase(phaseRef.current);
+    if (isCorrect) playSuccessTone();
+    else navigator.vibrate?.([25, 25, 45]);
+    resolveTimer.current = window.setTimeout(startAnswering, isCorrect ? 350 : 900);
   };
 
   const choose = (word: string) => {
@@ -86,54 +116,95 @@ export function QuickChallenge({ item, distractors, onResolve }: QuickChallengeP
         </div>
         <button type="button" className="mission-exit" onClick={() => navigate('/', { replace: true, state: null })}>✕ Salir al Inicio</button>
         <span className={`discovery-challenge-status ${phase}`}>
-          {phase === 'intro' ? 'Preparado' : phase === 'answering' ? '⚡ 5s' : phase === 'correct' ? '+10 XP' : 'Vuelve a intentarlo'}
+          {phase === 'intro' ? 'Preparado' : phase === 'anchor' ? '🧠 Puente' : phase === 'anchor-correct' ? '✅ Fijado' : phase === 'anchor-wrong' ? '💡 Mira la escena' : phase === 'answering' ? '⚡ 5s' : phase === 'correct' ? '+10 XP' : 'Vuelve a intentarlo'}
         </span>
       </header>
-      <div className={`discovery-fire-track ${phase === 'intro' ? 'is-ready' : ''}`} aria-label={phase === 'intro' ? 'El tiempo empieza al pulsar Estoy listo' : 'Tiempo restante'}>
+      <div className={`discovery-fire-track ${phase !== 'answering' ? 'is-ready' : ''}`} aria-label={phase === 'answering' ? 'Tiempo restante' : 'El tiempo empieza al recuperar el puente'}>
         <motion.div key={item.wordId} initial={{ width: '100%' }} animate={phase === 'answering' ? { width: '0%' } : { width: '100%' }} transition={{ duration: phase === 'answering' ? LIMIT_MS / 1000 : 0, ease: 'linear' }} />
       </div>
 
       <section className={`discovery-challenge-card ${phase}`}>
-        <p className="discovery-card-kicker">{phase === 'intro' ? 'ANTES DE EMPEZAR' : 'RECUERDA LA ASOCIACIÓN'}</p>
+        <p className="discovery-card-kicker">{phase === 'intro' ? 'ANTES DE EMPEZAR' : phase.startsWith('anchor') ? 'FIJA EL PUENTE MNEMOTÉCNICO' : 'RECUPERA LA PALABRA'}</p>
         {phase === 'intro' ? (
           <div className="discovery-challenge-instructions">
             <strong>Vas a recuperar una palabra en inglés.</strong>
-            <span>Mira la escena y, cuando pulses «Estoy listo», toca la opción inglesa que corresponde. No tienes que escribir ni inventar una frase.</span>
+            <span>Mira la escena y, cuando pulses «Estoy listo», recupera primero la palabra puente. Después tendrás cinco segundos para elegir el inglés.</span>
           </div>
         ) : null}
-        <div className="discovery-challenge-scene">
-          <span className="discovery-challenge-emoji" aria-hidden="true">{item.keyword ? '🧠' : '🧩'}</span>
-          <div>
-            <small>La escena que acabas de conectar</small>
-            <p><Rich text={scene} /></p>
+        {phase === 'intro' || phase.startsWith('anchor') || showHint ? (
+          <div className="discovery-challenge-scene">
+            <span className="discovery-challenge-emoji" aria-hidden="true">{item.keyword ? '🧠' : '🧩'}</span>
+            <div>
+              <small>La escena que acabas de conectar</small>
+              <p><Rich text={scene} /></p>
+            </div>
           </div>
-        </div>
-        <div className="discovery-challenge-prompt">
-          <span>{phase === 'intro' ? 'Cuando estés listo, busca el inglés de esta escena' : 'Toca la palabra inglesa que corresponde'}</span>
-          <SpeakBtn text={item.en} title="Escuchar la palabra" />
-        </div>
-        <div className="discovery-challenge-options">
-          {options.map((word) => {
-            const correct = word === item.en;
-            const wrongPicked = phase === 'wrong' && selected === word && !correct;
-            const reveal = phase === 'wrong' && correct;
-            return (
-              <motion.button
-                key={word}
-                type="button"
-                className={`discovery-challenge-option ${phase === 'correct' && correct ? 'is-correct' : ''} ${wrongPicked ? 'is-wrong' : ''} ${reveal ? 'is-revealed' : ''}`}
-                disabled={phase !== 'answering'}
-                whileTap={phase === 'answering' ? { scale: 0.96 } : undefined}
-                animate={phase === 'correct' && correct ? { scale: [1, 1.1, 1] } : reveal ? { x: [0, -7, 7, 0] } : undefined}
-                onClick={() => choose(word)}
-              >
-                {word}
-              </motion.button>
-          );
-        })}
-      </div>
+        ) : (
+          <div className="discovery-challenge-memory-closed">🧠 Escena guardada · recupérala desde tu imagen mental</div>
+        )}
+        {phase === 'anchor' || phase === 'anchor-correct' || phase === 'anchor-wrong' ? (
+          <>
+            <div className="discovery-challenge-prompt"><span>¿Con qué palabra puente conectamos {item.en.toUpperCase()}?</span></div>
+            <div className="discovery-challenge-options discovery-challenge-anchor-options">
+              {anchorOptions.map((value) => {
+                const correct = value.toLowerCase() === anchor.toLowerCase();
+                const wrongPicked = phase === 'anchor-wrong' && selectedAnchor === value && !correct;
+                const reveal = phase === 'anchor-wrong' && correct;
+                return (
+                  <motion.button
+                    key={value}
+                    type="button"
+                    className={`discovery-challenge-option ${phase === 'anchor-correct' && correct ? 'is-correct' : ''} ${wrongPicked ? 'is-wrong' : ''} ${reveal ? 'is-revealed' : ''}`}
+                    disabled={phase !== 'anchor'}
+                    whileTap={phase === 'anchor' ? { scale: 0.96 } : undefined}
+                    animate={phase === 'anchor-correct' && correct ? { scale: [1, 1.08, 1] } : reveal ? { x: [0, -7, 7, 0] } : undefined}
+                    onClick={() => chooseAnchor(value)}
+                  >
+                    {value}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </>
+        ) : phase !== 'intro' ? (
+          <>
+            <div className="discovery-challenge-prompt">
+              <span>Toca la palabra inglesa que corresponde</span>
+              <SpeakBtn text={item.en} title="Escuchar la palabra" allowBrowserFallback audioUrl={item.audioUrl} />
+            </div>
+            <button type="button" className="discovery-challenge-hint" onClick={() => setShowHint((value) => !value)}>
+              {showHint ? '▴ Ocultar escena' : '💡 Recordar escena'}
+            </button>
+            <div className="discovery-challenge-options">
+              {options.map((word) => {
+                const correct = word === item.en;
+                const wrongPicked = phase === 'wrong' && selected === word && !correct;
+                const reveal = phase === 'wrong' && correct;
+                return (
+                  <motion.button
+                    key={word}
+                    type="button"
+                    className={`discovery-challenge-option ${phase === 'correct' && correct ? 'is-correct' : ''} ${wrongPicked ? 'is-wrong' : ''} ${reveal ? 'is-revealed' : ''}`}
+                    disabled={phase !== 'answering'}
+                    whileTap={phase === 'answering' ? { scale: 0.96 } : undefined}
+                    animate={phase === 'correct' && correct ? { scale: [1, 1.1, 1] } : reveal ? { x: [0, -7, 7, 0] } : undefined}
+                    onClick={() => choose(word)}
+                  >
+                    {word}
+                  </motion.button>
+                );
+              })}
+            </div>
+          </>
+        ) : null}
         {phase === 'intro' ? (
-          <button type="button" className="btn big discovery-challenge-start" onClick={begin}>Estoy listo · empezar 5 s →</button>
+          <button type="button" className="btn big discovery-challenge-start" onClick={begin}>Estoy listo · recuperar puente →</button>
+        ) : null}
+        {phase === 'anchor-correct' ? (
+          <motion.p className="discovery-challenge-feedback is-correct" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>✅ {anchor} · puente recuperado. Ahora busca el inglés.</motion.p>
+        ) : null}
+        {phase === 'anchor-wrong' ? (
+          <motion.p className="discovery-challenge-feedback is-wrong" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>La conexión era <strong>{anchor}</strong>. La escena queda como pista y ahora empieza el reto de inglés.</motion.p>
         ) : null}
         {phase === 'correct' ? (
           <motion.p className="discovery-challenge-feedback is-correct" initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}>🔥 ¡Conexión recuperada! +10 XP</motion.p>

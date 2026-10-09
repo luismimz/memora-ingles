@@ -7,7 +7,18 @@ import type { Attempt, Mnemonic, Profile, Progress, StudyDay, Word } from './typ
 import { isConciseMnemonic } from '../../shared/mnemonicQuality.mjs';
 
 interface User { id: string; email: string; first_name: string | null }
-interface AiInfo { enabled: boolean; models: string[]; default: string; providers?: Record<string, string>; tts?: { enabled: boolean; provider: string } }
+interface AiInfo {
+  enabled: boolean;
+  models: string[];
+  default: string;
+  providers?: Record<string, string>;
+  tts?: {
+    enabled: boolean;
+    provider: string;
+    configured?: boolean;
+    status?: 'configured' | 'not_configured' | 'unavailable' | string;
+  };
+}
 
 interface Store {
   ready: boolean;
@@ -44,7 +55,15 @@ export const useStore = () => {
 };
 
 const PENDING_KEY = 'memora.pendingAttempts';
-const WORD_FIELDS = 'id,rank,day,en,es,pos,ipa,pron_es,example_en,example_es,topic,kind,hint_es,arpabet,examples,pilot';
+const WORD_FIELDS = 'id,rank,day,en,es,pos,ipa,pron_es,example_en,example_es,audio_url,bridge_word,scene_es,target_sentence_es,target_sentence_en,distractor,verb_family,irregular_forms,irregular_examples,definition_en,cefr_level,domains,status,topic,kind,hint_es,arpabet,examples,pilot';
+// Mantiene los campos pedagógicos aunque una instalación antigua todavía no
+// tenga el campo opcional de audio. El fallback legacy anterior ocultaba la
+// escena y la frase de Directus y dejaba Descubrir aparentemente vacío.
+// No incluye `irregular_examples` a propósito: permite que una instalación
+// anterior siga cargando todo el contenido curado mientras se migra el nuevo
+// campo de frases por forma.
+const WORD_FIELDS_CURATED_FALLBACK = 'id,rank,day,en,es,pos,ipa,pron_es,example_en,example_es,bridge_word,scene_es,target_sentence_es,target_sentence_en,distractor,verb_family,irregular_forms,topic,kind,hint_es,examples,pilot';
+const WORD_FIELDS_LEGACY = 'id,rank,day,en,es,pos,ipa,pron_es,example_en,example_es,topic,kind,hint_es,arpabet,examples,pilot';
 /** Tipos de palabra que se aprenden con palabra clave; el resto (cognados, bloques…) sin mnemotecnia. */
 export const USES_KEYWORD = (w: Pick<Word, 'kind'>) => !w.kind || w.kind === 'keyword' || w.kind === 'irregular';
 
@@ -69,6 +88,13 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
     let pending: Attempt[] = [];
     try { pending = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); } catch { /* vacío */ }
     if (!pending.length) return;
+    // Las primeras tarjetas de arranque podían guardar un id negativo local
+    // como mnemotecnia. Nunca es una FK válida en Directus; se descarta aquí
+    // para que ese registro antiguo no bloquee también los intentos nuevos.
+    pending = pending.map((attempt) => ({
+      ...attempt,
+      mnemonic: attempt.mnemonic && attempt.mnemonic > 0 ? attempt.mnemonic : null,
+    }));
     try {
       await items.create('attempts', pending);
       localStorage.removeItem(PENDING_KEY);
@@ -79,7 +105,13 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
     try {
       const me = await request<User>('GET', '/users/me?fields=id,email,first_name');
       const [ws, ps, ds, profs, aiRes] = await Promise.all([
-        items.list<Word>('words', { fields: WORD_FIELDS, sort: 'rank' }),
+        // Durante un redeploy puede arrancar el frontend antes de que el
+        // script de esquema haya añadido los campos técnicos. En ese caso
+        // cargamos el catálogo legado y la aplicación sigue siendo utilizable
+        // mientras se completa la migración, en vez de bloquear todo el login.
+        items.list<Word>('words', { fields: WORD_FIELDS, sort: 'rank' })
+          .catch(() => items.list<Word>('words', { fields: WORD_FIELDS_CURATED_FALLBACK, sort: 'rank' }))
+          .catch(() => items.list<Word>('words', { fields: WORD_FIELDS_LEGACY, sort: 'rank' })),
         items.list<Progress>('progress', { fields: '*' }),
         items.list<StudyDay>('study_days', { sort: 'day' }),
         items.list<Profile>('profiles'),
@@ -214,7 +246,9 @@ export function StoreProvider({ children, onAuthLost }: { children: ReactNode; o
         for (const id of empty) next.set(id, []);
         for (const m of refetched) next.get(m.word)!.push(m);
         // Los datos básicos (ipa, ejemplo...) también pueden haber cambiado
-        const fresh = await items.list<Word>('words', { fields: WORD_FIELDS, filter: { id: { _in: empty } } });
+        const fresh = await items.list<Word>('words', { fields: WORD_FIELDS, filter: { id: { _in: empty } } })
+          .catch(() => items.list<Word>('words', { fields: WORD_FIELDS_CURATED_FALLBACK, filter: { id: { _in: empty } } }))
+          .catch(() => items.list<Word>('words', { fields: WORD_FIELDS_LEGACY, filter: { id: { _in: empty } } }));
         setWords((ws) => ws.map((w) => fresh.find((f) => f.id === w.id) ?? w));
       }
     }

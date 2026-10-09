@@ -6,10 +6,10 @@
 //  phrasal   -> verbo + partícula: la partícula tiene significado propio.
 //  irregular -> verbo irregular: forma base con mnemotecnia + familia de sus formas.
 
-export const KINDS = ['cognate', 'easy', 'keyword', 'chunk', 'phrasal', 'phrasal_verb', 'compound', 'irregular'];
+export const KINDS = ['cognate', 'easy', 'keyword', 'chunk', 'phrasal', 'phrasal_verb', 'compound', 'irregular', 'feynman_model'];
 
 export const KIND_LABEL = {
-  cognate: 'Cognado', easy: 'Fácil', keyword: 'Palabra clave', chunk: 'Bloque', phrasal: 'Phrasal verb', phrasal_verb: 'Phrasal verb', compound: 'Palabra compuesta', irregular: 'Irregular',
+  cognate: 'Cognado', easy: 'Fácil', keyword: 'Palabra clave', chunk: 'Bloque', phrasal: 'Phrasal verb', phrasal_verb: 'Phrasal verb', compound: 'Palabra compuesta', irregular: 'Irregular', feynman_model: 'Modelo Feynman',
 };
 
 export const PARTICLES = {

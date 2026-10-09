@@ -59,7 +59,7 @@
     [ "sit", "sat", "sat", "sentarse", "iau", "Sólo baja un escalón: i → a → a.", "I sat next to her." ],
     [ "keep", "kept", "kept", "guardar / mantener", "eet", "", "I kept the secret." ],
     [ "sleep", "slept", "slept", "dormir", "eet", "", "I slept nine hours." ],
-    [ "feel", "felt", "felt", "sentir", "eet", "", "I felt very happy." ],
+    [ "feel", "felt", "felt", "sentir", "ee_to_e", "", "I felt very happy." ],
     [ "meet", "met", "met", "conocer / quedar", "eet", "Encoge sin añadir -t extra (ya la tenía).", "We met in 2019." ],
     [ "feed", "fed", "fed", "dar de comer", "eet", "", "I fed the cat." ],
     [ "leave", "left", "left", "irse / dejar", "eet", "Left también es 'izquierda': se fue por la izquierda.", "She left at six." ],
