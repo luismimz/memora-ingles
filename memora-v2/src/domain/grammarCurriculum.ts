@@ -63,8 +63,8 @@ export const grammarCurriculum: CurriculumPattern[] = [
   ],'Where you live?'),
   pattern(9,'final-preposition','Conservar la pieza que completa la expresión','LOOK FOR significa buscar: al preguntar, FOR puede quedarse al final.','La preposición tímida espera al final, sin abandonar su verbo.','No todas las preguntas terminan en FOR. Aprende LOOK FOR, TALK ABOUT y WITH según su significado.','look key talk',['present-now','wh-questions'],[
     example('¿Qué estás buscando?','Q:¿Qué|A:estás|S:TÚ|V:buscando?','Q:What|A:are|S:you|V:looking for?'),
-    example('¿Con quién estás?','Q:¿Quién|A:estás|S:TÚ|C:con?','Q:Who|A:are|S:you|C:with?'),
-    example('¿De qué estás hablando?','Q:¿Qué|A:estás|S:TÚ|V:hablando|C:de?','Q:What|A:are|S:you|V:talking|C:about?'),
+    example('¿Con quién estás?','C:¿Con|Q:quién|A:estás|S:TÚ?','Q:Who|A:are|S:you|C:with?'),
+    example('¿De qué estás hablando?','C:¿De|Q:qué|A:estás|S:TÚ|V:hablando?','Q:What|A:are|S:you|V:talking|C:about?'),
   ],'What are you looking?'),
   pattern(10,'adjective-order','Describir lo que quieres sin cambiar el orden','Las cualidades van antes del objeto: opinión, tamaño, color y, al final, el nombre.','Las cualidades hacen cola delante del coche del niño.','Los adjetivos no llevan plural: two red cars. La lista completa incluye más categorías; aquí practicamos tamaño y color.','car big red small blue house old green bike',['articles'],[
     example('Un coche grande y rojo.','C:UN|V:grande|V:rojo|C:coche.','C:A|V:big|V:red|C:car.'),
@@ -90,7 +90,7 @@ export const grammarCurriculum: CurriculumPattern[] = [
     example('Siempre trabajo aquí.','S:YO|C:siempre|V:trabajo|C:aquí.','S:I|C:always|V:work|C:here.'),
     example('Él siempre llega tarde.','S:ÉL|A:está|C:siempre|V:tarde.','S:He|A:is|C:always|V:late.',["He's always late."]),
     example('Ella suele cocinar.','S:ELLA|C:habitualmente|V:cocina.','S:She|C:usually|V:cooks.'),
-  ],'He always is late.'),
+  ],'He always late.'),
   pattern(15,'past-simple','Contar algo que pasó y terminó','Con AYER, cuenta una acción pasada: PLAYED; los irregulares tienen una forma propia.','La máquina del tiempo cambia la acción: PLAY → PLAYED; GO → WENT.','No todos reciben ED: GO → WENT, EAT → ATE. ED puede sonar /t/, /d/ o /ɪd/.','play yesterday go home eat breakfast',['simple-present'],[
     example('Jugué ayer.','S:YO|V:jugué|C:ayer.','S:I|V:played|C:yesterday.'),
     example('Fui a casa.','S:YO|V:fui|C:a casa.','S:I|V:went|C:home.'),
@@ -117,9 +117,9 @@ export const grammarCurriculum: CurriculumPattern[] = [
     example('Debo marcharme.','S:YO|A:debo|V:marcharme.','S:I|A:must|V:leave.'),
   ],'You should to call.'),
   pattern(20,'will','Ofrecerte y prometer una acción',"Para ofrecerte ahora: I WILL + verbo base; al hablar, I'LL.",'La promesa firma con WILL y deja el verbo como estaba.','WILL también hace predicciones. GOING TO se usa para planes e indicios: no son una división universal de todo futuro.','help cook dinner call tomorrow',['can','going-to'],[
-    example('Te ayudaré.','S:YO|A:me comprometo a|V:ayudar|C:a ti.','S:I|A:will|V:help|C:you.',["I'll help you."]),
-    example('Yo cocinaré la cena.','S:YO|A:me encargaré de|V:cocinar|C:la cena.','S:I|A:will|V:cook|C:dinner.',["I'll cook dinner."]),
-    example('Te llamaré mañana.','S:YO|A:me comprometo a|V:llamar|C:a ti mañana.','S:I|A:will|V:call|C:you tomorrow.',["I'll call you tomorrow."]),
+    example('Te ayudaré.','S:YO|C:te|V:ayudaré.','S:I|A:will|V:help|C:you.',["I'll help you."]),
+    example('Yo cocinaré la cena.','S:YO|V:cocinaré|C:la cena.','S:I|A:will|V:cook|C:dinner.',["I'll cook dinner."]),
+    example('Te llamaré mañana.','S:YO|C:te|V:llamaré|C:mañana.','S:I|A:will|V:call|C:you tomorrow.',["I'll call you tomorrow."]),
   ],'I will cooking dinner.'),
   pattern(21,'used-to','Contar algo que antes hacías o eras','ANTES, PERO AHORA NO → USED TO + verbo base.','El abuelo guarda su rutina antigua en USED TO.','No todo jugaba lleva USED TO. Aquí indica una costumbre o estado pasado que ya cambió. Con DID: Did you use to…?','live work here play soccer',['past-simple','did'],[
     example('Antes vivía aquí.','S:YO|A:antes solía|V:vivir|C:aquí.','S:I|A:used to|V:live|C:here.'),
@@ -152,7 +152,7 @@ export const grammarCurriculum: CurriculumPattern[] = [
   pattern(26,'verb-partners','Saber qué pieza pide el verbo anterior','WANT pide TO + acción; ENJOY pide acción con ING.','Cada verbo elige compañero: WANT TO, ENJOY ING.','LIKE admite playing y to play con matices. Ver un infinitivo español no basta para añadir TO: CAN PLAY no lo lleva.','want enjoy like play',['can','simple-present'],[
     example('Quiero jugar.','S:YO|A:quiero|C:[TO]|V:jugar.','S:I|A:want|C:to|V:play.'),
     example('Disfruto jugando.','S:YO|A:disfruto|V:jugando.','S:I|A:enjoy|V:playing.'),
-    example('Me gusta jugar.','S:YO|A:disfruto|V:jugando.','S:I|A:like|V:playing.', ['I like to play.']),
+    example('Me gusta jugar.','S:A MÍ|A:me gusta|V:jugar.','S:I|A:like|V:playing.', ['I like to play.']),
   ],'I want playing.'),
   pattern(27,'quantity','Hablar de cosas que cuentas y cosas que mides','MANY cuenta elementos; MUCH mide una cantidad; SOME expresa algo de.','MANY cuenta vasos; MUCH mide el agua que contienen.','WATER e INFORMATION no llevan A ni plural en estos usos. En afirmaciones cotidianas es frecuente A LOT OF en lugar de MUCH.','water friend time',['articles','do-does'],[
     example('Tengo algo de agua.','S:YO|V:tengo|C:algo de|V:agua.','S:I|V:have|C:some|V:water.'),
@@ -170,14 +170,14 @@ export const grammarCurriculum: CurriculumPattern[] = [
     example('Llevo estudiando desde el lunes.','S:YO|A:he estado|V:estudiando|C:desde el lunes.','S:I|A:have been|V:studying|C:since Monday.',["I've been studying since Monday."]),
   ],'I have been wait for an hour.'),
   pattern(30,'first-conditional','Decir qué harás si ocurre algo','SI pasa algo → IF + presente; después WILL + acción.','IF pone la condición; WILL espera el resultado al otro lado.','En este patrón básico no ponemos WILL tras IF. Hay otros usos especiales de IF y WILL que se enseñan después.','study pass rain stay home call answer',['will','simple-present'],[
-    example('Si estudio, aprobaré.','C:SI|S:YO|V:estudio,|S:YO|A:haré|V:aprobar.','C:If|S:I|V:study,|S:I|A:will|V:pass.',["If I study, I'll pass."]),
-    example('Si llueve, me quedaré en casa.','C:SI|S:ESO|V:llueve,|S:YO|A:me comprometo a|V:quedarme|C:en casa.','C:If|S:it|V:rains,|S:I|A:will|V:stay|C:home.',["If it rains, I'll stay home."]),
-    example('Si llamas, responderé.','C:SI|S:TÚ|V:llamas,|S:YO|A:me comprometo a|V:responder.','C:If|S:you|V:call,|S:I|A:will|V:answer.',["If you call, I'll answer."]),
+    example('Si estudio, aprobaré.','C:SI|S:YO|V:estudio,|S:YO|V:aprobaré.','C:If|S:I|V:study,|S:I|A:will|V:pass.',["If I study, I'll pass."]),
+    example('Si llueve, me quedaré en casa.','C:SI|V:llueve,|S:YO|V:me quedaré|C:en casa.','C:If|S:it|V:rains,|S:I|A:will|V:stay|C:home.',["If it rains, I'll stay home."]),
+    example('Si llamas, responderé.','C:SI|S:TÚ|V:llamas,|S:YO|V:responderé.','C:If|S:you|V:call,|S:I|A:will|V:answer.',["If you call, I'll answer."]),
   ],'If I will study, I will pass.'),
   pattern(31,'second-conditional','Imaginar qué harías si las cosas fueran distintas','SI imaginario usa pasado; el resultado lleva WOULD + verbo base.','El burro imagina tener tiempo y el otro vagón dice WOULD.','Este pasado no cuenta algo pasado. Enseñamos If I were rich; If I was rich también se oye y se acepta en registro informal.','have time study rich buy house know help',['past-simple','was-were','will'],[
-    example('Si tuviera tiempo, estudiaría.','C:SI|S:YO|V:tuviera tiempo,|S:YO|A:haría|V:estudiar.','C:If|S:I|V:had time,|S:I|A:would|V:study.',["If I had time, I'd study."]),
-    example('Si fuera rico, compraría una casa.','C:SI|S:YO|A:fuera|C:rico,|S:YO|A:haría|V:comprar|C:una casa.','C:If|S:I|A:were|C:rich,|S:I|A:would|V:buy|C:a house.', ['If I was rich, I would buy a house.',"If I were rich, I'd buy a house."]),
-    example('Si ella lo supiera, ayudaría.','C:SI|S:ELLA|V:lo supiera,|S:ELLA|A:haría|V:ayudar.','C:If|S:she|V:knew,|S:she|A:would|V:help.',["If she knew, she'd help."]),
+    example('Si tuviera tiempo, estudiaría.','C:SI|S:YO|V:tuviera tiempo,|S:YO|V:estudiaría.','C:If|S:I|V:had time,|S:I|A:would|V:study.',["If I had time, I'd study."]),
+    example('Si fuera rico, compraría una casa.','C:SI|S:YO|A:fuera|C:rico,|S:YO|V:compraría|C:una casa.','C:If|S:I|A:were|C:rich,|S:I|A:would|V:buy|C:a house.', ['If I was rich, I would buy a house.',"If I were rich, I'd buy a house."]),
+    example('Si ella lo supiera, ayudaría.','C:SI|S:ELLA|V:lo supiera,|S:ELLA|V:ayudaría.','C:If|S:she|V:knew,|S:she|A:would|V:help.',["If she knew, she'd help."]),
   ],'If I would have time, I would study.'),
   pattern(32,'third-conditional','Imaginar un resultado distinto de algo que ya pasó','SI HUBIERA hecho → IF + HAD + hecho; HABRÍA hecho → WOULD HAVE + hecho.','Dos vagones miran atrás: HAD preparado, WOULD HAVE terminado.','No es Si tuviera del presente imaginario. En este patrón, WOULD va en el resultado, no en la condición.','study pass leave early arrive time call answer',['second-conditional','present-perfect'],[
     example('Si hubiera estudiado, habría aprobado.','C:SI|S:YO|A:hubiera|V:estudiado,|S:YO|A:habría|V:aprobado.','C:If|S:I|A:had|V:studied,|S:I|A:would have|V:passed.',["If I had studied, I'd have passed."]),
@@ -202,7 +202,7 @@ export const grammarCurriculum: CurriculumPattern[] = [
   pattern(36,'reported-speech','Contar lo que otra persona dijo','Al contar algo después, ajusta persona y momento: dijo voy → SHE SAID SHE WAS GOING.','El mensaje viaja y cambia las etiquetas de persona y tiempo.','El tiempo no retrocede siempre: puede mantenerse si lo dicho sigue vigente. Las preguntas indirectas no conservan la inversión.','say go work here call',['past-simple','was-were','going-to','will'],[
     example('Ella dijo que iba a estudiar.','S:ELLA|V:dijo|C:que|S:ELLA|A:iba a|V:estudiar.','S:She|V:said|C:that|S:she|A:was going to|V:study.', ['She said she was going to study.']),
     example('Él dijo que trabajaba aquí.','S:ÉL|V:dijo|C:que|S:ÉL|V:trabajaba|C:aquí.','S:He|V:said|C:that|S:he|V:worked|C:here.', ['He said he worked here.']),
-    example('Ella dijo que llamaría.','S:ELLA|V:dijo|C:que|S:ELLA|A:haría|V:llamar.','S:She|V:said|C:that|S:she|A:would|V:call.', ['She said she would call.']),
+    example('Ella dijo que llamaría.','S:ELLA|V:dijo|C:que|S:ELLA|V:llamaría.','S:She|V:said|C:that|S:she|A:would|V:call.', ['She said she would call.']),
   ],'She said that she will called.'),
 ];
 
