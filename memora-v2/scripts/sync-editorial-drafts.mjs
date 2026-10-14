@@ -11,8 +11,9 @@ const server = await createServer({ root, configFile: false, server: { middlewar
 try {
   const { vocabularyPreviewPacks } = await server.ssrLoadModule('/src/preview/vocabularyPacks.ts');
   const { reviewUnits } = await server.ssrLoadModule('/src/preview/previewUnit.ts');
+  const { phrasalPreviewPacks } = await server.ssrLoadModule('/src/preview/phrasalPacks.ts');
   const { validateUnit } = await server.ssrLoadModule('/src/domain/unit.ts');
-  const candidates = [...reviewUnits, ...vocabularyPreviewPacks].map(validateUnit);
+  const candidates = [...reviewUnits, ...vocabularyPreviewPacks, ...phrasalPreviewPacks].map(validateUnit);
   if (new Set(candidates.map((unit) => unit.id)).size !== candidates.length) throw new Error('Identificadores duplicados.');
   const existing = await api('GET', '/items/learning_units?fields=id,status,content&limit=-1');
   const ids = new Set(existing.map((item) => item.id));

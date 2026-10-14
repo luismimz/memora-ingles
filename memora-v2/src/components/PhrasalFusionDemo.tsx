@@ -25,13 +25,13 @@ function TurnScene({ particle, compact = false }: { particle?: Particle; compact
   </svg>;
 }
 
-export function PhrasalFusionDemo({ onBack }: { onBack: () => void }) {
+export function PhrasalFusionDemo({ onBack, onPractice }: { onBack: () => void; onPractice?: (family: PhrasalFamily) => void }) {
   const [selected, setSelected] = useState('TURN');
   const family = phrasalFamilies.find((item) => item.base === selected)!;
-  return <div><nav className="review-nav" aria-label="Familias de phrasal verbs"><label htmlFor="fusion-family">Familia</label><select id="fusion-family" value={selected} onChange={(event) => setSelected(event.target.value)}>{phrasalFamilies.map((item) => <option key={item.base} value={item.base}>{item.base} · {item.discoveries.length} expresiones</option>)}</select><small>Laboratorio editorial · no demuestra dominio ni publica contenido.</small></nav><PhrasalFusionFamily key={selected} family={family} onBack={onBack} /></div>;
+  return <div><nav className="review-nav" aria-label="Familias de phrasal verbs"><label htmlFor="fusion-family">Familia</label><select id="fusion-family" value={selected} onChange={(event) => setSelected(event.target.value)}>{phrasalFamilies.map((item) => <option key={item.base} value={item.base}>{item.base} · {item.discoveries.length} expresiones</option>)}</select><small>Laboratorio editorial · no demuestra dominio ni publica contenido.</small></nav><PhrasalFusionFamily key={selected} family={family} onBack={onBack} onPractice={onPractice ? () => onPractice(family) : undefined} /></div>;
 }
 
-function PhrasalFusionFamily({ family, onBack }: { family: PhrasalFamily; onBack: () => void }) {
+function PhrasalFusionFamily({ family, onBack, onPractice }: { family: PhrasalFamily; onBack: () => void; onPractice?: () => void }) {
   const discoveries = family.discoveries;
   const storageKey = `memora.fusion.${family.base.toLowerCase()}.discovered`;
   const [index, setIndex] = useState(0);
@@ -116,6 +116,7 @@ function PhrasalFusionFamily({ family, onBack }: { family: PhrasalFamily; onBack
         }}
       ><strong>{item.particle}</strong><small>{item.particleMeaning}</small></button>)}</div>
       <div className="fusion-collection"><small>EXPLORADAS · NO EVALUADAS</small><div>{discovered.length ? discovered.map((item) => <span key={item}>{family.base} {item}</span>) : <em>Une la primera palabra.</em>}</div></div>
+      {onPractice ? <button type="button" className="primary-action" onClick={onPractice}>Practicar asociaciones de {family.base} →</button> : null}
     </section>
   </main>;
 }

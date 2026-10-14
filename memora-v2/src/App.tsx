@@ -92,13 +92,12 @@ export default function App() {
     const controller = new AbortController();
     setLoading(true);
     setError(null);
-    void Promise.all([
-      loadIdentity(controller.signal),
-      loadPublishedUnitSummaries(controller.signal),
-    ]).then(async ([user, loaded]) => {
+    void loadIdentity(controller.signal).then(async (user) => {
       if (controller.signal.aborted) return;
       setUserId(user.id);
       setIsAdmin(user.isAdmin);
+      const loaded = await loadPublishedUnitSummaries(controller.signal);
+      if (controller.signal.aborted) return;
       // La home del alumno solo recibe el catálogo publicado. Los pilotos se
       // conservan para sus herramientas específicas, pero no deben mezclarse
       // con las misiones publicadas.
@@ -113,7 +112,7 @@ export default function App() {
     }).catch((reason: unknown) => {
       if (controller.signal.aborted) return;
       if (reason instanceof DirectusError && reason.status === 403) {
-        setError('Tu usuario puede iniciar sesión, pero no tiene permiso para leer las unidades publicadas en Directus.');
+        setError('Directus no permite leer el catálogo de V2. Hay que comprobar que exista Learning Units y que tu cuenta tenga permiso de lectura.');
       } else {
         setError(reason instanceof Error ? reason.message : 'No se pudieron cargar las unidades publicadas desde Directus.');
       }
@@ -121,7 +120,12 @@ export default function App() {
     return () => controller.abort();
   }, [authenticated, preview]);
 
-  if (fusionOpen) return <PhrasalFusionDemo onBack={() => setFusionOpen(false)} />;
+  if (fusionOpen) return <PhrasalFusionDemo onBack={() => setFusionOpen(false)} onPractice={(family) => { void import('./preview/phrasalPacks').then(({ makePhrasalPacks }) => {
+    const packs = makePhrasalPacks(family);
+    setLearningMode('vocabulary'); setLibraryUnits(packs); setLibraryMode('vocabulary');
+    setConversationStart(false); setExpansionTest(null); setContentOpen(false);
+    setReviewMode(true); setUnit(packs[0]); setFusionOpen(false);
+  }).catch(() => setUnitError('No se pudo preparar esta familia.')); }} />;
   if (grammarOpen) return <GrammarWorkshop onBack={() => setGrammarOpen(false)} />;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
@@ -266,7 +270,7 @@ export default function App() {
   async function openLibrary(mode: 'vocabulary' | 'grammar') {
     setUnitError(null); setLoading(true);
     try {
-      const loaded = preview ? mode === 'vocabulary' ? [...reviewUnits, ...(await import('./preview/vocabularyPacks')).vocabularyPreviewPacks] : reviewUnits : await Promise.all(units.map((summary) => loadUnit(summary.id)));
+      const loaded = preview ? mode === 'vocabulary' ? [...reviewUnits, ...(await import('./preview/vocabularyPacks')).vocabularyPreviewPacks, ...(await import('./preview/phrasalPacks')).phrasalPreviewPacks] : reviewUnits : await Promise.all(units.map((summary) => loadUnit(summary.id)));
       setLibraryUnits(loaded); setLibraryMode(mode);
       setUnit(null); setEvolutionOpen(false); setProfileOpen(false);
     } catch (reason) { setUnitError(reason instanceof Error ? reason.message : 'No se pudo abrir este apartado.'); }
@@ -308,7 +312,7 @@ export default function App() {
     return <><LanguageGame learningMode={learningMode} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} preview={preview} reviewMode={inspectionMode} startInConversation={conversationStart} nextLabel={learningMode !== 'adventure' ? 'Elegir otra práctica →' : nextScene ? `Seguir: ${nextScene.title} →` : 'Volver al recorrido →'} onNext={continueAfterUnit} onComplete={expansionTest ? finishExpansionTest : undefined} onExit={() => { stopSpeech(); setUnit(null); setReviewMode(false); setExpansionTest(null); }} onEvolution={!inspectionMode ? () => { setUnit(null); setLibraryMode(null); setEvolutionOpen(true); } : undefined} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}</>;
   }
   if (loading) return <div className="gate-screen"><div className="gate-card"><div className="loading-orb">◌</div><h1>Preparando tu escena…</h1><p>Tu siguiente experiencia está casi lista.</p></div></div>;
-  if (authenticated && error) return <div className="gate-screen"><div className="gate-card"><p className="eyebrow">DIRECTUS</p><h1>No se pudo cargar la home</h1><p>{error}</p><button type="button" className="primary-action" onClick={() => { setAuthenticated(false); setError(null); }}>Volver al acceso</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Ver la experiencia de prueba</button> : null}</div></div>;
+  if (authenticated && error && !profileOpen && !contentOpen) return <div className="gate-screen"><div className="gate-card"><p className="eyebrow">DIRECTUS</p><h1>No se pudo cargar la home</h1><p>{error}</p>{isAdmin ? <button type="button" className="primary-action" onClick={() => setProfileOpen(true)}>Mi perfil · Gestionar contenido →</button> : null}<button type="button" onClick={() => { setAuthenticated(false); setError(null); }}>Volver al acceso</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Ver la experiencia de prueba</button> : null}</div></div>;
   if (libraryMode && !unit && (preview || authenticated)) return <LearningLibrary mode={libraryMode} units={libraryUnits} userId={userId} inspection={preview} onOpen={openLibraryUnit} onBack={() => setLibraryMode(null)} onWords={() => void openLibrary('vocabulary')} />;
   if (preview || authenticated) return <>{evolutionOpen
     ? <EvolutionView userId={userId} units={units} pilot={pilot} syncStatus={syncStatus} inspectionMode={preview} onBack={() => setEvolutionOpen(false)} onPractice={() => void openArcade()} onProfile={() => { setEvolutionOpen(false); setProfileOpen(true); }} onExit={exit} appearance={appearance} onToggleAppearance={toggleAppearance} />
