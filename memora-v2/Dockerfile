@@ -10,5 +10,5 @@ COPY backend/extensions/memora-ai/dist/core/progress.js ./backend/extensions/mem
 RUN cd memora-v2 && npm run build
 
 FROM nginx:1.27-alpine
-COPY frontend/nginx.conf /etc/nginx/conf.d/default.conf
+COPY memora-v2/nginx.conf /etc/nginx/conf.d/default.conf
 COPY --from=build /app/memora-v2/dist /usr/share/nginx/html
