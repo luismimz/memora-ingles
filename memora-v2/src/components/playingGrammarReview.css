@@ -1,0 +1,10 @@
+.playing-review-nav { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; margin: 14px auto; width: min(100%,720px); }
+.playing-review-nav label { font-size: .8rem; color: var(--muted); }
+.playing-review-nav select { max-width: 100%; min-height: 44px; font: inherit; color: var(--ink); background: var(--surface-soft); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; }
+.playing-review .game-stage { width: 100%; }
+.playing-review-controls { display: flex; justify-content: space-between; width: min(100%,620px); gap: 16px; margin: 16px auto; }
+.playing-review .mirror-tabs button[aria-pressed='true'], .playing-review .subject-list button[aria-pressed='true'] { border: 2px solid var(--accent); font-weight: 800; }
+.playing-review .subject-list { flex-wrap: wrap; }
+.playing-review .mirror-content > small { color: var(--muted); line-height: 1.5; }
+.playing-review .metamorph { min-height: 180px; }
+@media (max-width:500px) { .playing-review-nav { flex-direction: column; } .playing-review-controls { padding: 0 8px; } }

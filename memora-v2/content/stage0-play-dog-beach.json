@@ -1,0 +1,54 @@
+{
+  "id": "stage0-play-dog-beach",
+  "title": "La playa imposible",
+  "words": [
+    { "id": 1, "en": "PLAY", "es": "jugar", "ipa": "/pleɪ/", "bridge": "PLAYA", "scene": "En la PLAYA, el perro JUEGA con una pelota que rebota hasta las nubes.", "emojis": ["🏖️", "🐕"], "confusers": ["stay"] },
+    { "id": 2, "en": "DOG", "es": "perro", "ipa": "/dɔːɡ/", "bridge": "", "scene": "Un PERRO gigante pasea un hueso con correa.", "emojis": ["🐕", "🦴"], "confusers": ["god"] },
+    { "id": 3, "en": "BEACH", "es": "playa", "ipa": "/biːtʃ/", "bridge": "BICHO", "scene": "Un BICHO se tumba a tomar el sol en la PLAYA.", "emojis": ["🪲", "🏖️"], "confusers": ["peach"] }
+  ],
+  "grammar": [
+    { "id": "to", "spanish": "jugar", "spanishStem": "jugar", "spanishEnding": "", "englishRoot": "play", "englishNut": "to", "english": "to play", "placement": "before", "subjects": [ { "en": "", "es": "Jugar", "phrase": "to play" } ] },
+    { "id": "ing", "spanish": "jugando", "spanishStem": "jug", "spanishEnding": "ando", "englishRoot": "play", "englishNut": "ing", "english": "playing", "placement": "after", "subjects": [
+      { "en": "I'm", "es": "Yo estoy jugando", "phrase": "I'm playing" },
+      { "en": "You're", "es": "Tú estás jugando", "phrase": "You're playing" },
+      { "en": "He's", "es": "Él está jugando", "phrase": "He's playing" },
+      { "en": "She's", "es": "Ella está jugando", "phrase": "She's playing" },
+      { "en": "We're", "es": "Nosotros estamos jugando", "phrase": "We're playing" },
+      { "en": "You're", "es": "Vosotros estáis jugando", "phrase": "You're playing" },
+      { "en": "They're", "es": "Ellos están jugando", "phrase": "They're playing" },
+      { "en": "They're", "es": "Ellas están jugando", "phrase": "They're playing" }
+    ] }
+  ],
+  "sentence": {
+    "en": "I'm playing with my dog on the beach.",
+    "es": "Estoy jugando con mi perro en la playa.",
+    "slots": [
+      { "es": "Estoy", "en": "I'm", "choices": ["I'm", "You're"] },
+      { "es": "jugando", "en": "playing", "choices": ["playing", "play"] },
+      { "es": "con mi perro", "en": "with my dog", "choices": ["with my dog", "on the beach"] },
+      { "es": "en la playa.", "en": "on the beach.", "choices": ["on the beach.", "with my dog."] }
+    ],
+    "pronunciationTip": "I'm suena /aɪm/: dilo unido a playing, sin una pausa en medio."
+  },
+  "communication": {
+    "layer": "converse",
+    "intent": "Invitar a jugar en la playa",
+    "interlocutor": "un amigo",
+    "userTurn": "Where do you want to play?",
+    "reply": "I want to play on the beach.",
+    "replyMode": "target"
+  },
+  "practiceSentences": [
+    {
+      "en": "You're playing with my dog on the beach.",
+      "es": "Estás jugando con mi perro en la playa.",
+      "slots": [
+        { "es": "Estás", "en": "You're", "choices": ["You're", "I'm"] },
+        { "es": "jugando", "en": "playing", "choices": ["play", "playing"] },
+        { "es": "con mi perro", "en": "with my dog", "choices": ["with my dog", "on the beach"] },
+        { "es": "en la playa.", "en": "on the beach.", "choices": ["with my dog.", "on the beach."] }
+      ],
+      "pronunciationTip": "You're junta you y are en un solo sonido antes de playing."
+    }
+  ]
+}

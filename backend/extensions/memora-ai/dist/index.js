@@ -10,6 +10,7 @@ import { generateKeywordMnemonics, phoneticsFor, scoredCandidates } from './core
 import { pronunciationEs } from '../../../../shared/phonetics.mjs';
 import { BUCKETS, retentionBy } from '../../../../shared/retention.mjs';
 import { isConciseMnemonic } from '../../../../shared/mnemonicQuality.mjs';
+import { registerProgressRoutes } from './core/progress.js';
 
 export default {
   id: 'memora',
@@ -40,6 +41,7 @@ export default {
       }
     };
     const model = (req) => req.body?.model || undefined;
+    registerProgressRoutes(router, { auth, wrap, svc, pilotSvc: async (req) => new ItemsService('learning_units', { schema: await getSchema(), accountability: req.accountability }) });
     const saveWord = async (id, patch) => (await svc('words')).updateOne(id, patch);
 
     function discoveryScriptPath() {
@@ -295,7 +297,8 @@ export default {
       const voice = String(req.body.voice || env.KOKORO_TTS_VOICE || 'af_heart');
       const rate = Math.max(.5, Math.min(1.5, Number(req.body.rate) || 1));
       const lexiconVersion = String(env.KOKORO_LEXICON_VERSION || '1');
-      const cacheKey = createHash('sha256').update(JSON.stringify({ text, voice, rate, lexiconVersion })).digest('hex');
+      const voicePolicy = /^(ef|em)_/.test(voice) ? 'spanish-no-english-fallback-v2' : 'english-v1';
+      const cacheKey = createHash('sha256').update(JSON.stringify({ text, voice, rate, lexiconVersion, voicePolicy })).digest('hex');
       // No dependemos de la relación antigua speech_cache.file: si el esquema
       // de Directus tiene relaciones dañadas, TTS debe seguir pudiendo generar.
       let cache = null;

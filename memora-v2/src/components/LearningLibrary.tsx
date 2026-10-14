@@ -1,0 +1,27 @@
+import type { AtomicUnit } from '../domain/unit';
+import { useState } from 'react';
+import type { LearningMode } from '../domain/game';
+import { missingGrammarWords, requiredGrammarWords } from '../domain/learningModes';
+import { readWordMemories } from '../domain/memory';
+import './learningLibrary.css';
+
+export function LearningLibrary({ mode, units, userId, inspection, onOpen, onBack, onWords }: {
+  mode: 'vocabulary' | 'grammar'; units: AtomicUnit[]; userId: string; inspection: boolean;
+  onOpen: (unit: AtomicUnit, mode: LearningMode) => void; onBack: () => void; onWords: () => void;
+}) {
+  const memories = readWordMemories(userId);
+  const [search, setSearch] = useState('');
+  const [domain, setDomain] = useState('');
+  const allGroups = units.filter((unit) => mode === 'grammar' ? unit.kind !== 'vocabulary-pack' : !unit.mirror);
+  const domains = [...new Set(allGroups.filter((unit) => unit.kind === 'vocabulary-pack').map((unit) => unit.title.split(' · ')[1]))];
+  const groups = allGroups.filter((unit) => (!domain || unit.kind === 'vocabulary-pack' && unit.title.split(' · ')[1] === domain) && `${unit.title} ${unit.words.map((word) => `${word.en} ${word.es}`).join(' ')}`.toLocaleLowerCase().includes(search.toLocaleLowerCase().trim()));
+  return <main className="journey-screen learning-library"><header className="journey-header"><button type="button" onClick={onBack}>← Inicio</button><strong>MEMORA · {mode === 'vocabulary' ? 'PALABRAS' : 'GRAMÁTICA'}</strong></header>
+    <section><p className="eyebrow">{mode === 'vocabulary' ? 'PRIMERO, PALABRAS' : 'CON LO QUE YA SABES'}</p><h1>{mode === 'vocabulary' ? 'Una historia para cada palabra.' : 'Haz que tus palabras hablen.'}</h1><p>{mode === 'vocabulary' ? 'Asocia, escucha y recuerda. Puedes terminar aquí y seguir acumulando palabras.' : 'Un truco breve, piezas que se mueven y frases con palabras preparadas.'}</p>{inspection ? <p>Modo de prueba · puedes explorar las fichas sin guardar progreso.</p> : null}</section>
+    <div className="learning-library-filters"><label>Buscar palabra<input type="search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Information, casa, tecnología…" /></label>{domains.length ? <label>Ámbito<select value={domain} onChange={(event) => setDomain(event.target.value)}><option value="">Todos los ámbitos</option>{domains.map((value) => <option key={value} value={value}>{value}</option>)}</select></label> : null}</div>
+    <div className="learning-library-grid">{groups.map((unit) => {
+      const missing = mode === 'grammar' ? missingGrammarWords(unit, memories) : [];
+      const ready = inspection || !missing.length;
+      return <article key={unit.id}><p className="eyebrow">{unit.kind === 'vocabulary-pack' ? 'Revisión editorial · cognados sin puente' : unit.location?.label ?? 'Una historia de Memora'}</p><h2>{mode === 'grammar' ? unit.mirror?.novelty ?? unit.grammar[0].lesson?.title ?? `Usar «${unit.grammar[0].spanish}»` : unit.title}</h2><p>{mode === 'vocabulary' ? unit.words.map((word) => `${word.en} · ${word.es}`).join(' / ') : requiredGrammarWords(unit).join(' · ')}</p>{!ready ? <p className="learning-requirements">Primero prepara: {missing.join(', ').toUpperCase()}.</p> : null}<button type="button" className="primary-action" disabled={!ready} onClick={() => onOpen(unit, mode)}>{mode === 'vocabulary' ? 'Aprender estas palabras →' : 'Descubrir el truco →'}</button>{!ready ? <button type="button" className="quiet-action" onClick={onWords}>Ir a las palabras</button> : null}</article>;
+    })}</div>{!groups.length ? <p>Aún no hay contenido publicado para este apartado.</p> : null}
+  </main>;
+}

@@ -1,0 +1,25 @@
+.evolution-layout.history-chats { grid-template-columns: minmax(210px,.7fr) minmax(0,2fr); gap: 20px; }
+.history-list { display: flex; flex-direction: column; gap: 10px; max-height: 620px; overflow-y: auto; }
+.history-list button { border: 1px solid var(--line); border-radius: 18px; padding: 16px; background: var(--surface-strong); color: var(--ink); text-align: left; }
+.history-list button[aria-current='page'] { border: 2px solid var(--accent); }
+.history-list strong, .history-list small, .history-list span { display: block; }
+.history-list small { color: var(--muted); font-size: .75rem; line-height: 1.5; margin-top: 7px; }
+.history-list span { font-size: .85rem; margin-top: 10px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.history-conversation { background: var(--surface-strong); border: 1px solid var(--line); border-radius: 24px; min-width: 0; overflow: hidden; }
+.history-conversation > header { padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.history-conversation h2 { margin: 0 0 8px; font-size: 1.3rem; font-weight: 800; }
+.history-conversation header p { font-size: .8rem; color: var(--muted); line-height: 1.5; margin: 0; }
+.history-log { display: flex; flex-direction: column; gap: 16px; padding: 20px; height: min(530px,65dvh); min-height: 280px; overflow-y: auto; overscroll-behavior: contain; }
+.history-bubble { max-width: 90%; flex-shrink: 0; padding: 14px 18px; border-radius: 18px; overflow-wrap: anywhere; }
+.history-partner { align-self: flex-start; background: var(--surface-soft); }
+.history-learner { align-self: flex-end; background: var(--grammar-aux-soft); }
+.history-coach { align-self: flex-start; background: var(--surface-soft); border-left: 3px solid var(--warm); }
+.history-bubble p { margin: 8px 0; line-height: 1.55; }
+.history-bubble small { display: block; font-size: .75rem; color: var(--muted); line-height: 1.5; }
+.history-speaker { font-weight: 800; }
+.history-feedback { font-size: .85rem; color: var(--muted); }
+.history-bubble details { font-size: .75rem; margin-top: 10px; }
+.history-library { margin-top: 22px; justify-content: space-between; align-items: flex-start; }
+.history-library > details { flex: 1; }
+.history-library details details { margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--surface-soft); }
+@media(max-width:720px) { .evolution-layout.history-chats { grid-template-columns: minmax(0,1fr); } .history-list { flex-direction: row; max-height: none; overflow-x: auto; } .history-list button { min-width: 180px; } .history-bubble { max-width: 98%; } .history-log { padding: 14px; } }

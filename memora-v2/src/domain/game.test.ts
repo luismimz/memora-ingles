@@ -1,0 +1,74 @@
+import { describe, expect, it } from 'vitest';
+import { gameReducer, initialGame, type GameState } from './game';
+
+describe('flujo de la unidad', () => {
+  it('el modo gramática termina tras su propia práctica sin repetir construcción o forzar chat', () => {
+    const state = { ...initialGame, phase: 'grammar' as const, grammarPlayed: true };
+    expect(gameReducer(state, { type: 'continue', grammarCount: 1, grammarOnly: true }).phase).toBe('complete');
+    expect(gameReducer(state, { type: 'continue', grammarCount: 1 }).phase).toBe('build');
+  });
+  it('una misión con diálogo pasa a conversación antes de completarse', () => {
+    const state = { ...initialGame, phase: 'build' as const, filledSlots: 3 };
+    const next = gameReducer(state, { type: 'continue', sentenceCount: 1, slotCount: 3, conversation: true });
+    expect(next.phase).toBe('conversation');
+    expect(gameReducer(next, { type: 'continue' }).phase).toBe('complete');
+  });
+  it('abre directamente la tarjeta de asociación sin fase de escucha intermedia', () => {
+    expect(initialGame.phase).toBe('associate');
+    expect(gameReducer(initialGame, { type: 'connected' })).toMatchObject({ phase: 'associate', wordIndex: 1 });
+  });
+
+  it('mantiene las tres palabras antes de recuperación', () => {
+    let state = initialGame;
+    for (let index = 0; index < 3; index++) {
+      state = gameReducer(state, { type: 'connected' });
+    }
+    expect(state.phase).toBe('recall');
+    expect(state.wordIndex).toBe(2);
+  });
+
+  it('no permite saltarse una forma gramatical', () => {
+    const state = { ...initialGame, phase: 'grammar' as const };
+    expect(gameReducer(state, { type: 'continue' })).toBe(state);
+    expect(gameReducer(gameReducer(state, { type: 'grammarPlayed' }), { type: 'continue' }).grammarIndex).toBe(1);
+  });
+
+  it('termina el taller tras las dos formas del primer mundo', () => {
+    const first = { ...initialGame, phase: 'grammar' as const, grammarPlayed: true };
+    const second = gameReducer(first, { type: 'continue', grammarCount: 2 });
+    expect(second.grammarIndex).toBe(1);
+    expect(gameReducer({ ...second, grammarPlayed: true }, { type: 'continue', grammarCount: 2 }).phase).toBe('build');
+  });
+
+  it('no deja avanzar con una opción incorrecta', () => {
+    const state = { ...initialGame, phase: 'build' as const };
+    expect(gameReducer(state, { type: 'chooseSlot', correct: false, slotCount: 4 }).filledSlots).toBe(0);
+    expect(gameReducer(state, { type: 'continue', sentenceCount: 2, slotCount: 4 }).phase).toBe('build');
+  });
+
+  it('encadena frases de distinta longitud y solo completa después de la última', () => {
+    let state: GameState = { ...initialGame, phase: 'build' };
+    for (let sentence = 0; sentence < 3; sentence++) {
+      const slotCount = sentence === 2 ? 5 : 4;
+      for (let slot = 0; slot < slotCount; slot++) state = gameReducer(state, { type: 'chooseSlot', correct: true, slotCount });
+      state = gameReducer(state, { type: 'continue', sentenceCount: 3, slotCount });
+      expect(state.phase).toBe(sentence === 2 ? 'complete' : 'build');
+      if (sentence < 2) expect(state.filledSlots).toBe(0);
+    }
+  });
+
+  it('no fuerza una segunda ronda: los fallos vuelven en el repaso', () => {
+    const state = { ...initialGame, phase: 'reward' as const, correct: 0 };
+    expect(gameReducer(state, { type: 'continue' }).phase).toBe('grammar');
+  });
+  it('no obliga a repetir una misión de una palabra cuando ya se ha acertado', () => {
+    expect(gameReducer({ ...initialGame, phase: 'reward', correct: 1 }, { type: 'continue', wordCount: 1 }).phase).toBe('grammar');
+  });
+
+  it('permite inspeccionar una pantalla sin arrastrar el estado de la anterior', () => {
+    const inProgress = { ...initialGame, phase: 'build' as const, filledSlots: 2, correct: 3 };
+    const inspected = gameReducer(inProgress, { type: 'reviewJump', phase: 'grammar', index: 1 });
+    expect(inspected).toMatchObject({ phase: 'grammar', grammarIndex: 1, filledSlots: 0, correct: 0, grammarPlayed: false });
+    expect(gameReducer(inspected, { type: 'reviewJump', phase: 'build', index: 2 }).sentenceIndex).toBe(2);
+  });
+});

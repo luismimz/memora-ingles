@@ -1,0 +1,26 @@
+import type { AtomicUnit } from './unit';
+import type { WordMemory } from './memory';
+import type { LearningMode } from './game';
+import { recordUnitProgress, type UnitProgress } from './journey';
+import { recordSession } from './learningProfile';
+import { recordLearningActivity } from './learningActivity';
+import { getPlayableGrammar } from './unit';
+
+/** Readiness means prior successful practice, not a promise of long-term mastery. */
+export function missingGrammarWords(unit: AtomicUnit, memories: WordMemory[]): string[] {
+  const required = requiredGrammarWords(unit);
+  const practiced = new Set(memories.filter((memory) => memory.correct > 0).map((memory) => memory.key));
+  return [...new Set(required.map((word) => word.trim().toLocaleLowerCase('en')))].filter((word) => !practiced.has(word));
+}
+
+export function requiredGrammarWords(unit: AtomicUnit): string[] {
+  // Existing Directus copies of this authored pilot predate prerequisite metadata.
+  const legacyMirror = unit.mirror?.id === 'present-now-01' ? ['play', 'eat', 'work'] : [];
+  return [...new Set([...(unit.grammarPrerequisites?.vocabulary ?? [...unit.words.map((word) => word.en), ...legacyMirror]), ...getPlayableGrammar(unit).map((form) => form.englishBase ?? form.englishRoot)].map((word) => word.trim().toLocaleLowerCase('en')))];
+}
+
+export function completeLearningMode(userId: string, unit: AtomicUnit, mode: LearningMode, result: UnitProgress) {
+  if (mode === 'adventure') recordUnitProgress(userId, unit.id, result);
+  recordSession(userId, { unitId: unit.id, completedAt: result.completedAt, correct: result.correct, attempted: result.attempted });
+  recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `${mode}-completed`, skill: mode, phase: 'completion', source: 'learner', modality: 'choice', prompt: unit.communication?.intent ?? unit.title, response: mode === 'vocabulary' ? 'Palabras practicadas' : mode === 'grammar' ? 'Truco practicado' : 'Misión completada', expected: '', correct: null, helped: false });
+}

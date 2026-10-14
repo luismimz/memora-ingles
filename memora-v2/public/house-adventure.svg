@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 560" role="img" aria-labelledby="title desc">
+  <title id="title">La Casa Viva</title><desc id="desc">Una estancia fantástica con una puerta iluminada, un kiwi travieso y unas llaves.</desc>
+  <defs>
+    <linearGradient id="wall" x2="1" y2="1"><stop stop-color="#2e4251"/><stop offset="1" stop-color="#637580"/></linearGradient>
+    <linearGradient id="floor" x2="0" y2="1"><stop stop-color="#cd996f"/><stop offset="1" stop-color="#a36c53"/></linearGradient>
+    <radialGradient id="glow"><stop stop-color="#ffe7a0" stop-opacity=".9"/><stop offset="1" stop-color="#ffe7a0" stop-opacity="0"/></radialGradient>
+    <linearGradient id="door" x2="1" y2="1"><stop stop-color="#ffd992"/><stop offset="1" stop-color="#f59c72"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="13" stdDeviation="16" flood-color="#16252a" flood-opacity=".35"/></filter>
+  </defs>
+  <rect width="760" height="560" fill="url(#wall)"/>
+  <path d="M0 370 760 345v215H0Z" fill="url(#floor)"/>
+  <path d="M0 382 760 359M0 453 760 430M160 373l-18 187M399 365l4 195M619 352l36 208" stroke="#875b4a" stroke-opacity=".33" stroke-width="5"/>
+  <circle cx="460" cy="280" r="250" fill="url(#glow)"/>
+  <path d="M266 72h362v339H266Z" fill="#1c2e3d" stroke="#a2b8ad" stroke-width="14" filter="url(#shadow)"/>
+  <path d="M322 125h251v286H322Z" fill="url(#door)"/>
+  <path d="M345 151h204v226H345Z" fill="#ffe2ae" opacity=".55"/>
+  <path d="M558 411H312l-57 77h362Z" fill="#edba7e" opacity=".68"/>
+  <path d="M576 121v286l64 33V86Z" fill="#496279" stroke="#152b3c" stroke-width="12"/>
+  <circle cx="606" cy="283" r="9" fill="#ffe6a1"/>
+  <g opacity=".8" fill="#fff5c5"><circle cx="212" cy="144" r="4"/><circle cx="170" cy="197" r="3"/><circle cx="682" cy="143" r="4"/><path d="m655 244 5 11 11 5-11 5-5 11-5-11-11-5 11-5Z"/><path d="m181 293 5 9 9 5-9 5-5 9-5-9-9-5 9-5Z"/></g>
+  <g filter="url(#shadow)"><path d="M50 353h189v88H50Z" fill="#ca815c" stroke="#754e45" stroke-width="9"/><path d="M68 286h150v67H68Z" fill="#e1a17a" stroke="#754e45" stroke-width="9"/><path d="M47 443h199v21H47Z" fill="#634943"/><circle cx="92" cy="398" r="7" fill="#f6d18d"/><circle cx="198" cy="398" r="7" fill="#f6d18d"/></g>
+  <g transform="translate(84 115) rotate(-10)"><path d="M0 0h116v94H0Z" fill="#ecd2a6" stroke="#735a55" stroke-width="9"/><path d="m12 72 28-30 19 17 19-28 25 41Z" fill="#729d83"/><circle cx="28" cy="24" r="9" fill="#eeb981"/></g>
+  <g transform="translate(555 368)" filter="url(#shadow)"><ellipse cx="73" cy="107" rx="88" ry="18" fill="#674d43" opacity=".3"/><path d="M21 111q-32-66 8-94 26-23 38-2 16-29 42-8 38 29 9 104Z" fill="#5c936f" stroke="#365f51" stroke-width="10"/><path d="M65 39q-14-31-2-47M78 38q13-30 32-32" fill="none" stroke="#2b6248" stroke-width="9" stroke-linecap="round"/><circle cx="66" cy="61" r="8" fill="#1e3034"/><circle cx="105" cy="61" r="8" fill="#1e3034"/><path d="M76 84q12 12 27 0" fill="none" stroke="#1e3034" stroke-width="6" stroke-linecap="round"/><circle cx="42" cy="78" r="7" fill="#eaa583" opacity=".7"/><circle cx="122" cy="77" r="7" fill="#eaa583" opacity=".7"/></g>
+  <g transform="translate(518 298) rotate(30)" fill="none" stroke="#ffe5a1" stroke-width="11" stroke-linecap="round" stroke-linejoin="round" filter="url(#shadow)"><circle cx="0" cy="0" r="20"/><path d="M17 13 65 61h27V45H77V31H64"/></g>
+  <path d="M0 0h760v560H0Z" fill="none" stroke="#fff" stroke-opacity=".2" stroke-width="16"/>
+</svg>

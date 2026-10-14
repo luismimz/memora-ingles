@@ -1,0 +1,48 @@
+{
+  "world": "world1",
+  "status": "candidate_backlog",
+  "targetUniqueWords": {
+    "minimum": 290,
+    "maximum": 320
+  },
+  "currentExecutableWords": 58,
+  "policy": "Los candidatos no entran en la cola ni se cuentan como aprendidos hasta tener misión, asociación y revisión editorial.",
+  "blocks": [
+    {
+      "id": "home-routines",
+      "purpose": "Ampliar rutinas y estados cotidianos sin salir de la casa.",
+      "missions": [
+        { "id": "b1-bedroom-sleep", "zone": "bedroom", "locus": "bed", "layer": "observe", "grammar": "ing", "newWords": ["SLEEP", "PILLOW", "BLANKET"], "target": "I'm sleeping with my pillow and blanket." },
+        { "id": "b1-bedroom-morning", "zone": "bedroom", "locus": "bedroom-door", "layer": "converse", "grammar": "present-simple", "newWords": ["WAKE", "MORNING", "ALARM"], "target": "I wake up in the morning." },
+        { "id": "b1-bedroom-floor", "zone": "bedroom", "locus": "bedroom-door", "layer": "act", "grammar": "imperatives", "newWords": ["FLOOR", "CLOSE", "QUIET"], "target": "Close the door and be quiet." },
+        { "id": "b1-bathroom-hair", "zone": "bathroom", "locus": "mirror", "layer": "observe", "grammar": "ing", "newWords": ["SHAMPOO", "HAIR", "WET"], "target": "My hair is wet with shampoo." },
+        { "id": "b1-bathroom-dry", "zone": "bathroom", "locus": "towel-rack", "layer": "act", "grammar": "imperatives", "newWords": ["DRY", "FACE", "SOFT"], "target": "Dry your face with the soft towel." },
+        { "id": "b1-kitchen-cutlery", "zone": "kitchen", "locus": "table", "layer": "act", "grammar": "imperatives", "newWords": ["FORK", "KNIFE", "BOWL"], "target": "Put the fork, knife, and bowl here." }
+      ]
+    },
+    {
+      "id": "home-food",
+      "purpose": "Convert la cocina en acciones de preparación, elección y estado.",
+      "missions": [
+        { "id": "b1-kitchen-drink", "zone": "kitchen", "locus": "fridge", "layer": "observe", "grammar": "present-simple", "newWords": ["FRIDGE", "MILK", "JUICE"], "target": "I drink milk and juice." },
+        { "id": "b1-kitchen-meal", "zone": "kitchen", "locus": "table", "layer": "converse", "grammar": "survival-chunks", "newWords": ["FOOD", "HUNGRY", "GLASS"], "target": "I am hungry; pass the glass." },
+        { "id": "b1-kitchen-temperature", "zone": "kitchen", "locus": "hob", "layer": "converse", "grammar": "survival-chunks", "newWords": ["HOT", "COLD", "TASTE"], "target": "The soup is hot; taste it." },
+        { "id": "b1-kitchen-prepare", "zone": "kitchen", "locus": "counter", "layer": "act", "grammar": "imperatives", "newWords": ["CUT", "MIX", "ADD"], "target": "Cut, mix, and add the food." },
+        { "id": "b1-kitchen-cleanup", "zone": "kitchen", "locus": "kitchen-sink", "layer": "converse", "grammar": "present-continuous", "newWords": ["DIRTY", "FULL", "EMPTY"], "target": "The sink is full, not empty." },
+        { "id": "b1-living-listen", "zone": "living-room", "locus": "television", "layer": "observe", "grammar": "ing", "newWords": ["MUSIC", "LISTEN", "REMOTE"], "target": "I'm listening to music; find the remote." }
+      ]
+    },
+    {
+      "id": "home-and-nearby",
+      "purpose": "Transfer acciones de la casa a la entrada y al exterior cercano.",
+      "missions": [
+        { "id": "b1-living-chair", "zone": "living-room", "locus": "sofa", "layer": "observe", "grammar": "present-continuous", "newWords": ["CHAIR", "COMFORTABLE", "TIRED"], "target": "I'm tired in the comfortable chair." },
+        { "id": "b1-living-wall", "zone": "living-room", "locus": "lamp", "layer": "converse", "grammar": "survival-chunks", "newWords": ["PICTURE", "WALL", "FAMILY"], "target": "The family picture is on the wall." },
+        { "id": "b1-entrance-street", "zone": "entrance", "locus": "front-door", "layer": "converse", "grammar": "survival-chunks", "newWords": ["STREET", "SHOP", "BUS"], "target": "The bus is near the shop." },
+        { "id": "b1-entrance-weather", "zone": "entrance", "locus": "coat-hanger", "layer": "converse", "grammar": "survival-chunks", "newWords": ["RAIN", "UMBRELLA", "WEATHER"], "target": "The weather is rainy; take an umbrella." },
+        { "id": "b1-outside-wait", "zone": "nearby-outside", "locus": "building-door", "layer": "act", "grammar": "imperatives", "newWords": ["WAIT", "ARRIVE", "LATE"], "target": "Wait here; the bus is late." },
+        { "id": "b1-outside-people", "zone": "nearby-outside", "locus": "corner-shop", "layer": "converse", "grammar": "survival-chunks", "newWords": ["FRIEND", "PERSON", "TALK"], "target": "Talk to your friend, not a stranger." }
+      ]
+    }
+  ]
+}

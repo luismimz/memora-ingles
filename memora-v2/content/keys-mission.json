@@ -1,0 +1,453 @@
+{
+  "id": "m1-entry-keys",
+  "title": "Has perdido las llaves",
+  "contentVersion": "3",
+  "pilot": "keys-cycle-v1",
+  "location": {
+    "world": "world1",
+    "zone": "entrance",
+    "locus": "home.entrance.key-tray",
+    "label": "La Casa Viva · Entrada · Bandeja de llaves"
+  },
+  "words": [
+    {
+      "id": 1,
+      "en": "KEY",
+      "es": "llave",
+      "ipa": "/kiː/",
+      "bridge": "KIWI",
+      "scene": "Un KIWI se traga tu LLAVE y huye rodando.",
+      "emojis": [
+        "🥝",
+        "🔑"
+      ],
+      "associationMode": "acoustic_bridge",
+      "associationId": "keys-cycle-key",
+      "associationVersion": 1,
+      "highlightTerms": [
+        "KIWI",
+        "LLAVE"
+      ],
+      "memoryChain": [
+        "KIWI",
+        "KEY",
+        "LLAVE"
+      ],
+      "bridgeEvidence": {
+        "spanishCue": "KIWI",
+        "familiarMeaning": "fruta verde con semillas",
+        "soundRelation": "El inicio ki de kiwi aproxima /kiː/; el audio inglés alarga la vocal y elimina wi.",
+        "cueType": "spanish_word"
+      },
+      "status": "approved",
+      "editorialReview": {
+        "verdict": "approved",
+        "reviewedBy": "memora-pilot-editorial",
+        "reason": "Puente propuesto por el usuario. Se prueba su eficacia en este piloto, sin certificar retención."
+      },
+      "reconstruction": {
+        "prompt": "El kiwi sale rodando. ¿Qué se ha tragado?",
+        "choices": [
+          "Tu móvil",
+          "Tu llave"
+        ],
+        "answer": "Tu llave",
+        "cue": "Recuerda cómo la fruta se traga el objeto que abre la puerta."
+      }
+    },
+    {
+      "id": 2,
+      "en": "PHONE",
+      "es": "móvil",
+      "ipa": "/fəʊn/",
+      "bridge": "FONDO",
+      "scene": "El FONDO de tu bolsillo se traga el MÓVIL.",
+      "emojis": [
+        "👖",
+        "📱"
+      ],
+      "associationMode": "acoustic_bridge",
+      "associationId": "keys-cycle-phone",
+      "associationVersion": 1,
+      "highlightTerms": [
+        "FONDO",
+        "MÓVIL"
+      ],
+      "memoryChain": [
+        "FONDO",
+        "PHONE",
+        "MÓVIL"
+      ],
+      "bridgeEvidence": {
+        "spanishCue": "FONDO",
+        "familiarMeaning": "parte inferior de un bolsillo",
+        "soundRelation": "La sílaba fon de fondo aproxima phone; no conserva do y usa el diptongo inglés /əʊ/.",
+        "cueType": "spanish_word"
+      },
+      "status": "approved",
+      "editorialReview": {
+        "verdict": "approved",
+        "reviewedBy": "memora-pilot-editorial",
+        "reason": "Referente español real y aproximación documentada; audio y revisión con alumno antes de producción."
+      },
+      "reconstruction": {
+        "prompt": "Tu bolsillo tiene hambre. ¿Qué desaparece en el fondo?",
+        "choices": [
+          "El móvil",
+          "La cerradura"
+        ],
+        "answer": "El móvil",
+        "cue": "Imagina la pantalla encendiéndose en el fondo de tu bolsillo."
+      }
+    },
+    {
+      "id": 3,
+      "en": "POCKET",
+      "es": "bolsillo",
+      "ipa": "/ˈpɑːkɪt/",
+      "bridge": "PAQUETE",
+      "scene": "Un PAQUETE gigante revienta el BOLSILLO de tu abrigo.",
+      "emojis": [
+        "📦",
+        "👖"
+      ],
+      "associationMode": "acoustic_bridge",
+      "associationId": "keys-cycle-pocket",
+      "associationVersion": 1,
+      "highlightTerms": [
+        "PAQUETE",
+        "BOLSILLO"
+      ],
+      "memoryChain": [
+        "PAQUETE",
+        "POCKET",
+        "BOLSILLO"
+      ],
+      "bridgeEvidence": {
+        "spanishCue": "PAQUETE",
+        "familiarMeaning": "objeto envuelto para transportar",
+        "soundRelation": "PAQUETE y POCKET comparten el golpe inicial PA/PO y las consonantes P-K-T; el audio enseña las vocales inglesas.",
+        "cueType": "spanish_word"
+      },
+      "status": "approved",
+      "editorialReview": {
+        "verdict": "approved",
+        "reviewedBy": "memora-local-content-review",
+        "reason": "Reutiliza una asociación existente del catálogo local; palabra española real, puente acústico aproximado y escena breve centrada en el significado. Pendiente de prueba con alumnos."
+      },
+      "reconstruction": {
+        "prompt": "El paquete crece y crece… ¿qué hace estallar?",
+        "choices": [
+          "La llave",
+          "El bolsillo"
+        ],
+        "answer": "El bolsillo",
+        "cue": "Imagina la tela del abrigo estirándose alrededor del paquete."
+      }
+    },
+    {
+      "id": 4,
+      "en": "LOCK",
+      "es": "cerradura",
+      "ipa": "/lɑːk/",
+      "bridge": "LOCO",
+      "scene": "Un LOCO muerde la CERRADURA y escupe chispas.",
+      "emojis": [
+        "🤪",
+        "🔒"
+      ],
+      "associationMode": "acoustic_bridge",
+      "associationId": "keys-cycle-lock",
+      "associationVersion": 1,
+      "highlightTerms": [
+        "LOCO",
+        "CERRADURA"
+      ],
+      "memoryChain": [
+        "LOCO",
+        "LOCK",
+        "CERRADURA"
+      ],
+      "bridgeEvidence": {
+        "spanishCue": "LOCO",
+        "familiarMeaning": "persona que actúa de forma disparatada",
+        "soundRelation": "La primera sílaba LOC de LOCO se acerca a LOCK; el audio evita añadir la O final española.",
+        "cueType": "spanish_word"
+      },
+      "status": "approved",
+      "editorialReview": {
+        "verdict": "approved",
+        "reviewedBy": "memora-local-content-review",
+        "reason": "Reutiliza el puente LOCO del catálogo local para la acepción sustantiva LOCK; escena breve centrada en la cerradura. Pendiente de prueba con alumnos."
+      },
+      "reconstruction": {
+        "prompt": "Alguien muerde algo y escupe chispas. ¿Qué está mordiendo?",
+        "choices": [
+          "La cerradura",
+          "El móvil"
+        ],
+        "answer": "La cerradura",
+        "cue": "La escena ocurre donde metes la llave para abrir la puerta."
+      }
+    }
+  ],
+  "grammar": [
+    {
+      "id": "looking-for",
+      "visualContract": "present-continuous",
+      "spanish": "buscando",
+      "spanishStem": "busc",
+      "spanishEnding": "ando",
+      "englishRoot": "look",
+      "englishBase": "look",
+      "englishNut": "ing",
+      "english": "looking",
+      "placement": "after",
+      "spanishPieces": [
+        {
+          "id": "root",
+          "text": "busc",
+          "role": "root"
+        },
+        {
+          "id": "ending",
+          "text": "ando",
+          "role": "ending"
+        }
+      ],
+      "englishPieces": [
+        {
+          "id": "root",
+          "text": "look",
+          "role": "root"
+        },
+        {
+          "id": "ending",
+          "text": "ing",
+          "role": "ending"
+        }
+      ],
+      "subjects": [
+        {
+          "en": "I'm",
+          "expandedEn": "I am",
+          "es": "Yo estoy",
+          "reducedEs": "Estoy",
+          "phrase": "I'm looking for my keys."
+        }
+      ],
+      "lesson": {
+        "id": "looking-for-now",
+        "title": "Contar qué buscas",
+        "language": "en",
+        "steps": [
+          {
+            "caption": "Buscar se dice LOOK FOR: las dos palabras viajan juntas.",
+            "captionMarks": [
+              {
+                "text": "Buscar",
+                "role": "verb"
+              },
+              {
+                "text": "LOOK FOR",
+                "role": "verb"
+              }
+            ],
+            "es": [
+              {
+                "text": "buscar",
+                "role": "verb"
+              }
+            ],
+            "en": [
+              {
+                "text": "look for",
+                "role": "verb"
+              }
+            ]
+          },
+          {
+            "caption": "Estoy buscando: I'M LOOKING FOR. El -ando cambia a -ing; FOR sigue pegado a LOOK.",
+            "captionMarks": [
+              {
+                "text": "Estoy",
+                "role": "auxiliary"
+              },
+              {
+                "text": "I'M",
+                "role": "auxiliary"
+              },
+              {
+                "text": "-ando",
+                "role": "change"
+              },
+              {
+                "text": "-ing",
+                "role": "change"
+              },
+              {
+                "text": "FOR",
+                "role": "verb"
+              }
+            ],
+            "es": [
+              {
+                "text": "Estoy ",
+                "role": "auxiliary"
+              },
+              {
+                "text": "busc",
+                "role": "verb"
+              },
+              {
+                "text": "ando",
+                "role": "change"
+              },
+              {
+                "text": " mis llaves.",
+                "role": "context"
+              }
+            ],
+            "en": [
+              {
+                "text": "I'm ",
+                "role": "auxiliary"
+              },
+              {
+                "text": "look",
+                "role": "verb"
+              },
+              {
+                "text": "ing",
+                "role": "change"
+              },
+              {
+                "text": " for",
+                "role": "verb"
+              },
+              {
+                "text": " my keys.",
+                "role": "context"
+              }
+            ]
+          }
+        ],
+        "checks": [
+          {
+            "id": "teach",
+            "kind": "explain",
+            "prompt": "Alguien escribió «I looking for my keys». ¿Qué le explicarías?",
+            "choices": [
+              "Falta AM: I AM se junta en I'M.",
+              "Sobran las llaves."
+            ],
+            "answers": [
+              "Falta AM: I AM se junta en I'M."
+            ],
+            "hint": "Para «estoy», necesitas I AM. ING no hace todo el trabajo.",
+            "success": "Has explicado por qué hace falta AM."
+          },
+          {
+            "id": "use",
+            "kind": "write",
+            "prompt": "Dilo en inglés: estoy buscando mis llaves.",
+            "answers": [
+              "I'm looking for my keys.",
+              "I am looking for my keys."
+            ],
+            "hint": "I'M + LOOKING FOR + MY KEYS.",
+            "success": "Ya tienes una respuesta útil."
+          }
+        ],
+        "advanceMode": "manual"
+      }
+    }
+  ],
+  "sentence": {
+    "en": "I'm looking for my keys.",
+    "es": "Estoy buscando mis llaves.",
+    "slots": [
+      {
+        "en": "I'm",
+        "es": "Estoy",
+        "choices": [
+          "I'm",
+          "I"
+        ],
+        "note": "I AM significa «yo estoy». Al juntarlo suena y se escribe I'M."
+      },
+      {
+        "en": "looking for",
+        "es": "buscando",
+        "choices": [
+          "looking for",
+          "looking"
+        ],
+        "note": "LOOK FOR significa «buscar». Para «estoy buscando», LOOK cambia a LOOKING y FOR se queda."
+      },
+      {
+        "en": "my keys.",
+        "es": "mis llaves.",
+        "choices": [
+          "my keys.",
+          "my phone."
+        ],
+        "note": "MY sirve para «mi» y «mis». KEY es una llave; KEYS lleva la S de varias llaves."
+      }
+    ],
+    "pronunciationTip": "Escucha LOOKING FOR como un grupo y da fuerza a KEYS."
+  },
+  "communication": {
+    "layer": "converse",
+    "intent": "contar qué buscas cuando alguien te pregunta",
+    "interlocutor": "Emma, una persona de casa",
+    "userTurn": "I'm looking for my keys.",
+    "reply": "Let's look together.",
+    "replyMode": "receptive_chunk",
+    "practicePrompt": "What are you looking for?",
+    "acceptedAnswers": [
+      "I'm looking for my keys.",
+      "I am looking for my keys."
+    ],
+    "dialogue": {
+      "partner": "Emma",
+      "reply": {
+        "en": "Let's look together.",
+        "es": "Busquemos juntos."
+      },
+      "context": "El kiwi ha escondido tus llaves. Emma se acerca para ayudarte.",
+      "rhythmTip": "Escucha LOOKING FOR como un grupo. La voz destaca KEYS al decir qué buscas.",
+      "turns": [
+        {
+          "role": "A",
+          "en": "What are you looking for?",
+          "es": "¿Qué estás buscando?",
+          "acceptedAnswers": [
+            "What are you looking for?"
+          ]
+        },
+        {
+          "role": "B",
+          "en": "I'm looking for my keys.",
+          "es": "Estoy buscando mis llaves.",
+          "acceptedAnswers": [
+            "I'm looking for my keys.",
+            "I am looking for my keys."
+          ]
+        }
+      ],
+      "transferContext": "Las llaves ya están en la bandeja, pero ahora no encuentras tu móvil. Dile a Emma qué buscas.",
+      "transfer": {
+        "role": "B",
+        "en": "I'm looking for my phone.",
+        "es": "Estoy buscando mi móvil.",
+        "acceptedAnswers": [
+          "I'm looking for my phone.",
+          "I am looking for my phone."
+        ]
+      },
+      "continueMode": "manual"
+    }
+  },
+  "activeRecall": true
+}

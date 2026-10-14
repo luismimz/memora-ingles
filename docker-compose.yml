@@ -5,7 +5,7 @@ services:
   web:
     build:
       context: .
-      dockerfile: frontend/Dockerfile
+      dockerfile: memora-v2/Dockerfile
     restart: unless-stopped
     depends_on:
       - directus
@@ -58,9 +58,9 @@ services:
       OPENROUTER_IMAGE_MODEL: ${OPENROUTER_IMAGE_MODEL:-google/gemini-2.5-flash-image}
       FAL_KEY: ${FAL_KEY:-}
       FAL_MODEL: ${FAL_MODEL:-fal-ai/flux/schnell}
-      # Prepara las escenas absurdas y sus imágenes fuera de la sesión; es idempotente y solo genera las que faltan.
-      PREPARE_ALL_ASSOCIATIONS: ${PREPARE_ALL_ASSOCIATIONS:-true}
-      DISCOVERY_ENRICH_ON_BOOT: ${DISCOVERY_ENRICH_ON_BOOT:-true}
+      # V2: nunca genera ni altera el catálogo al arrancar. La preparación es explícita.
+      PREPARE_ALL_ASSOCIATIONS: "false"
+      DISCOVERY_ENRICH_ON_BOOT: "false"
       DISCOVERY_TEXT_MODE: ${DISCOVERY_TEXT_MODE:-auto}
       DISCOVERY_IMAGE_MODE: ${DISCOVERY_IMAGE_MODE:-auto}
       DISCOVERY_ENRICH_LIMIT: ${DISCOVERY_ENRICH_LIMIT:-10}

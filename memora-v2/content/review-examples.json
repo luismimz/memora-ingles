@@ -1,0 +1,674 @@
+[
+  {
+    "id": "m1-test-desk",
+    "title": "La playa del escritorio",
+    "location": {
+      "world": "world1",
+      "zone": "bedroom",
+      "locus": "home.bedroom.desk",
+      "label": "La Casa Viva · Dormitorio · Sobre el escritorio"
+    },
+    "words": [
+      {
+        "id": 1,
+        "en": "PLAY",
+        "es": "jugar",
+        "ipa": "/pleɪ/",
+        "bridge": "PLAYA",
+        "associationMode": "acoustic_bridge",
+        "status": "approved",
+        "bridgeEvidence": {
+          "spanishCue": "PLAYA",
+          "familiarMeaning": "orilla arenosa del mar",
+          "soundRelation": "El inicio /pleɪ/ de play aproxima pla- de playa; no son pronunciaciones iguales.",
+          "cueType": "spanish_word"
+        },
+        "editorialReview": {
+          "verdict": "approved",
+          "reviewedBy": "codex-editorial",
+          "reason": "Ejemplo de revisión con referentes españoles conocidos y aproximación sonora documentada. Probar su eficacia con el usuario."
+        },
+        "anchor": "Una PLAYA invade el salón cuando empiezas a JUGAR.",
+        "meaningTerms": [
+          "JUGAR"
+        ],
+        "highlightTerms": [
+          "PLAYA",
+          "JUGAR"
+        ],
+        "memoryChain": [
+          "PLAYA",
+          "PLAY",
+          "JUGAR"
+        ],
+        "scene": "Una PLAYA invade el salón cuando empiezas a JUGAR.",
+        "emojis": [
+          "🏖️",
+          "🎮"
+        ],
+        "imageUrl": null,
+        "audioUrl": null,
+        "learningRole": "new"
+      },
+      {
+        "id": 2,
+        "en": "COMPUTER",
+        "es": "ordenador",
+        "ipa": "/kəmˈpjuːtə/",
+        "bridge": "COMPOTA",
+        "associationMode": "acoustic_bridge",
+        "status": "approved",
+        "bridgeEvidence": {
+          "spanishCue": "COMPOTA",
+          "familiarMeaning": "fruta cocida y triturada",
+          "soundRelation": "Comparten el arranque consonántico comp-; puente aproximado previamente elegido, el audio fija /kəmˈpjuːtə/.",
+          "cueType": "spanish_word"
+        },
+        "editorialReview": {
+          "verdict": "approved",
+          "reviewedBy": "codex-editorial",
+          "reason": "Ejemplo de revisión con referentes españoles conocidos y aproximación sonora documentada. Probar su eficacia con el usuario."
+        },
+        "anchor": "La COMPOTA brota de un ORDENADOR y pega sus teclas.",
+        "meaningTerms": [
+          "ORDENADOR"
+        ],
+        "highlightTerms": [
+          "COMPOTA",
+          "ORDENADOR"
+        ],
+        "memoryChain": [
+          "COMPOTA",
+          "COMPUTER",
+          "ORDENADOR"
+        ],
+        "scene": "La COMPOTA brota de un ORDENADOR y pega sus teclas.",
+        "emojis": [
+          "🖥️",
+          "🍎"
+        ],
+        "imageUrl": null,
+        "audioUrl": null,
+        "learningRole": "new"
+      },
+      {
+        "id": 3,
+        "en": "DESK",
+        "es": "escritorio",
+        "ipa": "/desk/",
+        "bridge": "DISCO",
+        "associationMode": "acoustic_bridge",
+        "status": "approved",
+        "bridgeEvidence": {
+          "spanishCue": "DISCO",
+          "familiarMeaning": "objeto circular plano",
+          "soundRelation": "Comparten d y el grupo sk; cambia la vocal y se elimina la o. Escuchar /desk/.",
+          "cueType": "spanish_word"
+        },
+        "editorialReview": {
+          "verdict": "approved",
+          "reviewedBy": "codex-editorial",
+          "reason": "Ejemplo de revisión con referentes españoles conocidos y aproximación sonora documentada. Probar su eficacia con el usuario."
+        },
+        "anchor": "Un DISCO despliega patas y se convierte en ESCRITORIO.",
+        "meaningTerms": [
+          "ESCRITORIO"
+        ],
+        "highlightTerms": [
+          "DISCO",
+          "ESCRITORIO"
+        ],
+        "memoryChain": [
+          "DISCO",
+          "DESK",
+          "ESCRITORIO"
+        ],
+        "scene": "Un DISCO despliega patas y se convierte en ESCRITORIO.",
+        "emojis": [
+          "💿"
+        ],
+        "imageUrl": null,
+        "audioUrl": null,
+        "learningRole": "new"
+      }
+    ],
+    "grammar": [
+      {
+        "id": "ing",
+        "visualContract": "present-continuous",
+        "spanish": "jugando",
+        "spanishStem": "jug",
+        "spanishEnding": "ando",
+        "englishRoot": "play",
+        "englishNut": "ing",
+        "english": "playing",
+        "placement": "after",
+        "spanishPieces": [
+          {
+            "id": "verb-root",
+            "text": "jug",
+            "role": "root"
+          },
+          {
+            "id": "process",
+            "text": "ando",
+            "role": "ending"
+          }
+        ],
+        "englishPieces": [
+          {
+            "id": "verb-root",
+            "text": "play",
+            "role": "root"
+          },
+          {
+            "id": "process",
+            "text": "ing",
+            "role": "ending"
+          }
+        ],
+        "subjects": [
+          {
+            "en": "I'm",
+            "expandedEn": "I am",
+            "es": "Yo estoy",
+            "reducedEs": "Estoy",
+            "phrase": "I'm playing"
+          },
+          {
+            "en": "You're",
+            "expandedEn": "You are",
+            "es": "Tú estás",
+            "reducedEs": "Estás",
+            "phrase": "You're playing"
+          },
+          {
+            "en": "He's",
+            "expandedEn": "He is",
+            "es": "Él está",
+            "reducedEs": "Está",
+            "phrase": "He's playing"
+          },
+          {
+            "en": "She's",
+            "expandedEn": "She is",
+            "es": "Ella está",
+            "reducedEs": "Está",
+            "phrase": "She's playing"
+          },
+          {
+            "en": "We're",
+            "expandedEn": "We are",
+            "es": "Nosotros estamos",
+            "reducedEs": "Estamos",
+            "phrase": "We're playing"
+          },
+          {
+            "en": "You're",
+            "expandedEn": "You are",
+            "es": "Vosotros estáis",
+            "reducedEs": "Estáis",
+            "phrase": "You're playing"
+          },
+          {
+            "en": "They're",
+            "expandedEn": "They are",
+            "es": "Ellos están",
+            "reducedEs": "Están",
+            "phrase": "They're playing"
+          },
+          {
+            "en": "They're",
+            "expandedEn": "They are",
+            "es": "Ellas están",
+            "reducedEs": "Están",
+            "phrase": "They're playing"
+          }
+        ],
+        "englishBase": "play",
+        "memoryTrick": {
+          "cue": "DOS PISTAS: ESTOY + ANDO / IENDO",
+          "explanation": "Cuando dices «estoy jugando», ESTOY te pide AM y ANDO te pide ING. I AM se acorta a I'M."
+        }
+      }
+    ],
+    "sentence": {
+      "en": "I'm playing on my computer.",
+      "es": "Estoy jugando en mi ordenador.",
+      "slots": [
+        {
+          "en": "I'm playing",
+          "es": "Estoy jugando",
+          "choices": [
+            "I'm playing",
+            "I play"
+          ]
+        },
+        {
+          "en": "on my computer.",
+          "es": "en mi ordenador.",
+          "choices": [
+            "on my computer.",
+            "at my desk."
+          ]
+        }
+      ],
+      "pronunciationTip": "I'm se une como una sola pieza: aim."
+    },
+    "practiceSentences": [
+      {
+        "en": "I'm playing on my computer at my desk.",
+        "es": "Estoy jugando en mi ordenador, en mi escritorio.",
+        "slots": [
+          {
+            "en": "I'm playing",
+            "es": "Estoy jugando",
+            "choices": [
+              "I'm playing",
+              "I play"
+            ]
+          },
+          {
+            "en": "on my computer",
+            "es": "en mi ordenador",
+            "choices": [
+              "on my computer",
+              "at my desk"
+            ]
+          },
+          {
+            "en": "at my desk.",
+            "es": "en mi escritorio.",
+            "choices": [
+              "at my desk.",
+              "on my computer."
+            ]
+          }
+        ],
+        "pronunciationTip": "Playing termina en ing; mantenlo unido al verbo."
+      }
+    ],
+    "communication": {
+      "layer": "observe",
+      "intent": "decir a otra persona qué estás haciendo",
+      "interlocutor": "una persona de casa",
+      "userTurn": "I'm playing on my computer.",
+      "reply": "Okay, have fun!",
+      "replyMode": "receptive_chunk",
+      "practicePrompt": "What are you doing?",
+      "acceptedAnswers": [
+        "I'm playing on my computer."
+      ],
+      "dialogue": {
+        "context": "Alguien entra en tu dormitorio y te pregunta qué estás haciendo.",
+        "turns": [
+          {
+            "role": "A",
+            "en": "What are you doing?",
+            "es": "¿Qué estás haciendo?",
+            "acceptedAnswers": [
+              "What are you doing?"
+            ]
+          },
+          {
+            "role": "B",
+            "en": "I'm playing on my computer.",
+            "es": "Estoy jugando en mi ordenador.",
+            "acceptedAnswers": [
+              "I'm playing on my computer.",
+              "I am playing on my computer."
+            ]
+          }
+        ],
+        "rhythmTip": "Escucha «on my computer» como un grupo. Repite el ritmo sin separar cada palabra."
+      }
+    },
+    "methodCoverage": {
+      "listenBeforeRead": true,
+      "mnemonicAssociation": true,
+      "timedRecall": true,
+      "visualTransformation": true,
+      "chunkConstruction": true,
+      "gradualWriting": true,
+      "shadowing": true,
+      "conversationalReply": true,
+      "spacedReview": true,
+      "interleaving": true
+    },
+    "factory": {
+      "specId": "m1-test-desk",
+      "world": "world1",
+      "zone": "bedroom",
+      "status": "draft",
+      "model": "editorial",
+      "generatedAt": "2026-10-12T02:26:00.030Z",
+      "reviewRequired": false,
+      "reviewReasons": []
+    }
+  },
+  {
+    "id": "m1-test-kitchen",
+    "contentVersion": "2",
+    "title": "El kit que cocina",
+    "location": {
+      "world": "world1",
+      "zone": "kitchen",
+      "locus": "home.kitchen.hob",
+      "label": "La Casa Viva · Cocina · Junto a los fogones"
+    },
+    "words": [
+      {
+        "id": 1,
+        "en": "COOK",
+        "es": "cocinar",
+        "ipa": "/kʊk/",
+        "bridge": "CUCO",
+        "associationMode": "acoustic_bridge",
+        "status": "approved",
+        "bridgeEvidence": {
+          "spanishCue": "CUCO",
+          "familiarMeaning": "ave conocida por su canto",
+          "soundRelation": "Cuco comienza por /kuk/, cercano a /kʊk/; la vocal inglesa es corta.",
+          "cueType": "spanish_word"
+        },
+        "editorialReview": {
+          "verdict": "approved",
+          "reviewedBy": "codex-editorial",
+          "reason": "Ejemplo de revisión con referentes españoles conocidos y aproximación sonora documentada. Probar su eficacia con el usuario."
+        },
+        "anchor": "Un CUCO sale del reloj para COCINAR una tortilla.",
+        "meaningTerms": [
+          "COCINAR"
+        ],
+        "highlightTerms": [
+          "CUCO",
+          "COCINAR"
+        ],
+        "memoryChain": [
+          "CUCO",
+          "COOK",
+          "COCINAR"
+        ],
+        "scene": "Un CUCO sale del reloj para COCINAR una tortilla.",
+        "emojis": [
+          "🐦",
+          "🍳"
+        ],
+        "imageUrl": null,
+        "audioUrl": null,
+        "learningRole": "new"
+      },
+      {
+        "id": 2,
+        "en": "DINNER",
+        "es": "cena",
+        "ipa": "/ˈdɪnə/",
+        "bridge": "DINERO",
+        "associationMode": "acoustic_bridge",
+        "status": "approved",
+        "bridgeEvidence": {
+          "spanishCue": "DINERO",
+          "familiarMeaning": "monedas y billetes",
+          "soundRelation": "Dinero aporta din- y una secuencia próxima; dinner no conserva la terminación española.",
+          "cueType": "spanish_word"
+        },
+        "editorialReview": {
+          "verdict": "approved",
+          "reviewedBy": "codex-editorial",
+          "reason": "Ejemplo de revisión con referentes españoles conocidos y aproximación sonora documentada. Probar su eficacia con el usuario."
+        },
+        "anchor": "El DINERO se derrite y llena la mesa de CENA.",
+        "meaningTerms": [
+          "CENA"
+        ],
+        "highlightTerms": [
+          "DINERO",
+          "CENA"
+        ],
+        "memoryChain": [
+          "DINERO",
+          "DINNER",
+          "CENA"
+        ],
+        "scene": "El DINERO se derrite y llena la mesa de CENA.",
+        "emojis": [
+          "💶",
+          "🍽️"
+        ],
+        "imageUrl": null,
+        "audioUrl": null,
+        "learningRole": "new"
+      },
+      {
+        "id": 3,
+        "en": "KITCHEN",
+        "es": "cocina",
+        "ipa": "/ˈkɪtʃɪn/",
+        "bridge": "KIT CHINO",
+        "associationMode": "acoustic_bridge",
+        "status": "approved",
+        "bridgeEvidence": {
+          "spanishCue": "KIT CHINO",
+          "familiarMeaning": "conjunto de utensilios chinos",
+          "soundRelation": "Kit + comienzo de chino aporta /kit tʃi/ cercano a /ˈkɪtʃɪn/; usar siempre audio inglés.",
+          "cueType": "spanish_expression"
+        },
+        "editorialReview": {
+          "verdict": "approved",
+          "reviewedBy": "codex-editorial",
+          "reason": "Ejemplo de revisión con referentes españoles conocidos y aproximación sonora documentada. Probar su eficacia con el usuario."
+        },
+        "anchor": "Un KIT CHINO se despliega y construye una COCINA.",
+        "meaningTerms": [
+          "COCINA"
+        ],
+        "highlightTerms": [
+          "KIT CHINO",
+          "COCINA"
+        ],
+        "memoryChain": [
+          "KIT CHINO",
+          "KITCHEN",
+          "COCINA"
+        ],
+        "scene": "Un KIT CHINO se despliega y construye una COCINA.",
+        "emojis": [
+          "🧰",
+          "🥢"
+        ],
+        "imageUrl": null,
+        "audioUrl": null,
+        "learningRole": "new"
+      }
+    ],
+    "grammar": [
+      {
+        "id": "ing",
+        "visualContract": "present-continuous",
+        "spanish": "cocinando",
+        "spanishStem": "cocin",
+        "spanishEnding": "ando",
+        "englishBase": "cook",
+        "englishRoot": "cook",
+        "englishNut": "ing",
+        "english": "cooking",
+        "placement": "after",
+        "spanishPieces": [
+          {
+            "id": "verb-root",
+            "text": "cocin",
+            "role": "root"
+          },
+          {
+            "id": "process",
+            "text": "ando",
+            "role": "ending"
+          }
+        ],
+        "englishPieces": [
+          {
+            "id": "verb-root",
+            "text": "cook",
+            "role": "root"
+          },
+          {
+            "id": "process",
+            "text": "ing",
+            "role": "ending"
+          }
+        ],
+        "subjects": [
+          {
+            "en": "I'm",
+            "expandedEn": "I am",
+            "es": "Yo estoy",
+            "reducedEs": "Estoy",
+            "phrase": "I'm cooking"
+          },
+          {
+            "en": "You're",
+            "expandedEn": "You are",
+            "es": "Tú estás",
+            "reducedEs": "Estás",
+            "phrase": "You're cooking"
+          },
+          {
+            "en": "He's",
+            "expandedEn": "He is",
+            "es": "Él está",
+            "reducedEs": "Está",
+            "phrase": "He's cooking"
+          },
+          {
+            "en": "She's",
+            "expandedEn": "She is",
+            "es": "Ella está",
+            "reducedEs": "Está",
+            "phrase": "She's cooking"
+          },
+          {
+            "en": "We're",
+            "expandedEn": "We are",
+            "es": "Nosotros estamos",
+            "reducedEs": "Estamos",
+            "phrase": "We're cooking"
+          },
+          {
+            "en": "You're",
+            "expandedEn": "You are",
+            "es": "Vosotros estáis",
+            "reducedEs": "Estáis",
+            "phrase": "You're cooking"
+          },
+          {
+            "en": "They're",
+            "expandedEn": "They are",
+            "es": "Ellos están",
+            "reducedEs": "Están",
+            "phrase": "They're cooking"
+          },
+          {
+            "en": "They're",
+            "expandedEn": "They are",
+            "es": "Ellas están",
+            "reducedEs": "Están",
+            "phrase": "They're cooking"
+          }
+        ],
+        "memoryTrick": {
+          "cue": "DOS PISTAS: ESTOY + ANDO / IENDO",
+          "explanation": "Cuando dices «estoy cocinando», ESTOY te pide AM y ANDO te pide ING. I AM se acorta a I'M."
+        }
+      }
+    ],
+    "sentence": {
+      "en": "I'm cooking dinner in the kitchen.",
+      "es": "Estoy cocinando la cena en la cocina.",
+      "slots": [
+        {
+          "en": "I'm cooking",
+          "es": "Estoy cocinando",
+          "choices": [
+            "I'm cooking",
+            "I cook"
+          ]
+        },
+        {
+          "en": "dinner",
+          "es": "la cena",
+          "choices": [
+            "dinner",
+            "soap"
+          ]
+        },
+        {
+          "en": "in the kitchen.",
+          "es": "en la cocina.",
+          "choices": [
+            "in the kitchen.",
+            "at my desk."
+          ]
+        }
+      ],
+      "pronunciationTip": "Cook lleva una vocal corta; cooking mantiene el mismo golpe."
+    },
+    "communication": {
+      "layer": "observe",
+      "intent": "decir que estoy cocinando la cena",
+      "interlocutor": "una persona de casa",
+      "userTurn": "I'm cooking dinner in the kitchen.",
+      "reply": "Great, dinner smells good!",
+      "replyMode": "receptive_chunk",
+      "practicePrompt": "What are you cooking?",
+      "acceptedAnswers": [
+        "I'm cooking dinner in the kitchen.",
+        "I'm cooking dinner."
+      ],
+      "dialogue": {
+        "context": "Alguien entra en la cocina y te pregunta qué estás cocinando.",
+        "turns": [
+          {
+            "role": "A",
+            "en": "What are you cooking?",
+            "es": "¿Qué estás cocinando?",
+            "acceptedAnswers": [
+              "What are you cooking?"
+            ]
+          },
+          {
+            "role": "B",
+            "en": "I'm cooking dinner.",
+            "es": "Estoy cocinando la cena.",
+            "acceptedAnswers": [
+              "I'm cooking dinner.",
+              "I am cooking dinner."
+            ]
+          }
+        ],
+        "rhythmTip": "Escucha «cooking dinner» como un grupo. Repite el ritmo sin separar cada palabra."
+      }
+    },
+    "methodCoverage": {
+      "listenBeforeRead": true,
+      "mnemonicAssociation": true,
+      "timedRecall": true,
+      "visualTransformation": true,
+      "chunkConstruction": true,
+      "gradualWriting": true,
+      "shadowing": true,
+      "conversationalReply": true,
+      "spacedReview": true,
+      "interleaving": true
+    },
+    "factory": {
+      "specId": "m1-test-kitchen",
+      "world": "world1",
+      "zone": "kitchen",
+      "status": "draft",
+      "model": "editorial",
+      "generatedAt": "2026-10-12T02:26:00.035Z",
+      "reviewRequired": false,
+      "reviewReasons": []
+    }
+  }
+]

@@ -1,47 +1,14 @@
-// Se ejecuta en segundo plano al arrancar el contenedor: espera a Directus y aplica esquema + contenido.
-// Ambos scripts son idempotentes, así que es seguro correrlos en cada despliegue.
-import { spawnSync } from 'node:child_process';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
-
-const here = dirname(fileURLToPath(import.meta.url));
+// V2 startup only checks readiness. Schema/content changes are explicit reviewed jobs.
+import { api } from './lib.mjs';
 const url = process.env.DIRECTUS_URL || 'http://localhost:8055';
-
-for (let i = 0; i < 120; i++) {
-  try { if ((await fetch(`${url}/server/health`)).ok) break; } catch { /* aún arrancando */ }
-  await new Promise((r) => setTimeout(r, 2000));
+let healthy = false;
+for (let index = 0; index < 120; index++) {
+  try { if ((await fetch(`${url}/server/health`)).ok) { healthy = true; break; } } catch { /* Waiting for Directus. */ }
+  await new Promise((resolve) => setTimeout(resolve, 2000));
 }
-for (const script of ['setup-schema.mjs', 'seed-content.mjs', 'seed-curated-directus.mjs', 'enrich-words.mjs', 'prepare-h1-assets.mjs']) {
-  const r = spawnSync(process.execPath, [join(here, script)], { stdio: 'inherit', env: process.env });
-  if (r.status !== 0) { console.error(`[memora] ${script} falló`); break; }
+if (!healthy) throw new Error('Directus no está listo. No se ejecutó ninguna migración ni preparación de contenido.');
+for (const collection of ['learning_units', 'learning_events']) {
+  const result = await api('GET', `/collections/${collection}`, undefined, { allowFail: true });
+  if (result.error) console.error(`[memora] Falta ${collection}. Revisa el esquema antes de habilitar alumnos; el arranque no lo modifica.`);
 }
-console.log('[memora] esquema y contenido al día');
-
-// Directus ya está disponible mientras esta tarea continúa en segundo plano.
-// Deja el catálogo listo antes de que el alumno encuentre una palabra sin conexión mental.
-if (process.env.OPENROUTER_API_KEY && process.env.PREPARE_ALL_ASSOCIATIONS !== 'false') {
-  console.log('[memora] preparando asociaciones de los días 1-30…');
-  const r = spawnSync(process.execPath, [join(here, 'generate-mnemonics.mjs'), '1', '30'], { stdio: 'inherit', env: process.env });
-  if (r.status !== 0) console.error('[memora] la preparación de asociaciones continuará en el próximo despliegue');
-  else console.log('[memora] catálogo de asociaciones preparado');
-}
-
-// Enriquecimiento de la misión nueva (texto + imágenes FLUX). Es opt-in por
-// variable de entorno, pero queda activo por defecto en Coolify. El script es
-// idempotente: cada redeploy solo toma el siguiente lote que aún falta.
-const textMode = String(process.env.DISCOVERY_TEXT_MODE || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto';
-const imageMode = String(process.env.DISCOVERY_IMAGE_MODE || 'auto').toLowerCase() === 'manual' ? 'manual' : 'auto';
-const discoveryOnBoot = process.env.DISCOVERY_ENRICH_ON_BOOT !== 'false';
-const discoveryLimit = Number(process.env.DISCOVERY_ENRICH_LIMIT || 10);
-const discoveryBatch = Number(process.env.DISCOVERY_ENRICH_BATCH || 2);
-const canRunText = textMode === 'auto' && Boolean(process.env.OPENROUTER_API_KEY);
-const canRunImage = imageMode === 'auto' && Boolean(process.env.FAL_KEY);
-if (discoveryOnBoot && (canRunText || canRunImage)) {
-  console.log(`[memora] enriquecimiento Discovery · texto:${textMode} · imágenes:${imageMode} · lote:${discoveryLimit}`);
-  const args = [join(here, 'enrich-discovery-directus.mjs'), `--limit=${discoveryLimit}`, `--batch=${discoveryBatch}`, `--text-mode=${canRunText ? textMode : 'manual'}`, `--image-mode=${canRunImage ? imageMode : 'manual'}`];
-  const r = spawnSync(process.execPath, args, { stdio: 'inherit', env: process.env });
-  if (r.status !== 0) console.error('[memora] el enriquecimiento Discovery continuará en el próximo despliegue');
-  else console.log('[memora] lote Discovery preparado');
-} else if (discoveryOnBoot) {
-  console.log('[memora] Discovery automático omitido: faltan OPENROUTER_API_KEY o FAL_KEY');
-}
+console.log('[memora] V2 lista. Arranque sin semillas, migraciones ni generación automática.');

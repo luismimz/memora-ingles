@@ -44,7 +44,7 @@ export function kokoroTts(env) {
         let res = await requestAudio(requestedVoice);
         // Perfiles antiguos guardaban voces del navegador (Samantha, Google…).
         // Si Kokoro no reconoce ese nombre, reintenta con su voz oficial.
-        if (!res.ok && requestedVoice !== fallbackVoice && (res.status === 400 || res.status === 404 || res.status === 422)) {
+        if (!res.ok && !/^(ef|em)_/.test(requestedVoice) && requestedVoice !== fallbackVoice && (res.status === 400 || res.status === 404 || res.status === 422)) {
           res = await requestAudio(fallbackVoice);
         }
         if (!res.ok) {

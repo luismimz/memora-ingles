@@ -1,7 +1,13 @@
 node_modules/
 frontend/dist/
+memora-v2/dist/
+memora-v2/*.tsbuildinfo
 .env
 backend/data/
 backend/uploads/
+backend/private/ilerna/
+backend/private/generated/
+backend/private/checkpoints/
+backend/private/quarantine/
 *.log
 .DS_Store

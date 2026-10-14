@@ -1,5 +1,7 @@
 **/node_modules
 frontend/dist
+memora-v2/dist
+backend/private
 backend/data
 backend/uploads
 backend/.env

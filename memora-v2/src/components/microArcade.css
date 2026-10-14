@@ -1,0 +1,45 @@
+.micro-dialog { inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; padding: 0; border: 0; margin: 0; background: var(--page); color: var(--ink); }
+.micro-dialog::backdrop { background: rgba(30,26,22,.65); }
+.micro-screen { min-height: 100%; }
+.micro-card::before { display: none; }
+.micro-content { width: 100%; min-width: 0; display: flex; flex-direction: column; gap: 24px; text-align: center; justify-content: center; }
+.micro-content h1 { font-size: clamp(1.7rem,4vw,2.5rem); line-height: 1.2; margin: 0; }
+.micro-content p { line-height: 1.6; margin: 0; }
+.micro-content small, .micro-feedback, .micro-result span { color: var(--muted); }
+.micro-content .micro-prompt { font-size: clamp(1.8rem,4vw,2.7rem); font-weight: 750; }
+.micro-content form { text-align: left; }
+.micro-content label { display: block; font-size: .9rem; margin-bottom: 10px; }
+.micro-content form > div { display: flex; gap: 10px; }
+.micro-content input { flex: 1; min-width: 0; padding: 14px; min-height: 52px; border-radius: 14px; border: 1px solid var(--accent); background: var(--surface-soft); color: var(--ink); font: inherit; }
+.micro-content form button { margin: 0; padding: 12px 18px; }
+.micro-hint { display: grid; gap: 12px; background: var(--surface-soft); padding: 14px; border-radius: 18px; }
+.micro-hint .scene-visual { height: 130px; }
+.micro-options, .micro-tools { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+.micro-options button { background: var(--surface-soft); color: var(--ink); border: 1px solid var(--accent); border-radius: 12px; min-height: 44px; padding: 12px 20px; }
+.micro-answer { font-size: 1.8rem; font-weight: 750; }
+.micro-meaning { display: block; margin-top: .25rem; font-size: 1rem; font-weight: 500; }
+.micro-result { display: grid; gap: 12px; }
+.micro-result strong { font-size: 1.4rem; }
+.micro-countdown { width: 100%; height: 6px; overflow: hidden; border-radius: 10px; background: var(--surface-soft); }
+.micro-countdown > span { display: block; height: 100%; background: linear-gradient(90deg, #e88873, #e4c788, #8ccbbb); transition: width .05s linear; }
+.micro-countdown.is-urgent > span { background: #d87761; }
+.micro-clock { display: none; }
+.arcade-stream-tools { display: flex; gap: .35rem; align-items: center; }
+.arcade-stream-tools button { font-size: .7rem; min-height: 44px; padding: .5rem; }
+.arcade-stream-card::before { display: none; }
+.arcade-stream-foot { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: .7rem; }
+.arcade-stream-foot small { color: var(--muted); font-size: .65rem; }
+.arcade-stream-card .recall-choices button.is-correct { border-color: #25ba83; background: rgba(54,210,147,.12); }
+.arcade-reminder { padding: 30px; }
+.arcade-reminder-chain { display: flex; align-items: center; justify-content: center; gap: .8rem; flex-wrap: wrap; font-size: clamp(1.5rem, 4vw, 2.2rem); }
+.arcade-reminder-chain > strong:first-child { color: var(--warm); }
+.arcade-reminder-story { font-size: 1.15rem; line-height: 1.5; margin: 0; }
+.arcade-grammar-shell { width: min(100%, 610px); }
+.arcade-grammar-shell > .arcade-stream-tools { justify-content: flex-end; }
+.arcade-grammar-options { grid-template-columns: repeat(2, 1fr); }
+.arcade-grammar-prompt { font-size: clamp(1.2rem, 3vw, 1.8rem); line-height: 1.5; }
+.grammar-gap { border: 1px dashed var(--accent); border-radius: 8px; padding: 0 .5rem; }
+.arcade-grammar-card .recall-content .scene-visual { height: 150px; }
+@media (prefers-reduced-motion: reduce) { .arcade-stream-card .game-card-flip { transition: none; } .recall-correct .game-card-face { animation: none; } }
+.arcade-invitation { border: 1px solid var(--accent); border-radius: 18px; padding: 14px 20px; min-height: 52px; color: var(--ink); font-weight: 850; background: linear-gradient(120deg,var(--warm-soft),var(--grammar-verb-soft)); box-shadow: 0 5px 18px rgba(70,50,25,.08); }
+@media(max-width:500px) { .micro-content { gap: 18px; } .micro-content form > div { flex-wrap: wrap; } .micro-content form button { width: 100%; } }

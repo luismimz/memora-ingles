@@ -1,0 +1,68 @@
+{
+  "id": "phase1-wash-soap-dog",
+  "title": "El baño imposible",
+  "words": [
+    { "id": 4, "en": "WASH", "es": "lavar", "ipa": "/wɒʃ/", "bridge": "GUASA", "scene": "Con mucha GUASA, LAVO al perro con una pastilla de jabón que rebota hasta el techo.", "emojis": ["🐕", "🧼"], "confusers": ["watch"] },
+    { "id": 5, "en": "SOAP", "es": "jabón", "ipa": "/soʊp/", "bridge": "SOPA", "scene": "Una SOPA de JABÓN explota sobre el perro y llena la bañera de espuma.", "emojis": ["🥣", "🧼"], "confusers": ["soup"] },
+    { "id": 2, "en": "DOG", "es": "perro", "ipa": "/dɔːɡ/", "bridge": "", "scene": "Un PERRO gigante pasea un hueso con correa.", "emojis": ["🐕", "🦴"], "confusers": ["god"] }
+  ],
+  "grammar": [
+    { "id": "to", "spanish": "lavar", "spanishStem": "lavar", "spanishEnding": "", "englishRoot": "wash", "englishNut": "to", "english": "to wash", "placement": "before", "subjects": [
+      { "en": "", "es": "Lavar", "phrase": "to wash" }
+    ] },
+    { "id": "ing", "spanish": "lavando", "spanishStem": "lav", "spanishEnding": "ando", "englishRoot": "wash", "englishNut": "ing", "english": "washing", "placement": "after", "subjects": [
+      { "en": "I'm", "es": "Yo estoy lavando", "phrase": "I'm washing" },
+      { "en": "You're", "es": "Tú estás lavando", "phrase": "You're washing" },
+      { "en": "He's", "es": "Él está lavando", "phrase": "He's washing" },
+      { "en": "She's", "es": "Ella está lavando", "phrase": "She's washing" },
+      { "en": "We're", "es": "Nosotros estamos lavando", "phrase": "We're washing" },
+      { "en": "You're", "es": "Vosotros estáis lavando", "phrase": "You're washing" },
+      { "en": "They're", "es": "Ellos están lavando", "phrase": "They're washing" },
+      { "en": "They're", "es": "Ellas están lavando", "phrase": "They're washing" }
+    ] }
+  ],
+  "sentence": {
+    "en": "I'm washing my dog with soap.",
+    "es": "Estoy lavando a mi perro con jabón.",
+    "slots": [
+      { "es": "Estoy", "en": "I'm", "choices": ["I'm", "You're"] },
+      { "es": "lavando", "en": "washing", "choices": ["washing", "wash"] },
+      { "es": "a mi perro", "en": "my dog", "choices": ["my dog", "my soap"] },
+      { "es": "con jabón.", "en": "with soap.", "choices": ["with soap.", "with my dog."] }
+    ],
+    "pronunciationTip": "I'm washing: une I'm y washing en una sola respiración."
+  },
+  "communication": {
+    "layer": "converse",
+    "intent": "Preguntar qué se está lavando",
+    "interlocutor": "un familiar",
+    "userTurn": "What are you washing?",
+    "reply": "I'm washing my dog with soap.",
+    "replyMode": "target"
+  },
+  "practiceSentences": [
+    {
+      "en": "You're washing my dog with soap.",
+      "es": "Estás lavando a mi perro con jabón.",
+      "slots": [
+        { "es": "Estás", "en": "You're", "choices": ["You're", "I'm"] },
+        { "es": "lavando", "en": "washing", "choices": ["wash", "washing"] },
+        { "es": "a mi perro", "en": "my dog", "choices": ["my soap", "my dog"] },
+        { "es": "con jabón.", "en": "with soap.", "choices": ["with my dog.", "with soap."] }
+      ],
+      "pronunciationTip": "You're une you y are antes de washing."
+    },
+    {
+      "en": "I'm washing my dog with soap on the beach.",
+      "es": "Estoy lavando a mi perro con jabón en la playa.",
+      "slots": [
+        { "es": "Estoy", "en": "I'm", "choices": ["I'm", "You're"] },
+        { "es": "lavando", "en": "washing", "choices": ["washing", "wash"] },
+        { "es": "a mi perro", "en": "my dog", "choices": ["my dog", "my soap"] },
+        { "es": "con jabón", "en": "with soap", "choices": ["with soap", "with my dog"] },
+        { "es": "en la playa.", "en": "on the beach.", "choices": ["on the beach.", "with my dog."] }
+      ],
+      "pronunciationTip": "Reutiliza beach, que ya conoces: la frase crece sin añadir otra palabra nueva."
+    }
+  ]
+}
