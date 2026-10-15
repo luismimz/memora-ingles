@@ -8,6 +8,8 @@
 .home-profile > span:first-child, .home-profile img { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--warm); object-fit: cover; }
 .home-header .appearance-toggle { margin-left: 0; }
 .home-body { display: grid; gap: 24px; padding: 38px 0 60px; }
+.home-play-hub { display: contents; }
+.home-hub-content { display: grid; gap: 24px; padding-top: 38px; }
 .home-intro { display: flex; align-items: end; justify-content: space-between; gap: 16px; }
 .home-intro .eyebrow { margin: 0 0 7px; color: var(--accent-ink); }
 .home-intro h1 { margin: 0; font-size: clamp(2rem, 4vw, 3.45rem); line-height: 1.05; letter-spacing: -.06em; }
@@ -83,4 +85,29 @@
 @media (max-width: 420px) {
   .home-nav { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 3px; border-radius: 20px; }
   .home-nav a, .home-nav button { display: grid; place-items: center; min-width: 0; min-height: 44px; padding: 8px 4px; white-space: normal; text-align: center; }
+}
+@media (max-width: 700px) {
+  .home-v2 { padding: 12px; }
+  .home-play-hub { display: flex; flex-direction: column; }
+  .home-play-hub.has-map { height: calc(100svh - 24px); min-height: 540px; }
+  .home-header { flex: 0 0 auto; gap: 8px; }
+  .home-header .journey-brand .brand-mark { width: 40px; height: 40px; font-size: 1.45rem; }
+  .home-header .home-profile { min-height: 44px; letter-spacing: 0; }
+  .home-nav { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 19px; }
+  .home-nav a, .home-nav button { display: grid; place-items: center; min-width: 0; min-height: 44px; padding: 6px 2px; font-size: .67rem; line-height: 1.2; white-space: normal; text-align: center; }
+  .home-hub-content { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 8px; padding-top: 10px; }
+  .home-intro { flex: 0 0 auto; }
+  .home-intro h1 { font-size: 1.55rem; line-height: 1.15; letter-spacing: -.035em; }
+  .home-catalogue { margin-top: 4px; font-size: .78rem; line-height: 1.4; }
+  .home-hub-content .journey-map-section { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 6px; }
+  .home-hub-content .journey-map-heading { flex: 0 0 auto; }
+  .home-hub-content .journey-map-heading h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .home-hub-content .journey-map-heading p:last-child { margin: 0; font-size: .76rem; }
+  .home-hub-content .journey-map-shell { display: flex; flex-direction: column; flex: 1; min-height: 0; border-radius: 23px; }
+  .home-hub-content .journey-map-toolbar, .home-hub-content .journey-map-footer { flex: 0 0 auto; padding: 6px 12px; }
+  .home-hub-content .journey-map-viewport { flex: 1; height: auto; min-height: 160px; }
+  .home-body { padding-top: 20px; }
+}
+@media (max-width: 350px) {
+  .home-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 }

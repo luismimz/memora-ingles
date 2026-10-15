@@ -68,6 +68,7 @@ export function JourneyHome(props: Props) {
     : featured && completedIds.has(featured.id) ? 'Vuelve a practicar' : featuredPresentation?.pack ? 'Conecta y recuerda estas palabras' : 'Descubre esta historia';
 
   return <main className="journey-screen home-v2" id="inicio">
+    <div className={`home-play-hub ${stories.length ? 'has-map' : ''}`}>
     <header className="journey-header home-header">
       <a className="journey-brand" href="#inicio" aria-label="Memora, ir al inicio"><span className="brand-mark">M</span><span>MEMORA</span></a>
       <nav className="home-nav" aria-label="Navegación principal">
@@ -76,16 +77,19 @@ export function JourneyHome(props: Props) {
         <button type="button" onClick={onArcade} disabled={!onArcade}>Arcade</button>
         <button type="button" onClick={onEvolution} disabled={!onEvolution}>Mi evolución</button>
       </nav>
-      <button type="button" className="home-profile" onClick={onProfile} aria-label="Abrir perfil y progreso">{avatar ? <img src={avatar} alt="" /> : <span aria-hidden="true">◉</span>}<span>{completed.length}/{stories.length} misiones</span></button>
+      <button type="button" className="home-profile" onClick={onProfile} aria-label="Abrir perfil y progreso">{avatar ? <img src={avatar} alt="" /> : <span aria-hidden="true">◉</span>}<span>{completed.length}/{stories.length} paradas</span></button>
       <button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button>
       <button type="button" className="journey-exit" onClick={onExit}>Salir</button>
     </header>
 
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
-    <div className="home-body">
-      <div className="home-intro"><div><p className="eyebrow">TU AVENTURA</p><h1>La historia sigue contigo.</h1><p className="home-catalogue" aria-label="Contenido disponible"><strong>{catalogue.words}</strong> {catalogue.words === 1 ? 'palabra en el catálogo' : 'palabras en el catálogo'}{catalogue.expressions > 0 ? <> · <strong>{catalogue.expressions}</strong> {catalogue.expressions === 1 ? 'expresión' : 'expresiones'}</> : null}</p></div><span>{completed.length} de {stories.length} misiones completadas</span></div>
+    <div className="home-hub-content">
+      <div className="home-intro"><div><h1>Tu aventura</h1><p className="home-catalogue" aria-label="Contenido disponible"><strong>{catalogue.words}</strong> {catalogue.words === 1 ? 'palabra en el catálogo' : 'palabras en el catálogo'}{catalogue.expressions > 0 ? <> · <strong>{catalogue.expressions}</strong> {catalogue.expressions === 1 ? 'expresión' : 'expresiones'}</> : null}</p></div><span>{completed.length} de {stories.length} paradas completadas</span></div>
       {stories.length ? <JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} onOpen={onOpen} /> : null}
+    </div>
+    </div>
 
+    <div className="home-body">
       {featured ? <section className="home-adventure" aria-labelledby="home-adventure-title">
         <div className="home-adventure-art">{featuredPresentation?.pack ? <JourneyScene scene={featuredPresentation.scene} /> : <img src="/house-adventure.svg" alt="Ilustración de la Casa Viva: una puerta iluminada, un kiwi travieso y unas llaves escondidas" />}<span>{featuredPresentation?.place}</span></div>
         <div className="home-adventure-copy"><p className="eyebrow">{resume ? 'JUSTO DONDE LO DEJASTE' : `PARADA ${currentIndex} DE ${stories.length}`}</p><h2 id="home-adventure-title">{featuredPresentation?.title}</h2><p className="home-adventure-story">{featuredPresentation?.subtitle}</p>{featuredPresentation?.pack ? <p className="home-current-words" lang="en">{featuredPresentation.terms}</p> : null}<p className="home-current-step"><span aria-hidden="true">✦</span> {missionLabel}</p><button type="button" className="primary-action" onClick={() => onOpen(featured)}>{resume ? 'Continuar jugando' : readUnitProgress(userId, featured.id) ? 'Volver a jugar' : featuredPresentation?.pack ? 'Descubrir palabras' : 'Empezar misión'} <span aria-hidden="true">→</span></button><div className="home-adventure-progress"><div role="progressbar" aria-label="Misiones completadas del mundo" aria-valuemin={0} aria-valuemax={stories.length} aria-valuenow={completed.length}><span style={{ width: `${stories.length ? completed.length / stories.length * 100 : 0}%` }} /></div><small>{completed.length}/{stories.length} misiones de este recorrido</small></div></div>

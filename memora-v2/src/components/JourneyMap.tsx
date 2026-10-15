@@ -72,9 +72,9 @@ export function JourneyMap({ units, currentId, completedIds, onOpen }: Props) {
   }
 
   return <section className="journey-map-section" aria-labelledby="journey-map-title">
-    <div className="journey-map-heading"><div><p className="eyebrow">TU CAMINO</p><h2 id="journey-map-title">Una parada, nuevas palabras.</h2><p id="journey-map-help">Arrastra para explorar. Toca una parada para jugar.<span className="map-keyboard-help"> También puedes usar la rueda, Tab y las flechas.</span></p></div></div>
+    <div className="journey-map-heading"><div><h2 id="journey-map-title">Tu camino</h2><p id="journey-map-help">Arrastra el mapa. Toca para jugar.<span className="map-keyboard-help"> También puedes usar la rueda, Tab y las flechas.</span></p></div></div>
     <div className="journey-map-shell">
-      <div className="journey-map-toolbar"><span>{current ? `Tu posición · parada ${activeIndex + 1} de ${units.length}` : 'Tu recorrido'}</span><button type="button" onClick={() => moveTo(activeIndex)} disabled={!away}>◎ Volver a mi posición</button></div>
+      <div className="journey-map-toolbar"><span aria-label={current ? `Tu posición · parada ${activeIndex + 1} de ${units.length}` : 'Tu recorrido'}>{current ? `Parada ${activeIndex + 1} de ${units.length}` : 'Tu recorrido'}</span><button type="button" onClick={() => moveTo(activeIndex)} disabled={!away} aria-label="Volver a mi posición">◎ Mi posición</button></div>
       <div ref={viewport} className="journey-map-viewport" role="region" aria-label="Mapa de tu recorrido" aria-describedby="journey-map-help" tabIndex={0}
         onKeyDown={keyDown} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={endDrag} onPointerCancel={endDrag}
         onClickCapture={(event) => { if (performance.now() < suppressClickUntil.current && event.detail !== 0) { event.preventDefault(); event.stopPropagation(); } }}
