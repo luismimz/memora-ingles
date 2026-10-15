@@ -4,7 +4,6 @@ import { LearningLibrary } from './components/LearningLibrary';
 import { missingGrammarWords } from './domain/learningModes';
 import { readWordMemories } from './domain/memory';
 import type { LearningMode } from './domain/game';
-import { readGameCheckpoint, readMirrorCheckpoint } from './domain/gameCheckpoint';
 import { JourneyHome } from './components/JourneyHomeV2';
 import { journeyPresentation } from './domain/journeyMap';
 import { ProfileView } from './components/ProfileView';
@@ -18,7 +17,7 @@ import { EvolutionView } from './components/EvolutionView';
 import { MirrorLessonExperience } from './components/MirrorLessonExperience';
 import { PlayingGrammarReview } from './components/PlayingGrammarReview';
 import type { AtomicUnit } from './domain/unit';
-import { nextPlayableUnit } from './domain/journey';
+import { nextPlayableUnit, orderedJourneyUnits } from './domain/journey';
 import { readSentenceMemories } from './domain/memory';
 import { previewUnit, reviewUnits } from './preview/previewUnit';
 import { DirectusError, endSession, hasSession, loadPublishedUnitSummaries, loadUnit, loadKeysPilot, loadMirrorPilot, logIn, loadIdentity, clearAssetCache, type UnitSummary } from './services/directus';
@@ -174,17 +173,16 @@ export default function App() {
   }
 
   async function openUnit(summary: UnitSummary, directConversation = false) {
-    const checkpointId = `${summary.id}:${resumeMode}`;
-    const mode = !directConversation && resumeMode !== 'adventure' && summary.id === lastOpenedUnitId && (readGameCheckpoint(userId, checkpointId, summary.contentVersion ?? '1') || readMirrorCheckpoint(userId, checkpointId, summary.contentVersion ?? '1')) ? resumeMode : !directConversation && journeyPresentation(summary).pack ? 'vocabulary' : 'adventure';
+    const mode = !directConversation && resumeMode !== 'adventure' && summary.id === lastOpenedUnitId ? resumeMode : !directConversation && journeyPresentation(summary).pack ? 'vocabulary' : 'adventure';
     setLearningMode(mode); setLibraryMode(null);
-    rememberUnit(summary.id, mode);
     setConversationStart(directConversation);
     setExpansionTest(null);
     setUnitError(null);
     setReviewMode(false);
-    if (preview) { setUnit(reviewUnits.find((item) => item.id === summary.id) ?? previewUnit); return; }
+    if (preview) { rememberUnit(summary.id, mode); setUnit(reviewUnits.find((item) => item.id === summary.id) ?? previewUnit); return; }
+    setUnit(null);
     setLoading(true);
-    try { setUnit(summary.id === pilot?.id ? pilot : summary.id === mirrorPilot?.id ? mirrorPilot : await loadUnit(summary.id)); }
+    try { const loaded = summary.id === pilot?.id ? pilot : summary.id === mirrorPilot?.id ? mirrorPilot : await loadUnit(summary.id); rememberUnit(summary.id, mode); setUnit(loaded); }
     catch (reason) { setUnitError(reason instanceof Error ? reason.message : 'No se pudo abrir esta escena.'); }
     finally { setLoading(false); }
   }
@@ -289,28 +287,38 @@ export default function App() {
     if (!unit) return;
     stopSpeech();
     if (contentOpen && reviewMode) { setUnit(null); setReviewMode(false); return; }
-    if (learningMode !== 'adventure') { setUnit(null); setLibraryMode(learningMode); return; }
-    const playableUnits: readonly { id: string; title: string }[] = reviewMode ? reviewUnits : units;
-    const next = nextPlayableUnit(unit.id, playableUnits);
-    rememberUnit(next?.id ?? null);
-    setUnit(null);
-    if (next) {
-      if (reviewMode) openReview(next.id);
-      else void openUnit(next);
+    if (nextScene) {
+      if (libraryMode) openLibraryUnit(nextScene as AtomicUnit, learningMode);
+      else if (reviewMode) openReview(nextScene.id);
+      else void openUnit(nextScene);
+      return;
     }
-    if (!next) setReviewMode(false);
+    setUnit(null);
+    setLibraryMode(null);
+    setReviewMode(false);
   }
 
-  const playableUnits: readonly { id: string; title: string }[] = reviewMode ? reviewUnits : units;
+  const playableUnits: readonly (UnitSummary | AtomicUnit)[] = libraryMode
+    ? libraryUnits.filter((candidate) => learningMode !== 'grammar' || candidate.kind !== 'vocabulary-pack' && (preview || !missingGrammarWords(candidate, readWordMemories(userId)).length))
+    : reviewMode ? reviewUnits : units;
   const nextScene = unit ? nextPlayableUnit(unit.id, playableUnits) : undefined;
+  const nextLabel = nextScene ? 'Continuar jugando →' : 'Volver al recorrido →';
+  const routePosition = unit ? orderedJourneyUnits(playableUnits).findIndex((candidate) => candidate.id === unit.id) : -1;
+  function rememberAfterCompletion() {
+    if (preview || reviewMode) return;
+    const nextMode = libraryMode ? learningMode : nextScene && journeyPresentation(nextScene).pack ? 'vocabulary' : 'adventure';
+    rememberUnit(nextScene?.id ?? unit?.id ?? null, nextMode);
+    refreshProgress((version) => version + 1);
+  }
 
   const microOverlay = microSession ? <ArcadeExperience userId={userId} units={microSession.units} inspection={microSession.inspection} onExit={() => setMicroSession(null)} /> : null;
   const offerArcade = unit && (preview || shouldOfferMicroArcade(userId, unit.id));
   if (unit) {
-    const inspectionMode = reviewMode || preview || isAdmin && unit.id !== pilot?.id && unit.id !== mirrorPilot?.id;
+    // Admins playing from Home are learners too. Only explicit editorial review is read-only.
+    const inspectionMode = reviewMode || preview;
     if (preview && learningMode === 'grammar' && unit.grammar.some((form) => form.englishBase === 'play')) return <PlayingGrammarReview key={`playing-review-${unit.id}`} unit={previewUnit} mirrorUnit={reviewUnits.find((item) => item.mirror)!} onExit={() => { stopSpeech(); setUnit(null); setLibraryMode('grammar'); setLibraryUnits(reviewUnits); }} />;
-    if (unit.mirror && learningMode !== 'vocabulary') return <><MirrorLessonExperience grammarOnly={learningMode === 'grammar'} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} inspection={inspectionMode} syncStatus={syncStatus} onExit={() => { stopSpeech(); setUnit(null); setReviewMode(false); }} onNext={continueAfterUnit} nextLabel={learningMode !== 'adventure' ? 'Elegir otra práctica →' : nextScene ? `Seguir: ${nextScene.title} →` : 'Volver al recorrido →'} onEvolution={() => { setUnit(null); setLibraryMode(null); if (!inspectionMode) setEvolutionOpen(true); }} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}</>;
-    return <><LanguageGame learningMode={learningMode} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} preview={preview} reviewMode={inspectionMode} startInConversation={conversationStart} nextLabel={learningMode !== 'adventure' ? 'Elegir otra práctica →' : nextScene ? `Seguir: ${nextScene.title} →` : 'Volver al recorrido →'} onNext={continueAfterUnit} onComplete={expansionTest ? finishExpansionTest : undefined} onExit={() => { stopSpeech(); setUnit(null); setReviewMode(false); setExpansionTest(null); }} onEvolution={!inspectionMode ? () => { setUnit(null); setLibraryMode(null); setEvolutionOpen(true); } : undefined} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}</>;
+    if (unit.mirror && learningMode !== 'vocabulary') return <><MirrorLessonExperience grammarOnly={learningMode === 'grammar'} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} inspection={inspectionMode} syncStatus={syncStatus} onFinished={rememberAfterCompletion} onExit={() => { stopSpeech(); setUnit(null); setReviewMode(false); }} onNext={continueAfterUnit} nextLabel={nextLabel} onEvolution={() => { setUnit(null); setLibraryMode(null); if (!inspectionMode) setEvolutionOpen(true); }} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}</>;
+    return <><LanguageGame learningMode={learningMode} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} preview={preview} reviewMode={inspectionMode} startInConversation={conversationStart} nextLabel={nextLabel} positionLabel={routePosition >= 0 ? `PARADA ${routePosition + 1}` : undefined} syncStatus={syncStatus} onFinished={rememberAfterCompletion} onNext={continueAfterUnit} onComplete={expansionTest ? finishExpansionTest : undefined} onExit={() => { stopSpeech(); setUnit(null); setReviewMode(false); setExpansionTest(null); }} onEvolution={!inspectionMode ? () => { setUnit(null); setLibraryMode(null); setEvolutionOpen(true); } : undefined} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}</>;
   }
   if (loading) return <div className="gate-screen"><div className="gate-card"><div className="loading-orb">◌</div><h1>Preparando tu escena…</h1><p>Tu siguiente experiencia está casi lista.</p></div></div>;
   if (authenticated && error && !profileOpen && !contentOpen) return <div className="gate-screen"><div className="gate-card"><p className="eyebrow">DIRECTUS</p><h1>No se pudo cargar la home</h1><p>{error}</p>{isAdmin ? <button type="button" className="primary-action" onClick={() => setProfileOpen(true)}>Mi perfil · Gestionar contenido →</button> : null}<button type="button" onClick={() => { setAuthenticated(false); setError(null); }}>Volver al acceso</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Ver la experiencia de prueba</button> : null}</div></div>;

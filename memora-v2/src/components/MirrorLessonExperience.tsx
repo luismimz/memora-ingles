@@ -20,7 +20,7 @@ import './mirror.css';
 
 const stages = ['Descubrir', 'Español espejo', 'Comparar', 'Probar', 'Conversar', 'Recordar', 'Completado'] as const;
 /** One data-driven vertical experience. It uses Memora's real event journal, chat and SRS. */
-export function MirrorLessonExperience({ unit, userId, grammarOnly = false, inspection, syncStatus, onExit, onNext, nextLabel, onEvolution, onPractice, appearance, onToggleAppearance }: { unit: AtomicUnit; userId: string; grammarOnly?: boolean; inspection: boolean; syncStatus: SyncStatus; onExit: () => void; onNext: () => void; nextLabel: string; onEvolution: () => void; onPractice?: () => void; appearance: Appearance; onToggleAppearance: () => void }) {
+export function MirrorLessonExperience({ unit, userId, grammarOnly = false, inspection, syncStatus, onFinished, onExit, onNext, nextLabel, onEvolution, onPractice, appearance, onToggleAppearance }: { unit: AtomicUnit; userId: string; grammarOnly?: boolean; inspection: boolean; syncStatus: SyncStatus; onFinished?: () => void; onExit: () => void; onNext: () => void; nextLabel: string; onEvolution: () => void; onPractice?: () => void; appearance: Appearance; onToggleAppearance: () => void }) {
   const checkpointId = grammarOnly ? `${unit.id}:grammar` : unit.id;
   const lesson = unit.mirror!;
   const [checkpoint] = useState(() => inspection ? null : readMirrorCheckpoint(userId, checkpointId, unit.contentVersion ?? '1'));
@@ -58,6 +58,7 @@ export function MirrorLessonExperience({ unit, userId, grammarOnly = false, insp
       const recall = attempts.filter((attempt) => attempt.activityId === 'mirror-recall').at(-1);
       recordWordRecall(userId, unit.words[0], recall?.helped ? 'hesitant' : 'quick', now, 'production', undefined, recall?.helped ?? true);
       recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: 'mirror-complete', skill: lesson.id, phase: 'completion', source: 'learner', modality: 'writing', prompt: lesson.novelty, response: 'Ficha practicada: traducción, conversación y recuperación.', expected: '', correct: null, helped: false, feedback: 'La primera práctica no demuestra retención a largo plazo. Las frases quedan programadas para repasar.' });
+      onFinished?.();
     }
     move(6);
   }

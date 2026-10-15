@@ -25,11 +25,18 @@ export const journeySteps: readonly JourneyStep[] = [
   { id: 'formal-and-reported', title: 'Cuenta lo que pasó', skill: 'Voz pasiva y estilo indirecto', ilerna: 'Unidades 7 y 9' },
 ];
 
+/** Home and in-game continuation must use exactly the same published route. */
+export function orderedJourneyUnits<T extends { id: string }>(units: readonly T[]): T[] {
+  const byId = new Map(units.map((unit) => [unit.id, unit]));
+  const planned = journeySteps.map((step) => byId.get(step.id)).filter((unit): unit is T => Boolean(unit));
+  const plannedIds = new Set(planned.map((unit) => unit.id));
+  return [...planned, ...units.filter((unit) => !plannedIds.has(unit.id))];
+}
+
 export function nextPlayableUnit<T extends { id: string }>(currentId: string, units: readonly T[]): T | undefined {
-  const current = journeySteps.findIndex((step) => step.id === currentId);
-  if (current >= 0) return journeySteps.slice(current + 1).map((step) => units.find((unit) => unit.id === step.id)).find((unit) => unit !== undefined);
-  const fallback = units.findIndex((unit) => unit.id === currentId);
-  return fallback >= 0 ? units[fallback + 1] : undefined;
+  const ordered = orderedJourneyUnits(units);
+  const current = ordered.findIndex((unit) => unit.id === currentId);
+  return current >= 0 ? ordered[current + 1] : undefined;
 }
 
 export interface UnitProgress {

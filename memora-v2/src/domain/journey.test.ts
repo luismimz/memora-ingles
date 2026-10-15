@@ -21,6 +21,14 @@ describe('recorrido', () => {
     expect(nextPlayableUnit('legacy-one', units)?.id).toBe('legacy-two');
   });
 
+  it('continúa después de la última misión planificada a los paquetes publicados, igual que Home', () => {
+    const units = [{ id: 'pack-1' }, { id: 'm1-bedroom-02' }, { id: 'pack-2' }, { id: 'm1-z1-01' }];
+    expect(nextPlayableUnit('m1-z1-01', units)?.id).toBe('m1-bedroom-02');
+    expect(nextPlayableUnit('m1-bedroom-02', units)?.id).toBe('pack-1');
+    expect(nextPlayableUnit('pack-1', units)?.id).toBe('pack-2');
+    expect(nextPlayableUnit('pack-2', units)).toBeUndefined();
+  });
+
   it('separa repaso vencido, futuro y progreso corrupto', () => {
     const record = { completedAt: '2026-10-09T10:00:00.000Z', nextReviewAt: '2026-10-09T11:00:00.000Z', correct: 3, attempted: 3 };
     vi.stubGlobal('localStorage', { getItem: (key: string) => key.endsWith('.ready') ? JSON.stringify(record) : '{invalid' });

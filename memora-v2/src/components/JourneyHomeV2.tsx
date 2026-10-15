@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { readGameCheckpoint, readMirrorCheckpoint } from '../domain/gameCheckpoint';
-import { isReviewDue, journeySteps, readUnitProgress } from '../domain/journey';
+import { isReviewDue, orderedJourneyUnits, readUnitProgress } from '../domain/journey';
 import { readLearningActivities } from '../domain/learningActivity';
 import { loadLearningProfile, readAvatar } from '../domain/learningProfile';
 import { readWordMemories } from '../domain/memory';
@@ -39,10 +39,7 @@ export function JourneyHome(props: Props) {
     appearance, onToggleAppearance, onWords, onGrammar, resumeLearningMode = 'adventure' } = props;
   const [showAllWords, setShowAllWords] = useState(false);
   const catalogue = catalogueStats(units);
-  const byId = new Map(units.map((unit) => [unit.id, unit]));
-  const planned = journeySteps.map((step) => byId.get(step.id)).filter((unit): unit is UnitSummary => Boolean(unit));
-  const plannedIds = new Set(planned.map((unit) => unit.id));
-  const stories = [...planned, ...units.filter((unit) => !plannedIds.has(unit.id))];
+  const stories = orderedJourneyUnits(units);
   const knownUnitIds = new Set(stories.map((unit) => unit.id));
   const activities = readLearningActivities(userId).filter((item) => knownUnitIds.has(item.unitId));
   const completed = stories.filter((unit) => readUnitProgress(userId, unit.id) || completedVocabularyStop(unit, activities));
@@ -51,7 +48,10 @@ export function JourneyHome(props: Props) {
   const due = stories.find((unit) => isReviewDue(readUnitProgress(userId, unit.id)));
   const checkpointFor = (id: string) => resumeLearningMode === 'adventure' ? id : `${id}:${resumeLearningMode}`;
   const resume = stories.find((unit) => unit.id === resumeUnitId && (readGameCheckpoint(userId, checkpointFor(unit.id), unit.contentVersion ?? '1') || readMirrorCheckpoint(userId, checkpointFor(unit.id), unit.contentVersion ?? '1')));
-  const featured = resume ?? next ?? due ?? stories[0];
+  // Completion remembers the following stop before the learner presses Continue.
+  // It has no checkpoint yet and must not send someone who stopped at mission 10 back to 1.
+  const queued = stories.find((unit) => unit.id === resumeUnitId && !completedIds.has(unit.id));
+  const featured = resume ?? queued ?? next ?? due ?? stories[0];
   const featuredPresentation = featured ? journeyPresentation(featured) : null;
   const gameCheckpoint = resume ? readGameCheckpoint(userId, checkpointFor(resume.id), resume.contentVersion ?? '1') : null;
   const mirrorCheckpoint = resume ? readMirrorCheckpoint(userId, checkpointFor(resume.id), resume.contentVersion ?? '1') : null;
