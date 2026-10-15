@@ -5,6 +5,7 @@ import { readLearningActivities } from '../domain/learningActivity';
 import { loadLearningProfile, readAvatar } from '../domain/learningProfile';
 import { readWordMemories } from '../domain/memory';
 import { shouldOfferMicroArcade } from '../domain/microArcade';
+import { catalogueStats } from '../domain/catalogueStats';
 import type { UnitSummary } from '../services/directus';
 import type { Appearance } from '../useAppearance';
 import type { LearningMode } from '../domain/game';
@@ -35,6 +36,7 @@ export function JourneyHome(props: Props) {
     appearance, onToggleAppearance, onWords, onGrammar, resumeLearningMode = 'adventure' } = props;
   const [showAllStories, setShowAllStories] = useState(false);
   const [showAllWords, setShowAllWords] = useState(false);
+  const catalogue = catalogueStats(units);
   const byId = new Map(units.map((unit) => [unit.id, unit]));
   const planned = journeySteps.map((step) => byId.get(step.id)).filter((unit): unit is UnitSummary => Boolean(unit));
   const plannedIds = new Set(planned.map((unit) => unit.id));
@@ -77,7 +79,7 @@ export function JourneyHome(props: Props) {
 
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
     <div className="home-body">
-      <div className="home-intro"><div><p className="eyebrow">TU AVENTURA</p><h1>La historia sigue contigo.</h1></div><span>{completed.length} de {stories.length} misiones completadas</span></div>
+      <div className="home-intro"><div><p className="eyebrow">TU AVENTURA</p><h1>La historia sigue contigo.</h1><p className="home-catalogue" aria-label="Contenido disponible"><strong>{catalogue.words}</strong> {catalogue.words === 1 ? 'palabra disponible' : 'palabras disponibles'}{catalogue.expressions > 0 ? <> · <strong>{catalogue.expressions}</strong> {catalogue.expressions === 1 ? 'expresión' : 'expresiones'}</> : null}</p></div><span>{completed.length} de {stories.length} misiones completadas</span></div>
       {featured ? <section className="home-adventure" aria-labelledby="home-adventure-title">
         <div className="home-adventure-art"><img src="/house-adventure.svg" alt="Ilustración de la Casa Viva: una puerta iluminada, un kiwi travieso y unas llaves escondidas" /><span>MUNDO 1 · LA CASA VIVA</span></div>
         <div className="home-adventure-copy"><p className="eyebrow">{resume ? 'JUSTO DONDE LO DEJASTE' : `MISIÓN ${currentIndex} DE ${stories.length}`}</p><h2 id="home-adventure-title">{featured.title}</h2><p className="home-adventure-story">{featured.teaser || 'Algo extraño ocurre en esta habitación. Entra y descubre qué palabra te abre el camino.'}</p><p className="home-current-step"><span aria-hidden="true">✦</span> {missionLabel}</p><button type="button" className="primary-action" onClick={() => onOpen(featured)}>{resume ? 'Continuar jugando' : readUnitProgress(userId, featured.id) ? 'Volver a jugar' : 'Empezar misión'} <span aria-hidden="true">→</span></button><div className="home-adventure-progress"><div role="progressbar" aria-label="Misiones completadas del mundo" aria-valuemin={0} aria-valuemax={stories.length} aria-valuenow={completed.length}><span style={{ width: `${stories.length ? completed.length / stories.length * 100 : 0}%` }} /></div><small>{completed.length}/{stories.length} misiones de este recorrido</small></div></div>
