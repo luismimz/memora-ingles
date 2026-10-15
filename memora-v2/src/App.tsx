@@ -6,6 +6,7 @@ import { readWordMemories } from './domain/memory';
 import type { LearningMode } from './domain/game';
 import { readGameCheckpoint, readMirrorCheckpoint } from './domain/gameCheckpoint';
 import { JourneyHome } from './components/JourneyHomeV2';
+import { journeyPresentation } from './domain/journeyMap';
 import { ProfileView } from './components/ProfileView';
 import { ContentManager } from './components/ContentManager';
 import { ArcadeExperience } from './components/ArcadeExperience';
@@ -174,7 +175,7 @@ export default function App() {
 
   async function openUnit(summary: UnitSummary, directConversation = false) {
     const checkpointId = `${summary.id}:${resumeMode}`;
-    const mode = !directConversation && resumeMode !== 'adventure' && summary.id === lastOpenedUnitId && (readGameCheckpoint(userId, checkpointId, summary.contentVersion ?? '1') || readMirrorCheckpoint(userId, checkpointId, summary.contentVersion ?? '1')) ? resumeMode : 'adventure';
+    const mode = !directConversation && resumeMode !== 'adventure' && summary.id === lastOpenedUnitId && (readGameCheckpoint(userId, checkpointId, summary.contentVersion ?? '1') || readMirrorCheckpoint(userId, checkpointId, summary.contentVersion ?? '1')) ? resumeMode : !directConversation && journeyPresentation(summary).pack ? 'vocabulary' : 'adventure';
     setLearningMode(mode); setLibraryMode(null);
     rememberUnit(summary.id, mode);
     setConversationStart(directConversation);

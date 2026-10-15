@@ -25,6 +25,7 @@
 .home-adventure-story { max-width: 36ch; margin: 0; color: var(--muted); line-height: 1.5; }
 .home-current-step { display: flex; align-items: center; gap: 9px; margin: 18px 0 0; color: var(--accent-ink); font-size: .86rem; font-weight: 800; }
 .home-current-step span { font-size: 1.3rem; }
+.home-current-words { margin: 12px 0 0; color: var(--accent-ink); font-size: .8rem; font-weight: 750; overflow-wrap: anywhere; }
 .home-adventure-copy .primary-action { margin-top: 21px; }
 .home-adventure-progress { width: 100%; margin-top: 25px; }
 .home-adventure-progress > div { height: 7px; overflow: hidden; border-radius: 999px; background: var(--surface-soft); }

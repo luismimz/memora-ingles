@@ -91,6 +91,7 @@ export async function loadMirrorPilot(signal?: AbortSignal): Promise<AtomicUnit 
 export interface UnitSummary {
   id: string;
   title: string;
+  kind?: AtomicUnit['kind'];
   contentVersion?: string;
   location?: AtomicUnit['location'];
   hasDialogue?: boolean;
@@ -225,6 +226,7 @@ export async function loadPublishedUnitSummaries(signal?: AbortSignal): Promise<
       return {
         id,
         title: resolvedTitle,
+        kind: unit?.kind,
         contentVersion: unit?.contentVersion,
         location: unit?.location,
         hasDialogue: Boolean(unit?.communication?.dialogue),
