@@ -196,6 +196,7 @@ body { background: var(--page); }
 :root[data-appearance='dark'] .scene-visual { background: radial-gradient(circle at 38% 35%, #a4836b, #664d3d 64%, #3b332e); }
 .scene-visual.is-compact { height: clamp(165px, 25dvh, 235px); }
 .scene-visual img { width: 100%; height: 100%; object-fit: contain; }
+.scene-visual .cognate-scene { width: 100%; height: 100%; padding: 8px 12px 12px; filter: drop-shadow(0 7px 5px rgba(101,63,41,.12)); }
 .scene-emoji { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; filter: drop-shadow(0 12px 10px rgba(101,63,41,.25)); }
 .scene-emoji span { font-size: clamp(5rem, 17vw, 9rem); line-height: 1; }
 .is-compact .scene-emoji span { font-size: clamp(4rem, 13vw, 7rem); }
