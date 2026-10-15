@@ -8,7 +8,7 @@ describe('recordatorio según la ruta aprendida', () => {
     const html = renderToStaticMarkup(<ArcadeWordReminder word={vocabularyPreviewPacks[0].words[0]} paused={false} />);
     expect(html).toContain('RECUERDA LA PALABRA');
     expect(html).not.toContain('RECUERDA EL PUENTE');
-    expect(html).not.toContain('role="img"');
+    expect(html).toContain('role="img"');
     expect(html).toContain('pronunciación inglesa');
   });
   it('mantiene la historia y el puente de la asociación original', () => {

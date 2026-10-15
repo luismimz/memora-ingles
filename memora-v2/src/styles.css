@@ -219,6 +219,10 @@ body { background: var(--page); }
 :root[data-appearance='dark'] .primary-action { background: linear-gradient(145deg, #f7ead8, #d9c2a6); color: #29241f; }
 .primary-action:hover { filter: brightness(1.04); transform: translateY(-2px); }
 .association-content { position: relative; gap: 10px; }
+.cognate-example { color: var(--muted); font-size: .85rem; line-height: 1.4; }
+.cognate-example summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--accent-ink); font-weight: 750; }
+.cognate-example p { margin: 6px 0; }
+.cognate-example button { min-height: 44px; }
 .audio-glass { position: absolute; z-index: 3; inset: -4px; display: grid; place-items: center; border-radius: 24px; background: color-mix(in srgb, var(--surface-strong) 92%, transparent); backdrop-filter: blur(36px); -webkit-backdrop-filter: blur(36px); color: var(--accent-ink); font-size: 2.4rem; opacity: 1; pointer-events: none; transition: opacity .5s ease, backdrop-filter .5s ease; }
 .audio-glass > span { animation: audio-pulse .7s ease-in-out infinite alternate; }
 .association-content.is-revealed .audio-glass { opacity: 0; backdrop-filter: blur(0); -webkit-backdrop-filter: blur(0); }

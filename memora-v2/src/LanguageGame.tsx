@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { GameCard } from './components/GameCard';
 import { WordHeading } from './components/WordHeading';
+import { CognateAssociationCard } from './components/CognateAssociationCard';
 import { EchoPractice } from './components/EchoPractice';
 import { GrammarMorphology } from './components/GrammarMorphology';
 import { GrammarCoach } from './components/GrammarCoach';
@@ -146,7 +147,7 @@ function AssociationCard({ unit, inspection, word, index, total, userId, locatio
     else onConnect();
   }
   if (reconstruct) return <SceneReconstruction unit={unit} word={word} userId={userId} inspection={inspection} onContinue={onConnect} />;
-  if (word.associationMode === 'cognate') return <GameCard onAdvance={revealed ? connect : undefined} advanceLabel="Recordar"><div className={`association-content ${revealed ? 'is-revealed' : 'is-listening'}`}><p className="eyebrow">SE PARECE · SIGNIFICA LO MISMO</p><WordHeading en={word.en} es={word.es} /><p className="ipa">{word.ipa}</p><p>No necesitas inventar una asociación. Escucha cómo suena en inglés.</p><button type="button" className="quiet-action" onClick={() => void playEnglish(word.en.toLowerCase(), word.audioUrl)}>🔊 Escuchar {word.en}</button>{word.usageExample ? <div><p lang="en">{word.usageExample.en}</p><p>{word.usageExample.es}</p><button type="button" className="quiet-action" onClick={() => void playEnglish(word.usageExample!.en)}>🔊 Escuchar el ejemplo</button></div> : null}<button type="button" className="primary-action" onClick={connect}>Seguir →</button></div></GameCard>;
+  if (word.associationMode === 'cognate') return <CognateAssociationCard word={word} index={index} total={total} revealed={revealed} onConnect={connect} />;
 
   return <GameCard onAdvance={revealed ? connect : undefined} back={<div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
     <div className={`association-content ${revealed ? 'is-revealed' : 'is-listening'}`}>
