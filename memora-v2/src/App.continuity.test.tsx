@@ -21,7 +21,7 @@ vi.mock('react', async (original) => ({
 vi.mock('./useAppearance', () => ({ useAppearance: () => ({ appearance: 'light', toggleAppearance: vi.fn() }) }));
 vi.mock('./services/audio', () => ({ stopSpeech: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('./services/directus', async (original) => ({ ...await original<typeof import('./services/directus')>(), hasSession: () => true, loadUnit: api.loadUnit }));
-vi.mock('./domain/microArcade', () => ({ shouldOfferMicroArcade: () => false }));
+vi.mock('./domain/microArcade', async (original) => ({ ...await original<typeof import('./domain/microArcade')>(), shouldOfferMicroArcade: () => false }));
 
 let App: typeof import('./App').default;
 const next = { ...previewUnit, id: 'next-pack', title: 'Más asociaciones', kind: 'vocabulary-pack' as const };
@@ -47,6 +47,25 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
+  it('abre Arcade al continuar tras cuatro misiones y luego sigue sin repetirlas', async () => {
+    for (const word of current.words) recordWordRecall('learner', word, 'quick');
+    for (let index = 1; index <= 4; index++) {
+      hooks.states.set(2, { ...current, id: `pack-${index}` });
+      game().props.onFinished();
+    }
+    hooks.states.set(15, [{ ...current, id: 'pack-4' }, next]);
+    expect(game().props.nextLabel).toBe('Ronda Arcade →');
+    game().props.onNext();
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    hooks.cursor = 0;
+    const overlay = (App() as ReactElement<{ children: ReactElement[] }>).props.children[1];
+    expect((overlay.props as any).initialMode).toBe('associations');
+    expect(hooks.states.get(2)).toMatchObject({ id: 'pack-4' });
+    (overlay.props as any).onExit();
+    await Promise.resolve(); await Promise.resolve();
+    expect(hooks.states.get(2)).toBe(next);
+    expect(game().props.nextLabel).not.toBe('Ronda Arcade →');
+  });
   it('prepara las palabras reales desde Gramática y entra al truco sin mover Inicio', async () => {
     const source = { ...previewUnit, id: 'grammar-preparation' };
     const stop = grammarJourney([source])[0];
@@ -77,7 +96,7 @@ describe('continuidad real desde App', () => {
     expect(api.loadUnit).not.toHaveBeenCalled();
     expect(storage.size).toBe(0);
   });
-  it('juega y reanuda desde el mapa de Gramática sin perder la posición de Inicio', () => {
+  it('intercala Arcade tras un truco y reanuda Gramática sin perder la posición de Inicio', async () => {
     const first = { ...previewUnit, id: 'grammar-first', grammar: [previewUnit.grammar[0]] };
     const second = { ...first, id: 'grammar-next', grammar: [{ ...first.grammar[0], lesson: { ...lessonForForm(first.grammar[0], 'jugar')!, id: 'next-grammar-pattern' } }] };
     const route = grammarJourney([first, second]);
@@ -92,6 +111,11 @@ describe('continuidad real desde App', () => {
     expect(storage.get('memora-v2.grammar-position.learner')).toBe(route[1].id);
     expect(storage.get('memora-v2.resume.learner')).toBe('home-10');
     playing.onNext();
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    hooks.cursor = 0;
+    const overlay = (App() as ReactElement<{ children: ReactElement[] }>).props.children[1];
+    expect((overlay.props as any).initialMode).toBe('grammar');
+    (overlay.props as any).onExit();
     expect(game().props.stop.id).toBe(route[1].id);
     expect(hooks.states.get(4)).toBe('grammar');
     expect(api.loadUnit).not.toHaveBeenCalled();

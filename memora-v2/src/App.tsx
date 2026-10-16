@@ -8,9 +8,10 @@ import { JourneyHome } from './components/JourneyHomeV2';
 import { completedVocabularyStop, journeyPresentation } from './domain/journeyMap';
 import { ProfileView } from './components/ProfileView';
 import { ContentManager } from './components/ContentManager';
-import { ArcadeExperience } from './components/ArcadeExperience';
+import { ArcadeExperience, eligibleGrammarUnits } from './components/ArcadeExperience';
 import { readLearningActivities } from './domain/learningActivity';
-import { shouldOfferMicroArcade } from './domain/microArcade';
+import { shouldOfferMicroArcade, microRounds } from './domain/microArcade';
+import { completeArcadeCadence, consumeAutomaticArcade, pendingAutomaticArcade, type AutomaticArcadeMode } from './domain/arcadeCadence';
 import { PhrasalFusionDemo } from './components/PhrasalFusionDemo';
 import { GrammarWorkshop } from './components/GrammarWorkshop';
 import { EvolutionView } from './components/EvolutionView';
@@ -53,7 +54,7 @@ export default function App() {
   const [pilot, setPilot] = useState<AtomicUnit | null>(null);
   const [mirrorPilot, setMirrorPilot] = useState<AtomicUnit | null>(null);
   const [contentOpen, setContentOpen] = useState(false);
-  const [microSession, setMicroSession] = useState<{ units: AtomicUnit[]; inspection: boolean } | null>(null);
+  const [microSession, setMicroSession] = useState<{ units: AtomicUnit[]; inspection: boolean; automatic?: boolean; initialMode?: AutomaticArcadeMode } | null>(null);
   const [units, setUnits] = useState<UnitSummary[]>(previewRequested ? previewSummaries : []);
   const [userId, setUserId] = useState('preview');
   const [isAdmin, setIsAdmin] = useState(false);
@@ -292,16 +293,19 @@ export default function App() {
     setUnits(loaded);
   }
 
-  async function openArcade() {
+  async function openArcade(automatic = false, initialMode: AutomaticArcadeMode = 'associations') {
     setUnitError(null);
     try {
       const known = new Set([...readSentenceMemories(userId).map((memory) => memory.unitId), ...readLearningActivities(userId).map((activity) => activity.unitId)]);
-      const candidates = preview ? (unit ? [unit] : reviewUnits) : await Promise.all(
+      const candidates = preview ? (unit ? [unit] : reviewUnits) : (await Promise.allSettled(
         [...(unit ? [{ id: unit.id }] : []), ...units.filter((summary) => known.has(summary.id) && summary.id !== unit?.id)].slice(0, 12).map((summary) => summary.id === unit?.id ? Promise.resolve(unit) : summary.id === pilot?.id ? Promise.resolve(pilot) : summary.id === mirrorPilot?.id ? Promise.resolve(mirrorPilot) : loadUnit(summary.id)),
-      );
+      )).flatMap((result) => result.status === 'fulfilled' && result.value ? [result.value] : []);
       // No synthetic recall or exposure is inferred from a completion flag.
       // Opening/closing the modal keeps the underlying lesson mounted.
-      setMicroSession({ units: candidates, inspection: preview || reviewMode });
+      const hasGrammar = initialMode === 'grammar' && eligibleGrammarUnits(userId, candidates).length > 0;
+      if (automatic && !hasGrammar && !microRounds(userId, candidates).some((round) => round.options.length >= 2)) { advanceAfterUnit(); return; }
+      setMicroSession({ units: candidates, inspection: preview || reviewMode, automatic, initialMode });
+      if (automatic) consumeAutomaticArcade(userId);
     } catch (reason) {
       setUnitError(reason instanceof Error ? reason.message : 'No se pudo preparar la ronda.');
     }
@@ -363,6 +367,12 @@ export default function App() {
   }
 
   function continueAfterUnit() {
+    const pending = !preview && !reviewMode && pendingAutomaticArcade(userId);
+    if (pending) { void openArcade(true, pending); return; }
+    advanceAfterUnit();
+  }
+
+  function advanceAfterUnit() {
     if (!unit) return;
     stopSpeech();
     if (preparingGrammar) { void prepareGrammarStop(preparingGrammar); return; }
@@ -395,10 +405,11 @@ export default function App() {
     ? libraryUnits
     : reviewMode ? reviewUnits : journeyRoute;
   const nextScene = unit ? libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit.id) : !libraryMode && !reviewMode ? followingJourneyStop(activeTrick?.id ?? unit.id) : nextPlayableUnit(unit.id, playableUnits) : undefined;
-  const nextLabel = preparingGrammar ? missingGrammarStop(preparingGrammar, libraryUnits, readWordMemories(userId)).length ? 'Seguir preparando palabras →' : 'Entrar al truco →' : nextScene ? 'Continuar jugando →' : 'Volver al recorrido →';
+  const nextLabel = !preview && !reviewMode && pendingAutomaticArcade(userId) ? 'Ronda Arcade →' : preparingGrammar ? missingGrammarStop(preparingGrammar, libraryUnits, readWordMemories(userId)).length ? 'Seguir preparando palabras →' : 'Entrar al truco →' : nextScene ? 'Continuar jugando →' : 'Volver al recorrido →';
   const routePosition = unit ? (libraryMode || reviewMode ? orderedJourneyUnits(playableUnits) : playableUnits).findIndex((candidate) => candidate.id === (activeTrick?.id ?? unit.id)) : -1;
   function rememberAfterCompletion() {
     if (preview || reviewMode) return;
+    if (unit) completeArcadeCadence(userId, activeTrick?.id ?? unit.id, unit.contentVersion ?? '1', Boolean(activeTrick) || learningMode === 'grammar');
     if (preparingGrammar) { writeGrammarPosition(userId, preparingGrammar.id); refreshProgress((version) => version + 1); return; }
     const following = libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit?.id ?? '') : !libraryMode ? followingJourneyStop(activeTrick?.id ?? unit?.id ?? '') : nextScene;
     const nextMode = libraryMode ? learningMode : following && 'routeTrick' in following && following.routeTrick ? 'grammar' : following && journeyPresentation(following).pack ? 'vocabulary' : 'adventure';
@@ -406,12 +417,12 @@ export default function App() {
     refreshProgress((version) => version + 1);
   }
 
-  const microOverlay = microSession ? <ArcadeExperience userId={userId} units={microSession.units} inspection={microSession.inspection} onExit={() => setMicroSession(null)} /> : null;
+  const microOverlay = microSession ? <ArcadeExperience userId={userId} units={microSession.units} inspection={microSession.inspection} initialMode={microSession.initialMode} onExit={() => { stopSpeech(); setMicroSession(null); if (microSession.automatic) advanceAfterUnit(); }} /> : null;
   const offerArcade = unit && (preview || shouldOfferMicroArcade(userId, unit.id));
   if (unit) {
     // Admins playing from Home are learners too. Only explicit editorial review is read-only.
     const inspectionMode = reviewMode || preview;
-    if (activeTrick) return <JourneyTrickExperience key={`${activeTrick.id}-${userId}`} unit={unit} stop={activeTrick} userId={userId} inspection={inspectionMode} onFinished={rememberAfterCompletion} onNext={continueAfterUnit} onExit={() => { stopSpeech(); setUnit(null); setActiveTrick(null); }} syncStatus={syncStatus} appearance={appearance} onToggleAppearance={toggleAppearance} />;
+    if (activeTrick) return <><JourneyTrickExperience key={`${activeTrick.id}-${userId}`} unit={unit} stop={activeTrick} userId={userId} inspection={inspectionMode} onFinished={rememberAfterCompletion} onNext={continueAfterUnit} nextLabel={nextLabel} onExit={() => { stopSpeech(); setUnit(null); setActiveTrick(null); }} syncStatus={syncStatus} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}</>;
     if (preview && learningMode === 'grammar' && unit.grammar.some((form) => form.englishBase === 'play')) return <PlayingGrammarReview key={`playing-review-${unit.id}`} unit={previewUnit} mirrorUnit={reviewUnits.find((item) => item.mirror)!} onExit={() => { stopSpeech(); setUnit(null); setLibraryMode('grammar'); setLibraryUnits(reviewUnits); }} />;
     if (unit.mirror && learningMode !== 'vocabulary') return <><MirrorLessonExperience grammarOnly={learningMode === 'grammar'} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} inspection={inspectionMode} syncStatus={syncStatus} onFinished={rememberAfterCompletion} onExit={() => { stopSpeech(); setUnit(null); setReviewMode(false); }} onNext={continueAfterUnit} nextLabel={nextLabel} onEvolution={() => { setUnit(null); setLibraryMode(null); if (!inspectionMode) setEvolutionOpen(true); }} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}</>;
 return <><LanguageGame learningMode={learningMode} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} preview={preview} reviewMode={inspectionMode} startInConversation={conversationStart} nextLabel={nextLabel} positionLabel={preparingGrammar ? 'PREPARA EL TRUCO' : routePosition >= 0 ? `PARADA ${routePosition + 1}` : undefined} syncStatus={syncStatus} onFinished={rememberAfterCompletion} onNext={continueAfterUnit} onComplete={expansionTest ? finishExpansionTest : undefined} onExit={() => { stopSpeech(); setUnit(null); setReviewMode(false); setExpansionTest(null); setPreparingGrammar(null); }} onEvolution={!inspectionMode ? () => { setUnit(null); setLibraryMode(null); setEvolutionOpen(true); } : undefined} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}</>;

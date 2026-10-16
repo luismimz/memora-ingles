@@ -11,12 +11,13 @@ import { ConversationPractice } from './ConversationPractice';
 import { GameCard } from './GameCard';
 import { stopSpeech } from '../services/audio';
 import { GrammarArcade } from './GrammarArcade';
+import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
   const memories = readWordMemories(userId);
   const practiced = new Set([...readGrammarAttempts(userId).filter((attempt) => attempt.correct).map((attempt) => attempt.unitId),
     ...readLearningActivities(userId).filter((attempt) => attempt.phase === 'construction' && attempt.correct).map((attempt) => attempt.unitId)]);
-  return units.filter((unit) => practiced.has(unit.id) && !missingGrammarWords(unit, memories).length);
+  return units.filter((unit) => practiced.has(unit.id) && !missingGrammarWords(unit, memories).length && grammarArcadeRounds(userId, [unit]).length > 0);
 }
 export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => eligibleGrammarUnits(userId, units).filter((unit) => unit.communication?.dialogue);
 
@@ -27,8 +28,8 @@ function ArcadeDialog({ children, onExit }: { children: React.ReactNode; onExit:
 }
 
 /** Optional modes share the same attempts, SRS and conversation history. */
-export function ArcadeExperience({ userId, units, inspection, onExit }: { userId: string; units: AtomicUnit[]; inspection: boolean; onExit: () => void }) {
-  const [stage, setStage] = useState<'associations' | 'grammar' | 'build' | 'chat' | 'finish'>('associations');
+export function ArcadeExperience({ userId, units, inspection, onExit, initialMode = 'associations' }: { userId: string; units: AtomicUnit[]; inspection: boolean; onExit: () => void; initialMode?: 'associations' | 'grammar' }) {
+  const [stage, setStage] = useState<'associations' | 'grammar' | 'build' | 'chat' | 'finish'>(() => initialMode === 'grammar' && (inspection || eligibleGrammarUnits(userId, units).length) ? 'grammar' : 'associations');
   const [mixed, setMixed] = useState(false);
   const [selected, setSelected] = useState<AtomicUnit>(() => (inspection ? units.filter((unit) => unit.communication?.dialogue) : eligibleMixedUnits(userId, units))[0]);
   const [filled, setFilled] = useState(0);
