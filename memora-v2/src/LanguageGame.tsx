@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { GameCard } from './components/GameCard';
 import { WordHeading } from './components/WordHeading';
 import { CognateAssociationCard } from './components/CognateAssociationCard';
+import { useAssociationAudio } from './components/useAssociationAudio';
+import { AssociationAudioStatus } from './components/AssociationAudioStatus';
 import { EchoPractice } from './components/EchoPractice';
 import { GrammarMorphology } from './components/GrammarMorphology';
 import { GrammarCoach } from './components/GrammarCoach';
@@ -20,7 +22,7 @@ import { readLearningActivities, recordLearningActivity } from './domain/learnin
 import { readGrammarAttempts } from './domain/grammarMemory';
 import { recordChunkExposure, recordSentenceExposure, recordWordRecall } from './domain/memory';
 import { getExpandedEnglishSubject, getPlayableGrammar, getSpanishSubjectLabel, getUnitSentences, makeRecallChoices, nextReviewAt, type AtomicUnit, type AtomicWord, type GrammarForm } from './domain/unit';
-import { playEnglish, playMiss, playSnap, playSpanish, prefetchSpanish, prefetchSpeech, stopSpeech } from './services/audio';
+import { playEnglish, playMiss, playSnap, playSpanish, prefetchSpeech, stopSpeech } from './services/audio';
 import type { Appearance } from './useAppearance';
 import { syncLabels, type SyncStatus } from './services/progressSync';
 
@@ -123,24 +125,10 @@ function GrammarLesson({ form, baseSpanish, index, total, onReady, onContinue }:
 }
 
 function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void }) {
-  const [revealed, setRevealed] = useState(false);
+  const { audioState, listen } = useAssociationAudio(word);
   const [reconstruct, setReconstruct] = useState(false);
   const rejectionKey = `memora-v2.rejected-association.${userId}.${word.en.toLocaleLowerCase('en-US')}`;
   const [associationRejected, setAssociationRejected] = useState(() => localStorage.getItem(rejectionKey) === '1');
-  useEffect(() => {
-    let active = true;
-    prefetchSpanish(word.scene);
-    void (async () => {
-      await playEnglish(word.en.toLowerCase(), word.audioUrl, true);
-      if (!active) return;
-      setRevealed(true);
-      if (word.associationMode === 'cognate') return;
-      await playSpanish(word.scene, true);
-      if (!active) return;
-      await playEnglish(word.en.toLowerCase(), word.audioUrl);
-    })();
-    return () => { active = false; stopSpeech(); };
-  }, [word.id, word.en, word.audioUrl, word.scene]);
 
   function connect() {
     stopSpeech();
@@ -148,15 +136,14 @@ function AssociationCard({ unit, inspection, word, index, total, userId, locatio
     else onConnect();
   }
   if (reconstruct) return <SceneReconstruction unit={unit} word={word} userId={userId} inspection={inspection} onContinue={onConnect} />;
-  if (word.associationMode === 'cognate') return <CognateAssociationCard word={word} index={index} total={total} revealed={revealed} onConnect={connect} />;
+  if (word.associationMode === 'cognate') return <CognateAssociationCard word={word} index={index} total={total} audioState={audioState} onListen={listen} onConnect={connect} />;
 
-  return <GameCard onAdvance={revealed ? connect : undefined} back={<div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
-    <div className={`association-content ${revealed ? 'is-revealed' : 'is-listening'}`}>
+  return <GameCard onAdvance={connect} back={<div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
+    <div className="association-content is-revealed">
       {location ? <p className="association-location">{location}</p> : null}
-      <p className="eyebrow">ASOCIACIÓN {index + 1}/{total}</p><WordHeading en={word.en} es={word.es.toUpperCase()} /><p className="ipa">{word.ipa}</p><SceneVisual word={word} showMemoryLink={!associationRejected} /><div className={`bridge-row ${word.bridge && !associationRejected ? '' : 'is-direct'}`}>{word.bridge && !associationRejected ? <div><small>SUENA A</small><b>{word.bridge}</b></div> : <div><small>IMAGEN DIRECTA</small><b>Sin palabra puente</b></div>}<button type="button" className="round-audio" onClick={() => void playEnglish(word.en.toLowerCase(), word.audioUrl)} aria-label={`Escuchar ${word.en}`}>🔊</button></div>{associationRejected ? <p className="scene-copy">Mira, escucha y conecta directamente con <strong>{word.es.toUpperCase()}</strong>.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
-      {revealed && word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; setAssociationRejected(next); if (next) localStorage.setItem(rejectionKey, '1'); else localStorage.removeItem(rejectionKey); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
-      {word.reconstruction ? <><small>{word.bridgeEvidence?.soundRelation}</small><button type="button" className="quiet-action" onClick={() => { stopSpeech(); setRevealed(true); connect(); }}>Ya lo he imaginado →</button></> : null}
-      <span className="audio-glass" role="status" aria-label={revealed ? 'Palabra revelada' : 'Escucha antes de leer'}><span aria-hidden="true">◉</span></span>
+      <p className="eyebrow">ASOCIACIÓN {index + 1}/{total}</p><WordHeading en={word.en} es={word.es.toUpperCase()} /><p className="ipa">{word.ipa}</p><SceneVisual word={word} showMemoryLink={!associationRejected} /><div className={`bridge-row ${word.bridge && !associationRejected ? '' : 'is-direct'}`}>{word.bridge && !associationRejected ? <div><small>SUENA A</small><b>{word.bridge}</b></div> : <div><small>IMAGEN DIRECTA</small><b>Sin palabra puente</b></div>}<button type="button" className="round-audio" onClick={listen} aria-label={`Escuchar ${word.en}`}>🔊</button></div><AssociationAudioStatus state={audioState} />{associationRejected ? <p className="scene-copy">Mira, escucha y conecta directamente con <strong>{word.es.toUpperCase()}</strong>.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
+      {word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; setAssociationRejected(next); if (next) localStorage.setItem(rejectionKey, '1'); else localStorage.removeItem(rejectionKey); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
+      {word.reconstruction ? <><small>{word.bridgeEvidence?.soundRelation}</small><button type="button" className="quiet-action" onClick={connect}>Ya lo he imaginado →</button></> : null}
     </div>
   </GameCard>;
 }
@@ -203,6 +190,13 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   const acquisitionIndexes = unit.words.map((item, index) => item.learningRole === 'review' ? -1 : index).filter((index) => index >= 0);
   const recallWord = unit.words[recalledWordIndex(unit, state.recallIndex)];
   const choices = useMemo(() => makeRecallChoices(unit, recalledWordIndex(unit, state.recallIndex), sessionSeed), [unit, state.recallIndex, sessionSeed]);
+  const nextAssociationWord = unit.words[acquisitionIndexes[acquisitionIndexes.indexOf(state.wordIndex) + 1]];
+
+  useEffect(() => () => stopSpeech(), [state.phase, state.recallIndex]);
+
+  useEffect(() => {
+    if (state.phase === 'associate' && nextAssociationWord) prefetchSpeech(nextAssociationWord.en.toLowerCase(), nextAssociationWord.audioUrl);
+  }, [state.phase, nextAssociationWord]);
 
   useEffect(() => {
     if (reviewMode || startInConversation) return;

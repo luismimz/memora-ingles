@@ -14,7 +14,7 @@ vi.mock('react', async (original) => ({
   useEffect: () => undefined,
 }));
 vi.mock('./useAppearance', () => ({ useAppearance: () => ({ appearance: 'light', toggleAppearance: vi.fn() }) }));
-vi.mock('./services/audio', () => ({ stopSpeech: vi.fn() }));
+vi.mock('./services/audio', () => ({ stopSpeech: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('./services/directus', async (original) => ({ ...await original<typeof import('./services/directus')>(), hasSession: () => true, loadUnit: api.loadUnit }));
 vi.mock('./domain/microArcade', () => ({ shouldOfferMicroArcade: () => false }));
 

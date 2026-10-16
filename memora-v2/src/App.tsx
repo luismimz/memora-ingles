@@ -21,7 +21,7 @@ import { nextPlayableUnit, orderedJourneyUnits } from './domain/journey';
 import { readSentenceMemories } from './domain/memory';
 import { previewUnit, reviewUnits } from './preview/previewUnit';
 import { DirectusError, endSession, hasSession, loadPublishedUnitSummaries, loadUnit, loadKeysPilot, loadMirrorPilot, logIn, loadIdentity, clearAssetCache, type UnitSummary } from './services/directus';
-import { stopSpeech } from './services/audio';
+import { prefetchSpeech, stopSpeech } from './services/audio';
 import { useAppearance } from './useAppearance';
 import { startProgressSync, type SyncStatus } from './services/progressSync';
 
@@ -62,6 +62,9 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const [, refreshProgress] = useState(0);
+
+  // A delayed clip belongs to the screen that requested it, not the next one.
+  useEffect(() => () => stopSpeech(), [unit?.id, libraryMode, grammarOpen, fusionOpen, Boolean(microSession)]);
 
   useEffect(() => {
     try { setLastOpenedUnitId(localStorage.getItem(`memora-v2.resume.${userId}`)); const mode = localStorage.getItem(`memora-v2.resume-mode.${userId}`); setResumeMode(mode === 'vocabulary' || mode === 'grammar' ? mode : 'adventure'); }
@@ -182,7 +185,7 @@ export default function App() {
     if (preview) { rememberUnit(summary.id, mode); setUnit(reviewUnits.find((item) => item.id === summary.id) ?? previewUnit); return; }
     setUnit(null);
     setLoading(true);
-    try { const loaded = summary.id === pilot?.id ? pilot : summary.id === mirrorPilot?.id ? mirrorPilot : await loadUnit(summary.id); rememberUnit(summary.id, mode); setUnit(loaded); }
+    try { const loaded = summary.id === pilot?.id ? pilot : summary.id === mirrorPilot?.id ? mirrorPilot : await loadUnit(summary.id); const firstWord = loaded.words.find((word) => word.learningRole !== 'review') ?? loaded.words[0]; prefetchSpeech(firstWord.en.toLowerCase(), firstWord.audioUrl); rememberUnit(summary.id, mode); setUnit(loaded); }
     catch (reason) { setUnitError(reason instanceof Error ? reason.message : 'No se pudo abrir esta escena.'); }
     finally { setLoading(false); }
   }
@@ -279,6 +282,7 @@ export default function App() {
     if (candidate.kind === 'vocabulary-pack' && mode !== 'vocabulary') { setUnitError('Este paquete prepara palabras; no contiene una lección de gramática.'); return; }
     const missing = mode === 'grammar' ? missingGrammarWords(candidate, readWordMemories(userId)) : [];
     if (!preview && missing.length) { setUnitError(`Prepara primero estas palabras: ${missing.join(', ')}.`); return; }
+    if (mode === 'vocabulary') { const firstWord = candidate.words.find((word) => word.learningRole !== 'review') ?? candidate.words[0]; prefetchSpeech(firstWord.en.toLowerCase(), firstWord.audioUrl); }
     setLearningMode(mode); setConversationStart(false); setExpansionTest(null); setReviewMode(false);
     rememberUnit(candidate.id, mode); setUnit(candidate);
   }

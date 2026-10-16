@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { stopSpeech } from '../services/audio';
 
 export const arcadeCheckpointDue = (completed: number, acknowledged: number) => completed > 0 && completed % 15 === 0 && completed !== acknowledged;
 
@@ -11,6 +12,7 @@ export function useArcadeClock(index: number, revealed: boolean, enabled: boolea
   const expire = useRef(onExpire); expire.current = onExpire;
   const advance = useRef(onAdvance); advance.current = onAdvance;
   const checkpoint = arcadeCheckpointDue(index, acknowledged);
+  useEffect(() => { if (paused) stopSpeech(); return () => stopSpeech(); }, [index, paused]);
   useEffect(() => { left.current = 6000; setRemaining(6000); }, [index]);
   useEffect(() => {
     if (!enabled || paused || revealed || checkpoint) return;

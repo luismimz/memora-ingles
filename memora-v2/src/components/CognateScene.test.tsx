@@ -9,7 +9,7 @@ const words = vocabularyPreviewPacks.flatMap((pack) => pack.words).filter((word)
 describe('cognados visuales, no fichas solo informativas', () => {
   it.each(['HOTEL', 'INFORMATION'])('%s conserva una escena tanto al aprender como en Arcade', (en) => {
     const word = words.find((item) => item.en === en)!;
-    const html = renderToStaticMarkup(<CognateAssociationCard word={word} index={0} total={3} revealed onConnect={() => {}} />);
+    const html = renderToStaticMarkup(<CognateAssociationCard word={word} index={0} total={3} onConnect={() => {}} />);
     expect(html).toContain(`data-cognate-scene="${en.toLowerCase()}"`);
     expect(html).toContain('round-audio');
     const hidden = renderToStaticMarkup(<SceneVisual word={word} hideAnswer />);
