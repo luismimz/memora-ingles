@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { previewUnit } from './preview/previewUnit';
 import { grammarTricks } from './domain/journeyTricks';
-import { recordWordRecall } from './domain/memory';
+import { recordWordRecall, readWordMemories } from './domain/memory';
 import { grammarJourney } from './domain/grammarJourney';
 import { lessonForForm } from './domain/grammarLesson';
 import { recordLearningActivity } from './domain/learningActivity';
@@ -47,6 +47,36 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
+  it('prepara las palabras reales desde Gramática y entra al truco sin mover Inicio', async () => {
+    const source = { ...previewUnit, id: 'grammar-preparation' };
+    const stop = grammarJourney([source])[0];
+    storage.set('memora-v2.resume.learner', 'home-10');
+    hooks.states.set(2, null); hooks.states.set(4, 'grammar'); hooks.states.set(5, [source]); hooks.states.set(15, [source]); hooks.states.set(22, false);
+    api.loadUnit.mockResolvedValue(source);
+    game().props.onPrepare(stop);
+    await Promise.resolve(); await Promise.resolve();
+    expect(api.loadUnit).toHaveBeenCalledWith(source.id);
+    expect(game().props.learningMode).toBe('vocabulary');
+    expect(game().props.positionLabel).toBe('PREPARA EL TRUCO');
+    expect(readWordMemories('learner')).toEqual([]);
+    for (const en of stop.routeTrick!.vocabulary) recordWordRecall('learner', { ...source.words[0], en }, 'quick');
+    const prepared = game().props;
+    expect(prepared.nextLabel).toBe('Entrar al truco →');
+    prepared.onFinished(); prepared.onNext();
+    expect(game().props.stop.id).toBe(stop.id);
+    expect(storage.get('memora-v2.resume.learner')).toBe('home-10');
+    expect(hooks.states.get(4)).toBe('grammar');
+  });
+  it('explica una ficha ausente sin fingir aprendizaje ni dejar el botón sin respuesta', () => {
+    const source = { ...previewUnit, id: 'grammar-unavailable' };
+    const stop = grammarJourney([source])[0];
+    hooks.states.set(2, null); hooks.states.set(4, 'grammar'); hooks.states.set(5, [source]); hooks.states.set(15, []); hooks.states.set(22, false);
+    game().props.onPrepare(stop);
+    expect(game().props.notice).toContain('aún no están disponibles');
+    expect(hooks.states.get(2)).toBeNull();
+    expect(api.loadUnit).not.toHaveBeenCalled();
+    expect(storage.size).toBe(0);
+  });
   it('juega y reanuda desde el mapa de Gramática sin perder la posición de Inicio', () => {
     const first = { ...previewUnit, id: 'grammar-first', grammar: [previewUnit.grammar[0]] };
     const second = { ...first, id: 'grammar-next', grammar: [{ ...first.grammar[0], lesson: { ...lessonForForm(first.grammar[0], 'jugar')!, id: 'next-grammar-pattern' } }] };

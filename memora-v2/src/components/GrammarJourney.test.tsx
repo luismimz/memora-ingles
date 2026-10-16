@@ -12,7 +12,9 @@ it('sustituye las tarjetas por el mapa y explica por qué los trucos están bloq
   expect(html).toContain('PREPARA SUS PALABRAS');
   expect(html).toContain('Preparar palabras en Inicio');
   expect(html).toContain('Una misión no se pudo cargar');
-  expect(html).toMatch(/disabled=""[^>]*>Continuar/);
+  expect(html).toContain('Ver qué falta');
+  expect(html).not.toMatch(/disabled=""[^>]*>Ver qué falta/);
+  expect(html).toContain('Ver palabras pendientes');
   expect(html).not.toContain('learning-library-grid');
 });
 it('quita Palabras del menú principal sin retirar el aprendizaje de vocabulario', () => {

@@ -89,7 +89,7 @@ export function JourneyHome(props: Props) {
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
     <div className="home-hub-content">
       <div className="home-intro"><div><h1>Tu aventura</h1><p className="home-catalogue" aria-label="Contenido disponible"><strong>{catalogue.words}</strong> {catalogue.words === 1 ? 'palabra en el catálogo' : 'palabras en el catálogo'}{catalogue.expressions > 0 ? <> · <strong>{catalogue.expressions}</strong> {catalogue.expressions === 1 ? 'expresión' : 'expresiones'}</> : null}</p></div><span>{completed.length} de {stories.length} paradas completadas</span></div>
-      {stories.length ? <JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} /> : null}
+      {stories.length ? <JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} onLockedOpen={onOpen} /> : null}
     </div>
     </div>
 

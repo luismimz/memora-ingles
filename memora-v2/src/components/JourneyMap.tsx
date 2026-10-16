@@ -4,9 +4,9 @@ import { journeyPresentation, mapPath, mapPosition, mapScrollTarget, MAP_STEP, M
 import { JourneyScene } from './JourneyScene';
 import './journeyMap.css';
 
-type Props = { units: UnitSummary[]; currentId?: string; completedIds: ReadonlySet<string>; lockedIds?: ReadonlySet<string>; onOpen: (unit: UnitSummary) => void; continueLabel?: string };
+type Props = { units: UnitSummary[]; currentId?: string; completedIds: ReadonlySet<string>; lockedIds?: ReadonlySet<string>; onOpen: (unit: UnitSummary) => void; onLockedOpen?: (unit: UnitSummary) => void; continueLabel?: string };
 
-export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen, continueLabel = 'Continuar →' }: Props) {
+export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen, onLockedOpen, continueLabel = 'Continuar →' }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(320);
   const [away, setAway] = useState(false);
@@ -16,6 +16,11 @@ export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen, 
   const activeIndex = Math.max(0, units.findIndex((unit) => unit.id === currentId));
   const current = units[activeIndex];
   const height = MAP_TOP * 2 + Math.max(0, units.length - 1) * MAP_STEP;
+  const currentLocked = Boolean(current && lockedIds?.has(current.id) && !completedIds.has(current.id));
+  function openStop(unit: UnitSummary) {
+    if (lockedIds?.has(unit.id) && !completedIds.has(unit.id)) { onLockedOpen?.(unit); return; }
+    onOpen(unit);
+  }
 
   function moveTo(index: number, animate = true) {
     const element = viewport.current;
@@ -88,7 +93,7 @@ export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen, 
             const done = completedIds.has(unit.id);
             const locked = !done && Boolean(lockedIds?.has(unit.id));
             return <li key={unit.id} style={{ left: position.x, top: position.y, width: MAP_NODE_WIDTH }} className={`journey-map-stop ${active ? 'is-current' : ''} ${done ? 'is-complete' : ''}`}>
-              <button type="button" className={unit.routeTrick ? 'journey-map-node is-trick' : 'journey-map-node'} disabled={locked} aria-current={active ? 'step' : undefined} aria-label={`Parada ${index + 1}: ${presentation.title}. ${locked ? 'Practica primero sus palabras. ' : active ? 'Continúa aquí. ' : done ? 'Completada. ' : ''}${presentation.terms}`} onClick={() => onOpen(unit)}>
+              <button type="button" className={unit.routeTrick ? 'journey-map-node is-trick' : 'journey-map-node'} disabled={locked && !onLockedOpen} aria-current={active ? 'step' : undefined} aria-label={`Parada ${index + 1}: ${presentation.title}. ${locked ? onLockedOpen ? 'Ver palabras pendientes. ' : 'Practica primero sus palabras. ' : active ? 'Continúa aquí. ' : done ? 'Completada. ' : ''}${presentation.terms}`} onClick={() => openStop(unit)}>
                 <span className="map-node-art"><JourneyScene scene={presentation.scene} /><span className="map-node-number">{done ? '✓' : index + 1}</span>{active ? <span className="map-you">ESTÁS AQUÍ</span> : null}</span>
                 <span className="map-node-copy"><small>{done ? 'COMPLETADA' : locked ? '🔒 PREPARA SUS PALABRAS' : unit.routeTrick ? '✦ PARADA TRUCO' : active ? 'CONTINUAR' : presentation.place}</small><strong>{presentation.title}</strong><span>{presentation.terms || 'Descubre la escena'}</span></span>
               </button>
@@ -96,7 +101,7 @@ export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen, 
           })}</ol>
         </div>
       </div>
-      <div className="journey-map-footer"><span>Explora a tu ritmo · tu progreso se conserva</span>{current ? <button type="button" disabled={lockedIds?.has(current.id)} onClick={() => onOpen(current)}>{continueLabel}</button> : null}</div>
+      <div className="journey-map-footer"><span>Explora a tu ritmo · tu progreso se conserva</span>{current ? <button type="button" disabled={currentLocked && !onLockedOpen} onClick={() => openStop(current)}>{currentLocked && onLockedOpen ? 'Ver qué falta →' : continueLabel}</button> : null}</div>
     </div>
   </section>;
 }

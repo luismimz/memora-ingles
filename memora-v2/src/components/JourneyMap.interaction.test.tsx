@@ -33,6 +33,22 @@ function setup() {
 
 afterEach(() => vi.unstubAllGlobals());
 describe('journey map input handlers', () => {
+  it('una parada bloqueada responde con sus requisitos sin abrir la evaluación', () => {
+    const stop = { id: 'locked', title: 'Estoy jugando' };
+    const onOpen = vi.fn(); const onLockedOpen = vi.fn();
+    const tree = JourneyMap({ units: [stop], currentId: stop.id, completedIds: new Set(), lockedIds: new Set([stop.id]), onOpen, onLockedOpen });
+    const shell = tree.props.children[1];
+    const region = shell.props.children[1];
+    const node = region.props.children.props.children[1].props.children[0].props.children;
+    expect(node.props.disabled).toBe(false);
+    node.props.onClick();
+    const footer = shell.props.children[2].props.children[1];
+    expect(footer.props.children).toBe('Ver qué falta →');
+    footer.props.onClick();
+    expect(onLockedOpen).toHaveBeenCalledTimes(2);
+    expect(onLockedOpen).toHaveBeenCalledWith(stop);
+    expect(onOpen).not.toHaveBeenCalled();
+  });
   it('pans by the drag distance and suppresses the accidental click afterwards', () => {
     const { region, element, event } = setup();
     region.props.onPointerDown(event());

@@ -45,6 +45,15 @@ export function completedGrammarStop(stop: UnitSummary, activities: readonly Lea
     && ['grammar-completed', 'mirror-complete'].includes(activity.activityId));
 }
 
+/** Choose real published vocabulary; never manufacture a bridge or a learned flag. */
+export function grammarPreparationCandidate(stop: UnitSummary, summaries: readonly UnitSummary[], units: readonly AtomicUnit[], memories: readonly WordMemory[]): UnitSummary | undefined {
+  const missing = new Set(missingGrammarStop(stop, units, memories));
+  if (!missing.size) return undefined;
+  return summaries.map((unit, index) => ({ unit, index, coverage: unit.words?.filter((word) => missing.has(word.en.trim().toLowerCase())).length ?? 0 }))
+    .filter((candidate) => candidate.coverage > 0)
+    .sort((left, right) => right.coverage - left.coverage || left.index - right.index)[0]?.unit;
+}
+
 export function nextGrammarStop(currentId: string, route: readonly UnitSummary[], units: readonly AtomicUnit[], memories: readonly WordMemory[], activities: readonly LearningActivity[], inspection = false): UnitSummary | undefined {
   const index = route.findIndex((stop) => stop.id === currentId);
   if (index < 0) return undefined;
