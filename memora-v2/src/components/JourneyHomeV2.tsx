@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { readGameCheckpoint, readMirrorCheckpoint } from '../domain/gameCheckpoint';
-import { isReviewDue, orderedJourneyUnits, readUnitProgress } from '../domain/journey';
+import { isReviewDue, readUnitProgress } from '../domain/journey';
 import { readLearningActivities } from '../domain/learningActivity';
 import { loadLearningProfile, readAvatar } from '../domain/learningProfile';
 import { readWordMemories } from '../domain/memory';
@@ -13,6 +13,8 @@ import type { UnitSummary } from '../services/directus';
 import type { Appearance } from '../useAppearance';
 import type { LearningMode } from '../domain/game';
 import './homeV2.css';
+import { buildJourneyRoute, completedTrick, missingTrickWords } from '../domain/journeyTricks';
+import { readTrickCheckpoint } from '../domain/trickCheckpoint';
 
 type Props = {
   units: UnitSummary[]; userId: string; resumeUnitId?: string | null; error?: string | null;
@@ -39,18 +41,20 @@ export function JourneyHome(props: Props) {
     appearance, onToggleAppearance, onWords, onGrammar, resumeLearningMode = 'adventure' } = props;
   const [showAllWords, setShowAllWords] = useState(false);
   const catalogue = catalogueStats(units);
-  const stories = orderedJourneyUnits(units);
+  const stories = buildJourneyRoute(units);
+  const memories = readWordMemories(userId);
+  const lockedIds = new Set(stories.filter((stop) => missingTrickWords(stop, memories).length).map((stop) => stop.id));
   const knownUnitIds = new Set(stories.map((unit) => unit.id));
   const activities = readLearningActivities(userId).filter((item) => knownUnitIds.has(item.unitId));
-  const completed = stories.filter((unit) => readUnitProgress(userId, unit.id) || completedVocabularyStop(unit, activities));
+  const completed = stories.filter((unit) => unit.routeTrick ? completedTrick(unit, activities) : readUnitProgress(userId, unit.id) || completedVocabularyStop(unit, activities));
   const completedIds = new Set(completed.map((unit) => unit.id));
-  const next = stories.find((unit) => !completedIds.has(unit.id));
+  const next = stories.find((unit) => !completedIds.has(unit.id) && !lockedIds.has(unit.id));
   const due = stories.find((unit) => isReviewDue(readUnitProgress(userId, unit.id)));
   const checkpointFor = (id: string) => resumeLearningMode === 'adventure' ? id : `${id}:${resumeLearningMode}`;
-  const resume = stories.find((unit) => unit.id === resumeUnitId && (readGameCheckpoint(userId, checkpointFor(unit.id), unit.contentVersion ?? '1') || readMirrorCheckpoint(userId, checkpointFor(unit.id), unit.contentVersion ?? '1')));
+  const resume = stories.find((unit) => unit.id === resumeUnitId && !lockedIds.has(unit.id) && (unit.routeTrick ? readTrickCheckpoint(userId, unit.id, unit.contentVersion ?? '1') : readGameCheckpoint(userId, checkpointFor(unit.id), unit.contentVersion ?? '1') || readMirrorCheckpoint(userId, checkpointFor(unit.id), unit.contentVersion ?? '1')));
   // Completion remembers the following stop before the learner presses Continue.
   // It has no checkpoint yet and must not send someone who stopped at mission 10 back to 1.
-  const queued = stories.find((unit) => unit.id === resumeUnitId && !completedIds.has(unit.id));
+  const queued = stories.find((unit) => unit.id === resumeUnitId && !completedIds.has(unit.id) && !lockedIds.has(unit.id));
   const featured = resume ?? queued ?? next ?? due ?? stories[0];
   const featuredPresentation = featured ? journeyPresentation(featured) : null;
   const gameCheckpoint = resume ? readGameCheckpoint(userId, checkpointFor(resume.id), resume.contentVersion ?? '1') : null;
@@ -64,7 +68,7 @@ export function JourneyHome(props: Props) {
   const inviteArcade = Boolean(onArcade && uniqueWords.length && featured && (dueCount > 0 || shouldOfferMicroArcade(userId, featured.id)));
   const avatar = readAvatar(userId);
   const currentIndex = featured ? stories.findIndex((unit) => unit.id === featured.id) + 1 : 0;
-  const missionLabel = resume ? gameCheckpoint ? activityLabels[gameCheckpoint.phase] : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
+  const missionLabel = featured?.routeTrick ? 'Un truco breve con palabras que ya has practicado' : resume ? gameCheckpoint ? activityLabels[gameCheckpoint.phase] : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
     : featured && completedIds.has(featured.id) ? 'Vuelve a practicar' : featuredPresentation?.pack ? 'Conecta y recuerda estas palabras' : 'Descubre esta historia';
 
   return <main className="journey-screen home-v2" id="inicio">
@@ -85,7 +89,7 @@ export function JourneyHome(props: Props) {
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
     <div className="home-hub-content">
       <div className="home-intro"><div><h1>Tu aventura</h1><p className="home-catalogue" aria-label="Contenido disponible"><strong>{catalogue.words}</strong> {catalogue.words === 1 ? 'palabra en el catálogo' : 'palabras en el catálogo'}{catalogue.expressions > 0 ? <> · <strong>{catalogue.expressions}</strong> {catalogue.expressions === 1 ? 'expresión' : 'expresiones'}</> : null}</p></div><span>{completed.length} de {stories.length} paradas completadas</span></div>
-      {stories.length ? <JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} onOpen={onOpen} /> : null}
+      {stories.length ? <JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} /> : null}
     </div>
     </div>
 

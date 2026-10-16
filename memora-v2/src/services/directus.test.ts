@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { endSession, publishUnit, unpublishUnit, approveUnitReview, saveUnitDraft } from './directus';
+import { endSession, publishUnit, unpublishUnit, approveUnitReview, saveUnitDraft, loadLearningLibrary, loadPublishedUnitSummaries } from './directus';
 import { previewUnit } from '../preview/previewUnit';
 
 describe('escrituras de contenido', () => {
@@ -71,5 +71,35 @@ describe('escrituras de contenido', () => {
     await expect(saveUnitDraft(previewUnit)).resolves.toEqual(previewUnit);
     expect(fetch).toHaveBeenCalledTimes(3);
     expect(fetch).toHaveBeenLastCalledWith('/api/items/learning_units', expect.objectContaining({ method: 'POST' }));
+  });
+});
+
+describe('lectura tolerante de gramática publicada', () => {
+  it('limita las solicitudes simultáneas para no saturar Directus', async () => {
+    let active = 0; let peak = 0;
+    vi.stubGlobal('fetch', vi.fn().mockImplementation(async () => {
+      active++; peak = Math.max(peak, active);
+      await Promise.resolve(); active--;
+      return new Response(JSON.stringify({ data: { status: 'published', content: previewUnit } }), { headers: { 'content-type': 'application/json' } });
+    }));
+    const result = await loadLearningLibrary(Array.from({ length: 17 }, (_, index) => ({ id: `unit-${index}`, title: 'Unidad' })), 'grammar');
+    expect(result.units).toHaveLength(17); expect(peak).toBeLessThanOrEqual(6);
+  });
+  it('una publicación defectuosa no oculta las lecciones válidas ni descarga los paquetes', async () => {
+    const request = vi.fn().mockImplementation(async (url: string) => {
+      if (url.includes('/good?')) return new Response(JSON.stringify({ data: { status: 'published', content: previewUnit } }), { headers: { 'content-type': 'application/json' } });
+      return new Response(JSON.stringify({ data: { status: 'published', content: {} } }), { headers: { 'content-type': 'application/json' } });
+    });
+    vi.stubGlobal('fetch', request);
+    const result = await loadLearningLibrary([{ id: 'good', title: 'Bien' }, { id: 'bad', title: 'Revisar' }, { id: 'words', title: 'Palabras', kind: 'vocabulary-pack' }], 'grammar');
+    expect(result.units).toEqual([previewUnit]);
+    expect(result.failed).toEqual(['Revisar']);
+    expect(request).toHaveBeenCalledTimes(2);
+  });
+  it('extrae metadatos de trucos sin que una publicación dañada rompa el mapa', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [{ id: 'good', title: 'Bien', status: 'published', content: previewUnit }, { id: 'bad', title: 'Revisar', status: 'published', content: {} }] }), { headers: { 'content-type': 'application/json' } })));
+    const summaries = await loadPublishedUnitSummaries();
+    expect(summaries[0].grammarTricks!.length).toBeGreaterThan(0);
+    expect(summaries[1].grammarTricks).toEqual([]);
   });
 });

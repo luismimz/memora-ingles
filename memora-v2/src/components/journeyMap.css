@@ -19,6 +19,9 @@
 .journey-map-stop { position: absolute; transform: translate(-50%, -50%); }
 .journey-map-node { display: block; width: 100%; padding: 0; overflow: hidden; border: 3px solid #fefcf6; border-radius: 23px; background: #fffaf0; color: #302e27; font: inherit; text-align: left; box-shadow: 0 7px 0 #b3bfa1, 0 12px 23px #40564121; cursor: pointer; transition: transform .16s ease, box-shadow .16s ease; }
 .journey-map-node:hover { transform: translateY(-3px); box-shadow: 0 10px 0 #b3bfa1, 0 16px 25px #40564129; }
+.journey-map-node.is-trick { background: #fff5df; border-color: #e4bb6c; }
+.journey-map-node:disabled { cursor: default; filter: saturate(.6); }
+.journey-map-node:disabled:hover { transform: none; }
 .map-node-art { position: relative; display: block; height: 63px; overflow: hidden; background: #d0e0ce; }
 .journey-scene { display: block; width: 100%; height: 100%; object-fit: cover; }
 .map-node-art .journey-scene { width: 100%; height: auto; transform: translateY(-18px); }

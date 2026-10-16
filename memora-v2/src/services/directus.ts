@@ -1,5 +1,6 @@
 import { validateApprovedAssociation, validateAssociationQuality, validateUnit, type AtomicUnit } from '../domain/unit';
 import { hasAdminPolicy, type Identity } from '../domain/admin';
+import { grammarTricks, type JourneyTrick } from '../domain/journeyTricks';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 const TOKEN_KEY = 'memora-v2.auth';
@@ -92,6 +93,8 @@ export interface UnitSummary {
   id: string;
   title: string;
   kind?: AtomicUnit['kind'];
+  grammarTricks?: JourneyTrick[];
+  routeTrick?: JourneyTrick;
   contentVersion?: string;
   location?: AtomicUnit['location'];
   hasDialogue?: boolean;
@@ -222,21 +225,40 @@ export async function loadPublishedUnitSummaries(signal?: AbortSignal): Promise<
     .map(({ id, title, content }): UnitSummary | null => {
       const unit = content && typeof content === 'object' ? content as Partial<AtomicUnit> : null;
       const resolvedTitle = title || unit?.title;
-      if (!resolvedTitle) return null;
+      if (typeof resolvedTitle !== 'string' || !resolvedTitle.trim()) return null;
+      let tricks: JourneyTrick[] = [];
+      try { tricks = grammarTricks(validateUnit(content)); } catch { /* A malformed story cannot block the map or other grammar lessons. */ }
       return {
         id,
         title: resolvedTitle,
         kind: unit?.kind,
+        grammarTricks: tricks,
         contentVersion: unit?.contentVersion,
         location: unit?.location,
         hasDialogue: Boolean(unit?.communication?.dialogue),
         teaser: unit?.communication?.dialogue?.context,
-        words: Array.isArray(unit?.words) ? unit.words.map(({ en, es }) => ({ en, es })) : undefined,
+        words: Array.isArray(unit?.words) ? unit.words.filter((word) => word && typeof word.en === 'string' && typeof word.es === 'string').map(({ en, es }) => ({ en, es })) : undefined,
         sentence: unit?.sentence?.en && unit.sentence.es ? { en: unit.sentence.en, es: unit.sentence.es } : undefined,
       };
     }).filter((unit): unit is UnitSummary => unit !== null);
   if (units.length) return units;
   return [];
+}
+
+/** Bounded partial loading: one broken publication must not take down a library. */
+export async function loadLearningLibrary(summaries: readonly UnitSummary[], mode: 'vocabulary' | 'grammar'): Promise<{ units: AtomicUnit[]; failed: string[] }> {
+  const candidates = summaries.filter((summary) => mode !== 'grammar' || summary.kind !== 'vocabulary-pack');
+  const units: AtomicUnit[] = [];
+  const failed: string[] = [];
+  for (let offset = 0; offset < candidates.length; offset += 6) {
+    const batch = candidates.slice(offset, offset + 6);
+    const results = await Promise.allSettled(batch.map((summary) => loadUnit(summary.id)));
+    results.forEach((result, index) => {
+      if (result.status === 'fulfilled') units.push(result.value);
+      else failed.push(batch[index].title);
+    });
+  }
+  return { units, failed };
 }
 
 const assets = new Map<string, string>();

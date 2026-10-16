@@ -1,0 +1,48 @@
+import { beforeEach, expect, it, vi } from 'vitest';
+import { renderToStaticMarkup } from 'react-dom/server';
+import { JourneyTrickExperience } from './JourneyTrickExperience';
+import { previewUnit } from '../preview/previewUnit';
+import { grammarTricks } from '../domain/journeyTricks';
+import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
+import { readUnitProgress } from '../domain/journey';
+import { initializeJournal, readJournal } from '../domain/progressJournal';
+import { restoreProgress } from '../domain/restoreProgress';
+import { readTrickCheckpoint } from '../domain/trickCheckpoint';
+const captured = vi.hoisted(() => ({ coach: null as any }));
+vi.mock('./GrammarCoach', () => ({ GrammarCoach: (props: unknown) => { captured.coach = props; return <div>Truco real</div>; } }));
+vi.mock('../services/audio', () => ({ stopSpeech: vi.fn() }));
+beforeEach(() => {
+  const values = new Map<string, string>();
+  vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), key: (index: number) => [...values.keys()][index] ?? null, get length() { return values.size; } });
+  vi.stubGlobal('sessionStorage', { getItem: () => null, setItem: () => {} });
+  initializeJournal('learner');
+  captured.coach = null;
+});
+it('conserva intentos en el journal real sin completar la misión de palabras ni duplicar el cierre', () => {
+  const trick = grammarTricks(previewUnit)[0];
+  const stop = { id: 'trick:test', title: trick.title, contentVersion: previewUnit.contentVersion, routeTrick: trick };
+  const onFinished = vi.fn();
+  renderToStaticMarkup(<JourneyTrickExperience unit={previewUnit} stop={stop} userId="learner" inspection={false} onFinished={onFinished} onNext={() => {}} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />);
+  expect(captured.coach.requirePractice).toBe(true);
+  expect(captured.coach.unitId).toBe(previewUnit.id);
+  captured.coach.onProgress({ stage: 1, checkIndex: 0, input: '', feedback: 'idle', helped: false });
+  expect(readTrickCheckpoint('learner', stop.id, previewUnit.contentVersion ?? '1')?.stage).toBe(1);
+  recordLearningActivity('learner', { unitId: previewUnit.id, unitTitle: previewUnit.title, contentVersion: previewUnit.contentVersion ?? '1', activityId: 'write', skill: trick.skill, phase: 'grammar', source: 'learner', modality: 'writing', prompt: 'Prueba', response: 'I am playing', expected: 'I am playing', correct: true, helped: false });
+  captured.coach.onContinue(); captured.coach.onContinue();
+  expect(onFinished).toHaveBeenCalledTimes(1);
+  expect(readUnitProgress('learner', previewUnit.id)).toBeNull();
+  expect(readTrickCheckpoint('learner', stop.id, previewUnit.contentVersion ?? '1')).toBeNull();
+  expect(readLearningActivities('learner').filter((activity) => activity.phase === 'completion')).toHaveLength(1);
+  const events = readJournal('learner')!.events;
+  const restored = restoreProgress('learner', [...events, ...events]);
+  expect(JSON.parse(restored.get('memora-v2.learning.learner')!).some((activity: { activityId: string }) => activity.activityId === `trick-completed:${trick.formId}`)).toBe(true);
+});
+it('la revisión no escribe intentos, completados ni checkpoints', () => {
+  const trick = grammarTricks(previewUnit)[0];
+  const onFinished = vi.fn();
+  renderToStaticMarkup(<JourneyTrickExperience unit={previewUnit} stop={{ id: 'trick:test', title: trick.title, routeTrick: trick }} userId="learner" inspection onFinished={onFinished} onNext={() => {}} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />);
+  captured.coach.onProgress({ stage: 1, checkIndex: 0, input: '', feedback: 'idle', helped: false });
+  captured.coach.onContinue();
+  expect(readLearningActivities('learner')).toHaveLength(0);
+  expect(onFinished).not.toHaveBeenCalled();
+});

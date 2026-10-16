@@ -2,7 +2,7 @@ import type { GrammarForm } from './unit';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 
 export interface LessonPiece { text: string; role: 'subject' | 'auxiliary' | 'verb' | 'change' | 'context' }
-export interface LessonStep { caption: string; es: LessonPiece[]; en: LessonPiece[]; captionMarks?: LessonPiece[] }
+export interface LessonStep { caption: string; es: LessonPiece[]; en: LessonPiece[]; captionMarks?: LessonPiece[]; hideEnglish?: boolean; advanceLabel?: string }
 export interface LessonCheck {
   id: string;
   kind: 'choose' | 'explain' | 'write';
@@ -25,6 +25,7 @@ export function validateGrammarLesson(value: GrammarLessonData): void {
   if (value?.advanceMode !== undefined && !['manual', 'automatic'].includes(value.advanceMode)) throw new Error('El ritmo del truco no es válido.');
   if (!value?.id?.trim() || !value.title?.trim() || value.language !== 'en' || !Array.isArray(value.steps) || !value.steps.length || value.steps.length > 6 || !Array.isArray(value.checks) || !value.checks.length) throw new Error('El truco necesita demostración y práctica revisadas.');
   for (const step of value.steps) {
+    if (step.hideEnglish !== undefined && typeof step.hideEnglish !== 'boolean' || step.advanceLabel !== undefined && !step.advanceLabel.trim()) throw new Error('La revelación del truco necesita un botón y un estado válidos.');
     if (!step.caption?.trim() || step.caption.split(/\s+/).length > 35) throw new Error('Cada paso explica una sola idea en un máximo de 35 palabras.');
     for (const row of [step.es, step.en]) if (!Array.isArray(row) || !row.length || row.some((part) => !part.text?.trim() || !['subject', 'auxiliary', 'verb', 'change', 'context'].includes(part.role))) throw new Error('La transformación requiere piezas explícitas, no terminaciones adivinadas.');
     if (step.captionMarks && (!Array.isArray(step.captionMarks) || step.captionMarks.length > 12 || step.captionMarks.some((part) => !part.text?.trim() || !step.caption.includes(part.text) || !['subject', 'auxiliary', 'verb', 'change', 'context'].includes(part.role)))) throw new Error('El énfasis debe señalar piezas reales de la explicación.');
@@ -47,8 +48,9 @@ export function lessonForForm(form: GrammarForm, baseSpanish?: string): GrammarL
   return {
     id: `present-continuous:${form.englishBase}`, title: 'Lo que estás haciendo', language: 'en',
     steps: [
-      { caption: `Mira el final: ${form.spanishEnding} señala una acción en marcha; en inglés aparece ING.`, es: spanishVerb, en: englishVerb },
-      { caption: "Para decir «estoy», añade I'M delante. Dos piezas: I'M + acción con ING.", es: [piece('Estoy ', 'auxiliary'), ...spanishVerb], en: [piece("I'm ", 'auxiliary'), ...englishVerb] },
+      { caption: `Estoy ${form.spanish}. Antes de traducir: ¿quién está ${form.spanish}?`, es: [piece('Estoy ', 'auxiliary'), ...spanishVerb], en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), ...englishVerb], hideEnglish: true, advanceLabel: `¿Quién está ${form.spanish}?` },
+      { caption: 'YO. En español puedes omitir la persona; en estas frases inglesas debes escribirla. Hazla visible antes de traducir.', es: [piece('YO ', 'subject'), piece('estoy ', 'auxiliary'), ...spanishVerb], en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), ...englishVerb], advanceLabel: 'Ver cómo encajan las piezas →' },
+      { caption: `I + AM se juntan: I'M. La acción conserva ING, como ${form.spanishEnding} en «${form.spanish}».`, es: [piece('YO ', 'subject'), piece('estoy ', 'auxiliary'), ...spanishVerb], en: [piece("I'm ", 'auxiliary'), ...englishVerb], advanceLabel: 'Probarlo con mis palabras →' },
     ],
     checks: [
       { id: 'explain', kind: 'explain', prompt: `Ayuda a alguien que escribió «I ${form.english}». ¿Qué falta?`, choices: ['AM: I am + verbo con ING.', 'Nada: ING ya lo dice todo.'], answers: ['AM: I am + verbo con ING.'], hint: `ING no puede hacer todo el trabajo. Para «estoy ${form.spanish}», necesitas I AM.`, success: 'Lo has explicado: AM e ING trabajan juntos en esta frase.' },

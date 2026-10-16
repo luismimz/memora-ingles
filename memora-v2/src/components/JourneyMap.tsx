@@ -4,9 +4,9 @@ import { journeyPresentation, mapPath, mapPosition, mapScrollTarget, MAP_STEP, M
 import { JourneyScene } from './JourneyScene';
 import './journeyMap.css';
 
-type Props = { units: UnitSummary[]; currentId?: string; completedIds: ReadonlySet<string>; onOpen: (unit: UnitSummary) => void };
+type Props = { units: UnitSummary[]; currentId?: string; completedIds: ReadonlySet<string>; lockedIds?: ReadonlySet<string>; onOpen: (unit: UnitSummary) => void };
 
-export function JourneyMap({ units, currentId, completedIds, onOpen }: Props) {
+export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(320);
   const [away, setAway] = useState(false);
@@ -86,10 +86,11 @@ export function JourneyMap({ units, currentId, completedIds, onOpen }: Props) {
             const presentation = journeyPresentation(unit);
             const active = unit.id === current?.id;
             const done = completedIds.has(unit.id);
+            const locked = !done && Boolean(lockedIds?.has(unit.id));
             return <li key={unit.id} style={{ left: position.x, top: position.y, width: MAP_NODE_WIDTH }} className={`journey-map-stop ${active ? 'is-current' : ''} ${done ? 'is-complete' : ''}`}>
-              <button type="button" className="journey-map-node" aria-current={active ? 'step' : undefined} aria-label={`Parada ${index + 1}: ${presentation.title}. ${active ? 'Continúa aquí. ' : done ? 'Completada. ' : ''}${presentation.terms}`} onClick={() => onOpen(unit)}>
+              <button type="button" className={unit.routeTrick ? 'journey-map-node is-trick' : 'journey-map-node'} disabled={locked} aria-current={active ? 'step' : undefined} aria-label={`Parada ${index + 1}: ${presentation.title}. ${locked ? 'Practica primero sus palabras. ' : active ? 'Continúa aquí. ' : done ? 'Completada. ' : ''}${presentation.terms}`} onClick={() => onOpen(unit)}>
                 <span className="map-node-art"><JourneyScene scene={presentation.scene} /><span className="map-node-number">{done ? '✓' : index + 1}</span>{active ? <span className="map-you">ESTÁS AQUÍ</span> : null}</span>
-                <span className="map-node-copy"><small>{done ? 'COMPLETADA' : active ? 'CONTINUAR' : presentation.place}</small><strong>{presentation.title}</strong><span>{presentation.terms || 'Descubre la escena'}</span></span>
+                <span className="map-node-copy"><small>{done ? 'COMPLETADA' : locked ? '🔒 PREPARA SUS PALABRAS' : unit.routeTrick ? '✦ PARADA TRUCO' : active ? 'CONTINUAR' : presentation.place}</small><strong>{presentation.title}</strong><span>{presentation.terms || 'Descubre la escena'}</span></span>
               </button>
             </li>;
           })}</ol>

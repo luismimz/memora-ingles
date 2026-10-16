@@ -1,6 +1,8 @@
 import type { ReactElement } from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { previewUnit } from './preview/previewUnit';
+import { grammarTricks } from './domain/journeyTricks';
+import { recordWordRecall } from './domain/memory';
 
 const hooks = vi.hoisted(() => ({ cursor: 0, states: new Map<number, unknown>() }));
 const api = vi.hoisted(() => ({ loadUnit: vi.fn() }));
@@ -38,10 +40,28 @@ beforeEach(() => {
 function game() {
   hooks.cursor = 0;
   const root = App() as ReactElement<{ children: ReactElement[] }>;
-  return root.props.children[0] as ReactElement<Record<string, any>>;
+  return (root.props.children?.[0] ?? root) as ReactElement<Record<string, any>>;
 }
 
 describe('continuidad real desde App', () => {
+  it('encadena la cuarta misión con un truco publicado y conserva su posición separada', async () => {
+    const source = { ...previewUnit, id: 'trick-source' };
+    const descriptor = grammarTricks(source)[0];
+    const fourth = { ...current, id: 'fourth-pack' };
+    const summaries = [{ ...source, grammarTricks: [descriptor] }, { ...current, id: 'pack-two' }, { ...current, id: 'pack-three' }, fourth, next];
+    for (const en of descriptor.vocabulary) recordWordRecall('learner', { ...source.words[0], en }, 'quick');
+    hooks.states.set(2, fourth); hooks.states.set(15, summaries);
+    api.loadUnit.mockResolvedValue(source);
+    const props = game().props;
+    props.onFinished();
+    expect(storage.get('memora-v2.resume.learner')).toBe(`trick:${source.id}:${descriptor.formId}`);
+    expect(storage.get('memora-v2.resume-mode.learner')).toBe('grammar');
+    props.onNext();
+    await Promise.resolve(); await Promise.resolve();
+    expect(api.loadUnit).toHaveBeenCalledWith(source.id);
+    expect(hooks.states.get(2)).toBe(source);
+    expect(game().props.stop.routeTrick.skill).toBe(descriptor.skill);
+  });
   it('una cuenta admin jugando desde Home guarda como alumno, no como revisión', () => {
     expect(game().props.reviewMode).toBe(false);
     expect(game().props.syncStatus).toBe('saved');

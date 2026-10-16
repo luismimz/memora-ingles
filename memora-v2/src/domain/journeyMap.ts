@@ -21,6 +21,7 @@ const places: Record<string, { title: string; name: string; scene: string }> = {
 
 /** Presentation only: IDs, content, prerequisites and saved attempts never change. */
 export function journeyPresentation(unit: UnitSummary) {
+  if (unit.routeTrick) return { title: unit.routeTrick.title, place: '✦ Un truco con tus palabras', scene: 'learning', subtitle: 'Descubre una pieza, compárala y úsala en una frase.', station: null, terms: unit.routeTrick.vocabulary.join(' · '), pack: false };
   const cognate = /^Cognados\s*·\s*([^·]+)\s*·\s*(\d+)$/iu.exec(unit.title);
   const association = /^Asociaciones cotidianas\s*·/iu.test(unit.title);
   const phrasal = /^Phrasal verbs\s*·\s*([^·]+)/iu.exec(unit.title);
