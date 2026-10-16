@@ -77,7 +77,7 @@ export function JourneyHome(props: Props) {
       <a className="journey-brand" href="#inicio" aria-label="Memora, ir al inicio"><span className="brand-mark">M</span><span>MEMORA</span></a>
       <nav className="home-nav" aria-label="Navegación principal">
         <a href="#inicio" aria-current="page">Inicio</a>
-        <button type="button" onClick={onWords}>Palabras</button><button type="button" onClick={onGrammar}>Gramática</button>
+        <button type="button" onClick={onGrammar}>Gramática</button>
         <button type="button" onClick={onArcade} disabled={!onArcade}>Arcade</button>
         <button type="button" onClick={onEvolution} disabled={!onEvolution}>Mi evolución</button>
       </nav>

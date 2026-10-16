@@ -1,5 +1,15 @@
 # Gramática en el recorrido
 
+## Navegación y mapa de Gramática
+
+Inicio es el mapa principal de palabras. El menú principal muestra Inicio, Gramática, Arcade y Mi evolución, sin el enlace redundante Palabras; el acceso secundario al repaso de vocabulario se conserva.
+
+Gramática utiliza el mismo mapa arrastrable y sus controles de teclado, no la antigua cuadrícula de tarjetas. Sus nodos reutilizan los IDs, los checkpoints y los completados de las paradas Truco de Inicio. Las lecciones antiguas sin ese contrato siguen abriéndose en su motor existente. No se inventan fichas al construir el mapa.
+
+El mapa de Gramática conserva una posición local independiente: practicar allí no sobrescribe la posición del mapa de palabras. La continuación recorre solo fichas preparadas y pendientes; cuando no quedan, vuelve al mapa de Gramática. Si falta vocabulario, se indica y se ofrece volver a Inicio. La posición fina continúa siendo local al navegador, mientras los intentos se sincronizan con el journal existente.
+
+Verificados menú y ambos mapas a 320, 390, 430 y 1280 px sin desbordamiento horizontal; el mapa permanece visible incluso con el aviso de vocabulario pendiente. Las páginas temporales de comprobación se retiraron antes del build.
+
 ## Alcance
 
 - Las misiones de palabras y el Arcade conservan sus motores.

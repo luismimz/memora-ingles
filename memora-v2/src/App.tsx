@@ -27,6 +27,8 @@ import { startProgressSync, type SyncStatus } from './services/progressSync';
 import { buildJourneyRoute, grammarTricks, missingTrickWords, nextJourneyStop } from './domain/journeyTricks';
 import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { loadLearningLibrary } from './services/directus';
+import { GrammarJourney } from './components/GrammarJourney';
+import { grammarJourney, missingGrammarStop, nextGrammarStop, readGrammarPosition, writeGrammarPosition } from './domain/grammarJourney';
 
 const previewAllowed = import.meta.env.DEV;
 const previewRequested = previewAllowed && new URLSearchParams(window.location.search).has('preview');
@@ -78,6 +80,11 @@ export default function App() {
   }, [userId]);
 
   function rememberUnit(id: string | null, mode: LearningMode = 'adventure') {
+    if (libraryMode === 'grammar') {
+      if (!preview) writeGrammarPosition(userId, id);
+      refreshProgress((version) => version + 1);
+      return;
+    }
     setLastOpenedUnitId(id);
     setResumeMode(mode);
     try {
@@ -318,38 +325,53 @@ export default function App() {
     rememberUnit(candidate.id, mode); setUnit(candidate);
   }
 
+  function openGrammarStop(stop: UnitSummary) {
+    const source = libraryUnits.find((candidate) => candidate.id === (stop.routeTrick?.sourceId ?? stop.id));
+    if (!source) { setLibraryNotice('No se pudo abrir este truco. Recarga el recorrido para intentarlo de nuevo.'); return; }
+    const missing = missingGrammarStop(stop, libraryUnits, readWordMemories(userId));
+    if (!preview && missing.length) { setLibraryNotice(`Prepara primero en Inicio: ${missing.join(', ')}.`); return; }
+    if (!stop.routeTrick) { openLibraryUnit(source, 'grammar'); return; }
+    setActiveTrick(stop); setLearningMode('grammar'); setConversationStart(false); setExpansionTest(null); setReviewMode(false); setLibraryNotice(null);
+    rememberUnit(stop.id, 'grammar'); setUnit(source);
+  }
+
   function continueAfterUnit() {
     if (!unit) return;
     stopSpeech();
     if (contentOpen && reviewMode) { setUnit(null); setReviewMode(false); return; }
-    const following = !libraryMode && !reviewMode ? followingJourneyStop(activeTrick?.id ?? unit.id) : nextScene;
+    const following = libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit.id) : !libraryMode && !reviewMode ? followingJourneyStop(activeTrick?.id ?? unit.id) : nextScene;
     if (following) {
-      if (libraryMode) openLibraryUnit(following as AtomicUnit, learningMode);
+      if (libraryMode === 'grammar') openGrammarStop(following);
+      else if (libraryMode) openLibraryUnit(following as AtomicUnit, learningMode);
       else if (reviewMode) openReview(following.id);
       else void openUnit(following);
       return;
     }
     setUnit(null);
     setActiveTrick(null);
-    setLibraryMode(null);
+    if (libraryMode !== 'grammar') setLibraryMode(null);
     setReviewMode(false);
   }
 
   const journeyRoute = buildJourneyRoute(units);
+  const grammarRoute = libraryMode === 'grammar' ? grammarJourney(libraryUnits) : [];
+  function followingGrammarStop(id: string) {
+    return nextGrammarStop(id, grammarRoute, libraryUnits, readWordMemories(userId), readLearningActivities(userId), preview);
+  }
   function followingJourneyStop(id: string) {
     const activities = readLearningActivities(userId);
     const completedIds = new Set(units.filter((candidate) => readUnitProgress(userId, candidate.id) || completedVocabularyStop(candidate, activities)).map((candidate) => candidate.id));
     return nextJourneyStop(id, journeyRoute, readWordMemories(userId), activities, completedIds);
   }
-  const playableUnits: readonly (UnitSummary | AtomicUnit)[] = libraryMode
-    ? libraryUnits.filter((candidate) => learningMode !== 'grammar' || candidate.kind !== 'vocabulary-pack' && (preview || !missingGrammarWords(candidate, readWordMemories(userId)).length))
+  const playableUnits: readonly (UnitSummary | AtomicUnit)[] = libraryMode === 'grammar' ? grammarRoute : libraryMode
+    ? libraryUnits
     : reviewMode ? reviewUnits : journeyRoute;
-  const nextScene = unit ? !libraryMode && !reviewMode ? followingJourneyStop(activeTrick?.id ?? unit.id) : nextPlayableUnit(unit.id, playableUnits) : undefined;
+  const nextScene = unit ? libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit.id) : !libraryMode && !reviewMode ? followingJourneyStop(activeTrick?.id ?? unit.id) : nextPlayableUnit(unit.id, playableUnits) : undefined;
   const nextLabel = nextScene ? 'Continuar jugando →' : 'Volver al recorrido →';
   const routePosition = unit ? (libraryMode || reviewMode ? orderedJourneyUnits(playableUnits) : playableUnits).findIndex((candidate) => candidate.id === (activeTrick?.id ?? unit.id)) : -1;
   function rememberAfterCompletion() {
     if (preview || reviewMode) return;
-    const following = !libraryMode ? followingJourneyStop(activeTrick?.id ?? unit?.id ?? '') : nextScene;
+    const following = libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit?.id ?? '') : !libraryMode ? followingJourneyStop(activeTrick?.id ?? unit?.id ?? '') : nextScene;
     const nextMode = libraryMode ? learningMode : following && 'routeTrick' in following && following.routeTrick ? 'grammar' : following && journeyPresentation(following).pack ? 'vocabulary' : 'adventure';
     rememberUnit(following?.id ?? activeTrick?.id ?? unit?.id ?? null, nextMode);
     refreshProgress((version) => version + 1);
@@ -367,6 +389,7 @@ export default function App() {
   }
   if (loading) return <div className="gate-screen"><div className="gate-card"><div className="loading-orb">◌</div><h1>Preparando tu escena…</h1><p>Tu siguiente experiencia está casi lista.</p></div></div>;
   if (authenticated && error && !profileOpen && !contentOpen) return <div className="gate-screen"><div className="gate-card"><p className="eyebrow">DIRECTUS</p><h1>No se pudo cargar la home</h1><p>{error}</p>{isAdmin ? <button type="button" className="primary-action" onClick={() => setProfileOpen(true)}>Mi perfil · Gestionar contenido →</button> : null}<button type="button" onClick={() => { setAuthenticated(false); setError(null); }}>Volver al acceso</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Ver la experiencia de prueba</button> : null}</div></div>;
+  if (libraryMode === 'grammar' && !unit && (preview || authenticated)) return <GrammarJourney units={libraryUnits} userId={userId} inspection={preview} resumeId={readGrammarPosition(userId) || (resumeMode === 'grammar' ? lastOpenedUnitId : null)} notice={libraryNotice} onRetry={() => void openLibrary('grammar')} onOpen={openGrammarStop} onBack={() => setLibraryMode(null)} onArcade={() => { setLibraryMode(null); void openArcade(); }} onEvolution={!preview ? () => { setLibraryMode(null); setEvolutionOpen(true); } : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />;
   if (libraryMode && !unit && (preview || authenticated)) return <LearningLibrary mode={libraryMode} units={libraryUnits} userId={userId} inspection={preview} notice={libraryNotice} onRetry={() => void openLibrary(libraryMode)} onOpen={openLibraryUnit} onBack={() => setLibraryMode(null)} onWords={() => void openLibrary('vocabulary')} />;
   if (preview || authenticated) return <>{evolutionOpen
     ? <EvolutionView userId={userId} units={units} pilot={pilot} syncStatus={syncStatus} inspectionMode={preview} onBack={() => setEvolutionOpen(false)} onPractice={() => void openArcade()} onProfile={() => { setEvolutionOpen(false); setProfileOpen(true); }} onExit={exit} appearance={appearance} onToggleAppearance={toggleAppearance} />

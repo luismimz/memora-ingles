@@ -3,6 +3,9 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { previewUnit } from './preview/previewUnit';
 import { grammarTricks } from './domain/journeyTricks';
 import { recordWordRecall } from './domain/memory';
+import { grammarJourney } from './domain/grammarJourney';
+import { lessonForForm } from './domain/grammarLesson';
+import { recordLearningActivity } from './domain/learningActivity';
 
 const hooks = vi.hoisted(() => ({ cursor: 0, states: new Map<number, unknown>() }));
 const api = vi.hoisted(() => ({ loadUnit: vi.fn() }));
@@ -25,7 +28,7 @@ const next = { ...previewUnit, id: 'next-pack', title: 'Más asociaciones', kind
 const current = { ...previewUnit, id: 'first-pack', kind: 'vocabulary-pack' as const };
 let storage: Map<string, string>;
 beforeAll(async () => {
-  vi.stubGlobal('window', { location: { search: '' } });
+  vi.stubGlobal('window', { location: { search: '' }, dispatchEvent: vi.fn() });
   App = (await import('./App')).default;
 });
 beforeEach(() => {
@@ -44,6 +47,28 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
+  it('juega y reanuda desde el mapa de Gramática sin perder la posición de Inicio', () => {
+    const first = { ...previewUnit, id: 'grammar-first', grammar: [previewUnit.grammar[0]] };
+    const second = { ...first, id: 'grammar-next', grammar: [{ ...first.grammar[0], lesson: { ...lessonForForm(first.grammar[0], 'jugar')!, id: 'next-grammar-pattern' } }] };
+    const route = grammarJourney([first, second]);
+    for (const en of route[0].routeTrick!.vocabulary) recordWordRecall('learner', { ...first.words[0], en }, 'quick');
+    storage.set('memora-v2.resume.learner', 'home-10');
+    hooks.states.set(2, null); hooks.states.set(4, 'grammar'); hooks.states.set(5, [first, second]); hooks.states.set(22, false);
+    game().props.onOpen(route[0]);
+    const playing = game().props;
+    expect(playing.stop.id).toBe(route[0].id);
+    recordLearningActivity('learner', { unitId: first.id, unitTitle: first.title, contentVersion: first.contentVersion ?? '1', activityId: `trick-completed:${route[0].routeTrick!.formId}`, skill: route[0].routeTrick!.skill, phase: 'completion', source: 'learner', modality: 'writing', prompt: '', response: '', expected: '', correct: null, helped: false });
+    playing.onFinished();
+    expect(storage.get('memora-v2.grammar-position.learner')).toBe(route[1].id);
+    expect(storage.get('memora-v2.resume.learner')).toBe('home-10');
+    playing.onNext();
+    expect(game().props.stop.id).toBe(route[1].id);
+    expect(hooks.states.get(4)).toBe('grammar');
+    expect(api.loadUnit).not.toHaveBeenCalled();
+    game().props.onExit();
+    expect(game().props.resumeId).toBe(route[1].id);
+    expect(hooks.states.get(4)).toBe('grammar');
+  });
   it('encadena la cuarta misión con un truco publicado y conserva su posición separada', async () => {
     const source = { ...previewUnit, id: 'trick-source' };
     const descriptor = grammarTricks(source)[0];

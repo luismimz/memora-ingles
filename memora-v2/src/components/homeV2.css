@@ -2,8 +2,14 @@
 .home-header { flex-wrap: wrap; gap: 13px; }
 .home-nav { display: flex; align-items: center; gap: 3px; margin-left: auto; padding: 5px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-strong); }
 .home-nav a, .home-nav button { padding: 10px 13px; border: 0; border-radius: 999px; background: transparent; color: var(--ink); font: inherit; font-size: .78rem; font-weight: 760; letter-spacing: 0; text-decoration: none; white-space: nowrap; cursor: pointer; }
-.home-nav a[aria-current] { background: var(--surface-soft); color: var(--accent-ink); }
+.home-nav a[aria-current], .home-nav button[aria-current] { background: var(--surface-soft); color: var(--accent-ink); }
 .home-nav button:disabled { opacity: .45; cursor: not-allowed; }
+.grammar-journey .home-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.grammar-journey-hint { flex: 0 0 auto; max-width: 700px; padding: 10px 14px; border-radius: 20px; background: var(--surface-strong); line-height: 1.4; font-size: .85rem; }
+.grammar-journey-hint p { margin: 0; }
+.grammar-journey-hint button { min-height: 44px; }
+.grammar-journey-hint strong { overflow-wrap: anywhere; }
+.grammar-journey .home-intro h1 { font-size: clamp(1.3rem, 4vw, 2rem); }
 .home-profile { display: flex; align-items: center; gap: 9px; min-height: 43px; padding: 4px 11px 4px 4px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-strong); color: var(--ink); font: inherit; font-size: .72rem; font-weight: 800; white-space: nowrap; cursor: pointer; }
 .home-profile > span:first-child, .home-profile img { display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: var(--warm); object-fit: cover; }
 .home-header .appearance-toggle { margin-left: 0; }
@@ -93,7 +99,7 @@
   .home-header { flex: 0 0 auto; gap: 8px; }
   .home-header .journey-brand .brand-mark { width: 40px; height: 40px; font-size: 1.45rem; }
   .home-header .home-profile { min-height: 44px; letter-spacing: 0; }
-  .home-nav { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 19px; }
+  .home-nav { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 2px; padding: 3px; border-radius: 19px; }
   .home-nav a, .home-nav button { display: grid; place-items: center; min-width: 0; min-height: 44px; padding: 6px 2px; font-size: .67rem; line-height: 1.2; white-space: normal; text-align: center; }
   .home-hub-content { display: flex; flex-direction: column; flex: 1; min-height: 0; gap: 8px; padding-top: 10px; }
   .home-intro { flex: 0 0 auto; }
@@ -109,5 +115,5 @@
   .home-body { padding-top: 20px; }
 }
 @media (max-width: 350px) {
-  .home-nav { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .home-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 }

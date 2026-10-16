@@ -4,9 +4,9 @@ import { journeyPresentation, mapPath, mapPosition, mapScrollTarget, MAP_STEP, M
 import { JourneyScene } from './JourneyScene';
 import './journeyMap.css';
 
-type Props = { units: UnitSummary[]; currentId?: string; completedIds: ReadonlySet<string>; lockedIds?: ReadonlySet<string>; onOpen: (unit: UnitSummary) => void };
+type Props = { units: UnitSummary[]; currentId?: string; completedIds: ReadonlySet<string>; lockedIds?: ReadonlySet<string>; onOpen: (unit: UnitSummary) => void; continueLabel?: string };
 
-export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen }: Props) {
+export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen, continueLabel = 'Continuar →' }: Props) {
   const viewport = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(320);
   const [away, setAway] = useState(false);
@@ -96,7 +96,7 @@ export function JourneyMap({ units, currentId, completedIds, lockedIds, onOpen }
           })}</ol>
         </div>
       </div>
-      <div className="journey-map-footer"><span>Explora a tu ritmo · tu progreso se conserva</span>{current ? <button type="button" onClick={() => onOpen(current)}>Continuar →</button> : null}</div>
+      <div className="journey-map-footer"><span>Explora a tu ritmo · tu progreso se conserva</span>{current ? <button type="button" disabled={lockedIds?.has(current.id)} onClick={() => onOpen(current)}>{continueLabel}</button> : null}</div>
     </div>
   </section>;
 }

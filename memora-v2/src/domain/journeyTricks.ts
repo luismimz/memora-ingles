@@ -10,13 +10,17 @@ import type { WordMemory } from './memory';
 export interface JourneyTrick { sourceId: string; formId: string; skill: string; title: string; vocabulary: string[] }
 const normalize = (word: string) => word.trim().toLocaleLowerCase('en');
 
+export function trickStop(source: UnitSummary, trick: JourneyTrick): UnitSummary {
+  return { ...source, id: `trick:${encodeURIComponent(trick.sourceId)}:${encodeURIComponent(trick.formId)}`, title: trick.title, routeTrick: trick, grammarTricks: undefined };
+}
+
 /** Metadata comes exclusively from published, validated content, never demo lessons. */
 export function grammarTricks(unit: AtomicUnit): JourneyTrick[] {
   if (unit.kind === 'vocabulary-pack') return [];
   return getPlayableGrammar(unit).flatMap((form) => {
     const base = unit.words.find((word) => normalize(word.en) === normalize(form.englishBase ?? ''))?.es.toLowerCase();
     const lesson = lessonForForm(form, base);
-    return lesson ? [{ sourceId: unit.id, formId: form.id, skill: lesson.id, title: lesson.title, vocabulary: requiredGrammarWords(unit) }] : [];
+    return lesson ? [{ sourceId: unit.id, formId: form.id, skill: lesson.id, title: lesson.title === 'Lo que estás haciendo' ? `Estoy ${form.spanish}` : lesson.title, vocabulary: requiredGrammarWords(unit) }] : [];
   });
 }
 
@@ -37,7 +41,7 @@ export function buildJourneyRoute(units: readonly UnitSummary[]): UnitSummary[] 
     if (!trick) continue; // No invented filler lesson to satisfy a fixed interval.
     used.add(trick.skill);
     const source = units.find((candidate) => candidate.id === trick.sourceId)!;
-    route.push({ ...source, id: `trick:${encodeURIComponent(trick.sourceId)}:${encodeURIComponent(trick.formId)}`, title: trick.title, routeTrick: trick, grammarTricks: undefined });
+    route.push(trickStop(source, trick));
     sinceTrick = 0;
   }
   return route;
