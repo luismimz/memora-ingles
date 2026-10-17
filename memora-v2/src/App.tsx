@@ -398,8 +398,9 @@ export default function App() {
   }
   function followingJourneyStop(id: string) {
     const activities = readLearningActivities(userId);
+    const memories = readWordMemories(userId);
     const completedIds = new Set(units.filter((candidate) => readUnitProgress(userId, candidate.id) || completedVocabularyStop(candidate, activities)).map((candidate) => candidate.id));
-    return nextJourneyStop(id, journeyRoute, readWordMemories(userId), activities, completedIds);
+    return nextJourneyStop(id, buildJourneyRoute(units, memories), memories, activities, completedIds);
   }
   const playableUnits: readonly (UnitSummary | AtomicUnit)[] = libraryMode === 'grammar' ? grammarRoute : libraryMode
     ? libraryUnits

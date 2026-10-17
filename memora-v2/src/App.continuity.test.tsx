@@ -48,6 +48,20 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
+  it('recalcula el truco con las palabras acertadas DURANTE la misión, no las del render anterior', () => {
+    const descriptor = grammarTricks(previewUnit)[0];
+    const summaries = [
+      { ...current, id: 'pack-one', words: [{ en: 'BRUSH', es: 'cepillar' }], grammarTricks: [{ ...descriptor, sourceId: 'brush-source', vocabulary: ['brush'], skill: 'brush', formId: 'brush' }] },
+      { ...current, id: 'pack-two', words: [{ en: 'HOTEL', es: 'hotel' }] },
+      { ...current, id: 'pack-three', words: [{ en: 'INFORMATION', es: 'información' }] },
+      { ...current, id: 'pack-four', grammarTricks: [{ ...descriptor, sourceId: 'pack-four' }] }, next,
+    ];
+    hooks.states.set(2, { ...current, id: 'pack-four' }); hooks.states.set(15, summaries);
+    const props = game().props;
+    recordWordRecall('learner', current.words[0], 'quick');
+    props.onFinished();
+    expect(storage.get('memora-v2.resume.learner')).toBe(`trick:pack-four:${descriptor.formId}`);
+  });
   it('abre Arcade por sorpresa tras cuatro misiones SIN pulsar continuar y luego sigue', async () => {
     for (const word of current.words) recordWordRecall('learner', word, 'quick');
     for (let index = 1; index <= 4; index++) {
