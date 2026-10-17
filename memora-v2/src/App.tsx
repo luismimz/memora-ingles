@@ -391,7 +391,7 @@ export default function App() {
     setReviewMode(false);
   }
 
-  const journeyRoute = buildJourneyRoute(units);
+  const journeyRoute = buildJourneyRoute(units, readWordMemories(userId));
   const grammarRoute = libraryMode === 'grammar' ? grammarJourney(libraryUnits) : [];
   function followingGrammarStop(id: string) {
     return nextGrammarStop(id, grammarRoute, libraryUnits, readWordMemories(userId), readLearningActivities(userId), preview);
@@ -405,16 +405,17 @@ export default function App() {
     ? libraryUnits
     : reviewMode ? reviewUnits : journeyRoute;
   const nextScene = unit ? libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit.id) : !libraryMode && !reviewMode ? followingJourneyStop(activeTrick?.id ?? unit.id) : nextPlayableUnit(unit.id, playableUnits) : undefined;
-  const nextLabel = !preview && !reviewMode && pendingAutomaticArcade(userId) ? 'Ronda Arcade →' : preparingGrammar ? missingGrammarStop(preparingGrammar, libraryUnits, readWordMemories(userId)).length ? 'Seguir preparando palabras →' : 'Entrar al truco →' : nextScene ? 'Continuar jugando →' : 'Volver al recorrido →';
+  const nextLabel = preparingGrammar ? missingGrammarStop(preparingGrammar, libraryUnits, readWordMemories(userId)).length ? 'Seguir preparando palabras →' : 'Entrar al truco →' : nextScene ? 'Continuar jugando →' : 'Volver al recorrido →';
   const routePosition = unit ? (libraryMode || reviewMode ? orderedJourneyUnits(playableUnits) : playableUnits).findIndex((candidate) => candidate.id === (activeTrick?.id ?? unit.id)) : -1;
   function rememberAfterCompletion() {
     if (preview || reviewMode) return;
-    if (unit) completeArcadeCadence(userId, activeTrick?.id ?? unit.id, unit.contentVersion ?? '1', Boolean(activeTrick) || learningMode === 'grammar');
-    if (preparingGrammar) { writeGrammarPosition(userId, preparingGrammar.id); refreshProgress((version) => version + 1); return; }
+    const arcadeMode = unit ? completeArcadeCadence(userId, activeTrick?.id ?? unit.id, unit.contentVersion ?? '1', Boolean(activeTrick) || learningMode === 'grammar') : null;
+    if (preparingGrammar) { writeGrammarPosition(userId, preparingGrammar.id); refreshProgress((version) => version + 1); if (arcadeMode) void openArcade(true, arcadeMode); return; }
     const following = libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit?.id ?? '') : !libraryMode ? followingJourneyStop(activeTrick?.id ?? unit?.id ?? '') : nextScene;
     const nextMode = libraryMode ? learningMode : following && 'routeTrick' in following && following.routeTrick ? 'grammar' : following && journeyPresentation(following).pack ? 'vocabulary' : 'adventure';
     rememberUnit(following?.id ?? activeTrick?.id ?? unit?.id ?? null, nextMode);
     refreshProgress((version) => version + 1);
+    if (arcadeMode) void openArcade(true, arcadeMode);
   }
 
   const microOverlay = microSession ? <ArcadeExperience userId={userId} units={microSession.units} inspection={microSession.inspection} initialMode={microSession.initialMode} onExit={() => { stopSpeech(); setMicroSession(null); if (microSession.automatic) advanceAfterUnit(); }} /> : null;

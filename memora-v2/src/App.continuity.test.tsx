@@ -6,6 +6,7 @@ import { recordWordRecall, readWordMemories } from './domain/memory';
 import { grammarJourney } from './domain/grammarJourney';
 import { lessonForForm } from './domain/grammarLesson';
 import { recordLearningActivity } from './domain/learningActivity';
+import { recordGrammarAttempt } from './domain/grammarMemory';
 
 const hooks = vi.hoisted(() => ({ cursor: 0, states: new Map<number, unknown>() }));
 const api = vi.hoisted(() => ({ loadUnit: vi.fn() }));
@@ -47,15 +48,14 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
-  it('abre Arcade al continuar tras cuatro misiones y luego sigue sin repetirlas', async () => {
+  it('abre Arcade por sorpresa tras cuatro misiones SIN pulsar continuar y luego sigue', async () => {
     for (const word of current.words) recordWordRecall('learner', word, 'quick');
     for (let index = 1; index <= 4; index++) {
       hooks.states.set(2, { ...current, id: `pack-${index}` });
       game().props.onFinished();
     }
     hooks.states.set(15, [{ ...current, id: 'pack-4' }, next]);
-    expect(game().props.nextLabel).toBe('Ronda Arcade →');
-    game().props.onNext();
+    expect(game().props.nextLabel).not.toBe('Ronda Arcade →');
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
     hooks.cursor = 0;
     const overlay = (App() as ReactElement<{ children: ReactElement[] }>).props.children[1];
@@ -107,10 +107,11 @@ describe('continuidad real desde App', () => {
     const playing = game().props;
     expect(playing.stop.id).toBe(route[0].id);
     recordLearningActivity('learner', { unitId: first.id, unitTitle: first.title, contentVersion: first.contentVersion ?? '1', activityId: `trick-completed:${route[0].routeTrick!.formId}`, skill: route[0].routeTrick!.skill, phase: 'completion', source: 'learner', modality: 'writing', prompt: '', response: '', expected: '', correct: null, helped: false });
+    const lesson = lessonForForm(first.grammar[0], 'jugar')!;
+    recordGrammarAttempt('learner', { unitId: first.id, skill: lesson.id, check: lesson.checks[0].id, kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
     playing.onFinished();
     expect(storage.get('memora-v2.grammar-position.learner')).toBe(route[1].id);
     expect(storage.get('memora-v2.resume.learner')).toBe('home-10');
-    playing.onNext();
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
     hooks.cursor = 0;
     const overlay = (App() as ReactElement<{ children: ReactElement[] }>).props.children[1];

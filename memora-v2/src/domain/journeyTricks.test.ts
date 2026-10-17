@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildJourneyRoute, completedTrick, grammarTricks, missingTrickWords, nextJourneyStop, type JourneyTrick } from './journeyTricks';
+import { buildJourneyRoute, completedTrick, grammarTricks, mixedJourneyUnits, missingTrickWords, nextJourneyStop, type JourneyTrick } from './journeyTricks';
 import type { UnitSummary } from '../services/directus';
 import type { WordMemory } from './memory';
 import type { LearningActivity } from './learningActivity';
@@ -11,6 +11,39 @@ const known = [{ key: 'play', correct: 1 }] as WordMemory[];
 const activity = { unitId: 'u1', contentVersion: '1', source: 'learner', phase: 'completion', activityId: 'trick-completed:ing' } as LearningActivity;
 
 describe('paradas de gramática con vocabulario preparado', () => {
+  it('el truco de jugando requiere PLAY, no COMPUTER/DESK de la conversación', () => {
+    const descriptor = grammarTricks(previewUnit)[0];
+    expect(descriptor.vocabulary).toEqual(['play']);
+    const stop = { ...previewUnit, routeTrick: descriptor };
+    expect(missingTrickWords(stop, known)).toEqual([]);
+    expect(previewUnit.words.length).toBeGreaterThan(1);
+  });
+  it('cepillando no hereda teeth/mirror de una misión que el truco corto no usa', () => {
+    const source = structuredClone(previewUnit);
+    source.words = [{ ...source.words[0], en: 'BRUSH', es: 'cepillar' }, { ...source.words[1], en: 'TEETH', es: 'dientes' }, { ...source.words[2], en: 'MIRROR', es: 'espejo' }];
+    source.grammar[0] = { ...source.grammar[0], lesson: undefined, englishBase: 'brush', englishRoot: 'brush', english: 'brushing', spanish: 'cepillando', spanishStem: 'cepill', spanishEnding: 'ando', subjects: [{ en: "I'm", expandedEn: 'I am', es: 'Yo estoy', phrase: "I'm brushing" }] };
+    expect(grammarTricks(source)[0].vocabulary).toEqual(['brush']);
+  });
+  it('no elimina una palabra contextual cuando la lección sí la exige', () => {
+    const source = structuredClone(previewUnit);
+    source.grammar[0].lesson = { id: 'computer-context', title: 'Con mi ordenador', language: 'en', steps: [{ caption: 'Compara las piezas.', es: [{ text: 'ordenador', role: 'context' }], en: [{ text: 'computer', role: 'context' }] }], checks: [{ id: 'write', kind: 'write', prompt: 'Escribe la frase.', answers: ['I am playing on my computer.'], hint: 'Recuerda las piezas.', success: 'Bien.' }] };
+    const descriptor = grammarTricks(source)[0];
+    expect(descriptor.vocabulary).toContain('computer');
+    expect(missingTrickWords({ ...source, routeTrick: descriptor }, known)).toContain('computer');
+  });
+  it('reparte equivalentes y asociaciones sin borrar, duplicar ni modificar misiones', () => {
+    const input = [...Array.from({ length: 6 }, (_, i) => ({ id: `c${i}`, title: 'Equivalente', words: [{ en: 'HOTEL', es: 'hotel', associationMode: 'cognate' as const }] })), ...Array.from({ length: 3 }, (_, i) => ({ id: `a${i}`, title: 'Historia absurda' }))];
+    const mixed = mixedJourneyUnits(input);
+    expect(mixed.map((unit) => unit.id)).toEqual(['a0', 'c0', 'c1', 'a1', 'c2', 'c3', 'a2', 'c4', 'c5']);
+    expect(new Set(mixed.map((unit) => unit.id)).size).toBe(input.length);
+    expect(input[0].id).toBe('c0');
+  });
+  it('elige un truco con palabras practicadas antes que otro de vocabulario futuro', () => {
+    const input = units(5);
+    input[0].grammarTricks = [{ ...trick, vocabulary: ['brush'], skill: 'brush', title: 'Cepillando' }, trick];
+    input[0].words = [{ en: 'BRUSH', es: 'cepillar' }];
+    expect(buildJourneyRoute(input, known).find((stop) => stop.routeTrick)?.routeTrick?.skill).toBe('present-now');
+  });
   it('intercala un truco después de cuatro misiones sin alterar IDs ni duplicar lecciones', () => {
     const input = units(9);
     input[4].grammarTricks = [{ ...trick, sourceId: 'u5' }];

@@ -2,7 +2,6 @@ import type { UnitSummary } from '../services/directus';
 import type { AtomicUnit } from './unit';
 import { getPlayableGrammar } from './unit';
 import { lessonForForm } from './grammarLesson';
-import { requiredGrammarWords } from './learningModes';
 import { orderedJourneyUnits } from './journey';
 import type { LearningActivity } from './learningActivity';
 import type { WordMemory } from './memory';
@@ -20,16 +19,40 @@ export function grammarTricks(unit: AtomicUnit): JourneyTrick[] {
   return getPlayableGrammar(unit).flatMap((form) => {
     const base = unit.words.find((word) => normalize(word.en) === normalize(form.englishBase ?? ''))?.es.toLowerCase();
     const lesson = lessonForForm(form, base);
-    return lesson ? [{ sourceId: unit.id, formId: form.id, skill: lesson.id, title: lesson.title === 'Lo que estás haciendo' ? `Estoy ${form.spanish}` : lesson.title, vocabulary: requiredGrammarWords(unit) }] : [];
+    // A short trick does not teach the source mission's context or conversation.
+    // Keep only lexical items actually used by this lesson; its grammatical pieces
+    // are explained in the lesson itself, not demanded as prior vocabulary.
+    const english = normalize(lesson ? [...lesson.steps.map((step) => step.en.map((part) => part.text).join('')), ...lesson.checks.filter((check) => check.kind === 'write').flatMap((check) => check.answers)].join(' ') : '').replace(/[^\p{L}\p{N}]+/gu, ' ');
+    const vocabulary = [...new Set([...(form.englishBase ? [normalize(form.englishBase)] : []), ...unit.words.filter((word) => (` ${english} `).includes(` ${normalize(word.en)} `)).map((word) => normalize(word.en))])];
+    return lesson ? [{ sourceId: unit.id, formId: form.id, skill: lesson.id, title: lesson.title === 'Lo que estás haciendo' ? `Estoy ${form.spanish}` : lesson.title, vocabulary }] : [];
   });
 }
 
 /** Stable stop IDs separate a short trick from its source story and saved attempts. */
-export function buildJourneyRoute(units: readonly UnitSummary[]): UnitSummary[] {
+export function mixedJourneyUnits(units: readonly UnitSummary[]): UnitSummary[] {
   const ordered = orderedJourneyUnits(units);
+  const isEquivalent = (unit: UnitSummary) => unit.words?.length && unit.words.every((word) => word.associationMode === 'cognate') || /^Cognados\s*·/iu.test(unit.title);
+  const equivalent = ordered.filter(isEquivalent);
+  const associations = ordered.filter((unit) => !isEquivalent(unit));
+  if (!equivalent.length || !associations.length) return ordered;
+  // Distribute the scarce associations over the whole catalogue instead of
+  // exhausting them first and leaving a long, uninterrupted tail of cognates.
+  const result: UnitSummary[] = [];
+  let position = 0;
+  associations.forEach((association, index) => {
+    result.push(association);
+    const limit = Math.ceil(equivalent.length * (index + 1) / associations.length);
+    while (position < limit) result.push(equivalent[position++]);
+  });
+  return result;
+}
+
+export function buildJourneyRoute(units: readonly UnitSummary[], memories: readonly WordMemory[] = []): UnitSummary[] {
+  const ordered = mixedJourneyUnits(units);
   const pending = ordered.flatMap((unit) => unit.grammarTricks ?? []);
   const used = new Set<string>();
   const introduced = new Set<string>();
+  const practiced = new Set(memories.filter((memory) => memory.correct > 0).map((memory) => normalize(memory.key)));
   const route: UnitSummary[] = [];
   let sinceTrick = 0;
   for (const unit of ordered) {
@@ -37,7 +60,8 @@ export function buildJourneyRoute(units: readonly UnitSummary[]): UnitSummary[] 
     unit.words?.forEach((word) => introduced.add(normalize(word.en)));
     sinceTrick++;
     if (sinceTrick < 4) continue;
-    const trick = pending.find((candidate) => !used.has(candidate.skill) && candidate.vocabulary.every((word) => introduced.has(normalize(word))));
+    const trick = pending.find((candidate) => !used.has(candidate.skill) && candidate.vocabulary.every((word) => practiced.has(normalize(word))))
+      ?? pending.find((candidate) => !used.has(candidate.skill) && candidate.vocabulary.every((word) => introduced.has(normalize(word))));
     if (!trick) continue; // No invented filler lesson to satisfy a fixed interval.
     used.add(trick.skill);
     const source = units.find((candidate) => candidate.id === trick.sourceId)!;

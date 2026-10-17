@@ -41,8 +41,8 @@ export function JourneyHome(props: Props) {
     appearance, onToggleAppearance, onWords, onGrammar, resumeLearningMode = 'adventure' } = props;
   const [showAllWords, setShowAllWords] = useState(false);
   const catalogue = catalogueStats(units);
-  const stories = buildJourneyRoute(units);
   const memories = readWordMemories(userId);
+  const stories = buildJourneyRoute(units, memories);
   const lockedIds = new Set(stories.filter((stop) => missingTrickWords(stop, memories).length).map((stop) => stop.id));
   const knownUnitIds = new Set(stories.map((unit) => unit.id));
   const activities = readLearningActivities(userId).filter((item) => knownUnitIds.has(item.unitId));

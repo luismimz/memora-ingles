@@ -1,8 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AtomicUnit } from '../domain/unit';
 import { getPlayableGrammar } from '../domain/unit';
-import { missingGrammarWords } from '../domain/learningModes';
-import { readWordMemories, recordChunkExposure, recordSentenceExposure } from '../domain/memory';
+import { recordChunkExposure, recordSentenceExposure } from '../domain/memory';
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
 import { MicroArcade } from './MicroArcade';
@@ -14,10 +13,9 @@ import { GrammarArcade } from './GrammarArcade';
 import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
-  const memories = readWordMemories(userId);
   const practiced = new Set([...readGrammarAttempts(userId).filter((attempt) => attempt.correct).map((attempt) => attempt.unitId),
     ...readLearningActivities(userId).filter((attempt) => attempt.phase === 'construction' && attempt.correct).map((attempt) => attempt.unitId)]);
-  return units.filter((unit) => practiced.has(unit.id) && !missingGrammarWords(unit, memories).length && grammarArcadeRounds(userId, [unit]).length > 0);
+  return units.filter((unit) => practiced.has(unit.id) && grammarArcadeRounds(userId, [unit]).length > 0);
 }
 export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => eligibleGrammarUnits(userId, units).filter((unit) => unit.communication?.dialogue);
 
