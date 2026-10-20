@@ -99,7 +99,13 @@ describe('lectura tolerante de gramática publicada', () => {
   it('extrae metadatos de trucos sin que una publicación dañada rompa el mapa', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [{ id: 'good', title: 'Bien', status: 'published', content: previewUnit }, { id: 'bad', title: 'Revisar', status: 'published', content: {} }] }), { headers: { 'content-type': 'application/json' } })));
     const summaries = await loadPublishedUnitSummaries();
-    expect(summaries[0].grammarTricks!.length).toBeGreaterThan(0);
-    expect(summaries[1].grammarTricks).toEqual([]);
+    expect(summaries.find((summary) => summary.id === 'good')!.grammarTricks!.length).toBeGreaterThan(0);
+    expect(summaries.find((summary) => summary.id === 'bad')!.grammarTricks).toEqual([]);
+  });
+  it('estabiliza el catálogo por ID aunque Directus responda en otro orden', async () => {
+    const records = ['pack-10', 'pack-2', 'pack-1'].map((id) => ({ id, title: id, status: 'published', content: previewUnit }));
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: records }), { headers: { 'content-type': 'application/json' } })));
+    expect((await loadPublishedUnitSummaries()).map((summary) => summary.id)).toEqual(['pack-1', 'pack-2', 'pack-10']);
+    expect(fetch).toHaveBeenCalledWith(expect.stringContaining('&sort=id'), expect.anything());
   });
 });

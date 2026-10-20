@@ -8,6 +8,7 @@ import { readUnitProgress } from '../domain/journey';
 import { initializeJournal, readJournal } from '../domain/progressJournal';
 import { restoreProgress } from '../domain/restoreProgress';
 import { readTrickCheckpoint } from '../domain/trickCheckpoint';
+import { lessonForForm } from '../domain/grammarLesson';
 const captured = vi.hoisted(() => ({ coach: null as any }));
 vi.mock('./GrammarCoach', () => ({ GrammarCoach: (props: unknown) => { captured.coach = props; return <div>Truco real</div>; } }));
 vi.mock('../services/audio', () => ({ stopSpeech: vi.fn() }));
@@ -45,4 +46,19 @@ it('la revisión no escribe intentos, completados ni checkpoints', () => {
   captured.coach.onContinue();
   expect(readLearningActivities('learner')).toHaveLength(0);
   expect(onFinished).not.toHaveBeenCalled();
+});
+it('abre y guarda una ficha independiente con escena sin inventar una transformación verbal', () => {
+  const lesson = { ...lessonForForm(previewUnit.grammar[0], 'jugar')!, id: 'independent-use' };
+  const source = { ...previewUnit, id: 'grammar-only', kind: 'grammar-lesson' as const, grammar: [], grammarLesson: lesson, grammarPrerequisites: { vocabulary: ['play'] } };
+  const descriptor = grammarTricks(source)[0];
+  const onFinished = vi.fn();
+  renderToStaticMarkup(<JourneyTrickExperience unit={source} stop={{ id: 'trick:grammar-only:independent-use', title: lesson.title, routeTrick: descriptor }} userId="learner" inspection={false} onFinished={onFinished} onNext={() => {}} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />);
+  expect(captured.coach.lesson).toBe(lesson);
+  expect(captured.coach.form).toBeUndefined();
+  expect(captured.coach.sceneWord).toBe(source.words[0]);
+  captured.coach.onContinue();
+  expect(readLearningActivities('learner').at(-1)?.activityId).toBe('trick-completed:independent-use');
+  expect(readLearningActivities('learner').at(-1)?.unitId).toBe('grammar-only');
+  expect(onFinished).toHaveBeenCalledOnce();
+  expect(readUnitProgress('learner', source.id)).toBeNull();
 });

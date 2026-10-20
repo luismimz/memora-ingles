@@ -3,7 +3,7 @@ import { readGameCheckpoint, readMirrorCheckpoint } from '../domain/gameCheckpoi
 import { isReviewDue, readUnitProgress } from '../domain/journey';
 import { readLearningActivities } from '../domain/learningActivity';
 import { loadLearningProfile, readAvatar } from '../domain/learningProfile';
-import { readWordMemories } from '../domain/memory';
+import { isKnownForDirection, readWordMemories } from '../domain/memory';
 import { shouldOfferMicroArcade } from '../domain/microArcade';
 import { catalogueStats } from '../domain/catalogueStats';
 import { completedVocabularyStop, journeyPresentation } from '../domain/journeyMap';
@@ -44,7 +44,7 @@ export function JourneyHome(props: Props) {
   const memories = readWordMemories(userId);
   const stories = buildJourneyRoute(units, memories);
   const lockedIds = new Set(stories.filter((stop) => missingTrickWords(stop, memories).length).map((stop) => stop.id));
-  const knownUnitIds = new Set(stories.map((unit) => unit.id));
+  const knownUnitIds = new Set(stories.flatMap((unit) => [unit.id, ...(unit.routeTrick ? [unit.routeTrick.sourceId] : [])]));
   const activities = readLearningActivities(userId).filter((item) => knownUnitIds.has(item.unitId));
   const completed = stories.filter((unit) => unit.routeTrick ? completedTrick(unit, activities) : readUnitProgress(userId, unit.id) || completedVocabularyStop(unit, activities));
   const completedIds = new Set(completed.map((unit) => unit.id));
@@ -63,8 +63,9 @@ export function JourneyHome(props: Props) {
   const dueCount = profile.dueWords + profile.dueChunks + profile.dueSentences + profile.dueReviews;
   const wordMemories = readWordMemories(userId).filter((memory) => memory.correct > 0 && stories.some((unit) => unit.words?.some((word) => word.en.toLowerCase() === memory.word.en.toLowerCase())));
   const uniqueWords = [...new Map(wordMemories.map((memory) => [memory.word.en.toLowerCase(), memory])).values()];
+  const retainedWords = uniqueWords.filter((memory) => isKnownForDirection(memory, 'recall') || isKnownForDirection(memory, 'production'));
   const conversations = new Set(activities.filter((item) => item.source === 'learner' && (item.phase === 'dialogue' || item.phase === 'transfer')).map((item) => item.unitId)).size;
-  const conversationUnit = [...completed].reverse().find((unit) => unit.hasDialogue);
+  const conversationUnit = [...completed].reverse().find((unit) => unit.hasDialogue && activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)));
   const inviteArcade = Boolean(onArcade && uniqueWords.length && featured && (dueCount > 0 || shouldOfferMicroArcade(userId, featured.id)));
   const avatar = readAvatar(userId);
   const currentIndex = featured ? stories.findIndex((unit) => unit.id === featured.id) + 1 : 0;
@@ -107,7 +108,7 @@ export function JourneyHome(props: Props) {
 
       {inviteArcade ? <aside className="home-arcade-invite" aria-label="Invitación a Arcade"><div><p className="eyebrow">UNA RONDA OPCIONAL</p><h2>¿Aún recuerdas la escena?</h2><p>{dueCount ? `${dueCount} ${dueCount === 1 ? 'recuerdo espera' : 'recuerdos esperan'} una vuelta rápida.` : 'Una asociación corta para cambiar el ritmo.'} Puedes volver a la historia cuando quieras.</p></div><button type="button" onClick={onArcade}>Jugar una ronda <span aria-hidden="true">↗</span></button></aside> : null}
 
-      <section className="home-progress" aria-label="Tu progreso real"><div><strong>{uniqueWords.length}</strong><span>palabras recordadas</span></div><div><strong>{conversations}</strong><span>{conversations === 1 ? 'escena conversada' : 'escenas conversadas'}</span></div><div><strong>{dueCount}</strong><span>{dueCount === 1 ? 'repaso pendiente' : 'repasos pendientes'}</span></div><button type="button" onClick={onEvolution} disabled={!onEvolution}>Ver Mi evolución <span aria-hidden="true">→</span></button></section>
+      <section className="home-progress" aria-label="Tu progreso real"><div><strong>{uniqueWords.length}</strong><span>palabras practicadas</span><small>{retainedWords.length} recuperadas después sin pistas</small></div><div><strong>{conversations}</strong><span>{conversations === 1 ? 'escena conversada' : 'escenas conversadas'}</span></div><div><strong>{dueCount}</strong><span>{dueCount === 1 ? 'repaso pendiente' : 'repasos pendientes'}</span></div><button type="button" onClick={onEvolution} disabled={!onEvolution}>Ver Mi evolución <span aria-hidden="true">→</span></button></section>
 
       <section className="home-library" id="palabras" aria-labelledby="home-words-title"><div className="home-section-heading"><p className="eyebrow">TUS PALABRAS</p><h2 id="home-words-title">Cada palabra guarda una historia.</h2><p>Vuelve a una misión para descubrir nuevas asociaciones o recordar las que ya conoces.</p></div>{uniqueWords.length ? <div className="home-word-list">{(showAllWords ? uniqueWords : uniqueWords.slice(0, 8)).map((memory) => <span key={memory.key}><strong lang="en">{memory.word.en}</strong><small>{memory.word.es}</small></span>)}</div> : <p className="home-empty-copy">Todavía no hay palabras recordadas. Empieza una historia y pronto aparecerán aquí.</p>}{uniqueWords.length > 8 ? <button type="button" className="home-text-button" onClick={() => setShowAllWords((value) => !value)}>{showAllWords ? 'Mostrar menos' : `Ver todas las ${uniqueWords.length} palabras`}</button> : null}{(next ?? featured) ? <button type="button" className="home-text-button" onClick={onWords}>{next ? 'Descubrir palabras en la siguiente misión →' : 'Volver a una historia →'}</button> : null}</section>
 

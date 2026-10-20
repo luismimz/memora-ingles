@@ -1,11 +1,20 @@
 import { describe, expect, it } from 'vitest';
 import legacyPlay from '../../content/stage0-play-dog-beach.json';
 import legacyWash from '../../content/phase1-wash-soap-dog.json';
+import { lessonForForm } from './grammarLesson';
 import { getPlayableGrammar, getSpanishSubjectLabel, getUnitSentences, makeRecallChoices, nextReviewAt, validateApprovedAssociation, validateAssociationQuality, validateUnit } from './unit';
 const previewUnit = validateUnit(legacyPlay);
 const reviewUnits = [previewUnit, validateUnit(legacyWash)];
 
 describe('contrato de unidad atómica', () => {
+  it('valida un truco independiente sin inventar personas, raíces verbales ni ejercicios de palabras', () => {
+    const form = { ...previewUnit.grammar.find((candidate) => candidate.id === 'ing')!, englishBase: 'play' };
+    const source = { ...previewUnit, id: 'standalone', kind: 'grammar-lesson' as const, grammar: [], grammarLesson: lessonForForm(form, 'jugar')!, grammarPrerequisites: { vocabulary: ['play'] }, sentence: { ...previewUnit.sentence, slots: [] }, practiceSentences: undefined };
+    expect(validateUnit(source).grammar).toEqual([]);
+    expect(() => validateUnit({ ...source, grammarLesson: undefined })).toThrow('lección escrita');
+    expect(() => validateUnit({ ...source, grammarPrerequisites: undefined })).toThrow('vocabulario preparado');
+    expect(() => validateUnit({ ...source, grammarLesson: { ...source.grammarLesson, checks: [] } })).toThrow();
+  });
   it('acepta personas V2 sin recortar sus letras', () => {
     expect(getSpanishSubjectLabel('Yo estoy', 'jugando')).toBe('Yo estoy');
     expect(getSpanishSubjectLabel('Vosotros estáis', 'jugando')).toBe('Vosotros estáis');

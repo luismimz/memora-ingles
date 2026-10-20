@@ -1,9 +1,8 @@
 import type { AtomicUnit } from './unit';
 import type { UnitSummary } from '../services/directus';
-import { grammarTricks, completedTrick, missingTrickWords, trickStop } from './journeyTricks';
+import { grammarTricks, completedTrick, missingTrickWords, mixedJourneyUnits, trickStop } from './journeyTricks';
 import { getPlayableGrammar } from './unit';
 import { requiredGrammarWords } from './learningModes';
-import { orderedJourneyUnits } from './journey';
 import type { LearningActivity } from './learningActivity';
 import type { WordMemory } from './memory';
 import { progressStorage } from './progressJournal';
@@ -18,7 +17,9 @@ export function writeGrammarPosition(userId: string, id: string | null) {
 /** The grammar map uses the same stop IDs and completion events as Home. */
 export function grammarJourney(units: readonly AtomicUnit[]): UnitSummary[] {
   const used = new Set<string>();
-  return orderedJourneyUnits(units).flatMap<UnitSummary>((unit) => {
+  const byId = new Map(units.map((unit) => [unit.id, unit]));
+  return mixedJourneyUnits(units).flatMap<UnitSummary>((summary) => {
+    const unit = byId.get(summary.id)!;
     if (unit.kind === 'vocabulary-pack') return [];
     const tricks = grammarTricks(unit);
     if (tricks.length) return tricks.filter((trick) => {

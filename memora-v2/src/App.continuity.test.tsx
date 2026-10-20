@@ -48,6 +48,16 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
+  it('Inicio prepara las palabras de una misión antes de exigir su gramática o conversación', async () => {
+    const source = { ...previewUnit, id: 'word-first-story' };
+    hooks.states.set(2, null); hooks.states.set(15, [source]); hooks.states.set(22, false);
+    api.loadUnit.mockResolvedValue(source);
+    game().props.onOpen(source);
+    await Promise.resolve(); await Promise.resolve();
+    expect(game().props.learningMode).toBe('vocabulary');
+    expect(storage.get('memora-v2.resume-mode.learner')).toBe('vocabulary');
+    expect(readWordMemories('learner')).toEqual([]);
+  });
   it('recalcula el truco con las palabras acertadas DURANTE la misión, no las del render anterior', () => {
     const descriptor = grammarTricks(previewUnit)[0];
     const summaries = [
@@ -192,6 +202,7 @@ describe('continuidad real desde App', () => {
     expect(storage.size).toBe(0);
   });
   it('no vuelve al primer paquete cuando no hay más contenido', () => {
+    recordLearningActivity('learner', { unitId: current.id, unitTitle: current.title, contentVersion: current.contentVersion ?? '1', activityId: 'vocabulary-completed', skill: 'vocabulary', phase: 'completion', source: 'learner', modality: 'choice', prompt: '', response: 'Palabras practicadas', expected: '', correct: null, helped: false });
     hooks.states.set(2, next);
     const props = game().props;
     expect(props.nextLabel).toBe('Volver al recorrido →');

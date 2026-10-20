@@ -120,7 +120,7 @@ export interface UnitSentence {
 
 export interface AtomicUnit {
   /** A word pack has no invented grammar or scored sentence construction. */
-  kind?: 'mission' | 'vocabulary-pack';
+  kind?: 'mission' | 'vocabulary-pack' | 'grammar-lesson';
   id: string;
   title: string;
   contentVersion?: string;
@@ -131,6 +131,7 @@ export interface AtomicUnit {
   location?: { world: string; zone: string; locus: string; label: string };
   words: AtomicWord[];
   grammar: GrammarForm[];
+  grammarLesson?: GrammarLessonData;
   sentence: UnitSentence;
   practiceSentences?: UnitSentence[];
   mirror?: MirrorLessonData;
@@ -266,8 +267,10 @@ export function getExpandedEnglishSubject(subject: GrammarSubject): string {
 export function validateUnit(value: unknown): AtomicUnit {
   if (!value || typeof value !== 'object') throw new Error('La unidad no tiene datos.');
   const unit = value as Partial<AtomicUnit>;
-  if (unit.kind !== undefined && !['mission', 'vocabulary-pack'].includes(unit.kind)) throw new Error('El tipo de unidad no es válido.');
+  if (unit.kind !== undefined && !['mission', 'vocabulary-pack', 'grammar-lesson'].includes(unit.kind)) throw new Error('El tipo de unidad no es válido.');
   if (unit.grammarPrerequisites && (!Array.isArray(unit.grammarPrerequisites.vocabulary) || !unit.grammarPrerequisites.vocabulary.length || unit.grammarPrerequisites.vocabulary.some((word) => typeof word !== 'string' || !word.trim()))) throw new Error('La gramática necesita una lista de palabras preparadas.');
+  if (unit.grammarLesson) validateGrammarLesson(unit.grammarLesson);
+  if (unit.kind === 'grammar-lesson' && (!unit.grammarPrerequisites?.vocabulary.length || !unit.grammarLesson || !Array.isArray(unit.grammar) || unit.grammar.length)) throw new Error('El truco independiente necesita vocabulario preparado y una lección escrita explícitamente.');
   if (unit.activeRecall !== undefined && typeof unit.activeRecall !== 'boolean') throw new Error('El recuerdo activo debe ser verdadero o falso.');
   if (unit.grammarRole !== undefined && !['new', 'review'].includes(unit.grammarRole)) throw new Error('El papel de la gramática debe ser nuevo o repaso.');
   if (unit.mirror !== undefined) validateMirrorLesson(unit.mirror);
@@ -310,7 +313,7 @@ export function validateUnit(value: unknown): AtomicUnit {
       throw new Error(`${word.en}: la asociación sustituida no puede estar vacía.`);
     }
   }
-  if (!Array.isArray(unit.grammar) || unit.kind !== 'vocabulary-pack' && unit.grammar.length < 1 ||
+  if (!Array.isArray(unit.grammar) || !['vocabulary-pack', 'grammar-lesson'].includes(unit.kind ?? 'mission') && unit.grammar.length < 1 ||
     new Set(unit.grammar.map((form) => form.id)).size !== unit.grammar.length ||
     unit.grammar.some((form) => !form.id?.trim() || (form.visualContract !== undefined && !form.visualContract.trim()))) {
     throw new Error('Las formas de la unidad deben ser únicas y válidas.');
@@ -362,7 +365,7 @@ export function validateUnit(value: unknown): AtomicUnit {
   if (unit.location && Object.values(unit.location).some((value) => typeof value !== 'string' || !value.trim())) throw new Error('La escena necesita un lugar completo y estable.');
   const sentences = [unit.sentence, ...(unit.practiceSentences ?? [])];
   for (const sentence of sentences) {
-    if (unit.kind === 'vocabulary-pack') {
+    if (unit.kind === 'vocabulary-pack' || unit.kind === 'grammar-lesson') {
       if (!sentence?.en?.trim() || !sentence.es?.trim() || !Array.isArray(sentence.slots) || sentence.slots.length) throw new Error('El paquete de palabras usa ejemplos de escucha, no ejercicios sintéticos de gramática.');
       continue;
     }

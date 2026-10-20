@@ -28,3 +28,13 @@ it('no incluye las frases ampliadas hasta que se hayan enseñado realmente', () 
   expect(rounds).toHaveLength(previewUnit.sentence.slots.length);
   expect(rounds.every((round) => !round.conceptual && round.sentence.en === previewUnit.sentence.en)).toBe(true);
 });
+it('los trucos independientes entran en Arcade solo después de su práctica real', () => {
+  const lesson = { ...lessonForForm(previewUnit.grammar[0], 'jugar')!, id: 'independent-lesson' };
+  const source = { ...previewUnit, id: 'standalone', kind: 'grammar-lesson' as const, grammar: [], grammarLesson: lesson, grammarPrerequisites: { vocabulary: ['play'] } };
+  expect(grammarArcadeRounds('learner', [source])).toEqual([]);
+  recordGrammarAttempt('learner', { unitId: source.id, skill: lesson.id, check: lesson.checks[0].id, kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
+  expect(grammarArcadeRounds('learner', [source])).toEqual([]);
+  recordWordRecall('learner', previewUnit.words[0], 'quick');
+  const rounds = grammarArcadeRounds('learner', [source]);
+  expect(rounds).toHaveLength(1); expect(rounds[0].skill).toBe(lesson.id); expect(rounds[0].form).toBeUndefined();
+});

@@ -1,8 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import examples from '../../content/review-examples.json';
 import { validateUnit } from './unit';
-import { microRounds, shouldOfferMicroArcade } from './microArcade';
-import { commitMicroAttempt } from './microArcadeProgress';
+import { arcadeCandidateIds, microRounds, shouldOfferMicroArcade } from './microArcade';
+import { commitMicroAttempt, commitMicroTimeout } from './microArcadeProgress';
 import { recordSentenceExposure, recordWordRecall, readWordMemories, readSentenceMemories, isKnownForDirection } from './memory';
 import { initializeJournal, readJournal } from './progressJournal';
 import { readLearningActivities, recordLearningActivity } from './learningActivity';
@@ -41,6 +41,33 @@ describe('Arcade: preparar antes de pedir y guardar evidencia real', () => {
   it('no evalúa una asociación nueva que el alumno todavía no ha visto', () => {
     teach(); const changed = structuredClone(unit); changed.words[0].scene += ' Otra versión.';
     expect(microRounds('learner', [changed])).toEqual([]);
+  });
+  it('una palabra en dos misiones aparece una vez en la ronda', () => {
+    teach();
+    expect(microRounds('learner', [unit, { ...unit, id: 'another-mission' }])).toHaveLength(1);
+  });
+  it('prioriza recuerdos vencidos y lo recién practicado, sin depender del orden del catálogo', () => {
+    const summaries = Array.from({ length: 25 }, (_, index) => ({ id: `u${index}`, title: 'Misión', words: [{ en: `WORD${index}`, es: 'palabra' }] }));
+    teach();
+    const template = readWordMemories('learner')[0];
+    const memories = summaries.map((summary, index) => ({ ...template, key: summary.words[0].en.toLowerCase(), nextReviewAt: new Date(at.getTime() + (index < 8 ? -10000 + index : 10000)).toISOString() }));
+    const sample = recordLearningActivity('learner', { unitId: 'u23', unitTitle: 'Misión', contentVersion: '1', activityId: 'word', skill: 'WORD23', source: 'learner', phase: 'arcade', modality: 'writing', prompt: 'palabra', response: 'WORD23', expected: 'WORD23', correct: true, helped: false, at: at.toISOString() });
+    const activities = summaries.map((summary) => ({ ...sample, unitId: summary.id, at: summary.id === 'u23' ? at.toISOString() : new Date(at.getTime() - 5000).toISOString() }));
+    const ids = arcadeCandidateIds(summaries, memories, activities, 'u24', at.getTime());
+    expect(ids[0]).toBe('u24');
+    expect(ids.slice(1, 7)).toEqual(['u0', 'u1', 'u2', 'u3', 'u4', 'u5']);
+    expect(ids).toContain('u23');
+    expect(new Set(ids).size).toBe(12);
+    expect(arcadeCandidateIds([...summaries].reverse(), memories, activities, 'u24', at.getTime())).toEqual(ids);
+    expect(arcadeCandidateIds(summaries, [], [], undefined, at.getTime())).toEqual([]);
+    expect(arcadeCandidateIds(summaries, memories, [], undefined, at.getTime())).toEqual([]);
+  });
+  it('el tiempo agotado de escritura no se inventa como respuesta ni acierto', () => {
+    const round = teach();
+    const attempt = commitMicroTimeout('learner', round, crypto.randomUUID(), 'writing-clock', false);
+    expect(attempt.modality).toBe('writing');
+    expect(attempt.correct).toBeNull();
+    expect(readWordMemories('learner')[0].capabilities?.recall?.independentCorrect).toBe(0);
   });
   it('reconocimiento, ayuda y recuperación independiente no otorgan el mismo dominio', () => {
     const round = teach();

@@ -4,16 +4,16 @@ import { stopSpeech } from '../services/audio';
 export const arcadeCheckpointDue = (completed: number, acknowledged: number) => completed > 0 && completed % 15 === 0 && completed !== acknowledged;
 
 /** One clock for vocabulary and grammar. Choosing an answer ends the question immediately. */
-export function useArcadeClock(index: number, revealed: boolean, enabled: boolean, onExpire: () => void, onAdvance: () => void, feedbackMs: number) {
+export function useArcadeClock(index: number, revealed: boolean, enabled: boolean, onExpire: () => void, onAdvance: () => void, feedbackMs: number, durationMs = 6000) {
   const [paused, setPaused] = useState(false);
-  const [remaining, setRemaining] = useState(6000);
+  const [remaining, setRemaining] = useState(durationMs);
   const [acknowledged, setAcknowledged] = useState(0);
-  const left = useRef(6000);
+  const left = useRef(durationMs);
   const expire = useRef(onExpire); expire.current = onExpire;
   const advance = useRef(onAdvance); advance.current = onAdvance;
   const checkpoint = arcadeCheckpointDue(index, acknowledged);
   useEffect(() => { if (paused) stopSpeech(); return () => stopSpeech(); }, [index, paused]);
-  useEffect(() => { left.current = 6000; setRemaining(6000); }, [index]);
+  useEffect(() => { left.current = durationMs; setRemaining(durationMs); }, [index, durationMs]);
   useEffect(() => {
     if (!enabled || paused || revealed || checkpoint) return;
     const deadline = performance.now() + left.current;

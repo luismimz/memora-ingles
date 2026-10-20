@@ -62,6 +62,7 @@
 .home-progress > div { display: grid; gap: 3px; padding: 7px 13px; border-right: 1px solid var(--line); }
 .home-progress strong { font-size: 1.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
 .home-progress span { color: var(--muted); font-size: .72rem; }
+.home-progress small { color: var(--muted); font-size: .65rem; overflow-wrap: anywhere; }
 .home-progress button { padding: 10px 12px; border: 0; background: transparent; color: var(--accent-ink); font: inherit; font-size: .8rem; font-weight: 850; cursor: pointer; }
 .home-progress button:disabled { opacity: .45; cursor: not-allowed; }
 .home-library { padding: 23px; border: 1px solid var(--line); border-radius: 26px; background: var(--surface-strong); scroll-margin-top: 20px; }

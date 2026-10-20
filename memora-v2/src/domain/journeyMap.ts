@@ -49,7 +49,7 @@ export function mapPosition(index: number, width: number) {
 
 /** A completed vocabulary session finishes a stop, not full-story or grammar mastery. */
 export function completedVocabularyStop(unit: UnitSummary, activities: readonly LearningActivity[]) {
-  return journeyPresentation(unit).pack && activities.some((activity) => activity.unitId === unit.id
+  return activities.some((activity) => activity.unitId === unit.id
     && activity.contentVersion === (unit.contentVersion ?? '1') && activity.source === 'learner'
     && activity.phase === 'completion' && activity.skill === 'vocabulary' && activity.activityId === 'vocabulary-completed');
 }

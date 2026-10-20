@@ -4,14 +4,15 @@ import { grammarChecksForExperience, type GrammarLessonData } from '../domain/gr
 import { GrammarRow, GrammarCaption, GrammarText } from './GrammarText';
 import { recordGrammarAttempt } from '../domain/grammarMemory';
 import { recordLearningActivity } from '../domain/learningActivity';
-import type { GrammarForm } from '../domain/unit';
+import type { AtomicWord, GrammarForm } from '../domain/unit';
+import { SceneVisual } from './SceneVisual';
 import { playEnglish, playSpanish, playSnap, stopSpeech } from '../services/audio';
 import type { TrickCheckpoint } from '../domain/trickCheckpoint';
 import { recordSentenceExposure } from '../domain/memory';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
-export function GrammarCoach({ lesson, form, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], startAtPractice = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false }: {
-  lesson: GrammarLessonData; form?: GrammarForm; userId: string; unitId: string; unitTitle?: string; contentVersion?: string; conversationAnswers?: string[]; startAtPractice?: boolean; reviewMode: boolean; onReady: () => void; onContinue: () => void;
+export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], startAtPractice = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false }: {
+  lesson: GrammarLessonData; form?: GrammarForm; sceneWord?: AtomicWord; userId: string; unitId: string; unitTitle?: string; contentVersion?: string; conversationAnswers?: string[]; startAtPractice?: boolean; reviewMode: boolean; onReady: () => void; onContinue: () => void;
   checkpoint?: TrickCheckpoint | null; onProgress?: (state: TrickCheckpoint) => void; requirePractice?: boolean; schedulePractice?: boolean;
 }) {
   const validCheckpoint = checkpoint && checkpoint.stage <= lesson.steps.length && checkpoint.checkIndex < lesson.checks.length ? checkpoint : null;
@@ -88,12 +89,14 @@ export function GrammarCoach({ lesson, form, userId, unitId, unitTitle = lesson.
   return <GameCard className="coach-card" reserveFooter revealFooter={finished} onAdvance={finished ? onContinue : undefined} advanceLabel="Construir frase">
     <div className="coach-content">
       <p className="eyebrow">{step ? 'DESCUBRE EL TRUCO' : finished ? 'AHORA, ÚSALO' : check.kind === 'explain' ? 'AHORA TÚ ENSEÑAS' : check.kind === 'write' ? 'TU PRIMERA RESPUESTA' : 'PRUÉBALO'}</p>
+      {sceneWord ? <SceneVisual word={sceneWord} compact /> : null}
       {step ? <>
         <p className="coach-caption" aria-live="polite"><GrammarCaption text={step.caption} marks={step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p>
         <div className="coach-demonstration"><div><small className="coach-language">ESPAÑOL</small><GrammarRow parts={step.es} language="es" /></div>{!step.hideEnglish ? <><span className="coach-direction" aria-hidden="true">↓</span><div><small className="coach-language">INGLÉS</small><GrammarRow parts={step.en} language="en" /></div></> : null}</div>
         <div className="coach-actions">{!step.hideEnglish ? <button type="button" className="quiet-action" onClick={() => void playEnglish(step.en.map((part) => part.text).join(''))}>🔊 Escuchar inglés</button> : null}<button type="button" className="primary-action" onClick={() => { stopSpeech(); setStage((value) => value + 1); }}>{step.advanceLabel ?? 'Seguir ahora →'}</button><button type="button" className="quiet-action coach-pause" aria-pressed={paused} onClick={() => { stopSpeech(); setPaused((value) => !value); }}>{paused ? 'Reanudar explicación' : 'Pausar'}</button><button type="button" className="quiet-action" onClick={skipKnownTrick}>{requirePractice ? 'Ya lo entiendo · probarlo' : 'Ya conozco el truco · ir a la frase'}</button></div>
       </> : !finished ? <div className="coach-practice">
         <h2>{check.prompt}</h2>
+        {startAtPractice ? <button type="button" className="quiet-action" onClick={() => { stopSpeech(); setStage(0); }}>Ver el truco otra vez</button> : null}
         {check.kind === 'write' ? <form onSubmit={(event) => { event.preventDefault(); answer(input); }}><label className="sr-only" htmlFor="grammar-answer">Tu respuesta en inglés</label><input id="grammar-answer" lang="en" value={input} onChange={(event) => setInput(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={feedback === 'correct'} /><button type="submit" disabled={!input.trim() || feedback === 'correct'}>Comprobar</button></form>
           : <div className="coach-options">{check.choices!.map((choice) => <button type="button" key={choice} disabled={feedback === 'correct'} onClick={() => answer(choice)}>{form ? <GrammarText text={choice} form={form} /> : choice}</button>)}</div>}
         <p className="coach-feedback" role="status">{feedback === 'correct' ? check.success : feedback === 'help' ? check.hint : ''}</p>

@@ -7,7 +7,7 @@ import { completeLearningMode, missingGrammarWords } from './learningModes';
 import { recalledWordIndex, recordActiveWordAttempt } from './activeRecall';
 import { readWordMemories, recordWordRecall } from './memory';
 import { readUnitProgress } from './journey';
-import { readLearningActivities } from './learningActivity';
+import { readLearningActivities, recordLearningActivity } from './learningActivity';
 import { initializeJournal, readJournal } from './progressJournal';
 import { restoreProgress } from './restoreProgress';
 import { writtenConversationCorrection } from './conversation';
@@ -64,6 +64,8 @@ describe('modos conectados con el progreso real', () => {
     recordWordRecall('learner', { ...unit.words[0], en: 'LOOK', es: 'mirar' }, 'quick');
     expect(eligibleMixedUnits('learner', [unit])).toEqual([]);
     recordGrammarAttempt('learner', { skill: 'looking-for-now', unitId: unit.id, check: 'teach', kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
+    expect(eligibleMixedUnits('learner', [unit])).toEqual([]);
+    recordLearningActivity('learner', { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: 'respond', skill: 'respond', phase: 'dialogue', source: 'learner', modality: 'writing', prompt: unit.communication!.dialogue!.turns[0].en, response: unit.communication!.dialogue!.turns[1].en, expected: unit.communication!.dialogue!.turns[1].en, correct: true, helped: false });
     expect(eligibleMixedUnits('learner', [unit])).toEqual([unit]);
   });
   it('recuerdo independiente, error y reintento ayudado se restauran sin duplicados', () => {

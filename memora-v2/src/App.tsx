@@ -5,12 +5,12 @@ import { missingGrammarWords } from './domain/learningModes';
 import { readWordMemories } from './domain/memory';
 import type { LearningMode } from './domain/game';
 import { JourneyHome } from './components/JourneyHomeV2';
-import { completedVocabularyStop, journeyPresentation } from './domain/journeyMap';
+import { completedVocabularyStop } from './domain/journeyMap';
 import { ProfileView } from './components/ProfileView';
 import { ContentManager } from './components/ContentManager';
 import { ArcadeExperience, eligibleGrammarUnits } from './components/ArcadeExperience';
 import { readLearningActivities } from './domain/learningActivity';
-import { shouldOfferMicroArcade, microRounds } from './domain/microArcade';
+import { shouldOfferMicroArcade, microRounds, arcadeCandidateIds } from './domain/microArcade';
 import { completeArcadeCadence, consumeAutomaticArcade, pendingAutomaticArcade, type AutomaticArcadeMode } from './domain/arcadeCadence';
 import { PhrasalFusionDemo } from './components/PhrasalFusionDemo';
 import { GrammarWorkshop } from './components/GrammarWorkshop';
@@ -19,13 +19,12 @@ import { MirrorLessonExperience } from './components/MirrorLessonExperience';
 import { PlayingGrammarReview } from './components/PlayingGrammarReview';
 import type { AtomicUnit } from './domain/unit';
 import { nextPlayableUnit, orderedJourneyUnits, readUnitProgress } from './domain/journey';
-import { readSentenceMemories } from './domain/memory';
 import { previewUnit, reviewUnits } from './preview/previewUnit';
 import { DirectusError, endSession, hasSession, loadPublishedUnitSummaries, loadUnit, loadKeysPilot, loadMirrorPilot, logIn, loadIdentity, clearAssetCache, type UnitSummary } from './services/directus';
 import { prefetchSpeech, stopSpeech } from './services/audio';
 import { useAppearance } from './useAppearance';
 import { startProgressSync, type SyncStatus } from './services/progressSync';
-import { buildJourneyRoute, grammarTricks, missingTrickWords, nextJourneyStop } from './domain/journeyTricks';
+import { buildJourneyRoute, grammarTricks, missingTrickWords, nextJourneyStop, trickStop } from './domain/journeyTricks';
 import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { loadLearningLibrary } from './services/directus';
 import { GrammarJourney } from './components/GrammarJourney';
@@ -211,7 +210,7 @@ export default function App() {
       return;
     }
     setActiveTrick(null);
-    const mode = !directConversation && resumeMode !== 'adventure' && summary.id === lastOpenedUnitId ? resumeMode : !directConversation && journeyPresentation(summary).pack ? 'vocabulary' : 'adventure';
+    const mode = directConversation ? 'adventure' : summary.id === lastOpenedUnitId ? resumeMode : 'vocabulary';
     setLearningMode(mode); setLibraryMode(null);
     setConversationStart(directConversation);
     setExpansionTest(null);
@@ -236,11 +235,12 @@ export default function App() {
   }
 
   function reviewManagedUnit(draft: AtomicUnit) {
-    setActiveTrick(null);
+    const standalone = draft.kind === 'grammar-lesson' ? grammarTricks(draft)[0] : null;
+    setActiveTrick(standalone ? trickStop(draft, standalone) : null);
     setExpansionTest(null);
     setContentOpen(true);
     setLibraryMode(null);
-    setLearningMode(draft.kind === 'vocabulary-pack' ? 'vocabulary' : 'adventure');
+    setLearningMode(standalone ? 'grammar' : draft.kind === 'vocabulary-pack' ? 'vocabulary' : 'adventure');
     setConversationStart(false);
     setReviewMode(true);
     setUnit(draft);
@@ -296,9 +296,9 @@ export default function App() {
   async function openArcade(automatic = false, initialMode: AutomaticArcadeMode = 'associations') {
     setUnitError(null);
     try {
-      const known = new Set([...readSentenceMemories(userId).map((memory) => memory.unitId), ...readLearningActivities(userId).map((activity) => activity.unitId)]);
+      const candidateIds = arcadeCandidateIds(units, readWordMemories(userId), readLearningActivities(userId), unit?.id);
       const candidates = preview ? (unit ? [unit] : reviewUnits) : (await Promise.allSettled(
-        [...(unit ? [{ id: unit.id }] : []), ...units.filter((summary) => known.has(summary.id) && summary.id !== unit?.id)].slice(0, 12).map((summary) => summary.id === unit?.id ? Promise.resolve(unit) : summary.id === pilot?.id ? Promise.resolve(pilot) : summary.id === mirrorPilot?.id ? Promise.resolve(mirrorPilot) : loadUnit(summary.id)),
+        candidateIds.map((id) => id === unit?.id ? Promise.resolve(unit) : id === pilot?.id ? Promise.resolve(pilot) : id === mirrorPilot?.id ? Promise.resolve(mirrorPilot) : loadUnit(id)),
       )).flatMap((result) => result.status === 'fulfilled' && result.value ? [result.value] : []);
       // No synthetic recall or exposure is inferred from a completion flag.
       // Opening/closing the modal keeps the underlying lesson mounted.
@@ -324,6 +324,7 @@ export default function App() {
     finally { setLoading(false); }
   }
   function openLibraryUnit(candidate: AtomicUnit, mode: LearningMode) {
+    if (candidate.kind === 'grammar-lesson' && mode === 'grammar') { openGrammarStop(trickStop(candidate, grammarTricks(candidate)[0])); return; }
     setActiveTrick(null);
     if (candidate.kind === 'vocabulary-pack' && mode !== 'vocabulary') { setUnitError('Este paquete prepara palabras; no contiene una lección de gramática.'); return; }
     const missing = mode === 'grammar' ? missingGrammarWords(candidate, readWordMemories(userId)) : [];
@@ -413,7 +414,7 @@ export default function App() {
     const arcadeMode = unit ? completeArcadeCadence(userId, activeTrick?.id ?? unit.id, unit.contentVersion ?? '1', Boolean(activeTrick) || learningMode === 'grammar') : null;
     if (preparingGrammar) { writeGrammarPosition(userId, preparingGrammar.id); refreshProgress((version) => version + 1); if (arcadeMode) void openArcade(true, arcadeMode); return; }
     const following = libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit?.id ?? '') : !libraryMode ? followingJourneyStop(activeTrick?.id ?? unit?.id ?? '') : nextScene;
-    const nextMode = libraryMode ? learningMode : following && 'routeTrick' in following && following.routeTrick ? 'grammar' : following && journeyPresentation(following).pack ? 'vocabulary' : 'adventure';
+    const nextMode = libraryMode ? learningMode : following && 'routeTrick' in following && following.routeTrick ? 'grammar' : 'vocabulary';
     rememberUnit(following?.id ?? activeTrick?.id ?? unit?.id ?? null, nextMode);
     refreshProgress((version) => version + 1);
     if (arcadeMode) void openArcade(true, arcadeMode);

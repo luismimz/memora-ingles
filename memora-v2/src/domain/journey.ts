@@ -28,7 +28,8 @@ export const journeySteps: readonly JourneyStep[] = [
 /** Home and in-game continuation must use exactly the same published route. */
 export function orderedJourneyUnits<T extends { id: string }>(units: readonly T[]): T[] {
   const byId = new Map(units.map((unit) => [unit.id, unit]));
-  const planned = journeySteps.map((step) => byId.get(step.id)).filter((unit): unit is T => Boolean(unit));
+  const opening = ['m1-test-desk', 'm1-bathroom-brush', 'm1-test-kitchen', 'm1-outside-dog', 'editorial-mnemonics-002-1', 'editorial-mnemonics-002-2', 'editorial-cognates-calle-2', 'editorial-cognates-casa-2'];
+  const planned = [...new Set([...journeySteps.map((step) => step.id), ...opening])].map((id) => byId.get(id)).filter((unit): unit is T => Boolean(unit));
   const plannedIds = new Set(planned.map((unit) => unit.id));
   return [...planned, ...units.filter((unit) => !plannedIds.has(unit.id))];
 }

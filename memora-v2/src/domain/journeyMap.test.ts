@@ -43,6 +43,6 @@ describe('journey map geometry and presentation', () => {
     expect(completedVocabularyStop(unit, [{ ...completion, source: 'authored' }])).toBe(false);
     expect(completedVocabularyStop(unit, [{ ...completion, phase: 'dialogue' }])).toBe(false);
     expect(completedVocabularyStop(unit, [{ ...completion, contentVersion: '1' }])).toBe(false);
-    expect(completedVocabularyStop({ ...unit, kind: 'mission' }, [completion])).toBe(false);
+    expect(completedVocabularyStop({ ...unit, kind: 'mission' }, [completion])).toBe(true);
   });
 });

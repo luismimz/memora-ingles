@@ -12,6 +12,8 @@
 .micro-content form > div { display: flex; gap: 10px; }
 .micro-content input { flex: 1; min-width: 0; padding: 14px; min-height: 52px; border-radius: 14px; border: 1px solid var(--accent); background: var(--surface-soft); color: var(--ink); font: inherit; }
 .micro-content form button { margin: 0; padding: 12px 18px; }
+.arcade-write { display: grid; gap: 12px; width: 100%; min-width: 0; }
+.arcade-write input { width: 100%; min-width: 0; min-height: 52px; padding: 14px; border: 1px solid var(--accent); border-radius: 14px; background: var(--surface-soft); color: var(--ink); font: inherit; font-size: 1rem; }
 .micro-hint { display: grid; gap: 12px; background: var(--surface-soft); padding: 14px; border-radius: 18px; }
 .micro-hint .scene-visual { height: 130px; }
 .micro-options, .micro-tools { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }

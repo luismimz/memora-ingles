@@ -17,11 +17,11 @@ export function commitMicroAttempt(userId: string, round: MicroRound, stage: 'wo
 }
 
 /** Expiry means no answer, not a wrong written answer or an independent recall. */
-export function commitMicroTimeout(userId: string, round: MicroRound, id: string, sessionId: string): LearningActivity {
+export function commitMicroTimeout(userId: string, round: MicroRound, id: string, sessionId: string, recognition = true): LearningActivity {
   const existing = readLearningActivities(userId).find((event) => event.id === id);
   if (existing) return existing;
   const at = new Date();
-  const activity = recordLearningActivity(userId, { id, at: at.toISOString(), unitId: round.unit.id, unitTitle: round.unit.title, contentVersion: round.unit.contentVersion ?? '1', activityId: `micro:${sessionId}:timeout`, skill: round.word.en, phase: 'arcade', source: 'learner', modality: 'choice', prompt: round.word.es, response: '(sin respuesta antes de la siguiente ronda)', expected: round.word.en, correct: null, helped: true, feedback: round.word.scene });
-  recordWordRecall(userId, round.word, 'missed', at, 'recognition', undefined, true);
+  const activity = recordLearningActivity(userId, { id, at: at.toISOString(), unitId: round.unit.id, unitTitle: round.unit.title, contentVersion: round.unit.contentVersion ?? '1', activityId: `micro:${sessionId}:timeout`, skill: round.word.en, phase: 'arcade', source: 'learner', modality: recognition ? 'choice' : 'writing', prompt: round.word.es, response: '(sin respuesta antes de la siguiente ronda)', expected: round.word.en, correct: null, helped: true, feedback: round.word.scene });
+  recordWordRecall(userId, round.word, 'missed', at, recognition ? 'recognition' : 'recall', undefined, true);
   return activity;
 }

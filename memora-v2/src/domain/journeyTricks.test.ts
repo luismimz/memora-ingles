@@ -4,6 +4,7 @@ import type { UnitSummary } from '../services/directus';
 import type { WordMemory } from './memory';
 import type { LearningActivity } from './learningActivity';
 import { previewUnit, reviewUnits } from '../preview/previewUnit';
+import { lessonForForm } from './grammarLesson';
 
 const trick: JourneyTrick = { sourceId: 'u1', formId: 'ing', skill: 'present-now', title: 'Di quién', vocabulary: ['play'] };
 const units = (count: number): UnitSummary[] => Array.from({ length: count }, (_, index) => ({ id: `u${index + 1}`, title: `Parada ${index + 1}`, words: [{ en: 'PLAY', es: 'jugar' }], grammarTricks: index === 0 ? [trick] : [] }));
@@ -34,15 +35,28 @@ describe('paradas de gramática con vocabulario preparado', () => {
   it('reparte equivalentes y asociaciones sin borrar, duplicar ni modificar misiones', () => {
     const input = [...Array.from({ length: 6 }, (_, i) => ({ id: `c${i}`, title: 'Equivalente', words: [{ en: 'HOTEL', es: 'hotel', associationMode: 'cognate' as const }] })), ...Array.from({ length: 3 }, (_, i) => ({ id: `a${i}`, title: 'Historia absurda' }))];
     const mixed = mixedJourneyUnits(input);
-    expect(mixed.map((unit) => unit.id)).toEqual(['a0', 'c0', 'c1', 'a1', 'c2', 'c3', 'a2', 'c4', 'c5']);
+    expect(mixed.map((unit) => unit.id)).toEqual(['a0', 'c0', 'a1', 'c1', 'a2', 'c2', 'c3', 'c4', 'c5']);
     expect(new Set(mixed.map((unit) => unit.id)).size).toBe(input.length);
     expect(input[0].id).toBe('c0');
   });
-  it('elige un truco con palabras practicadas antes que otro de vocabulario futuro', () => {
+  it('los aciertos nuevos no mueven las paradas ni cambian sus IDs al recargar', () => {
     const input = units(5);
     input[0].grammarTricks = [{ ...trick, vocabulary: ['brush'], skill: 'brush', title: 'Cepillando' }, trick];
     input[0].words = [{ en: 'BRUSH', es: 'cepillar' }];
-    expect(buildJourneyRoute(input, known).find((stop) => stop.routeTrick)?.routeTrick?.skill).toBe('present-now');
+    expect(buildJourneyRoute(input, known)).toEqual(buildJourneyRoute(input, []));
+    expect(buildJourneyRoute(input, known).find((stop) => stop.routeTrick)?.routeTrick?.skill).toBe('brush');
+  });
+  it('evita siete misiones equivalentes seguidas aunque la proporción global sea muy desigual', () => {
+    const input = [...Array.from({ length: 160 }, (_, index) => ({ id: `c${index}`, title: 'Equivalente', words: [{ en: 'HOTEL', es: 'hotel', associationMode: 'cognate' as const }] })), ...units(12)];
+    const opening = mixedJourneyUnits(input).slice(0, 16);
+    expect(opening.filter((unit) => unit.id.startsWith('u'))).toHaveLength(8);
+    expect(mixedJourneyUnits(input).filter((unit) => unit.id.startsWith('u')).map((unit) => unit.id)).toEqual(units(12).map((unit) => unit.id));
+  });
+  it('recupera asociaciones pendientes para quien ya estaba en la cola de equivalentes', () => {
+    const input = [{ id: 'story', title: 'Historia' }, ...Array.from({ length: 6 }, (_, index) => ({ id: `c${index}`, title: 'Equivalente', words: [{ en: 'HOTEL', es: 'hotel', associationMode: 'cognate' as const }] }))];
+    const route = buildJourneyRoute(input);
+    expect(nextJourneyStop('c3', route, [], [], new Set(['c0', 'c1', 'c2', 'c3']))?.id).toBe('story');
+    expect(nextJourneyStop('c3', route, [], [], new Set(['story', 'c0', 'c1', 'c2', 'c3']))?.id).toBe('c4');
   });
   it('intercala un truco después de cuatro misiones sin alterar IDs ni duplicar lecciones', () => {
     const input = units(9);
@@ -87,5 +101,16 @@ describe('paradas de gramática con vocabulario preparado', () => {
     const route = buildJourneyRoute(reviewUnits.map((unit) => ({ ...unit, grammarTricks: grammarTricks(unit) })));
     expect(route.some((stop) => stop.routeTrick)).toBe(true);
     for (const stop of route.filter((stop) => stop.routeTrick)) expect(reviewUnits.some((unit) => unit.id === stop.routeTrick!.sourceId)).toBe(true);
+  });
+  it('un truco independiente usa palabras anteriores y nunca se cuenta como misión de vocabulario nueva', () => {
+    const authored = { ...previewUnit, id: 'grammar-only', kind: 'grammar-lesson' as const, grammarPrerequisites: { vocabulary: ['play'] }, grammar: [], grammarLesson: { ...lessonForForm(previewUnit.grammar[0], 'jugar')!, id: 'authored-identification', title: 'Usa lo preparado' } };
+    const descriptor = grammarTricks(authored)[0];
+    const input = [...units(8), { ...authored, grammarTricks: [descriptor] }];
+    input[4].grammarTricks = [{ ...trick, sourceId: 'u5', skill: 'present-brush', concept: 'present' }];
+    input[0].grammarTricks![0] = { ...trick, concept: 'present' };
+    const route = buildJourneyRoute(input);
+    expect(route.filter((stop) => !stop.routeTrick)).toHaveLength(8);
+    expect(route.some((stop) => stop.id === authored.id)).toBe(false);
+    expect(route.filter((stop) => stop.routeTrick)[1].routeTrick?.skill).toBe(descriptor.skill);
   });
 });

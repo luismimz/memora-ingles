@@ -215,7 +215,7 @@ export async function loadUnit(id: string, signal?: AbortSignal): Promise<Atomic
 /** El recorrido solo recibe metadatos: las escenas se descargan al abrirlas. */
 export async function loadPublishedUnitSummaries(signal?: AbortSignal): Promise<UnitSummary[]> {
   const records = await apiRequest<Array<{ id: string; title: string; status: string; content?: unknown }>>(
-    '/items/learning_units?filter[status][_eq]=published&fields=id,title,status,content&limit=-1',
+    '/items/learning_units?filter[status][_eq]=published&fields=id,title,status,content&limit=-1&sort=id',
     { signal },
   );
   // El recorrido muestra cualquier unidad publicada con metadatos válidos.
@@ -241,13 +241,13 @@ export async function loadPublishedUnitSummaries(signal?: AbortSignal): Promise<
         sentence: unit?.sentence?.en && unit.sentence.es ? { en: unit.sentence.en, es: unit.sentence.es } : undefined,
       };
     }).filter((unit): unit is UnitSummary => unit !== null);
-  if (units.length) return units;
+  if (units.length) return units.sort((left, right) => left.id.localeCompare(right.id, 'en', { numeric: true }));
   return [];
 }
 
 /** Bounded partial loading: one broken publication must not take down a library. */
 export async function loadLearningLibrary(summaries: readonly UnitSummary[], mode: 'vocabulary' | 'grammar'): Promise<{ units: AtomicUnit[]; failed: string[] }> {
-  const candidates = summaries.filter((summary) => mode !== 'grammar' || summary.kind !== 'vocabulary-pack');
+  const candidates = summaries.filter((summary) => mode === 'grammar' ? summary.kind !== 'vocabulary-pack' : summary.kind !== 'grammar-lesson');
   const units: AtomicUnit[] = [];
   const failed: string[] = [];
   for (let offset = 0; offset < candidates.length; offset += 6) {

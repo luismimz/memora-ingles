@@ -10,6 +10,7 @@ import { GameCard } from './GameCard';
 import { stopSpeech } from '../services/audio';
 import { syncLabels, type SyncStatus } from '../services/progressSync';
 import type { Appearance } from '../useAppearance';
+import { readGrammarAttempts } from '../domain/grammarMemory';
 
 export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
@@ -18,7 +19,10 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const trick = stop.routeTrick!;
   const form = unit.grammar.find((candidate) => candidate.id === trick.formId);
   const base = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase())?.es.toLowerCase();
-  const lesson = form ? lessonForForm(form, base) : null;
+  const lesson = unit.grammarLesson?.id === trick.formId ? unit.grammarLesson : form ? lessonForForm(form, base) : null;
+  const sceneWord = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase()) ?? unit.words[0];
+  const practicedPattern = !inspection && form && !form.lesson && (form.visualContract === 'present-continuous' || form.id === 'ing')
+    && readGrammarAttempts(userId).some((attempt) => attempt.skill.startsWith('present-continuous:') && attempt.skill !== trick.skill && attempt.kind === 'write' && attempt.correct && !attempt.helped);
   const [checkpoint] = useState(() => inspection ? null : readTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1'));
   const [finished, setFinished] = useState(false);
   const completed = useRef(false);
@@ -42,6 +46,6 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
     <header className="game-topbar"><button type="button" className="activity-back" onClick={() => { stopSpeech(); onExit(); }}>← Recorrido</button><span>✦ PARADA TRUCO</span><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button></header>
     <p className="mirror-save" role="status">{inspection ? 'Vista de prueba · no guarda progreso' : syncLabels[syncStatus]}</p>
     {!finished && lesson ? <h1 className="sr-only">{trick.title}</h1> : null}
-    <section className="game-stage">{!lesson ? <GameCard><h1>Este truco necesita revisión.</h1><p>Tu progreso se conserva. Puedes seguir con las palabras.</p><button type="button" onClick={onNext}>Continuar con las palabras →</button></GameCard> : finished ? <GameCard className="complete-card"><div className="complete-content"><div className="reward-burst" aria-hidden="true">✦</div><p className="eyebrow">UNA PIEZA MÁS</p><h1>¡Tus palabras ya dicen algo nuevo!</h1><p>{trick.title}</p><p>Una práctica, no una promesa de dominio. Tus intentos quedan en Mi evolución.</p><button type="button" className="primary-action" onClick={onNext}>{nextLabel}</button><button type="button" className="quiet-action" onClick={onExit}>Terminar por hoy</button></div></GameCard> : <GrammarCoach lesson={lesson} form={form} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} reviewMode={inspection} requirePractice schedulePractice checkpoint={checkpoint} onProgress={(state) => { if (!inspection && !completed.current) writeTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1', state); }} onReady={() => {}} onContinue={finish} />}</section>
+    <section className="game-stage">{!lesson ? <GameCard><h1>Este truco necesita revisión.</h1><p>Tu progreso se conserva. Puedes seguir con las palabras.</p><button type="button" onClick={onNext}>Continuar con las palabras →</button></GameCard> : finished ? <GameCard className="complete-card"><div className="complete-content"><div className="reward-burst" aria-hidden="true">✦</div><p className="eyebrow">UNA PIEZA MÁS</p><h1>¡Tus palabras ya dicen algo nuevo!</h1><p>{trick.title}</p><p>Una práctica, no una promesa de dominio. Tus intentos quedan en Mi evolución.</p><button type="button" className="primary-action" onClick={onNext}>{nextLabel}</button><button type="button" className="quiet-action" onClick={onExit}>Terminar por hoy</button></div></GameCard> : <GrammarCoach lesson={lesson} form={form} sceneWord={sceneWord} startAtPractice={Boolean(practicedPattern)} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} reviewMode={inspection} requirePractice schedulePractice checkpoint={checkpoint} onProgress={(state) => { if (!inspection && !completed.current) writeTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1', state); }} onReady={() => {}} onContinue={finish} />}</section>
   </main>;
 }

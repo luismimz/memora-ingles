@@ -15,7 +15,7 @@ export function LearningLibrary({ mode, units, userId, inspection, onOpen, onBac
   const memories = readWordMemories(userId);
   const [search, setSearch] = useState('');
   const [domain, setDomain] = useState('');
-  const allGroups = units.filter((unit) => mode === 'grammar' ? unit.kind !== 'vocabulary-pack' && (unit.mirror || getPlayableGrammar(unit).length > 0) : !unit.mirror);
+  const allGroups = units.filter((unit) => mode === 'grammar' ? unit.kind !== 'vocabulary-pack' && (unit.mirror || getPlayableGrammar(unit).length > 0) : !unit.mirror && unit.kind !== 'grammar-lesson');
   const domains = [...new Set(allGroups.filter((unit) => unit.kind === 'vocabulary-pack').map((unit) => unit.title.split(' · ')[1]))];
   const groups = allGroups.filter((unit) => (!domain || unit.kind === 'vocabulary-pack' && unit.title.split(' · ')[1] === domain) && `${unit.title} ${unit.mirror?.novelty ?? ''} ${unit.grammar.map((form) => form.lesson?.title ?? form.spanish).join(' ')} ${unit.words.map((word) => `${word.en} ${word.es}`).join(' ')}`.toLocaleLowerCase().includes(search.toLocaleLowerCase().trim()))
     .sort((left, right) => mode === 'grammar' && !inspection ? Number(Boolean(missingGrammarWords(left, memories).length)) - Number(Boolean(missingGrammarWords(right, memories).length)) : 0);
