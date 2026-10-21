@@ -95,6 +95,53 @@ describe('paradas de gramática con vocabulario preparado', () => {
     expect(completedTrick(stop, [{ ...activity, source: 'authored' }])).toBe(false);
     expect(completedTrick({ ...stop, contentVersion: '2' }, [activity])).toBe(false);
   });
+  it('espacia una ficha aplazada con cuatro misiones nuevas reales, también tras recargar', () => {
+    const input = units(10);
+    input[0].grammarTricks!.push({ ...trick, formId: 'other', skill: 'other' });
+    const route = buildJourneyRoute(input);
+    const done = (unitId: string, activityId: string, second: number) => ({ ...activity, unitId, activityId, at: `2026-10-21T10:00:${String(second).padStart(2, '0')}.000Z` });
+    const initial = [...Array.from({ length: 4 }, (_, index) => done(`u${index + 1}`, 'vocabulary-completed', index)), done('u1', 'trick-completed:ing', 4)];
+    const subsequent = Array.from({ length: 4 }, (_, index) => done(`u${index + 5}`, 'vocabulary-completed', index + 5));
+    for (let count = 1; count < 4; count++) {
+      const evidence = [...initial, ...subsequent.slice(0, count)];
+      const completedIds = new Set(evidence.filter((entry) => entry.activityId === 'vocabulary-completed').map((entry) => entry.unitId));
+      expect(nextJourneyStop(`u${count + 4}`, route, known, evidence, completedIds)?.id).toBe(`u${count + 5}`);
+    }
+    const evidence = [...initial, ...subsequent];
+    const completedIds = new Set(Array.from({ length: 8 }, (_, index) => `u${index + 1}`));
+    const selection = nextJourneyStop('u8', route, known, evidence, completedIds);
+    expect(selection?.id).toBe('trick:u1:other');
+    expect(nextJourneyStop('u8', buildJourneyRoute(input), known, JSON.parse(JSON.stringify(evidence)), completedIds)?.id).toBe(selection?.id);
+    // Restored records need not arrive in timestamp order.
+    expect(nextJourneyStop('u8', route, known, [...evidence].reverse(), completedIds)?.id).toBe(selection?.id);
+  });
+  it('repeticiones, contenido editorial y actividades Arcade no adelantan otra gramática', () => {
+    const input = units(10);
+    input[0].grammarTricks!.push({ ...trick, formId: 'other', skill: 'other' });
+    const route = buildJourneyRoute(input);
+    const evidence = [
+      { ...activity, activityId: 'vocabulary-completed', at: '2026-10-21T10:00:00Z' },
+      { ...activity, at: '2026-10-21T10:01:00Z' },
+      ...Array.from({ length: 5 }, (_, index) => ({ ...activity, activityId: 'vocabulary-completed', at: `2026-10-21T10:02:0${index}Z` })),
+      { ...activity, unitId: 'u5', source: 'authored', activityId: 'vocabulary-completed', at: '2026-10-21T10:03:00Z' },
+      { ...activity, unitId: 'u6', phase: 'arcade', activityId: 'vocabulary-completed', at: '2026-10-21T10:03:01Z' },
+    ] as LearningActivity[];
+    expect(nextJourneyStop('u5', route, known, evidence, new Set(['u1', 'u2', 'u3', 'u4', 'u5']))?.id).toBe('u6');
+    expect(evidence).toHaveLength(9);
+  });
+  it('no encadena quince variantes al agotar palabras ni borra las paradas guardadas', () => {
+    const input = units(4);
+    input[0].grammarTricks = Array.from({ length: 15 }, (_, index) => ({ ...trick, formId: `form-${index}`, skill: `skill-${index}`, concept: 'present-continuous' }));
+    const route = buildJourneyRoute(input);
+    const stops = route.filter((stop) => stop.routeTrick);
+    expect(stops).toHaveLength(15); // No deletion, renaming or fabricated completion.
+    const allWordsDone = new Set(input.map((unit) => unit.id));
+    expect(nextJourneyStop(stops[0].id, route, known, [], allWordsDone)).toBeUndefined();
+    // A previously saved tail stop still resolves and can leave for pending words.
+    expect(route.find((stop) => stop.id === 'trick:u1:form-12')).toBeTruthy();
+    expect(nextJourneyStop('trick:u1:form-12', route, known, [], new Set(['u1', 'u2', 'u3'] ))?.id).toBe('u4');
+    expect(completedTrick(stops[1], [])).toBe(false);
+  });
   it('extrae lecciones reales, pero nunca convierte paquetes en gramática inventada', () => {
     expect(grammarTricks(previewUnit).length).toBeGreaterThan(0);
     expect(grammarTricks({ ...previewUnit, kind: 'vocabulary-pack' })).toEqual([]);

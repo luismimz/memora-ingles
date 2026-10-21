@@ -3,6 +3,7 @@ import { GameCard } from './GameCard';
 import { SceneVisual } from './SceneVisual';
 import type { AtomicWord, GrammarForm, UnitSentence } from '../domain/unit';
 import { playEnglish, playMiss, playSnap, stopSpeech } from '../services/audio';
+import './sentencePreparation.css';
 
 function showProcess(text: string, word: string, stem: string, ending: string): ReactNode {
   const position = text.toLocaleLowerCase().indexOf(word.toLocaleLowerCase());
@@ -10,7 +11,7 @@ function showProcess(text: string, word: string, stem: string, ending: string): 
   return <>{text.slice(0, position)}<span className="builder-process"><span className="morph-root">{stem}</span><span className="morph-intent">{ending}</span></span>{text.slice(position + word.length)}</>;
 }
 
-export function SentenceBuilderCard({ sentence, sceneWord, processForm, index, total, filledSlots, choiceSeed, onPick, onNext, onAttempt }: {
+export function SentenceBuilderCard({ sentence, sceneWord, processForm, index, total, filledSlots, choiceSeed, onPick, onNext, onAttempt, preparationStep: savedPreparationStep, onPreparationChange }: {
   sentence: UnitSentence;
   sceneWord: AtomicWord;
   processForm: GrammarForm;
@@ -21,15 +22,22 @@ export function SentenceBuilderCard({ sentence, sceneWord, processForm, index, t
   onPick: () => void;
   onNext: () => void;
   onAttempt?: (choice: string, correct: boolean, slotIndex: number) => void;
+  preparationStep?: number;
+  onPreparationChange?: (step: number) => void;
 }) {
   const [wrongChoice, setWrongChoice] = useState<string | null>(null);
   const [sentenceReady, setSentenceReady] = useState(false);
+  const [preparation, setPreparation] = useState({ slot: filledSlots, step: 0 });
   const wrongTimer = useRef<number | null>(null);
   const answeredSlot = useRef(-1);
   useEffect(() => () => { if (wrongTimer.current !== null) window.clearTimeout(wrongTimer.current); }, []);
 
   const completed = filledSlots === sentence.slots.length;
   const active = sentence.slots[filledSlots];
+  const preparationIndex = savedPreparationStep !== undefined
+    ? Number.isInteger(savedPreparationStep) && savedPreparationStep >= 0 && savedPreparationStep <= (active?.preparation?.length ?? 0) ? savedPreparationStep : 0
+    : preparation.slot === filledSlots ? preparation.step : 0;
+  const preparationStep = active?.preparation?.[preparationIndex];
   const options = active && (choiceSeed + filledSlots) % 2 ? [...active.choices].reverse() : active?.choices;
   useEffect(() => {
     if (!completed) return undefined;
@@ -41,7 +49,7 @@ export function SentenceBuilderCard({ sentence, sceneWord, processForm, index, t
   }, [completed, sentence.en]);
 
   function choose(choice: string) {
-    if (!active || completed || answeredSlot.current === filledSlots) return;
+    if (!active || completed || preparationStep || answeredSlot.current === filledSlots) return;
     onAttempt?.(choice, choice === active.en, filledSlots);
     if (choice !== active.en) {
       setWrongChoice(choice);
@@ -67,7 +75,14 @@ export function SentenceBuilderCard({ sentence, sceneWord, processForm, index, t
           <span className="sentence-slot-en">{slotIndex < filledSlots ? slot.en : slotIndex === filledSlots ? '¿…?' : '· · ·'}</span>
         </div>)}
       </div>
-      {!completed && active ? <div className="slot-picker" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
+      {!completed && preparationStep ? <div className="slot-preparation">
+        <p className="eyebrow">PREPARA ESTA PIEZA · {preparationIndex + 1}/{active.preparation!.length}</p>
+        <p className="coach-caption">{preparationStep.explanation}</p>
+        <p className="coach-row" lang="es">{preparationStep.es}</p>
+        <p className="coach-row" lang="en">{preparationStep.en}</p>
+        <button type="button" className="quiet-action" onClick={() => void playEnglish(preparationStep.en)}>🔊 Escuchar la pieza</button>
+        <button type="button" className="primary-action" onClick={() => { stopSpeech(); setPreparation({ slot: filledSlots, step: preparationIndex + 1 }); onPreparationChange?.(preparationIndex + 1); }}>{preparationIndex === active.preparation!.length - 1 ? 'Usar estas piezas →' : 'Ver la siguiente pieza →'}</button>
+      </div> : !completed && active ? <div className="slot-picker" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
         event.preventDefault();
         const choice = event.dataTransfer.getData('text/plain');
         if (active.choices.includes(choice)) choose(choice);

@@ -88,11 +88,43 @@ export function completedTrick(stop: UnitSummary, activities: readonly LearningA
     && activity.phase === 'completion' && (activity.activityId === `trick-completed:${trick.formId}` || activity.activityId === 'grammar-completed')));
 }
 
+/** Derive spacing from existing journal evidence, not another persisted counter.
+ * Legacy records without dates keep the stable route's previous behaviour.
+ * Replaying a previously completed vocabulary mission does not earn a new slot.
+ */
+function readyForAnotherTrick(route: readonly UnitSummary[], activities: readonly LearningActivity[]): boolean {
+  const dated = activities.flatMap((activity, index) => {
+    const at = Date.parse(activity.at);
+    return activity.source === 'learner' && activity.phase === 'completion' && Number.isFinite(at) ? [{ activity, at, index }] : [];
+  }).sort((left, right) => left.at - right.at || left.index - right.index);
+  const tricks = route.filter((stop) => stop.routeTrick);
+  let lastTrick = -1;
+  dated.forEach(({ activity }, index) => {
+    if (tricks.some((stop) => completedTrick(stop, [activity]))) lastTrick = index;
+  });
+  if (lastTrick < 0) return true;
+  const vocabularyIds = new Set(route.filter((stop) => !stop.routeTrick).map((stop) => stop.id));
+  const seen = new Set<string>();
+  let newWordsMissions = 0;
+  dated.forEach(({ activity }, index) => {
+    if (activity.activityId !== 'vocabulary-completed' || !vocabularyIds.has(activity.unitId) || seen.has(activity.unitId)) return;
+    seen.add(activity.unitId);
+    if (index > lastTrick) newWordsMissions++;
+  });
+  return newWordsMissions >= 4;
+}
+
 export function nextJourneyStop(currentId: string, route: readonly UnitSummary[], memories: readonly WordMemory[], activities: readonly LearningActivity[] = [], completedIds: ReadonlySet<string> = new Set()): UnitSummary | undefined {
   const current = route.findIndex((stop) => stop.id === currentId);
   if (current < 0) return undefined;
   // A previously deferred trick can join the adventure once its words are practiced.
-  const available = (stop: UnitSummary) => !missingTrickWords(stop, memories).length && (stop.routeTrick ? !completedTrick(stop, activities) : !completedIds.has(stop.id));
+  // Home must not drain the grammar catalogue as a consecutive quiz at the tail.
+  // Keep all stable stops (including saved legacy tail positions) accessible, but
+  // after a trick continue with pending vocabulary or finish this adventure run.
+  // The independent grammar map deliberately uses nextGrammarStop instead.
+  const grammarReady = !route[current].routeTrick && readyForAnotherTrick(route, activities);
+  const available = (stop: UnitSummary) => (!stop.routeTrick || grammarReady)
+    && !missingTrickWords(stop, memories).length && (stop.routeTrick ? !completedTrick(stop, activities) : !completedIds.has(stop.id));
   const following = route.slice(current + 1).find(available);
   const scheduled = route.slice(current + 1).find((stop) => stop.routeTrick ? !completedTrick(stop, activities) : !completedIds.has(stop.id));
   const replacement = scheduled?.routeTrick && missingTrickWords(scheduled, memories).length ? route.find((stop) => stop.routeTrick && available(stop)) : undefined;

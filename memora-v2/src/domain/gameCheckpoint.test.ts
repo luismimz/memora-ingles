@@ -13,6 +13,16 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('guarda la subposición de preparación con el checkpoint existente sin cruzar usuario ni versión', () => {
+    const state = { ...initialGame, phase: 'build' as const, filledSlots: 1, preparationStep: 2 };
+    writeGameCheckpoint('learner', 'prepared', 'draft-1', state);
+    expect(readGameCheckpoint('learner', 'prepared', 'draft-1')).toEqual(state);
+    expect(readGameCheckpoint('other', 'prepared', 'draft-1')).toBeNull();
+    expect(readGameCheckpoint('learner', 'prepared', 'draft-2')).toBeNull();
+    writeGameCheckpoint('learner', 'invalid', '1', { ...state, preparationStep: 4 });
+    expect(readGameCheckpoint('learner', 'invalid', '1')).toBeNull();
+    expect(readGameCheckpoint('learner', 'prepared', 'draft-1')).toEqual(state);
+  });
   it('resumes the same game activity without accepting an older content version', () => {
     const state = { ...initialGame, phase: 'recall' as const, recallIndex: 2, recallAnswered: true, correct: 2 };
     writeGameCheckpoint('learner', 'mission', '2', state);

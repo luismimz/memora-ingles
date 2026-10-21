@@ -106,6 +106,8 @@ export interface GrammarForm {
 
 export interface SentenceSlot {
   note?: string;
+  /** Authored teaching before this slot's choices; never a scored attempt. */
+  preparation?: { en: string; es: string; explanation: string }[];
   en: string;
   es: string;
   choices: [string, string];
@@ -365,6 +367,9 @@ export function validateUnit(value: unknown): AtomicUnit {
   if (unit.location && Object.values(unit.location).some((value) => typeof value !== 'string' || !value.trim())) throw new Error('La escena necesita un lugar completo y estable.');
   const sentences = [unit.sentence, ...(unit.practiceSentences ?? [])];
   for (const sentence of sentences) {
+    for (const slot of sentence?.slots ?? []) {
+      if (slot.preparation !== undefined && (!Array.isArray(slot.preparation) || !slot.preparation.length || slot.preparation.length > 3 || slot.preparation.some((step) => !step.en?.trim() || !step.es?.trim() || !step.explanation?.trim() || step.explanation.split(/\s+/).length > 35))) throw new Error('La preparación de cada bloque necesita entre uno y tres pasos breves con español e inglés.');
+    }
     if (unit.kind === 'vocabulary-pack' || unit.kind === 'grammar-lesson') {
       if (!sentence?.en?.trim() || !sentence.es?.trim() || !Array.isArray(sentence.slots) || sentence.slots.length) throw new Error('El paquete de palabras usa ejemplos de escucha, no ejercicios sintéticos de gramática.');
       continue;

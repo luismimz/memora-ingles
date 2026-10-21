@@ -14,6 +14,8 @@ export interface GameState {
   grammarPlayed: boolean;
   filledSlots: number;
   sentenceIndex: number;
+  /** Navigation inside the active slot's explanation, not a learning result. */
+  preparationStep?: number;
 }
 
 export type GameAction =
@@ -23,6 +25,7 @@ export type GameAction =
   | { type: 'continue'; grammarCount?: number; sentenceCount?: number; slotCount?: number; conversation?: boolean; wordCount?: number; grammarOnly?: boolean }
   | { type: 'reviewJump'; phase: Phase; index?: number }
   | { type: 'grammarPlayed' }
+  | { type: 'prepareSlot'; sentenceIndex: number; slotIndex: number; step: number; stepCount: number }
   | { type: 'chooseSlot'; correct: boolean; slotCount: number }
   | { type: 'restart' };
 
@@ -59,9 +62,16 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase === 'conversation') return { ...state, phase: 'complete' };
       return state;
     case 'grammarPlayed': return state.phase === 'grammar' ? { ...state, grammarPlayed: true } : state;
-    case 'chooseSlot':
+    case 'prepareSlot':
+      if (state.phase !== 'build' || action.sentenceIndex !== state.sentenceIndex || action.slotIndex !== state.filledSlots
+        || !Number.isInteger(action.stepCount) || action.stepCount < 1 || action.stepCount > 3
+        || action.step !== (state.preparationStep ?? 0) + 1 || action.step > action.stepCount) return state;
+      return { ...state, preparationStep: action.step };
+    case 'chooseSlot': {
       if (state.phase !== 'build' || state.filledSlots >= action.slotCount || !action.correct) return state;
-      return { ...state, filledSlots: state.filledSlots + 1 };
+      const { preparationStep: _preparation, ...rest } = state;
+      return { ...rest, filledSlots: state.filledSlots + 1 };
+    }
     case 'reviewJump': {
       const index = Math.max(0, Math.floor(action.index ?? 0));
       return { ...initialGame, phase: action.phase,

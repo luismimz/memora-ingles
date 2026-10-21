@@ -1,0 +1,4 @@
+.slot-preparation { display: grid; gap: 10px; width: 100%; min-width: 0; }
+.slot-preparation p { margin: 0; overflow-wrap: anywhere; }
+.slot-preparation .coach-row { min-height: 0; font-size: clamp(1.4rem, 5vw, 2.2rem); }
+.slot-preparation button { min-height: 44px; white-space: normal; }

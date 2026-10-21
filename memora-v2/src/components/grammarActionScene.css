@@ -1,0 +1,20 @@
+.grammar-action-scene { margin: 0; width: 100%; min-width: 0; padding: 10px 14px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface-soft); }
+.grammar-action-scene figcaption { display: grid; gap: 5px; }
+.grammar-action-scene figcaption strong { color: var(--accent-ink); font-size: .63rem; letter-spacing: .08em; }
+.grammar-action-scene figcaption span { font-size: .85rem; line-height: 1.3; }
+.grammar-action-scene svg { display: block; width: 100%; height: clamp(60px, 10dvh, 95px); }
+.grammar-action-scene small { display: block; color: var(--muted); font-size: .65rem; line-height: 1.35; }
+.grammar-action-scene.is-running .grammar-action-ball { transform-origin: 210px 46px; animation: grammar-action-play 1.1s ease-in-out infinite alternate; }
+@keyframes grammar-action-play { from { transform: translate(-16px, 9px); } to { transform: translate(24px, -8px); } }
+.game-card-anchor.coach-action-card::before, .coach-action-card .game-card-flip, .coach-action-card .game-card-face { min-height: 0; }
+.coach-action-card .game-card-body { padding: clamp(15px, 3vw, 22px); }
+.coach-action-card .coach-content { min-height: 0; gap: 12px; padding: 0; }
+.coach-action-card .coach-caption { min-height: 0; line-height: 1.35; }
+.coach-action-card .coach-demonstration { min-height: 0; flex: none; gap: 5px; }
+.coach-action-card .coach-language { margin-bottom: 5px; }
+.coach-action-card .coach-row { font-size: clamp(1.5rem, 4.5vw, 2.5rem); line-height: 1.3; }
+.coach-action-card .coach-practice { gap: 12px; }
+.coach-action-card .coach-practice h2 { font-size: clamp(1.25rem, 4vw, 1.9rem); }
+.coach-action-card .coach-feedback { min-height: 1.5em; }
+.coach-action-card .coach-actions { gap: 6px; }
+@media (prefers-reduced-motion: reduce) { .grammar-action-scene.is-running .grammar-action-ball { animation: none; } }

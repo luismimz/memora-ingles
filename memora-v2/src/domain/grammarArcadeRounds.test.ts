@@ -11,7 +11,7 @@ beforeEach(() => {
 it('el catálogo no habilita preguntas; solo reutiliza el chequeo correcto ya practicado', () => {
   expect(grammarArcadeRounds('learner', [previewUnit])).toEqual([]);
   const lesson = lessonForForm(previewUnit.grammar[0], 'jugar')!;
-  const check = lesson.checks[0];
+  const check = lesson.checks.find((check) => check.id === 'meaning-now-v1')!;
   recordWordRecall('learner', previewUnit.words[0], 'quick');
   recordGrammarAttempt('learner', { unitId: previewUnit.id, skill: lesson.id, check: check.id, kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
   const rounds = grammarArcadeRounds('learner', [previewUnit]);
@@ -32,7 +32,7 @@ it('los trucos independientes entran en Arcade solo después de su práctica rea
   const lesson = { ...lessonForForm(previewUnit.grammar[0], 'jugar')!, id: 'independent-lesson' };
   const source = { ...previewUnit, id: 'standalone', kind: 'grammar-lesson' as const, grammar: [], grammarLesson: lesson, grammarPrerequisites: { vocabulary: ['play'] } };
   expect(grammarArcadeRounds('learner', [source])).toEqual([]);
-  recordGrammarAttempt('learner', { unitId: source.id, skill: lesson.id, check: lesson.checks[0].id, kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
+  recordGrammarAttempt('learner', { unitId: source.id, skill: lesson.id, check: 'meaning-now-v1', kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
   expect(grammarArcadeRounds('learner', [source])).toEqual([]);
   recordWordRecall('learner', previewUnit.words[0], 'quick');
   const rounds = grammarArcadeRounds('learner', [source]);

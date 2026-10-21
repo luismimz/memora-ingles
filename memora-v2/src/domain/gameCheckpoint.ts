@@ -13,6 +13,7 @@ export function readGameCheckpoint(userId: string, unitId: string, version: stri
     const state = saved.state;
     if (!['associate', 'recall', 'reward', 'grammar', 'build', 'conversation'].includes(state.phase ?? '')) return null;
     if (![state.wordIndex, state.recallIndex, state.grammarIndex, state.sentenceIndex].every((index) => Number.isInteger(index) && index! >= 0)) return null;
+    if (state.preparationStep !== undefined && (!Number.isInteger(state.preparationStep) || state.preparationStep < 0 || state.preparationStep > 3)) return null;
     return { ...initialGame, ...state };
   } catch { return null; }
 }

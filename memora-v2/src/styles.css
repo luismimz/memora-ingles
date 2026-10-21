@@ -194,6 +194,12 @@ body { background: var(--page); }
 .game-card-body { display: flex; flex: 1; width: 100%; padding: clamp(18px, 4vw, 30px); }
 .game-card-footer { display: flex; justify-content: space-between; gap: 10px; padding: 0 clamp(18px, 4vw, 30px) 22px; color: var(--muted); font-size: .68rem; font-weight: 850; }
 .game-card-footer.is-pending, .subject-area.is-pending { visibility: hidden; }
+.game-card-footer .card-advance { min-height: 44px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); color: var(--accent-ink); font: inherit; font-size: .85rem; cursor: pointer; }
+.game-card-footer .card-advance:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
+.game-card-footer .card-advance:disabled { opacity: .5; cursor: default; }
+.lesson-notice { position: fixed; z-index: 25; bottom: max(12px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); width: min(90vw, 560px); padding: 14px 18px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); color: var(--ink); box-shadow: 0 6px 30px #0002; font-size: .9rem; }
+.lesson-notice p { margin: 0 0 8px; }
+.lesson-notice button { min-height: 44px; color: var(--accent-ink); }
 .game-card-footer span:last-child { margin-left: auto; }
 .game-card-stamp { position: absolute; z-index: 10; top: 20%; left: 9%; padding: 8px 15px; border: 2px solid var(--accent); border-radius: 9px; color: var(--accent-ink); background: var(--surface-strong); font-size: 1.2rem; font-weight: 900; transform: rotate(-12deg); pointer-events: none; }
 .eyebrow { margin: 0; color: var(--accent-ink); font-size: .72rem; font-weight: 850; letter-spacing: .13em; }

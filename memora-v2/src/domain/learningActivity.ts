@@ -21,11 +21,17 @@ export function recordLearningActivity(userId: string, value: Omit<LearningActiv
   return activity;
 }
 
-export function contextualCorrection(response: string, expected: string): string {
-  const value = response.toLowerCase().replace(/[’‘]/g, "'");
-  if (/\blooking for\b/i.test(expected) && /\blooking\b/.test(value) && !/\bfor\b/.test(value)) return 'Para decir «buscar», conserva LOOK FOR completo. Aquí falta FOR.';
-  if (/^i(?: am|'m)\b/i.test(expected) && /^i\s+\w+ing\b/.test(value)) return 'Falta AM. Para decir «estoy», junta I AM: I\'M. Después va la acción con ING.';
-  if (/^what are you/i.test(expected) && /you are/i.test(value)) return 'Para preguntar, ARE salta delante de YOU: WHAT ARE YOU…?';
-  if (/keys/i.test(expected) && /\bkey\b/i.test(value)) return 'Hablas de varias llaves. KEY es una; KEYS añade la S del plural.';
-  return 'Escucha la frase de nuevo y fíjate en el orden de las piezas. Puedes volver a intentarlo.';
+export function contextualCorrection(response: string, expected: string, fallback = 'Escucha la frase de nuevo y fíjate en el orden de las piezas. Puedes volver a intentarlo.'): string {
+  const normalize = (text: string) => text.toLowerCase().replace(/[’‘]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
+  const value = normalize(response);
+  const model = normalize(expected);
+  const continuous = model.match(/^i(?: am|'m) (\w+ing(?: .*)?)$/);
+  // Only diagnose a missing subject when the rest matches the taught message.
+  if (continuous && value === `am ${continuous[1]}`) return 'La acción ya está. Añade quién: I significa YO. Junta I + AM antes de la acción.';
+  if (continuous && value === continuous[1]) return 'La acción ya está. Para decir «YO estoy», coloca I + AM delante. Después conserva la acción.';
+  if (/\blooking for\b/.test(model) && /\blooking\b/.test(value) && !/\bfor\b/.test(value)) return 'Para decir «buscar», conserva LOOK FOR completo. Aquí falta FOR.';
+  if (/^i(?: am|'m)\b/.test(model) && /^i\s+\w+ing\b/.test(value)) return 'Falta AM. Para decir «estoy», junta I AM: I\'M. Después va la acción con ING.';
+  if (/^what are you/.test(model) && /you are/.test(value)) return 'Para preguntar, ARE salta delante de YOU: WHAT ARE YOU…?';
+  if (/keys/.test(model) && /\bkey\b/.test(value)) return 'Hablas de varias llaves. KEY es una; KEYS añade la S del plural.';
+  return fallback;
 }

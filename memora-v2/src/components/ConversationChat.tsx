@@ -3,7 +3,7 @@ import { GameCard } from './GameCard';
 import { EchoPractice } from './EchoPractice';
 import { TypedChatMessage, type ChatMessage } from './TypedChatMessage';
 import type { AtomicUnit } from '../domain/unit';
-import { acceptedConversationAnswer, conversationTurns, followingConversationTurn, writtenConversationCorrection } from '../domain/conversation';
+import { acceptedConversationAnswer, conversationTurns, demonstratedConversationQuestionSkills, followingConversationTurn, writtenConversationCorrection } from '../domain/conversation';
 import { readGrammarAttempts, recordGrammarAttempt } from '../domain/grammarMemory';
 import { recordLearningActivity as persistLearningActivity } from '../domain/learningActivity';
 import { recordSentenceExposure } from '../domain/memory';
@@ -35,9 +35,7 @@ function readChatCheckpoint(userId: string, unitId: string, version: string, tur
 export function ConversationPractice({ unit, userId, reviewMode, checkpointScope = 'story', onContinue }: { unit: AtomicUnit; userId: string; reviewMode: boolean; checkpointScope?: string; onContinue: () => void }) {
   const checkpointUnitId = checkpointScope === 'story' ? unit.id : `${unit.id}:${checkpointScope}`;
   const dialogue = unit.communication!.dialogue!;
-  const turns = useMemo(() => conversationTurns(unit, new Set(readGrammarAttempts(userId)
-    .filter((attempt) => attempt.kind === 'write' && attempt.correct && !attempt.helped)
-    .map((attempt) => attempt.skill))), [unit, userId]);
+  const turns = useMemo(() => conversationTurns(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))), [unit, userId]);
   const partner = dialogue.partner ?? (unit.id === 'm1-entry-keys' ? 'Emma' : 'Alguien de casa');
   const recordLearningActivity = (owner: string, value: Parameters<typeof persistLearningActivity>[1]) => persistLearningActivity(owner, { ...value, conversationId: `person:${partner.normalize('NFKC').trim().toLocaleLowerCase('es')}`, speaker: value.source === 'learner' ? 'Tú' : value.activityId.startsWith('partner-') ? partner : 'Memora' });
   const [checkpoint] = useState(() => reviewMode ? null : readChatCheckpoint(userId, checkpointUnitId, unit.contentVersion ?? '1', turns.length));

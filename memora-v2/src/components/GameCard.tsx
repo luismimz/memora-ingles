@@ -9,10 +9,12 @@ interface GameCardProps {
   revealFooter?: boolean;
   className?: string;
   showBack?: boolean;
+  /** Opt in when the card has no primary button of its own. Gestures stay optional. */
+  advanceControl?: boolean;
 }
 
 /** La misma superficie y física para asociaciones, recompensas y gramática. */
-export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', reserveFooter = false, revealFooter = true, className = '', showBack }: GameCardProps) {
+export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', reserveFooter = false, revealFooter = true, className = '', showBack, advanceControl = false }: GameCardProps) {
   const [dragX, setDragX] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -95,7 +97,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
         <div className={`game-card-flip ${isFlipped ? 'is-flipped' : ''}`}>
           <article className="game-card-face game-card-front" aria-hidden={isFlipped}>
             <div className="game-card-body">{children}</div>
-            {onAdvance || reserveFooter ? <footer className={`game-card-footer ${revealFooter ? '' : 'is-pending'}`} aria-hidden={!revealFooter}><span><span className="gesture-touch">{advanceLabel ? `${advanceLabel} · ` : ''}desliza ←</span><span className="gesture-pointer">{advanceLabel ? `${advanceLabel} · ` : ''}arrastra ← <small>o pulsa ←</small></span></span><span>{back ? <><span className="gesture-touch">Recuerda la escena →</span><span className="gesture-pointer">Pista · arrastra →</span></> : ''}</span></footer> : null}
+            {onAdvance || reserveFooter ? <footer className={`game-card-footer ${revealFooter ? '' : 'is-pending'}`} aria-hidden={!revealFooter}>{advanceControl ? <button type="button" className="card-advance" disabled={!onAdvance || !revealFooter || exiting || isFlipped} onClick={advance}>{advanceLabel || 'Continuar'} <span aria-hidden="true">→</span></button> : <span><span className="gesture-touch">{advanceLabel ? `${advanceLabel} · ` : ''}desliza ←</span><span className="gesture-pointer">{advanceLabel ? `${advanceLabel} · ` : ''}arrastra ← <small>o pulsa ←</small></span></span>}<span>{back ? <><span className="gesture-touch">Recuerda la escena →</span><span className="gesture-pointer">Pista · arrastra →</span></> : ''}</span></footer> : null}
           </article>
           {back ? <article className="game-card-face game-card-back" aria-hidden={!isFlipped}>{back}</article> : null}
         </div>

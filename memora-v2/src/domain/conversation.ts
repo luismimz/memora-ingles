@@ -1,6 +1,11 @@
 import type { AtomicUnit, DialogueTurn } from './unit';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 import { contextualCorrection } from './learningActivity';
+import type { GrammarAttempt } from './grammarMemory';
+
+export function demonstratedConversationQuestionSkills(attempts: readonly GrammarAttempt[]): Set<string> {
+  return new Set(attempts.filter((attempt) => attempt.kind === 'write' && attempt.correct && !attempt.helped).map((attempt) => attempt.skill));
+}
 
 export interface ChatTurn {
   id: 'respond' | 'ask' | 'transfer';
@@ -32,6 +37,20 @@ export function conversationTurns(unit: AtomicUnit, demonstratedQuestionSkills: 
   }
   if (dialogue.transfer) turns.push({ id: 'transfer', expected: dialogue.transfer, prompt: dialogue.turns[0], context: dialogue.transferContext!, reply });
   return turns;
+}
+
+/** Only learner turns can take over an identical written task from the coach. */
+export function conversationPracticeAnswers(unit: AtomicUnit, demonstratedQuestionSkills: ReadonlySet<string> = new Set()): string[] {
+  const turns = conversationTurns(unit, demonstratedQuestionSkills);
+  const answers = turns.flatMap((turn) => {
+    const values = [...turn.expected.acceptedAnswers];
+    if (turn.id === 'respond' && unit.communication?.practicePrompt && turn.prompt
+      && normalizeSentenceAnswer(unit.communication.practicePrompt) === normalizeSentenceAnswer(turn.prompt.en)) {
+      values.push(...unit.communication.acceptedAnswers ?? []);
+    }
+    return values;
+  });
+  return [...new Set(answers)];
 }
 export function followingConversationTurn(current: number, total: number): number | null {
   return current + 1 < total ? current + 1 : null;

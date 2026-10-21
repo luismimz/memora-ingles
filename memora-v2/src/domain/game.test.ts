@@ -2,6 +2,20 @@ import { describe, expect, it } from 'vitest';
 import { gameReducer, initialGame, type GameState } from './game';
 
 describe('flujo de la unidad', () => {
+  it('reanuda lectura de preparación sin aciertos y rechaza duplicados o saltos de pasos', () => {
+    const state: GameState = { ...initialGame, phase: 'build', filledSlots: 1 };
+    const action = { type: 'prepareSlot' as const, sentenceIndex: 0, slotIndex: 1, step: 1, stepCount: 3 };
+    const first = gameReducer(state, action);
+    expect(first).toEqual({ ...state, preparationStep: 1 });
+    expect(gameReducer(first, action)).toBe(first);
+    expect(gameReducer(first, { ...action, step: 3 })).toBe(first);
+    expect(gameReducer(first, { ...action, slotIndex: 0, step: 2 })).toBe(first);
+    expect(gameReducer(first, { ...action, sentenceIndex: 1, step: 2 })).toBe(first);
+    expect(gameReducer(initialGame, action)).toBe(initialGame);
+    const second = gameReducer(first, { ...action, step: 2 });
+    expect(second.correct).toBe(0); expect(second.filledSlots).toBe(1);
+    expect(gameReducer(second, { type: 'chooseSlot', correct: true, slotCount: 2 }).preparationStep).toBeUndefined();
+  });
   it('el modo gramática termina tras su propia práctica sin repetir construcción o forzar chat', () => {
     const state = { ...initialGame, phase: 'grammar' as const, grammarPlayed: true };
     expect(gameReducer(state, { type: 'continue', grammarCount: 1, grammarOnly: true }).phase).toBe('complete');

@@ -9,6 +9,7 @@ import { initializeJournal, readJournal } from '../domain/progressJournal';
 import { restoreProgress } from '../domain/restoreProgress';
 import { readTrickCheckpoint } from '../domain/trickCheckpoint';
 import { lessonForForm } from '../domain/grammarLesson';
+import { recordGrammarAttempt } from '../domain/grammarMemory';
 const captured = vi.hoisted(() => ({ coach: null as any }));
 vi.mock('./GrammarCoach', () => ({ GrammarCoach: (props: unknown) => { captured.coach = props; return <div>Truco real</div>; } }));
 vi.mock('../services/audio', () => ({ stopSpeech: vi.fn() }));
@@ -18,6 +19,23 @@ beforeEach(() => {
   vi.stubGlobal('sessionStorage', { getItem: () => null, setItem: () => {} });
   initializeJournal('learner');
   captured.coach = null;
+});
+it('solo omite la explicación repetida tras una escritura correcta sin ayuda de otro verbo', () => {
+  const trick = grammarTricks(previewUnit)[0];
+  const props = { unit: previewUnit, stop: { id: 'trick:reuse', title: trick.title, routeTrick: trick }, userId: 'learner', inspection: false, onFinished: () => {}, onNext: () => {}, onExit: () => {}, syncStatus: 'saved' as const, appearance: 'light' as const, onToggleAppearance: () => {} };
+  const show = () => renderToStaticMarkup(<JourneyTrickExperience {...props} />);
+  show(); expect(captured.coach.omitGeneratedExplanation).toBe(false);
+  const prior = { unitId: 'prior-brush', skill: 'present-continuous:brush', check: 'use', at: '2026-10-21T00:00:00Z' };
+  recordGrammarAttempt('learner', { ...prior, kind: 'choose', correct: true, helped: false });
+  recordGrammarAttempt('learner', { ...prior, kind: 'write', correct: true, helped: true });
+  recordGrammarAttempt('learner', { ...prior, kind: 'write', correct: false, helped: false });
+  show(); expect(captured.coach.omitGeneratedExplanation).toBe(false);
+  recordGrammarAttempt('learner', { ...prior, kind: 'write', correct: true, helped: false });
+  show(); expect(captured.coach.omitGeneratedExplanation).toBe(true);
+  expect(captured.coach.startAtPractice).toBe(true);
+  expect(captured.coach.requirePractice).toBe(true);
+  renderToStaticMarkup(<JourneyTrickExperience {...props} inspection />);
+  expect(captured.coach.omitGeneratedExplanation).toBe(false);
 });
 it('conserva intentos en el journal real sin completar la misión de palabras ni duplicar el cierre', () => {
   const trick = grammarTricks(previewUnit)[0];

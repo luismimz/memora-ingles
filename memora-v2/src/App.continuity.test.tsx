@@ -1,14 +1,20 @@
 import type { ReactElement } from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
-import { previewUnit } from './preview/previewUnit';
+import { previewUnit, reviewUnits } from './preview/previewUnit';
+import { vocabularyPreviewPacks } from './preview/vocabularyPacks';
 import { grammarTricks } from './domain/journeyTricks';
 import { recordWordRecall, readWordMemories } from './domain/memory';
 import { grammarJourney } from './domain/grammarJourney';
 import { lessonForForm } from './domain/grammarLesson';
 import { recordLearningActivity } from './domain/learningActivity';
 import { recordGrammarAttempt } from './domain/grammarMemory';
+import { completeArcadeCadence, pendingAutomaticArcade } from './domain/arcadeCadence';
+import { completeLearningMode } from './domain/learningModes';
+import { completedTrick, isEquivalentUnit, missingTrickWords } from './domain/journeyTricks';
+import { completedVocabularyStop } from './domain/journeyMap';
+import { readLearningActivities } from './domain/learningActivity';
 
-const hooks = vi.hoisted(() => ({ cursor: 0, states: new Map<number, unknown>() }));
+const hooks = vi.hoisted(() => ({ cursor: 0, states: new Map<number, unknown>(), refCursor: 0, refs: new Map<number, { current: unknown }>() }));
 const api = vi.hoisted(() => ({ loadUnit: vi.fn() }));
 vi.mock('react', async (original) => ({
   ...await original<typeof import('react')>(),
@@ -18,6 +24,11 @@ vi.mock('react', async (original) => ({
     return [hooks.states.get(index), (value: unknown) => hooks.states.set(index, typeof value === 'function' ? value(hooks.states.get(index)) : value)];
   },
   useEffect: () => undefined,
+  useRef: (initial: unknown) => {
+    const index = hooks.refCursor++;
+    if (!hooks.refs.has(index)) hooks.refs.set(index, { current: initial });
+    return hooks.refs.get(index);
+  },
 }));
 vi.mock('./useAppearance', () => ({ useAppearance: () => ({ appearance: 'light', toggleAppearance: vi.fn() }) }));
 vi.mock('./services/audio', () => ({ stopSpeech: vi.fn(), prefetchSpeech: vi.fn() }));
@@ -37,17 +48,72 @@ beforeEach(() => {
   vi.stubGlobal('localStorage', { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value), removeItem: (key: string) => storage.delete(key) });
   hooks.cursor = 0;
   hooks.states.clear();
+  hooks.refCursor = 0; hooks.refs.clear();
   // App's top-level state only; children are not mounted or replaced by fake engines.
   for (const [index, value] of [[2, current], [3, 'vocabulary'], [15, [current, next]], [16, 'learner'], [17, true], [27, 'saved']] as const) hooks.states.set(index, value);
   api.loadUnit.mockReset().mockResolvedValue(next);
 });
 function game() {
   hooks.cursor = 0;
+  hooks.refCursor = 0;
   const root = App() as ReactElement<{ children: ReactElement[] }>;
   return (root.props.children?.[0] ?? root) as ReactElement<Record<string, any>>;
 }
 
 describe('continuidad real desde App', () => {
+  it('encadena cuatro contenidos existentes mezclados, Arcade y un truco preparado sin repetir paradas ni mover Gramática', async () => {
+    // Synthetic attempts in an isolated Map, not a learner account or a manual/browser playthrough.
+    const hotel = vocabularyPreviewPacks.find((candidate) => candidate.words.some((word) => word.en === 'HOTEL'))!;
+    const family = vocabularyPreviewPacks.find((candidate) => candidate.words.some((word) => word.en === 'FAMILY'))!;
+    const brush = reviewUnits.find((candidate) => candidate.id === 'm1-bathroom-brush')!;
+    const sources = [previewUnit, hotel, brush, family, next];
+    expect(sources.every(Boolean)).toBe(true);
+    expect(new Set(sources.map((candidate) => candidate.id)).size).toBe(5);
+    const summaries = sources.map((source) => ({ ...source, grammarTricks: grammarTricks(source) }));
+    hooks.states.set(2, sources[0]); hooks.states.set(15, summaries);
+    storage.set('memora-v2.grammar-position.learner', 'independent-grammar-position');
+    api.loadUnit.mockImplementation((id: string) => {
+      const source = sources.find((candidate) => candidate.id === id);
+      return source ? Promise.resolve(source) : Promise.reject(new Error(`Unexpected fixture ID: ${id}`));
+    });
+    const flush = async () => { for (let index = 0; index < 8; index++) await Promise.resolve(); };
+    const overlay = () => { hooks.cursor = 0; hooks.refCursor = 0; return (App() as ReactElement<{ children: ReactElement[] }>).props.children[1]; };
+    expect(summaries.map(isEquivalentUnit)).toEqual([false, true, false, true, false]);
+    for (let index = 0; index < 4; index++) {
+      const source = sources[index];
+      expect(game().props.unit.id).toBe(source.id);
+      // Recognition stays labelled as assisted recognition, not independent recall.
+      for (const word of source.words) recordWordRecall('learner', word, 'quick', new Date(), 'recognition', undefined, true);
+      completeLearningMode('learner', source, 'vocabulary', { correct: source.words.length, attempted: source.words.length, completedAt: new Date().toISOString(), nextReviewAt: new Date(Date.now() + 60000).toISOString() });
+      game().props.onFinished();
+      await flush();
+      if (index < 3) { game().props.onNext(); await flush(); }
+    }
+    const wordArcade = overlay();
+    expect((wordArcade.props as any).initialMode).toBe('associations');
+    expect(pendingAutomaticArcade('learner')).toBe('associations');
+    expect(summaries.filter((source) => completedVocabularyStop(source, readLearningActivities('learner')))).toHaveLength(4);
+    (wordArcade.props as any).onExit(); await flush();
+    const trick = game().props;
+    expect(trick.stop.routeTrick.sourceId).toBe(previewUnit.id);
+    expect(missingTrickWords(trick.stop, readWordMemories('learner'))).toEqual([]);
+    const descriptor = trick.stop.routeTrick;
+    const form = previewUnit.grammar.find((candidate) => candidate.id === descriptor.formId)!;
+    const lesson = lessonForForm(form, 'jugar')!;
+    recordGrammarAttempt('learner', { unitId: previewUnit.id, skill: lesson.id, check: 'meaning-now-v1', kind: 'explain', correct: true, helped: true, at: new Date().toISOString() });
+    recordLearningActivity('learner', { unitId: previewUnit.id, unitTitle: previewUnit.title, contentVersion: previewUnit.contentVersion ?? '1', activityId: `trick-completed:${descriptor.formId}`, skill: descriptor.skill, phase: 'completion', source: 'learner', modality: 'writing', prompt: lesson.title, response: 'Synthetic completion fixture', expected: '', correct: null, helped: false });
+    trick.onFinished(); await flush();
+    const grammarArcade = overlay();
+    expect((grammarArcade.props as any).initialMode).toBe('grammar');
+    expect(completedTrick(trick.stop, readLearningActivities('learner'))).toBe(true);
+    (grammarArcade.props as any).onExit(); await flush();
+    expect(game().props.unit.id).toBe(next.id);
+    expect(game().props.learningMode).toBe('vocabulary');
+    expect(completedTrick(grammarJourney(sources).find((stop) => stop.routeTrick?.sourceId === brush.id)!, readLearningActivities('learner'))).toBe(false);
+    expect(storage.get('memora-v2.grammar-position.learner')).toBe('independent-grammar-position');
+    expect(readLearningActivities('learner').filter((activity) => activity.activityId === 'vocabulary-completed')).toHaveLength(4);
+    expect(pendingAutomaticArcade('learner')).toBeNull();
+  });
   it('Inicio prepara las palabras de una misión antes de exigir su gramática o conversación', async () => {
     const source = { ...previewUnit, id: 'word-first-story' };
     hooks.states.set(2, null); hooks.states.set(15, [source]); hooks.states.set(22, false);
@@ -82,6 +148,7 @@ describe('continuidad real desde App', () => {
     expect(game().props.nextLabel).not.toBe('Ronda Arcade →');
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
     hooks.cursor = 0;
+    hooks.refCursor = 0;
     const overlay = (App() as ReactElement<{ children: ReactElement[] }>).props.children[1];
     expect((overlay.props as any).initialMode).toBe('associations');
     expect(hooks.states.get(2)).toMatchObject({ id: 'pack-4' });
@@ -132,12 +199,13 @@ describe('continuidad real desde App', () => {
     expect(playing.stop.id).toBe(route[0].id);
     recordLearningActivity('learner', { unitId: first.id, unitTitle: first.title, contentVersion: first.contentVersion ?? '1', activityId: `trick-completed:${route[0].routeTrick!.formId}`, skill: route[0].routeTrick!.skill, phase: 'completion', source: 'learner', modality: 'writing', prompt: '', response: '', expected: '', correct: null, helped: false });
     const lesson = lessonForForm(first.grammar[0], 'jugar')!;
-    recordGrammarAttempt('learner', { unitId: first.id, skill: lesson.id, check: lesson.checks[0].id, kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
+    recordGrammarAttempt('learner', { unitId: first.id, skill: lesson.id, check: 'meaning-now-v1', kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
     playing.onFinished();
     expect(storage.get('memora-v2.grammar-position.learner')).toBe(route[1].id);
     expect(storage.get('memora-v2.resume.learner')).toBe('home-10');
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
     hooks.cursor = 0;
+    hooks.refCursor = 0;
     const overlay = (App() as ReactElement<{ children: ReactElement[] }>).props.children[1];
     expect((overlay.props as any).initialMode).toBe('grammar');
     (overlay.props as any).onExit();
@@ -169,6 +237,80 @@ describe('continuidad real desde App', () => {
   it('una cuenta admin jugando desde Home guarda como alumno, no como revisión', () => {
     expect(game().props.reviewMode).toBe(false);
     expect(game().props.syncStatus).toBe('saved');
+  });
+  it('no consume Arcade al abrirlo ni lanza dos rondas por pulsar continuar durante la carga', async () => {
+    for (const word of current.words) recordWordRecall('learner', word, 'quick');
+    for (let index = 1; index <= 3; index++) completeArcadeCadence('learner', `previous-${index}`, '1', false);
+    const props = game().props;
+    props.onFinished();
+    props.onNext(); props.onNext();
+    expect(pendingAutomaticArcade('learner')).toBe('associations');
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    hooks.cursor = 0; hooks.refCursor = 0;
+    const overlay = (App() as ReactElement<{ children: ReactElement[] }>).props.children[1];
+    expect((overlay.props as any).initialMode).toBe('associations');
+    expect(api.loadUnit).not.toHaveBeenCalled();
+    expect(hooks.states.get(2)).toBe(current);
+    expect(pendingAutomaticArcade('learner')).toBe('associations');
+    (overlay.props as any).onExit();
+    expect(pendingAutomaticArcade('learner')).toBeNull();
+    (overlay.props as any).onExit(); // stale double activation must not advance twice
+    await Promise.resolve(); await Promise.resolve();
+    expect(hooks.states.get(2)).toBe(next);
+    expect(api.loadUnit).toHaveBeenCalledTimes(1);
+  });
+  it('retoma Arcade interrumpido sobre la siguiente parada guardada sin saltársela', async () => {
+    for (const word of current.words) recordWordRecall('learner', word, 'quick');
+    for (let index = 1; index <= 4; index++) completeArcadeCadence('learner', `previous-${index}`, '1', false);
+    storage.set('memora-v2.resume.learner', next.id);
+    hooks.states.set(2, null); hooks.states.set(22, false);
+    game().props.onOpen(next);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    hooks.cursor = 0; hooks.refCursor = 0;
+    const overlay = (App() as ReactElement<{ children: ReactElement[] }>).props.children[1];
+    expect((overlay.props as any).initialMode).toBe('associations');
+    expect(pendingAutomaticArcade('learner')).toBe('associations');
+    (overlay.props as any).onExit();
+    expect(hooks.states.get(2)).toBe(next);
+    expect(api.loadUnit).toHaveBeenCalledTimes(1);
+    expect(storage.get('memora-v2.resume.learner')).toBe(next.id);
+    expect(pendingAutomaticArcade('learner')).toBeNull();
+  });
+  it('no inventa un repaso si todavía no hay palabras practicadas ni salta la parada reanudada', async () => {
+    for (let index = 1; index <= 4; index++) completeArcadeCadence('learner', `previous-${index}`, '1', false);
+    hooks.states.set(2, null); hooks.states.set(22, false);
+    game().props.onOpen(next);
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    expect(hooks.states.get(2)).toBe(next);
+    expect(hooks.states.get(14)).toBeNull();
+    expect(readWordMemories('learner')).toEqual([]);
+    expect(pendingAutomaticArcade('learner')).toBe('associations');
+    expect(api.loadUnit).toHaveBeenCalledTimes(1);
+  });
+  it('salir mientras se prepara Arcade descarta el resultado tardío y conserva la ronda', async () => {
+    for (const word of current.words) recordWordRecall('learner', word, 'quick');
+    for (let index = 1; index <= 3; index++) completeArcadeCadence('learner', `previous-${index}`, '1', false);
+    const props = game().props;
+    props.onFinished(); props.onExit();
+    await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
+    expect(hooks.states.get(2)).toBeNull();
+    expect(hooks.states.get(14)).toBeNull();
+    expect(pendingAutomaticArcade('learner')).toBe('associations');
+  });
+  it('una petición antigua de misión no reemplaza la selección más reciente', async () => {
+    const first = { ...next, id: 'slow-first' };
+    const second = { ...next, id: 'fast-second' };
+    let resolveFirst!: (unit: typeof first) => void;
+    api.loadUnit.mockImplementation((id: string) => id === first.id ? new Promise((resolve) => { resolveFirst = resolve; }) : Promise.resolve(second));
+    hooks.states.set(2, null); hooks.states.set(22, false);
+    const props = game().props;
+    props.onOpen(first); props.onOpen(second);
+    await Promise.resolve(); await Promise.resolve();
+    expect(hooks.states.get(2)).toBe(second);
+    resolveFirst(first);
+    await Promise.resolve(); await Promise.resolve();
+    expect(hooks.states.get(2)).toBe(second);
+    expect(storage.get('memora-v2.resume.learner')).toBe(second.id);
   });
   it('guarda la siguiente parada al completar antes de pulsar continuar o salir', () => {
     game().props.onFinished();

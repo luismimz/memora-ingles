@@ -1,0 +1,8 @@
+.grammar-order { display: grid; gap: 14px; min-width: 0; }
+.order-message, .order-bank { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
+.order-message { min-height: 72px; padding: 12px; border: 1px dashed var(--line); border-radius: 16px; }
+.order-message p { margin: 0; font-size: .9rem; color: var(--muted); }
+.order-message button, .order-bank button { min-height: 48px; padding: 10px 16px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); font: inherit; font-weight: 800; cursor: pointer; overflow-wrap: anywhere; }
+.order-bank button:disabled { opacity: .4; cursor: default; }
+.grammar-order button:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
+.grammar-order small { color: var(--muted); }

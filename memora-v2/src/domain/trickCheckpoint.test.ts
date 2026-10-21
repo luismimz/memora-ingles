@@ -13,3 +13,19 @@ it('reanuda el paso, respuesta y pista solo para el usuario y versión correspon
   clearTrickCheckpoint('u1', 'trick:play');
   expect(readTrickCheckpoint('u1', 'trick:play', '1')).toBeNull();
 });
+it('conserva la identidad aditiva de la tarea y rechaza identidades malformadas sin borrar otros datos', () => {
+  const state = { stage: 3, checkIndex: 0, checkId: 'explain', input: '', feedback: 'help' as const, helped: true };
+  writeTrickCheckpoint('u1', 'trick:play', '1', state);
+  expect(readTrickCheckpoint('u1', 'trick:play', '1')).toEqual(state);
+  localStorage.setItem('memora-v2.trick.u1.invalid', JSON.stringify({ version: '1', state: { ...state, checkId: 12 } }));
+  expect(readTrickCheckpoint('u1', 'invalid', '1')).toBeNull();
+  expect(readTrickCheckpoint('u1', 'trick:play', '1')).toEqual(state);
+});
+it('conserva el último envío errado separado del borrador y admite registros antiguos', () => {
+  const state = { stage: 3, checkIndex: 2, checkId: 'use', input: 'I am play', correctionResponse: 'I playing', feedback: 'help' as const, helped: true };
+  writeTrickCheckpoint('u1', 'trick:play', '1', state);
+  expect(readTrickCheckpoint('u1', 'trick:play', '1')).toEqual(state);
+  localStorage.setItem('memora-v2.trick.u1.invalid', JSON.stringify({ version: '1', state: { ...state, correctionResponse: 12 } }));
+  expect(readTrickCheckpoint('u1', 'invalid', '1')).toBeNull();
+  expect(readTrickCheckpoint('u1', 'trick:play', '1')).toEqual(state);
+});

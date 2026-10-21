@@ -12,7 +12,7 @@ export function CognateAssociationCard({ word, index, total, audioState, onListe
   word: AtomicWord; index: number; total: number; audioState?: AssociationAudioState; onListen?: () => void; onConnect: () => void;
 }) {
   const visual = wordVisual(word);
-  return <GameCard onAdvance={onConnect} back={<div className="hint-face"><SceneVisual word={visual} showMemoryLink /><p><strong lang="en">{word.en}</strong> → <strong>{word.es}</strong></p><p>Se parecen y comparten este significado.</p></div>}>
+  return <GameCard onAdvance={onConnect} advanceControl advanceLabel="Ya la he conectado" back={<div className="hint-face"><SceneVisual word={visual} showMemoryLink /><p><strong lang="en">{word.en}</strong> → <strong>{word.es}</strong></p><p>Se parecen y comparten este significado.</p></div>}>
     <div className="association-content cognate-association is-revealed">
       <p className="eyebrow">ASOCIACIÓN {index + 1}/{total}</p>
       <WordHeading en={word.en} es={word.es.toUpperCase()} />

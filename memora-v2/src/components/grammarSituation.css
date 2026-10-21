@@ -1,0 +1,14 @@
+.grammar-situation { display: grid; gap: 8px; min-width: 0; }
+.situation-message { margin: 0; font-size: clamp(1.5rem, 5vw, 2.25rem); font-weight: 800; overflow-wrap: anywhere; }
+.situation-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.situation-options button { display: grid; gap: 4px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); color: var(--ink); font: inherit; cursor: pointer; }
+.situation-options button[aria-pressed="true"] { outline: 2px solid var(--accent-ink); outline-offset: 2px; }
+.situation-options button:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
+.situation-options svg { display: block; width: 100%; height: auto; }
+.situation-options span { font-size: .85rem; overflow-wrap: anywhere; }
+.situation-result { display: flex; align-items: center; gap: 10px; }
+.situation-result svg { width: 90px; flex: 0 0 90px; }
+.situation-result p { font-size: .85rem; margin: 0; }
+.game-card-anchor.coach-situation-card::before, .coach-situation-card .game-card-flip, .coach-situation-card .game-card-face { min-height: 0; }
+.coach-situation-card .coach-content { min-height: 0; gap: 12px; padding: 0; }
+.coach-situation-card .coach-practice h2 { font-size: clamp(1.1rem, 4vw, 1.5rem); }
