@@ -15,6 +15,18 @@ export interface ChatTurn {
   reply: { en: string; es?: string };
 }
 
+/** An optional role swap can change numeric positions without changing content version. */
+export function restoredConversationRound(saved: { round: number; turnId?: string }, turns: readonly ChatTurn[], stableLegacyOrder: boolean): number | null {
+  if (!Number.isInteger(saved.round) || saved.round < 0) return null;
+  if (saved.turnId !== undefined) {
+    const index = turns.findIndex((turn) => turn.id === saved.turnId);
+    return index < 0 ? null : index;
+  }
+  // Round zero always means respond. Later legacy indices are unsafe when an
+  // authored optional question can move transfer into or out of that position.
+  return saved.round < turns.length && (saved.round === 0 || stableLegacyOrder) ? saved.round : null;
+}
+
 export function acceptedConversationAnswer(unit: AtomicUnit, turn: ChatTurn, response: string): boolean {
   const answers = [...turn.expected.acceptedAnswers];
   if (turn.id === 'respond' && unit.communication?.practicePrompt && turn.prompt &&

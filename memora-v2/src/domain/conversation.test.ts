@@ -2,11 +2,31 @@ import { describe, it, expect } from 'vitest';
 import raw from '../../content/keys-mission.json';
 import { reviewUnits } from '../preview/previewUnit';
 import { validateUnit } from './unit';
-import { acceptedConversationAnswer, conversationPracticeAnswers, conversationTurns, demonstratedConversationQuestionSkills, followingConversationTurn } from './conversation';
+import { acceptedConversationAnswer, conversationPracticeAnswers, conversationTurns, demonstratedConversationQuestionSkills, followingConversationTurn, restoredConversationRound } from './conversation';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 import { grammarChecksForExperience } from './grammarLesson';
 
 describe('intercambio escrito dentro del chat', () => {
+  it('reanuda transferencia por identidad cuando una pregunta preparada cambia su posición', () => {
+    const unit = validateUnit(structuredClone(raw));
+    unit.communication!.dialogue!.roleSwap = true;
+    unit.communication!.dialogue!.questionSkillId = 'question:look-for';
+    const original = conversationTurns(unit);
+    const expanded = conversationTurns(unit, new Set(['question:look-for']));
+    expect(original.map((turn) => turn.id)).toEqual(['respond', 'transfer']);
+    expect(expanded.map((turn) => turn.id)).toEqual(['respond', 'ask', 'transfer']);
+    expect(restoredConversationRound({ round: 1, turnId: 'transfer' }, expanded, false)).toBe(2);
+    expect(restoredConversationRound({ round: 2, turnId: 'transfer' }, original, false)).toBe(1);
+    expect(restoredConversationRound({ round: 1, turnId: 'ask' }, original, false)).toBeNull();
+  });
+  it('no traslada un índice legado ambiguo ni una identidad inválida a otra actividad', () => {
+    const turns = conversationTurns(validateUnit(raw));
+    expect(restoredConversationRound({ round: 0 }, turns, false)).toBe(0);
+    expect(restoredConversationRound({ round: 1 }, turns, false)).toBeNull();
+    expect(restoredConversationRound({ round: 1 }, turns, true)).toBe(1);
+    expect(restoredConversationRound({ round: 0, turnId: 'removed' }, turns, true)).toBeNull();
+    expect(restoredConversationRound({ round: -1, turnId: 'respond' }, turns, true)).toBeNull();
+  });
   it('solo difiere escrituras de los turnos realmente previstos para el alumno, no del personaje', () => {
     const unit = validateUnit(structuredClone(raw));
     const dialogue = unit.communication!.dialogue!;

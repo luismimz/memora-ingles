@@ -3,7 +3,7 @@ import { GameCard } from './GameCard';
 import { EchoPractice } from './EchoPractice';
 import { TypedChatMessage, type ChatMessage } from './TypedChatMessage';
 import type { AtomicUnit } from '../domain/unit';
-import { acceptedConversationAnswer, conversationTurns, demonstratedConversationQuestionSkills, followingConversationTurn, writtenConversationCorrection } from '../domain/conversation';
+import { acceptedConversationAnswer, conversationTurns, demonstratedConversationQuestionSkills, followingConversationTurn, restoredConversationRound, writtenConversationCorrection, type ChatTurn } from '../domain/conversation';
 import { readGrammarAttempts, recordGrammarAttempt } from '../domain/grammarMemory';
 import { recordLearningActivity as persistLearningActivity } from '../domain/learningActivity';
 import { recordSentenceExposure } from '../domain/memory';
@@ -18,17 +18,22 @@ type ChatCheckpoint = {
   input: string; helped: boolean; hintLevel: number; awaitingNext: boolean; oral: boolean;
   revealedAnswer: boolean; savedMessages: string[]; previousAttempt?: string;
   replyTo?: string; serial: number;
+  turnId?: ChatTurn['id'];
+  recovery?: Omit<ChatCheckpoint, 'recovery'>;
 };
 const chatKey = (userId: string, unitId: string) => `memora-v2.chat-checkpoint.${userId}.${unitId}`;
 
-function readChatCheckpoint(userId: string, unitId: string, version: string, turnCount: number): ChatCheckpoint | null {
+function readChatCheckpoint(userId: string, unitId: string, version: string, turns: readonly ChatTurn[], stableLegacyOrder: boolean): { checkpoint: ChatCheckpoint | null; recovery?: ChatCheckpoint['recovery'] } {
   try {
     const saved = JSON.parse(localStorage.getItem(chatKey(userId, unitId)) || 'null') as ChatCheckpoint | null;
-    if (!saved || saved.version !== version || !Number.isInteger(saved.round) || saved.round < 0 || saved.round >= turnCount ||
+    if (!saved || saved.version !== version || !Number.isInteger(saved.round) || saved.round < 0 ||
       !Array.isArray(saved.messages) || !saved.messages.length || !Array.isArray(saved.savedMessages) ||
-      !Number.isInteger(saved.serial)) return null;
-    return saved;
-  } catch { return null; }
+      !Number.isInteger(saved.serial)) return { checkpoint: null };
+    const round = restoredConversationRound(saved, turns, stableLegacyOrder);
+    const { recovery, ...unmatched } = saved;
+    const prior = recovery && typeof recovery.input === 'string' ? recovery : undefined;
+    return round === null ? { checkpoint: null, recovery: prior ?? unmatched } : { checkpoint: { ...saved, round }, recovery: prior };
+  } catch { return { checkpoint: null }; }
 }
 
 /** Incoming message → learner's answer → reply. The chat never swipes away. */
@@ -38,7 +43,8 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   const turns = useMemo(() => conversationTurns(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))), [unit, userId]);
   const partner = dialogue.partner ?? (unit.id === 'm1-entry-keys' ? 'Emma' : 'Alguien de casa');
   const recordLearningActivity = (owner: string, value: Parameters<typeof persistLearningActivity>[1]) => persistLearningActivity(owner, { ...value, conversationId: `person:${partner.normalize('NFKC').trim().toLocaleLowerCase('es')}`, speaker: value.source === 'learner' ? 'Tú' : value.activityId.startsWith('partner-') ? partner : 'Memora' });
-  const [checkpoint] = useState(() => reviewMode ? null : readChatCheckpoint(userId, checkpointUnitId, unit.contentVersion ?? '1', turns.length));
+  const [restored] = useState(() => reviewMode ? { checkpoint: null } : readChatCheckpoint(userId, checkpointUnitId, unit.contentVersion ?? '1', turns, !(dialogue.roleSwap && dialogue.questionSkillId)));
+  const checkpoint = restored.checkpoint;
   const [round, setRound] = useState(checkpoint?.round ?? 0);
   const [messages, setMessages] = useState<ChatMessage[]>(() => checkpoint?.messages ?? [{ id: 'prompt-0', who: 'partner', text: turns[0].prompt!.en, translation: turns[0].prompt!.es }]);
   const [activeMessage, setActiveMessage] = useState(checkpoint?.activeMessage ?? 'prompt-0');
@@ -64,7 +70,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
 
   useEffect(() => {
     if (reviewMode || finished.current) return;
-    const value: ChatCheckpoint = { version: unit.contentVersion ?? '1', round, messages, activeMessage, busy, input, helped,
+    const value: ChatCheckpoint = { version: unit.contentVersion ?? '1', round, turnId: turns[round]?.id, recovery: restored.recovery, messages, activeMessage, busy, input, helped,
       hintLevel, awaitingNext, oral, revealedAnswer, savedMessages: [...savedMessages.current],
       previousAttempt: previousAttempt.current, replyTo: replyTo.current, serial: serial.current };
     try { localStorage.setItem(chatKey(userId, checkpointUnitId), JSON.stringify(value)); }
@@ -177,6 +183,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     <div className="conversation-content chat-content">
       <header className="chat-header"><span className="chat-avatar" aria-hidden="true">{partner[0]}</span><div><strong>{partner}</strong><small>{turn.id === 'ask' ? 'Ahora preguntas tú' : turn.id === 'transfer' ? 'Otra situación' : 'Una conversación en casa'}</small></div><span>{round + 1}/{turns.length}</span></header>
       <div className="chat-scene">{unit.id === 'm1-entry-keys' ? <KeysScene found={round >= 1} focus={turn.id === 'transfer' ? 'phone' : 'key'} /> : null}<p>{turn.context}</p></div>
+      {restored.recovery?.input ? <details className="chat-recovered-draft"><summary>Borrador anterior guardado</summary><p>El recorrido cambió y no podemos asignar este borrador con seguridad. Lo conservamos sin enviarlo a otro turno.</p><p lang="en">{restored.recovery.input}</p></details> : null}
       <div className="chat-log" ref={log} role="log" aria-label={`Conversación con ${partner}`} aria-live="polite" aria-relevant="additions">
         {messages.map((message) => <TypedChatMessage key={message.id} message={message} partner={partner} form={form} renderText={unit.mirror ? (text, language) => <MirrorText text={text} lesson={unit.mirror!} language={language} /> : undefined} autoSpeak={message.id === activeMessage} onReady={message.id === activeMessage ? () => messageReady(message.id) : undefined} />)}
       </div>

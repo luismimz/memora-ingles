@@ -99,6 +99,10 @@ button:focus-visible, .game-card-swipe:focus-visible { outline: 3px solid var(--
 .chat-scene { display: flex; gap: 14px; align-items: center; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
 .chat-scene .keys-scene { width: 140px; height: 70px; flex-shrink: 0; border-radius: 12px; }
 .chat-scene p { margin: 0; color: var(--muted); font-size: .88rem; line-height: 1.45; }
+.chat-recovered-draft { flex-shrink: 0; color: var(--muted); font-size: .85rem; overflow-wrap: anywhere; }
+.chat-recovered-draft summary { display: list-item; min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--accent-ink); }
+.chat-recovered-draft summary:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
+.chat-recovered-draft p { margin: 0 0 10px; line-height: 1.45; }
 .chat-log { flex: 1; min-height: 140px; overflow-y: auto; overscroll-behavior: contain; display: flex; flex-direction: column; gap: 14px; padding: 6px 6px 14px 0; scrollbar-width: thin; }
 .chat-bubble { width: fit-content; max-width: 92%; flex-shrink: 0; padding: 14px 16px; border-radius: 18px; border: 1px solid var(--line); background: var(--surface-soft); overflow-wrap: anywhere; }
 .chat-partner { margin-right: auto; border-bottom-left-radius: 5px; }
