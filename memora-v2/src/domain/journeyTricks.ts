@@ -51,12 +51,11 @@ export function buildJourneyRoute(units: readonly UnitSummary[], _memories: read
   const concepts = new Set<string>();
   const introduced = new Set<string>();
   const route: UnitSummary[] = [];
-  let sinceTrick = 0;
   for (const unit of ordered) {
     route.push(unit);
     unit.words?.forEach((word) => introduced.add(normalize(word.en)));
-    sinceTrick++;
-    if (sinceTrick < 4) continue;
+    // Place an application as soon as its lexical preparation is on the route.
+    // Actual learner readiness is still checked by missingTrickWords below.
     const eligible = pending.filter((candidate) => !used.has(candidate.skill) && candidate.vocabulary.every((word) => introduced.has(normalize(word))));
     const trick = eligible.find((candidate) => !concepts.has(candidate.concept ?? candidate.skill)) ?? eligible[0];
     if (!trick) continue; // No invented filler lesson to satisfy a fixed interval.
@@ -64,7 +63,6 @@ export function buildJourneyRoute(units: readonly UnitSummary[], _memories: read
     concepts.add(trick.concept ?? trick.skill);
     const source = units.find((candidate) => candidate.id === trick.sourceId)!;
     route.push(trickStop(source, trick));
-    sinceTrick = 0;
   }
   if (used.size) {
     for (const trick of pending) {
@@ -88,8 +86,8 @@ export function completedTrick(stop: UnitSummary, activities: readonly LearningA
     && activity.phase === 'completion' && (activity.activityId === `trick-completed:${trick.formId}` || activity.activityId === 'grammar-completed')));
 }
 
-/** Derive spacing from existing journal evidence, not another persisted counter.
- * Legacy records without dates keep the stable route's previous behaviour.
+/** Derive variety from existing journal evidence, not another persisted counter.
+ * Undated legacy records are not invented as new intervening practice.
  * Replaying a previously completed vocabulary mission does not earn a new slot.
  */
 function readyForAnotherTrick(route: readonly UnitSummary[], activities: readonly LearningActivity[]): boolean {
@@ -105,13 +103,15 @@ function readyForAnotherTrick(route: readonly UnitSummary[], activities: readonl
   if (lastTrick < 0) return true;
   const vocabularyIds = new Set(route.filter((stop) => !stop.routeTrick).map((stop) => stop.id));
   const seen = new Set<string>();
-  let newWordsMissions = 0;
+  let interveningVocabulary = false;
   dated.forEach(({ activity }, index) => {
     if (activity.activityId !== 'vocabulary-completed' || !vocabularyIds.has(activity.unitId) || seen.has(activity.unitId)) return;
     seen.add(activity.unitId);
-    if (index > lastTrick) newWordsMissions++;
+    if (index > lastTrick) interveningVocabulary = true;
   });
-  return newWordsMissions >= 4;
+  // Variety, not a four-mission quota: one genuine new vocabulary episode
+  // can create another opportunity. Replays cannot manufacture that evidence.
+  return interveningVocabulary;
 }
 
 export function nextJourneyStop(currentId: string, route: readonly UnitSummary[], memories: readonly WordMemory[], activities: readonly LearningActivity[] = [], completedIds: ReadonlySet<string> = new Set()): UnitSummary | undefined {

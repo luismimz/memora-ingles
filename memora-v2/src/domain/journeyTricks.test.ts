@@ -58,11 +58,11 @@ describe('paradas de gramática con vocabulario preparado', () => {
     expect(nextJourneyStop('c3', route, [], [], new Set(['c0', 'c1', 'c2', 'c3']))?.id).toBe('story');
     expect(nextJourneyStop('c3', route, [], [], new Set(['story', 'c0', 'c1', 'c2', 'c3']))?.id).toBe('c4');
   });
-  it('intercala un truco después de cuatro misiones sin alterar IDs ni duplicar lecciones', () => {
+  it('intercala la aplicación al preparar sus palabras, sin esperar cuatro misiones ni duplicar IDs', () => {
     const input = units(9);
     input[4].grammarTricks = [{ ...trick, sourceId: 'u5' }];
     const route = buildJourneyRoute(input);
-    expect(route.map((stop) => stop.id)).toEqual(['u1', 'u2', 'u3', 'u4', 'trick:u1:ing', 'u5', 'u6', 'u7', 'u8', 'u9']);
+    expect(route.map((stop) => stop.id)).toEqual(['u1', 'trick:u1:ing', 'u2', 'u3', 'u4', 'u5', 'u6', 'u7', 'u8', 'u9']);
     expect(input).toHaveLength(9);
     expect(route.filter((stop) => stop.routeTrick)).toHaveLength(1);
   });
@@ -72,10 +72,10 @@ describe('paradas de gramática con vocabulario preparado', () => {
     expect(buildJourneyRoute(input).filter((stop) => stop.routeTrick)).toHaveLength(0);
     input[5].words = [{ en: 'EAT', es: 'comer' }];
     expect(buildJourneyRoute(input).findIndex((stop) => stop.routeTrick)).toBe(6);
-    expect(buildJourneyRoute(units(3)).filter((stop) => stop.routeTrick)).toHaveLength(0);
+    expect(buildJourneyRoute(units(1)).map((stop) => stop.id)).toEqual(['u1', 'trick:u1:ing']);
   });
   it('un vocabulario solo mostrado no desbloquea; un acierto previo sí', () => {
-    const stop = buildJourneyRoute(units(5))[4];
+    const stop = buildJourneyRoute(units(5)).find((candidate) => candidate.routeTrick)!;
     expect(missingTrickWords(stop, [{ key: 'play', correct: 0 }] as WordMemory[])).toEqual(['play']);
     expect(missingTrickWords(stop, known)).toEqual([]);
   });
@@ -85,35 +85,30 @@ describe('paradas de gramática con vocabulario preparado', () => {
     expect(nextJourneyStop('u4', route, known)?.id).toBe('trick:u1:ing');
     expect(nextJourneyStop('u5', route, known)?.id).toBe('trick:u1:ing');
     expect(nextJourneyStop('u5', route, known, [activity])?.id).toBe('u6');
-    expect(nextJourneyStop('trick:u1:ing', route, known, [activity])?.id).toBe('u5');
+    expect(nextJourneyStop('trick:u1:ing', route, known, [activity], new Set(['u1']))?.id).toBe('u2');
     expect(nextJourneyStop('trick:u1:ing', route, known, [activity], new Set(['u1', 'u2', 'u3', 'u4', 'u5']))?.id).toBe('u6');
   });
   it('solo marca la práctica real del truco, respetando versión y fuente', () => {
-    const stop = buildJourneyRoute(units(5))[4];
+    const stop = buildJourneyRoute(units(5)).find((candidate) => candidate.routeTrick)!;
     expect(completedTrick(stop, [activity])).toBe(true);
     expect(completedTrick(stop, [{ ...activity, activityId: 'vocabulary-completed' }])).toBe(false);
     expect(completedTrick(stop, [{ ...activity, source: 'authored' }])).toBe(false);
     expect(completedTrick({ ...stop, contentVersion: '2' }, [activity])).toBe(false);
   });
-  it('espacia una ficha aplazada con cuatro misiones nuevas reales, también tras recargar', () => {
+  it('ofrece otra aplicación tras un episodio de palabras nuevo real, también tras recargar', () => {
     const input = units(10);
     input[0].grammarTricks!.push({ ...trick, formId: 'other', skill: 'other' });
     const route = buildJourneyRoute(input);
     const done = (unitId: string, activityId: string, second: number) => ({ ...activity, unitId, activityId, at: `2026-10-21T10:00:${String(second).padStart(2, '0')}.000Z` });
     const initial = [...Array.from({ length: 4 }, (_, index) => done(`u${index + 1}`, 'vocabulary-completed', index)), done('u1', 'trick-completed:ing', 4)];
-    const subsequent = Array.from({ length: 4 }, (_, index) => done(`u${index + 5}`, 'vocabulary-completed', index + 5));
-    for (let count = 1; count < 4; count++) {
-      const evidence = [...initial, ...subsequent.slice(0, count)];
-      const completedIds = new Set(evidence.filter((entry) => entry.activityId === 'vocabulary-completed').map((entry) => entry.unitId));
-      expect(nextJourneyStop(`u${count + 4}`, route, known, evidence, completedIds)?.id).toBe(`u${count + 5}`);
-    }
-    const evidence = [...initial, ...subsequent];
-    const completedIds = new Set(Array.from({ length: 8 }, (_, index) => `u${index + 1}`));
-    const selection = nextJourneyStop('u8', route, known, evidence, completedIds);
+    expect(nextJourneyStop('u4', route, known, initial, new Set(['u1', 'u2', 'u3', 'u4']))?.id).toBe('u5');
+    const evidence = [...initial, done('u5', 'vocabulary-completed', 5)];
+    const completedIds = new Set(['u1', 'u2', 'u3', 'u4', 'u5']);
+    const selection = nextJourneyStop('u5', route, known, evidence, completedIds);
     expect(selection?.id).toBe('trick:u1:other');
-    expect(nextJourneyStop('u8', buildJourneyRoute(input), known, JSON.parse(JSON.stringify(evidence)), completedIds)?.id).toBe(selection?.id);
+    expect(nextJourneyStop('u5', buildJourneyRoute(input), known, JSON.parse(JSON.stringify(evidence)), completedIds)?.id).toBe(selection?.id);
     // Restored records need not arrive in timestamp order.
-    expect(nextJourneyStop('u8', route, known, [...evidence].reverse(), completedIds)?.id).toBe(selection?.id);
+    expect(nextJourneyStop('u5', route, known, [...evidence].reverse(), completedIds)?.id).toBe(selection?.id);
   });
   it('repeticiones, contenido editorial y actividades Arcade no adelantan otra gramática', () => {
     const input = units(10);

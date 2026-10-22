@@ -61,7 +61,7 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
-  it('encadena cuatro contenidos existentes mezclados, Arcade y un truco preparado sin repetir paradas ni mover Gramática', async () => {
+  it('aplica cada acción preparada entre palabras mezcladas, sin esperar cuatro misiones ni mover Gramática', async () => {
     // Synthetic attempts in an isolated Map, not a learner account or a manual/browser playthrough.
     const hotel = vocabularyPreviewPacks.find((candidate) => candidate.words.some((word) => word.en === 'HOTEL'))!;
     const family = vocabularyPreviewPacks.find((candidate) => candidate.words.some((word) => word.en === 'FAMILY'))!;
@@ -79,6 +79,24 @@ describe('continuidad real desde App', () => {
     const flush = async () => { for (let index = 0; index < 8; index++) await Promise.resolve(); };
     const overlay = () => { hooks.cursor = 0; hooks.refCursor = 0; return (App() as ReactElement<{ children: ReactElement[] }>).props.children[1]; };
     expect(summaries.map(isEquivalentUnit)).toEqual([false, true, false, true, false]);
+    const practiced: string[] = [];
+    const finishPreparedTrick = async () => {
+      const props = game().props;
+      const stop = props.stop;
+      expect(missingTrickWords(stop, readWordMemories('learner'))).toEqual([]);
+      const descriptor = stop.routeTrick;
+      practiced.push(descriptor.sourceId);
+      const source = sources.find((candidate) => candidate.id === descriptor.sourceId)!;
+      const form = source.grammar.find((candidate) => candidate.id === descriptor.formId)!;
+      const lesson = lessonForForm(form, source.words[0].es)!;
+      recordGrammarAttempt('learner', { unitId: source.id, skill: lesson.id, check: 'meaning-now-v1', kind: 'explain', correct: true, helped: true, at: new Date().toISOString() });
+      recordLearningActivity('learner', { unitId: source.id, unitTitle: source.title, contentVersion: source.contentVersion ?? '1', activityId: `trick-completed:${descriptor.formId}`, skill: descriptor.skill, phase: 'completion', source: 'learner', modality: 'writing', prompt: lesson.title, response: 'Synthetic completion fixture', expected: '', correct: null, helped: false });
+      props.onFinished(); await flush();
+      const arcade = overlay();
+      expect((arcade.props as any).initialMode).toBe('grammar');
+      expect(completedTrick(stop, readLearningActivities('learner'))).toBe(true);
+      (arcade.props as any).onExit(); await flush();
+    };
     for (let index = 0; index < 4; index++) {
       const source = sources[index];
       expect(game().props.unit.id).toBe(source.id);
@@ -87,29 +105,22 @@ describe('continuidad real desde App', () => {
       completeLearningMode('learner', source, 'vocabulary', { correct: source.words.length, attempted: source.words.length, completedAt: new Date().toISOString(), nextReviewAt: new Date(Date.now() + 60000).toISOString() });
       game().props.onFinished();
       await flush();
-      if (index < 3) { game().props.onNext(); await flush(); }
+      if (index < 3) {
+        game().props.onNext(); await flush();
+        if (index === 0 || index === 2) await finishPreparedTrick();
+        expect(practiced).toHaveLength(index < 2 ? 1 : 2);
+      }
     }
-    const wordArcade = overlay();
-    expect((wordArcade.props as any).initialMode).toBe('associations');
-    expect(pendingAutomaticArcade('learner')).toBe('associations');
+    // The intervening grammar Arcades already provided variety; no forced
+    // extra round simply because the old route used four vocabulary episodes.
+    expect(overlay()).toBeNull();
+    expect(pendingAutomaticArcade('learner')).toBeNull();
     expect(summaries.filter((source) => completedVocabularyStop(source, readLearningActivities('learner')))).toHaveLength(4);
-    (wordArcade.props as any).onExit(); await flush();
-    const trick = game().props;
-    expect(trick.stop.routeTrick.sourceId).toBe(previewUnit.id);
-    expect(missingTrickWords(trick.stop, readWordMemories('learner'))).toEqual([]);
-    const descriptor = trick.stop.routeTrick;
-    const form = previewUnit.grammar.find((candidate) => candidate.id === descriptor.formId)!;
-    const lesson = lessonForForm(form, 'jugar')!;
-    recordGrammarAttempt('learner', { unitId: previewUnit.id, skill: lesson.id, check: 'meaning-now-v1', kind: 'explain', correct: true, helped: true, at: new Date().toISOString() });
-    recordLearningActivity('learner', { unitId: previewUnit.id, unitTitle: previewUnit.title, contentVersion: previewUnit.contentVersion ?? '1', activityId: `trick-completed:${descriptor.formId}`, skill: descriptor.skill, phase: 'completion', source: 'learner', modality: 'writing', prompt: lesson.title, response: 'Synthetic completion fixture', expected: '', correct: null, helped: false });
-    trick.onFinished(); await flush();
-    const grammarArcade = overlay();
-    expect((grammarArcade.props as any).initialMode).toBe('grammar');
-    expect(completedTrick(trick.stop, readLearningActivities('learner'))).toBe(true);
-    (grammarArcade.props as any).onExit(); await flush();
+    game().props.onNext(); await flush();
     expect(game().props.unit.id).toBe(next.id);
     expect(game().props.learningMode).toBe('vocabulary');
-    expect(completedTrick(grammarJourney(sources).find((stop) => stop.routeTrick?.sourceId === brush.id)!, readLearningActivities('learner'))).toBe(false);
+    expect(practiced).toEqual([previewUnit.id, brush.id]);
+    expect(completedTrick(grammarJourney(sources).find((stop) => stop.routeTrick?.sourceId === brush.id)!, readLearningActivities('learner'))).toBe(true);
     expect(storage.get('memora-v2.grammar-position.learner')).toBe('independent-grammar-position');
     expect(readLearningActivities('learner').filter((activity) => activity.activityId === 'vocabulary-completed')).toHaveLength(4);
     expect(pendingAutomaticArcade('learner')).toBeNull();
