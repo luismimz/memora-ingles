@@ -65,3 +65,27 @@ it('las frases antiguas sin preparación conservan las opciones y el comportamie
   button('on my computer.').props.onClick();
   expect(pick).toHaveBeenCalledOnce();
 });
+
+it('explica el error hasta corregir, no solo durante la animación, sin generar intentos por esperar', () => {
+  vi.useFakeTimers();
+  vi.stubGlobal('window', { setTimeout, clearTimeout });
+  const sentence = { ...deskPreparedUnit.sentence, en: 'I have a book.', es: 'Yo tengo un libro.', slots: [
+    { en: 'I', es: 'Yo', choices: ['I', 'have'] as [string, string] },
+    { en: 'have', es: 'tengo', choices: ['a', 'have'] as [string, string] },
+    { en: 'a', es: 'un', choices: ['a', 'I'] as [string, string] },
+    { en: 'book.', es: 'libro', choices: ['pen.', 'book.'] as [string, string] },
+  ] };
+  try {
+    render(1, sentence); button('a').props.onClick();
+    const expected = '«a» corresponde a «un». Aquí necesitas «tengo».';
+    expect(render(1, sentence)).toContain(expected);
+    vi.advanceTimersByTime(60_000);
+    const html = render(1, sentence);
+    expect(html).toContain(expected); expect(html).toContain('role="status"');
+    expect(html).toContain('lang="en"');
+    expect(attempt).toHaveBeenCalledTimes(1); expect(pick).not.toHaveBeenCalled();
+    button('have').props.onClick();
+    expect(pick).toHaveBeenCalledOnce(); expect(attempt).toHaveBeenCalledTimes(2);
+    expect(render(2, sentence)).not.toContain(expected);
+  } finally { vi.useRealTimers(); vi.unstubAllGlobals(); }
+});

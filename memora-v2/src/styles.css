@@ -255,6 +255,10 @@ body { background: var(--page); }
 .bridge-row small { color: var(--muted); font-size: .67rem; font-weight: 850; letter-spacing: .12em; }
 .bridge-row b { color: var(--warm); font-size: clamp(1.75rem, 5vw, 2.4rem); font-weight: 900; }
 .bridge-row.is-direct b { color: var(--muted); font-size: .86rem; }
+.bridge-sound-note { color: var(--muted); font-size: .8rem; line-height: 1.4; overflow-wrap: anywhere; }
+.bridge-sound-note details { margin-top: 6px; }
+.bridge-sound-note summary { cursor: pointer; padding: 8px 0; }
+.bridge-sound-note p { margin: 6px 0; }
 .round-audio { display: grid; place-items: center; width: 45px; height: 45px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-soft); color: var(--ink); }
 .scene-copy { margin: 0; color: var(--ink); font-size: clamp(.95rem, 2.2vw, 1.13rem); line-height: 1.35; font-weight: 700; }
 .scene-copy .mnemonic-bridge, .hint-face .mnemonic-bridge { color: var(--warm); font-weight: 950; }
