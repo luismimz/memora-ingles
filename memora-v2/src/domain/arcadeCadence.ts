@@ -1,7 +1,7 @@
 import { progressStorage } from './progressJournal';
 
 export type AutomaticArcadeMode = 'associations' | 'grammar';
-interface Cadence { seen: string[]; words: number; pending: AutomaticArcadeMode | null }
+interface Cadence { seen: string[]; words: number; pending: AutomaticArcadeMode | null; calm?: boolean }
 const key = (userId: string) => `memora-v2.arcade-cadence.${userId}`;
 function read(userId: string): Cadence {
   try {
@@ -26,6 +26,9 @@ export function completeArcadeCadence(userId: string, stopId: string, version: s
   return value.pending;
 }
 export const pendingAutomaticArcade = (userId: string) => read(userId).pending;
+/** Presentation preference only; retain cadence and learning evidence unchanged. */
+export const readArcadeCalm = (userId: string) => read(userId).calm === true;
+export function writeArcadeCalm(userId: string, calm: boolean) { save(userId, { ...read(userId), calm }); }
 export function consumeAutomaticArcade(userId: string) {
   const value = read(userId);
   value.pending = null; value.words = 0;

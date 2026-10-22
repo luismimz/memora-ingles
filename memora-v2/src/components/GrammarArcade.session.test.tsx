@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from 'vitest';
 import { previewUnit } from '../preview/previewUnit';
+import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 const hooks = vi.hoisted(() => ({ index: 0, state: new Map<number, unknown>(), advance: () => {}, expire: () => {} }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (initial: unknown) => { const id = hooks.index++; if (!hooks.state.has(id)) hooks.state.set(id, typeof initial === 'function' ? initial() : initial); return [hooks.state.get(id), (value: unknown) => hooks.state.set(id, typeof value === 'function' ? value(hooks.state.get(id)) : value)]; },
@@ -24,6 +25,8 @@ function render(automatic = true) {
   visit(tree);
 }
 beforeEach(() => {
+  const storage = new Map<string, string>();
+  vi.stubGlobal('localStorage', { getItem: (key: string) => storage.get(key) ?? null, setItem: (key: string, value: string) => storage.set(key, value) });
   hooks.state.clear(); exit.mockClear();
   vi.mocked(grammarArcadeRounds).mockReturnValue(Array.from({ length: 15 }, (_, slotIndex) => ({ unit: previewUnit, skill: 'present-continuous:brush', sentence: { ...previewUnit.sentence, en: 'I am brushing' }, slotIndex, slot: { en: 'Sí, ahora', es: 'Está ocurriendo ahora', choices: ['Sí, ahora', 'Todavía no'] }, conceptual: true })));
 });
@@ -44,4 +47,13 @@ it('Arcade manual cierra el lote de una frase; repetir requiere una decisión ex
   render(false); hooks.expire(); render(false); hooks.advance(); render(false);
   expect(nodes.find((node) => node.type === ArcadeCheckpoint)?.props.rounds).toBe(1);
   expect(exit).not.toHaveBeenCalled();
+});
+it('Gramática reutiliza la preferencia sin reloj guardada por asociaciones', () => {
+  writeArcadeCalm('isolated', true);
+  render();
+  const control = nodes.find((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás');
+  expect(control.props['aria-pressed']).toBe(true);
+  expect(nodes.find((node) => node.props.role === 'status')?.props.children).toContain('Sin cuenta atrás');
+  control.props.onClick(); render();
+  expect(readArcadeCalm('isolated')).toBe(false);
 });

@@ -1,5 +1,5 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { completeArcadeCadence, consumeAutomaticArcade, pendingAutomaticArcade } from './arcadeCadence';
+import { completeArcadeCadence, consumeAutomaticArcade, pendingAutomaticArcade, readArcadeCalm, writeArcadeCalm } from './arcadeCadence';
 beforeEach(() => {
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) });
@@ -18,6 +18,21 @@ it('un truco solicita gramática incluso en Inicio, sin crear progreso de aprend
   expect(completeArcadeCadence('learner', 'trick:play:ing', '1', true)).toBe('grammar');
   consumeAutomaticArcade('learner');
   expect(completeArcadeCadence('learner', 'trick:play:ing', '1', true)).toBeNull();
+  expect(localStorage.getItem('memora-v2.learning.learner')).toBeNull();
+  expect(localStorage.getItem('memora-v2.memory.learner')).toBeNull();
+});
+it('guarda sin reloj por alumno sin consumir rondas, borrar identidades ni crear aprendizaje', () => {
+  completeArcadeCadence('learner', 'word-1', '1', false);
+  completeArcadeCadence('learner', 'trick:play:ing', '1', true);
+  const before = JSON.parse(localStorage.getItem('memora-v2.arcade-cadence.learner')!);
+  expect(readArcadeCalm('learner')).toBe(false);
+  writeArcadeCalm('learner', true);
+  expect(JSON.parse(localStorage.getItem('memora-v2.arcade-cadence.learner')!)).toEqual({ ...before, calm: true });
+  expect(readArcadeCalm('learner')).toBe(true);
+  expect(readArcadeCalm('other')).toBe(false);
+  consumeAutomaticArcade('learner');
+  expect(readArcadeCalm('learner')).toBe(true);
+  expect(completeArcadeCadence('learner', 'word-1', '1', false)).toBeNull();
   expect(localStorage.getItem('memora-v2.learning.learner')).toBeNull();
   expect(localStorage.getItem('memora-v2.memory.learner')).toBeNull();
 });

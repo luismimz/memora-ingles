@@ -26,7 +26,8 @@
 .micro-countdown > span { display: block; height: 100%; background: linear-gradient(90deg, #e88873, #e4c788, #8ccbbb); transition: width .05s linear; }
 .micro-countdown.is-urgent > span { background: #d87761; }
 .micro-clock { display: none; }
-.arcade-stream-tools { display: flex; gap: .35rem; align-items: center; }
+.arcade-stream-tools { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; max-width: 100%; }
+.arcade-stream-screen .game-topbar { flex-wrap: wrap; gap: .5rem; }
 .arcade-stream-tools button { font-size: .7rem; min-height: 44px; padding: .5rem; }
 .arcade-stream-card::before { display: none; }
 .arcade-stream-foot { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: .7rem; }

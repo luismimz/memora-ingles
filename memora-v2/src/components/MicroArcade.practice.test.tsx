@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { previewUnit } from '../preview/previewUnit';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readWordMemories, recordWordRecall } from '../domain/memory';
+import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 const hooks = vi.hoisted(() => ({ index: 0, state: new Map<number, unknown>(), expire: () => {}, advance: () => {}, duration: 0 }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (initial: unknown) => { const id = hooks.index++; if (!hooks.state.has(id)) hooks.state.set(id, typeof initial === 'function' ? initial() : initial); return [hooks.state.get(id), (value: unknown) => hooks.state.set(id, typeof value === 'function' ? value(hooks.state.get(id)) : value)]; },
@@ -74,4 +75,16 @@ it('la sorpresa con una sola palabra termina tras el feedback sin rellenar quinc
   render(0, true, units); hooks.advance();
   expect(exited).toHaveBeenCalledOnce();
   expect(advanced).not.toHaveBeenCalled();
+});
+it('recupera sin reloj al entrar y permite cambiarlo sin tocar el aprendizaje', () => {
+  writeArcadeCalm('learner', true);
+  const memories = readWordMemories('learner');
+  render();
+  const control = nodes.find((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')!;
+  expect(control.props['aria-pressed']).toBe(true);
+  expect(nodes.find((node) => node.props.role === 'status')?.props.children).toContain('Sin cuenta atrás');
+  control.props.onClick(); render();
+  expect(readArcadeCalm('learner')).toBe(false);
+  expect(readWordMemories('learner')).toEqual(memories);
+  expect(readLearningActivities('learner')).toEqual([]);
 });
