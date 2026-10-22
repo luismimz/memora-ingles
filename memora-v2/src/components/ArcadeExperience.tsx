@@ -32,7 +32,7 @@ function ArcadeDialog({ children, onExit }: { children: React.ReactNode; onExit:
 }
 
 /** Optional modes share the same attempts, SRS and conversation history. */
-export function ArcadeExperience({ userId, units, inspection, onExit, initialMode = 'associations' }: { userId: string; units: AtomicUnit[]; inspection: boolean; onExit: () => void; initialMode?: 'associations' | 'grammar' }) {
+export function ArcadeExperience({ userId, units, inspection, onExit, initialMode = 'associations', automatic = false }: { userId: string; units: AtomicUnit[]; inspection: boolean; onExit: () => void; initialMode?: 'associations' | 'grammar'; automatic?: boolean }) {
   const [stage, setStage] = useState<'associations' | 'grammar' | 'build' | 'chat' | 'finish'>(() => initialMode === 'grammar' && (inspection || eligibleGrammarUnits(userId, units).length) ? 'grammar' : 'associations');
   const [mixed, setMixed] = useState(false);
   const [selected, setSelected] = useState<AtomicUnit>(() => (inspection ? units.filter((unit) => unit.communication?.dialogue) : eligibleMixedUnits(userId, units))[0]);
@@ -44,12 +44,13 @@ export function ArcadeExperience({ userId, units, inspection, onExit, initialMod
   const grammarUnits = inspection ? units : eligibleGrammarUnits(userId, units);
   function advanceRound(completed: number) {
     completedRounds.current = completed;
+    if (automatic) return;
     if (completed % 5 || completed % 15 === 0 || !grammarUnits.length || mixed) return;
     setStage((current) => current === 'grammar' ? 'associations' : 'grammar');
   }
   const anotherRound = () => { const index = available.findIndex((unit) => unit.id === selected?.id); setSelected(available[(index + 1) % available.length]); setFilled(0); previous.current = undefined; setStage('associations'); };
-  if (stage === 'grammar') return <ArcadeDialog onExit={onExit}><GrammarArcade units={grammarUnits} userId={userId} inspection={inspection} onExit={onExit} onWords={() => setStage('associations')} initialRound={completedRounds.current} onRoundAdvance={advanceRound} /></ArcadeDialog>;
-  if (stage === 'associations') return <MicroArcade userId={userId} units={mixed && selected ? [selected] : units} inspection={inspection} onExit={onExit} onUse={mixed && selected ? () => setStage('build') : undefined} onOnlyWords={mixed && selected ? () => setMixed(false) : undefined} onMix={!mixed && selected ? () => setMixed(true) : undefined} onGrammar={grammarUnits.length ? () => setStage('grammar') : undefined} initialRound={completedRounds.current} onRoundAdvance={advanceRound} />;
+  if (stage === 'grammar') return <ArcadeDialog onExit={onExit}><GrammarArcade units={grammarUnits} userId={userId} inspection={inspection} onExit={onExit} onWords={() => setStage('associations')} initialRound={completedRounds.current} onRoundAdvance={advanceRound} automatic={automatic} /></ArcadeDialog>;
+  if (stage === 'associations') return <MicroArcade userId={userId} units={mixed && selected ? [selected] : units} inspection={inspection} onExit={onExit} onUse={mixed && selected ? () => setStage('build') : undefined} onOnlyWords={mixed && selected ? () => setMixed(false) : undefined} onMix={!automatic && !mixed && selected ? () => setMixed(true) : undefined} onGrammar={!automatic && grammarUnits.length ? () => setStage('grammar') : undefined} initialRound={completedRounds.current} onRoundAdvance={advanceRound} automatic={automatic} />;
   if (stage === 'build' && selected) return <ArcadeDialog onExit={onExit}><SentenceBuilderCard sentence={selected.sentence} sceneWord={selected.words[0]} processForm={getPlayableGrammar(selected)[0]} index={0} total={1} filledSlots={filled} choiceSeed={1} onAttempt={(choice, correct, slotIndex) => {
     if (!inspection) { const slot = selected.sentence.slots[slotIndex]; const attempt = recordLearningActivity(userId, { unitId: selected.id, unitTitle: selected.title, contentVersion: selected.contentVersion ?? '1', activityId: `micro:${sessionId}:build:${slotIndex}`, skill: selected.grammar[0].id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, parentAttemptId: previous.current, feedback: correct ? 'Pieza recuperada con opciones.' : 'Compara las piezas y prueba otra vez.' }); previous.current = correct ? undefined : attempt.id; }
   }} onPick={() => { if (!inspection) { recordChunkExposure(userId, selected.id, selected.sentence, filled); if (filled === selected.sentence.slots.length - 1) recordSentenceExposure(userId, selected.id, selected.sentence); } setFilled((value) => value + 1); }} onNext={() => setStage('chat')} /></ArcadeDialog>;

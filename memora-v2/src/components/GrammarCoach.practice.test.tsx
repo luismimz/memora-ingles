@@ -100,9 +100,15 @@ it('un acierto antiguo sin identidad no se traslada al ordenado nuevo; escritura
   expect(nodes.find((node) => node.type === 'input')!.props.value).toBe('I playing');
   expect(readLearningActivities('learner')).toHaveLength(0);
 });
-it('con estructura ya practicada conserva comprensión y escritura sin imponer otro ordenado', () => {
+it('incluso con estructura practicada monta piezas antes de exigir escritura', () => {
   render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });
-  expect(nodes.find((node) => node.type === GrammarOrder)).toBeUndefined();
+  expect(nodes.find((node) => node.type === 'input')).toBeUndefined();
+  nodes.find((node) => node.type === GrammarOrder)!.props.onChange([1, 2, 0]);
+  render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });
+  nodes.find((node) => node.type === GrammarOrder)!.props.onAnswer('I AM PLAYING');
+  render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });
+  button('Seguir →').props.onClick();
+  render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });
   button(generatedLesson.checks[1].answers[0]).props.onClick();
   render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });
   button('Seguir →').props.onClick();

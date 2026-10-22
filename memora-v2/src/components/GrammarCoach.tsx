@@ -21,7 +21,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // Resume the task that is actually shown, not the unfiltered lesson index.
   // A conversational exchange may take over one of the written checks.
   const generatedContinuous = Boolean(form && !form.lesson && lesson.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
-  const checks = grammarChecksForExperience(lesson, conversationAnswers).filter((check) => !(omitGeneratedExplanation && generatedContinuous && ['explain', 'order-message-v1'].includes(check.id)));
+  const checks = grammarChecksForExperience(lesson, conversationAnswers).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain'));
   const teachingStage = checkpoint && checkpoint.stage <= lesson.steps.length ? checkpoint.stage : undefined;
   // Filtering earlier questions must not discard an identified unfinished response.
   const savedCheckIndex = checkpoint?.checkId !== undefined ? checks.findIndex((check) => check.id === checkpoint.checkId) : checkpoint?.checkIndex ?? -1;

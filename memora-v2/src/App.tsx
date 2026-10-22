@@ -479,7 +479,7 @@ export default function App() {
     if (arcadeMode) void openArcade(true, arcadeMode);
   }
 
-  const microOverlay = microSession ? <ArcadeExperience userId={userId} units={microSession.units} inspection={microSession.inspection} initialMode={microSession.initialMode} onExit={() => {
+  const microOverlay = microSession ? <ArcadeExperience userId={userId} units={microSession.units} inspection={microSession.inspection} initialMode={microSession.initialMode} automatic={microSession.automatic} onExit={() => {
     if (microSession.requestId !== arcadeRequest.current) return;
     arcadeRequest.current++;
     stopSpeech(); setMicroSession(null);

@@ -16,16 +16,17 @@ vi.mock('../services/audio', () => ({ playEnglish: vi.fn(), stopSpeech: vi.fn(),
 import { MicroArcade } from './MicroArcade';
 let nodes: ReactElement<any>[];
 const advanced = vi.fn();
-function render(initialRound = 2) {
+const exited = vi.fn();
+function render(initialRound = 2, automatic = false, units = [previewUnit]) {
   hooks.index = 0;
-  const tree = MicroArcade({ userId: 'learner', units: [previewUnit], inspection: false, onExit() {}, initialRound, onRoundAdvance: advanced });
+  const tree = MicroArcade({ userId: 'learner', units, inspection: false, onExit: exited, initialRound, onRoundAdvance: advanced, automatic });
   nodes = [];
   function visit(value: any) { if (Array.isArray(value)) value.forEach(visit); else if (value?.props) { nodes.push(value); visit(value.props.children); } }
   visit(tree);
   return tree;
 }
 beforeEach(() => {
-  hooks.state.clear(); advanced.mockClear();
+  hooks.state.clear(); advanced.mockClear(); exited.mockClear();
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) });
   for (const word of previewUnit.words) recordWordRecall('learner', word, 'hesitant', new Date(), 'recognition', undefined, true);
@@ -64,4 +65,13 @@ it('conserva el punto de parada número 15 después de un cambio de modo', () =>
   render(14); hooks.advance(); render(14);
   expect(advanced).toHaveBeenCalledWith(15);
   expect(nodes.some((node) => node.type instanceof Function && node.type.name === 'ArcadeCheckpoint')).toBe(true);
+});
+it('la sorpresa con una sola palabra termina tras el feedback sin rellenar quince rondas', () => {
+  const units = [{ ...previewUnit, words: [previewUnit.words[0]] }];
+  render(0, true, units);
+  nodes.find((node) => node.type === 'button' && node.props.children === previewUnit.words[0].en)!.props.onClick();
+  expect(exited).not.toHaveBeenCalled();
+  render(0, true, units); hooks.advance();
+  expect(exited).toHaveBeenCalledOnce();
+  expect(advanced).not.toHaveBeenCalled();
 });

@@ -8,9 +8,9 @@ vi.mock('react', async (original) => ({ ...await original<typeof import('react')
 import { ArcadeExperience } from './ArcadeExperience';
 import { MicroArcade } from './MicroArcade';
 import { GrammarArcade } from './GrammarArcade';
-function render(inspection = true) {
+function render(inspection = true, automatic = false) {
   hooks.index = 0;
-  return ArcadeExperience({ userId: 'learner', units: [previewUnit], inspection, onExit() {} });
+  return ArcadeExperience({ userId: 'learner', units: [previewUnit], inspection, automatic, onExit() {} });
 }
 beforeEach(() => { hooks.values.clear(); vi.stubGlobal('localStorage', { getItem: () => null }); });
 it('alterna vocabulario y gramática preparada sin reiniciar el contador ni saltar la pausa', () => {
@@ -27,4 +27,11 @@ it('alterna vocabulario y gramática preparada sin reiniciar el contador ni salt
 it('sin gramática practicada no abre una evaluación gramatical sorpresa', () => {
   let tree = render(false); tree.props.onRoundAdvance(5); tree = render(false);
   expect(tree.type).toBe(MicroArcade); expect(tree.props.onGrammar).toBeUndefined();
+});
+it('la sorpresa no entra en el ciclo de cinco más cinco más cinco', () => {
+  let tree = render(true, true);
+  expect(tree.props.automatic).toBe(true);
+  expect(tree.props.onGrammar).toBeUndefined();
+  tree.props.onRoundAdvance(5); tree = render(true, true);
+  expect(tree.type).toBe(MicroArcade);
 });

@@ -11,14 +11,16 @@ import './microArcade.css';
 import { useArcadeClock } from './useArcadeClock';
 import { ArcadeClock, ArcadeCheckpoint } from './ArcadeClock';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
+import { arcadeSessionLength } from '../domain/arcadeSession';
 
 /** Una ronda optativa de asociación; reconocer entre opciones no cuenta como recuerdo autónomo. */
-export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWords, onMix, onGrammar, initialRound = 0, onRoundAdvance }: { userId: string; units: AtomicUnit[]; inspection: boolean; onExit: () => void; onUse?: () => void; onOnlyWords?: () => void; onMix?: () => void; onGrammar?: () => void; initialRound?: number; onRoundAdvance?: (completed: number) => void }) {
+export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWords, onMix, onGrammar, initialRound = 0, onRoundAdvance, automatic = false }: { userId: string; units: AtomicUnit[]; inspection: boolean; onExit: () => void; onUse?: () => void; onOnlyWords?: () => void; onMix?: () => void; onGrammar?: () => void; initialRound?: number; onRoundAdvance?: (completed: number) => void; automatic?: boolean }) {
   const dialog = useRef<HTMLDialogElement>(null);
   const [candidates] = useState(() => inspection
     ? units.flatMap((unit) => unit.words.map((word) => ({ unit, word, phrase: { en: unit.sentence.en, es: unit.sentence.es, key: '' }, options: [] as string[], due: false })))
     : microRounds(userId, units));
   const [index, setIndex] = useState(initialRound);
+  const startRound = useRef(initialRound).current;
   const [revealed, setRevealed] = useState(false);
   const [usedHint, setUsedHint] = useState(inspection);
   const [feedback, setFeedback] = useState('');
@@ -34,6 +36,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const [choiceSeed] = useState(() => Math.floor(Math.random() * 100000));
   const previous = useRef<string>();
   const round: MicroRound | undefined = candidates[index % candidates.length];
+  const limit = arcadeSessionLength(candidates.length, automatic);
   const knownOptions = [...new Set(candidates.map((candidate) => candidate.word.en))];
   const baseOptions = round ? [...new Set([round.word.en, ...knownOptions.filter((value) => value !== round.word.en)])].slice(0, 3) : [];
   const offset = (choiceSeed + index * 7) % Math.max(1, baseOptions.length);
@@ -45,7 +48,10 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     if (!inspection) commitMicroTimeout(userId, round, crypto.randomUUID(), `${sessionId}:${index}`, !writing);
     setRevealed(true); setUsedHint(true); setResult('rescue'); setCombo(0); setFeedback('Recupera el puente.');
     void playEnglish(round.word.en, round.word.audioUrl);
-  }, () => { if (onUse && (index + 1) % 4 === 0) onUse(); else another(); }, result === 'correct' ? 1000 : 3200, durationMs);
+  }, () => {
+    if (automatic && index - startRound + 1 >= limit) { onExit(); return; }
+    if (onUse && (index + 1) % 4 === 0) onUse(); else another();
+  }, result === 'correct' ? 1000 : 3200, durationMs);
 
   function remember() {
     if (!round || revealed || answered.current || clock.paused) return;
@@ -93,7 +99,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen micro-screen arcade-stream-screen"><header className="game-topbar"><button type="button" className="activity-back" onClick={onExit}>← Salir</button><span>MEMORA ARCADE</span><div className="arcade-stream-tools"><button type="button" className="quiet-action" aria-pressed={clock.paused} onClick={() => { stopSpeech(); clock.togglePause(); }}>{clock.paused ? 'Seguir' : 'Pausar'}</button>{onGrammar ? <button type="button" className="quiet-action" onClick={onGrammar}>Gramática</button> : null}{onOnlyWords ? <button type="button" className="quiet-action" onClick={onOnlyWords}>Solo palabras</button> : onMix ? <button type="button" className="quiet-action" onClick={onMix}>Mixto</button> : null}</div></header>
     <section className="game-stage"><GameCard className={`arcade-stream-card ${result === 'correct' ? 'recall-correct' : 'recall-calm'}`} showBack={!clock.checkpoint && result === 'rescue'} back={reminder}>
     {clock.checkpoint ? <ArcadeCheckpoint onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : <div className="recall-content">
-      <p className="eyebrow">{writing ? 'SIN OPCIONES' : 'RECUERDA'} · {index % 15 + 1}/15 <span className={combo >= 3 ? 'combo-hot' : ''}>COMBO x{Math.max(1, combo)}</span></p>
+      <p className="eyebrow">{writing ? 'SIN OPCIONES' : 'RECUERDA'} · {automatic ? index - startRound + 1 : index % 15 + 1}/{automatic ? limit : 15} <span className={combo >= 3 ? 'combo-hot' : ''}>COMBO x{Math.max(1, combo)}</span></p>
       <ArcadeClock remaining={clock.remaining} paused={clock.paused} revealed={revealed} onPause={clock.togglePause} durationMs={durationMs} />
       {!writing ? <SceneVisual word={round.word} hideAnswer /> : null}<h1>¿Cómo se dice <em>{round.word.es}</em>?</h1>
       {writing ? <form className="arcade-write" onSubmit={(event) => { event.preventDefault(); if (input.trim()) choose(input); }}>
