@@ -29,3 +29,14 @@ it('conserva el último envío errado separado del borrador y admite registros a
   expect(readTrickCheckpoint('u1', 'invalid', '1')).toBeNull();
   expect(readTrickCheckpoint('u1', 'trick:play', '1')).toEqual(state);
 });
+
+it('conserva dos fallos y el enlace al intento, sin aceptar cuotas inválidas ni borrar otros checkpoints', () => {
+  const state = { stage: 3, checkIndex: 0, checkId: 'order-message-v1', input: '', feedback: 'help' as const, helped: true, checkFailures: 2, previousAttemptId: 'first-error' };
+  writeTrickCheckpoint('isolated', 'valid', '1', state);
+  expect(readTrickCheckpoint('isolated', 'valid', '1')).toEqual(state);
+  for (const checkFailures of [-1, 15, 1.5, '2']) {
+    localStorage.setItem('memora-v2.trick.isolated.invalid', JSON.stringify({ version: '1', state: { ...state, checkFailures } }));
+    expect(readTrickCheckpoint('isolated', 'invalid', '1')).toBeNull();
+  }
+  expect(readTrickCheckpoint('isolated', 'valid', '1')).toEqual(state);
+});

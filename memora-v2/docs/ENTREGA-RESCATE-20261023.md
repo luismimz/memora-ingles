@@ -1,0 +1,13 @@
+# Entrega parcial: salir de la reparación sin bucles
+
+Base17f8f74. Alcance: paradas del recorrido/mapa de Gramática que utilizan la plantilla generada conocida I AM + acción. No modifica lecciones authored ajenas, requisitos, contenidos/medios, SRS, cuentas, IDs/completados ni posiciones de mapas. No activa candidatos ni promete el nuevo curso completo.
+
+La revisión confirmó que esa plantilla ya monta antes de escribir; no se añadió otra copia del montaje. El hueco cerrado es el número ilimitado de errores: un intento y una reparación, después modelo enseñado con botón «Seguir con el modelo →». Aplica a ordenado, comprensión y escritura de esa plantilla. Ayuda y modelo nunca se anotan como acierto independiente. Se conserva primer error, relación entre intentos y exposición authored/correct=null; recargar no reinicia los dos fallos ni borra borrador/pista. Checkpoint aditivo admite registros antiguos. Guardias síncronas limitan eventos obsoletos/doble toque y no saltan dos tareas al avanzar con modelo.
+
+No significa que la causa histórica de las quince rondas fuese exclusivamente este código. Tampoco conecta todavía constructor contextual/conversación nuevos ni prepara contenido que no lo esté. Las lecciones explícitas necesitan revisión separada; la limitación no se les impone a ciegas.
+
+Prueba montada real con React, JourneyTrickExperience, GrammarCoach, journal y checkpoint; solo audio/medios sustituidos. Quince envíos por lote conservan dos errores, modelo, reload, doble avance idempotente, comprensión intermedia y escritura posterior, sin acierto al usar modelo. Validación de checkpoints rechaza conteos inválidos conservando los demás.352/72 y build pasaron; tras acotar guardias a plantilla conocida,24enfocadas y build final pasaron, sin otra batería redundante. Aviso de bundle500,66kB min/154,43gzip; pendiente optimización, no ocultado.
+
+Dependencias de prueba18.3.1 recuperadas del lock ya revisado del acumulado, no una actualización de React ni del runtime. Intento inicial npm offline falló por escritura en caché fuera del sandbox; no se cambiaron propietarios/permisos ni se ejecutó sudo. Lock/package aditivos para que las nuevas pruebas sean reproducibles.
+
+Prueba humana: abrir una parada de acción ya desbloqueada desde Inicio o Gramática. Montar con piezas antes de escribir. Si una tarea cuesta dos veces, debe aparecer el modelo y la salida; recargar ahí debe conservarla. No es necesario provocar errores ni borrar progreso para comprobar el orden normal. Inspección móvil, escucha real, diversión y memoria diferida siguen sin validar; estado de publicación/artefactos en checkpoint.

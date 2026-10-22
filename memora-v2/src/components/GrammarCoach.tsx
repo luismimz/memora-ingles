@@ -14,9 +14,10 @@ import { GrammarSituation } from './GrammarSituation';
 import { GrammarOrder } from './GrammarOrder';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
-export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], startAtPractice = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false }: {
+export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], startAtPractice = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit }: {
   lesson: GrammarLessonData; form?: GrammarForm; sceneWord?: AtomicWord; userId: string; unitId: string; unitTitle?: string; contentVersion?: string; conversationAnswers?: string[]; startAtPractice?: boolean; reviewMode: boolean; onReady: () => void; onContinue: () => void;
   checkpoint?: TrickCheckpoint | null; onProgress?: (state: TrickCheckpoint) => void; requirePractice?: boolean; schedulePractice?: boolean; omitGeneratedExplanation?: boolean;
+  repairLimit?: 2;
 }) {
   // Resume the task that is actually shown, not the unfiltered lesson index.
   // A conversational exchange may take over one of the written checks.
@@ -38,8 +39,13 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const [person, setPerson] = useState(0);
   const [order, setOrder] = useState<number[]>(validCheckpoint?.order ?? []);
   const [correctionResponse, setCorrectionResponse] = useState<string | undefined>(validCheckpoint?.correctionResponse);
+  const [checkFailures, setCheckFailures] = useState(validCheckpoint?.checkFailures ?? 0);
+  const failureCount = useRef(checkFailures);
+  const correctSubmission = useRef<string>();
+  const advancedCheck = useRef<string>();
+  const shownModel = useRef<string>();
   const timer = useRef<ReturnType<typeof setTimeout>>();
-  const previousAttempt = useRef<string>();
+  const previousAttempt = useRef<string | undefined>(validCheckpoint?.previousAttemptId);
   const readyRef = useRef(onReady);
   readyRef.current = onReady;
   const continueRef = useRef(onContinue);
@@ -48,11 +54,20 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // For a conversational mission the written answer belongs to its live exchange,
   // not an identical translation form immediately before it.
   const check = checks[checkIndex];
+  // Limit only the known generated contract; authored lessons need their own review.
+  const bounded = repairLimit === 2 && generatedContinuous;
+  const needsModel = bounded && checkFailures >= 2 && feedback !== 'correct';
+  const modelMessage = check?.kind === 'explain' ? lesson.steps.at(-1)!.en.map((part) => part.text).join('') : check?.answers[0];
   const helpText = check?.kind === 'write' && correctionResponse !== undefined ? contextualCorrection(correctionResponse, check.answers[0], check.hint) : check?.hint;
   const finished = !step && !check;
   const progressRef = useRef(onProgress);
   progressRef.current = onProgress;
-  useEffect(() => { progressRef.current?.({ stage, checkIndex, checkId: check?.id, input, feedback, helped, order, correctionResponse }); }, [stage, checkIndex, check?.id, input, feedback, helped, order, correctionResponse]);
+  useEffect(() => { progressRef.current?.({ stage, checkIndex, checkId: check?.id, input, feedback, helped, order, correctionResponse, checkFailures, previousAttemptId: previousAttempt.current }); }, [stage, checkIndex, check?.id, input, feedback, helped, order, correctionResponse, checkFailures]);
+  useEffect(() => {
+    if (step || !check || !needsModel || reviewMode || shownModel.current === check.id) return;
+    shownModel.current = check.id;
+    recordLearningActivity(userId, { unitId, unitTitle, contentVersion, activityId: `model:${check.id}`, skill: lesson.id, phase: 'grammar', source: 'authored', modality: 'choice', prompt: check.prompt, response: modelMessage!, expected: '', correct: null, helped: true, parentAttemptId: previousAttempt.current, feedback: 'Modelo mostrado con ayuda; no es un acierto independiente.' });
+  }, [step, check, needsModel, reviewMode, modelMessage]);
   useEffect(() => {
     if (!step || paused) return;
     // Spanish TTS expands ING as the abbreviation for «ingeniero». The written
@@ -74,9 +89,11 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   }
 
   function answer(value: string) {
-    if (!check || feedback === 'correct') return;
+    if (!check || feedback === 'correct' || bounded && (correctSubmission.current === check.id || failureCount.current >= 2)) return;
     if (check.kind !== 'write') setInput(value);
     const correct = check.answers.some((answer) => normalize(answer) === normalize(value));
+    if (correct) correctSubmission.current = check.id;
+    else if (bounded) { failureCount.current += 1; setCheckFailures(failureCount.current); }
     const correction = check.kind === 'write' ? contextualCorrection(value, check.answers[0], check.hint) : check.hint;
     if (!reviewMode) recordGrammarAttempt(userId, { skill: lesson.id, unitId, check: check.id, kind: check.kind, correct, helped, at: new Date().toISOString() });
     if (!reviewMode) {
@@ -92,13 +109,15 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
     if (check.kind !== 'explain') void playEnglish(check.answers[0]);
   }
   function nextCheck() {
+    if (!check || bounded && advancedCheck.current === check.id) return;
+    advancedCheck.current = check.id;
     stopSpeech();
       if (checkIndex === checks.length - 1) {
         readyRef.current();
         continueRef.current();
         return;
       }
-      setCheckIndex((value) => value + 1); setInput(''); setOrder([]); setCorrectionResponse(undefined); setFeedback('idle'); setHelped(false); previousAttempt.current = undefined;
+      setCheckIndex((value) => value + 1); setInput(''); setOrder([]); setCorrectionResponse(undefined); setFeedback('idle'); setHelped(false); previousAttempt.current = undefined; failureCount.current = 0; setCheckFailures(0);
   }
   const subject = form?.subjects[person];
   const finalStep = lesson.steps.at(-1)!;
@@ -117,9 +136,10 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
       </> : !finished ? <div className="coach-practice">
         <h2>{check.prompt}</h2>
         {startAtPractice ? <button type="button" className="quiet-action" onClick={() => { stopSpeech(); setStage(0); }}>Ver el truco otra vez</button> : null}
-        {ordering ? <GrammarOrder pieces={ordering} selected={order} locked={feedback === 'correct'} onChange={(selection) => { if (feedback === 'correct') return; setOrder(selection); setFeedback('idle'); }} onAnswer={answer} /> : situation ? <GrammarSituation check={check} selected={input} feedback={feedback} onAnswer={answer} onListen={() => void playEnglish(check.situation!.message)} /> : check.kind === 'write' ? <form onSubmit={(event) => { event.preventDefault(); answer(input); }}><label className="sr-only" htmlFor="grammar-answer">Tu respuesta en inglés</label><input id="grammar-answer" lang="en" value={input} onChange={(event) => setInput(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={feedback === 'correct'} /><button type="submit" disabled={!input.trim() || feedback === 'correct'}>Comprobar</button></form>
+        {needsModel ? <div className="grammar-repair-model" role="status"><p>Vamos con ayuda. Este es el mensaje:</p><p className="coach-row" lang="en">{modelMessage}</p><p>{check.hint}</p><button type="button" className="quiet-action" onClick={() => void playEnglish(modelMessage!)}>🔊 Escuchar el modelo</button></div> : ordering ? <GrammarOrder pieces={ordering} selected={order} locked={feedback === 'correct'} onChange={(selection) => { if (feedback === 'correct') return; setOrder(selection); setFeedback('idle'); }} onAnswer={answer} /> : situation ? <GrammarSituation check={check} selected={input} feedback={feedback} onAnswer={answer} onListen={() => void playEnglish(check.situation!.message)} /> : check.kind === 'write' ? <form onSubmit={(event) => { event.preventDefault(); answer(input); }}><label className="sr-only" htmlFor="grammar-answer">Tu respuesta en inglés</label><input id="grammar-answer" lang="en" value={input} onChange={(event) => setInput(event.target.value)} autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={feedback === 'correct'} /><button type="submit" disabled={!input.trim() || feedback === 'correct'}>Comprobar</button></form>
           : <div className="coach-options">{check.choices!.map((choice) => <button type="button" key={choice} disabled={feedback === 'correct'} onClick={() => answer(choice)}>{form ? <GrammarText text={choice} form={form} /> : choice}</button>)}</div>}
-        <p className="coach-feedback" role="status">{feedback === 'correct' ? check.success : feedback === 'help' ? helpText : ''}</p>
+        <p className="coach-feedback" role="status">{needsModel ? 'Puedes seguir. Esto queda como práctica con ayuda, no como recuerdo sin pistas.' : feedback === 'correct' ? check.success : feedback === 'help' ? helpText : ''}</p>
+        {needsModel ? <button type="button" className="primary-action" onClick={nextCheck}>Seguir con el modelo →</button> : null}
         {feedback === 'correct' ? <button type="button" className="primary-action" onClick={nextCheck}>Seguir →</button> : null}
         {feedback === 'idle' ? <button type="button" className="quiet-action" onClick={() => { setHelped(true); setFeedback('help'); void playSpanish(check.hint); }}>Dame una pista</button> : null}{!requirePractice ? <button type="button" className="quiet-action" onClick={skipKnownTrick}>Pasar este repaso · ir a la frase</button> : null}
       </div> : <div className="coach-finished">
