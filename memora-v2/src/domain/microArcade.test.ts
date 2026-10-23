@@ -26,6 +26,15 @@ beforeEach(() => {
   initializeJournal('learner');
 });
 describe('Arcade: preparar antes de pedir y guardar evidencia real', () => {
+  it('usa el modelo vigente de una palabra preparada sin reescribir memoria o inventar dominio', () => {
+    teach();
+    const before = readWordMemories('learner');
+    const current = { ...unit, words: unit.words.map((word, index) => index === 0 ? { ...word, ipa: '/revised/', audioUrl: '/reviewed-audio' } : word) };
+    const round = microRounds('learner', [current], at.getTime())[0];
+    expect(round.word.ipa).toBe('/revised/');
+    expect(round.word.audioUrl).toBe('/reviewed-audio');
+    expect(readWordMemories('learner')).toEqual(before);
+  });
   it('un modelo consultado entra en la práctica existente sin crear memoria/fallo ni exigir palabras no enseñadas', () => {
     recordActiveWordAttempt('learner', unit, unit.words[0], '', 'skip', true);
     expect(readWordMemories('learner')).toEqual([]);

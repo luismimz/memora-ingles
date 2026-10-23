@@ -18,7 +18,7 @@ it('usa los mismos IDs que Inicio y no inventa trucos para los paquetes', () => 
 it('comparte el completado real y continúa solo hacia trucos preparados pendientes', () => {
   const route = grammarJourney(reviewUnits);
   const first = route[0];
-  const learned = [...new Set(route.flatMap((stop) => stop.routeTrick?.vocabulary ?? []))].map((key) => ({ key, correct: 1 })) as WordMemory[];
+  const learned = [...new Set(route.flatMap((stop) => stop.routeTrick?.vocabulary ?? []))].map((key) => ({ key, correct: 1, word: reviewUnits.flatMap((unit) => unit.words).find((word) => word.en.toLowerCase() === key) })) as WordMemory[];
   expect(missingGrammarStop(first, reviewUnits, [])).not.toHaveLength(0);
   expect(missingGrammarStop(first, reviewUnits, learned)).toEqual([]);
   const completed = route.filter((stop) => stop.routeTrick).map((stop) => ({ unitId: stop.routeTrick!.sourceId, contentVersion: stop.contentVersion ?? '1', source: 'learner', phase: 'completion', activityId: `trick-completed:${stop.routeTrick!.formId}` })) as LearningActivity[];

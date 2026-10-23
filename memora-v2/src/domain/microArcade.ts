@@ -31,7 +31,7 @@ export function microRounds(userId: string, units: AtomicUnit[], now = Date.now(
   for (const unit of units) {
     const taught = unit.words.flatMap((word) => {
       const memory = words.find((value) => value.key === wordKey(word));
-      if (memory && memory.word.bridge === word.bridge && memory.word.scene === word.scene && memory.word.es === word.es && memory.word.associationId === word.associationId && memory.word.associationVersion === word.associationVersion) return [{ key: memory.key, word: memory.word, due: Date.parse(memory.nextReviewAt) <= now, pendingModel: memory.correct === 0 }];
+      if (memory && memory.word.bridge === word.bridge && memory.word.scene === word.scene && memory.word.es === word.es && memory.word.associationId === word.associationId && memory.word.associationVersion === word.associationVersion) return [{ key: memory.key, word, due: Date.parse(memory.nextReviewAt) <= now, pendingModel: memory.correct === 0 }];
       // A consulted model is teaching evidence, not a missed recall or a second SRS.
       // Legacy events without a snapshot cannot silently approve changed content.
       const model = activities.some((activity) => {

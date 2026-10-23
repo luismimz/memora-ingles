@@ -1,5 +1,6 @@
 import type { AtomicUnit } from './unit';
 import type { WordMemory } from './memory';
+import { practicedWordMeaning } from './memory';
 import type { LearningMode } from './game';
 import { recordUnitProgress, type UnitProgress } from './journey';
 import { recordSession } from './learningProfile';
@@ -10,7 +11,10 @@ import { getPlayableGrammar } from './unit';
 export function missingGrammarWords(unit: AtomicUnit, memories: WordMemory[]): string[] {
   const required = requiredGrammarWords(unit);
   const practiced = new Set(memories.filter((memory) => memory.correct > 0).map((memory) => memory.key));
-  return [...new Set(required.map((word) => word.trim().toLocaleLowerCase('en')))].filter((word) => !practiced.has(word));
+  return [...new Set(required.map((word) => word.trim().toLocaleLowerCase('en')))].filter((word) => {
+    const senses = unit.words.filter((item) => item.en.trim().toLocaleLowerCase('en') === word);
+    return senses.length ? senses.some((sense) => !memories.some((memory) => practicedWordMeaning(memory, sense))) : !practiced.has(word);
+  });
 }
 
 export function requiredGrammarWords(unit: AtomicUnit): string[] {

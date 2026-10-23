@@ -102,6 +102,13 @@ describe('lectura tolerante de gramática publicada', () => {
     expect(summaries.find((summary) => summary.id === 'good')!.grammarTricks!.length).toBeGreaterThan(0);
     expect(summaries.find((summary) => summary.id === 'bad')!.grammarTricks).toEqual([]);
   });
+  it('conserva identidad y versión de asociación en el resumen sin importar contenido ni escribir progreso', async () => {
+    const content = { ...previewUnit, words: previewUnit.words.map((word, index) => index === 0 ? { ...word, associationId: 'reviewed-play', associationVersion: 2 } : word) };
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [{ id: content.id, title: content.title, status: 'published', content }] }), { headers: { 'content-type': 'application/json' } })));
+    const summaries = await loadPublishedUnitSummaries();
+    expect(summaries[0].words![0]).toMatchObject({ en: content.words[0].en, es: content.words[0].es, associationId: 'reviewed-play', associationVersion: 2 });
+    expect(fetch).toHaveBeenCalledOnce();
+  });
   it('estabiliza el catálogo por ID aunque Directus responda en otro orden', async () => {
     const records = ['pack-10', 'pack-2', 'pack-1'].map((id) => ({ id, title: id, status: 'published', content: previewUnit }));
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: records }), { headers: { 'content-type': 'application/json' } })));

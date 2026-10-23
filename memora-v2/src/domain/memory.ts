@@ -138,6 +138,15 @@ export interface WordMemory {
   associationHistory?: AssociationHistoryEntry[];
 }
 
+/** Same spelling is not proof of the required sense or authored association version. */
+export function practicedWordMeaning(memory: WordMemory | undefined, word: Pick<AtomicWord, 'en' | 'es' | 'associationId' | 'associationVersion'>): boolean {
+  const normalized = (value: string) => value.normalize('NFKC').trim().replace(/\s+/gu, ' ').toLocaleLowerCase();
+  return Boolean(memory && memory.correct > 0 && memory.word && typeof memory.key === 'string' && typeof memory.word.es === 'string' && normalized(memory.key) === normalized(word.en)
+    && normalized(memory.word.es) === normalized(word.es)
+    && (word.associationId === undefined || memory.word.associationId === word.associationId)
+    && (word.associationVersion === undefined || memory.word.associationVersion === word.associationVersion));
+}
+
 const intervalsHours = [1, 24, 72, 168, 336, 720];
 const retryMinutes = 10;
 const storageKey = (userId: string) => `memora-v2.memory.${userId}`;

@@ -5,6 +5,7 @@ import { lessonForForm } from './grammarLesson';
 import { orderedJourneyUnits } from './journey';
 import type { LearningActivity } from './learningActivity';
 import type { WordMemory } from './memory';
+import { practicedWordMeaning } from './memory';
 
 export interface JourneyTrick { sourceId: string; formId: string; skill: string; title: string; vocabulary: string[]; concept?: string }
 const normalize = (word: string) => word.trim().toLocaleLowerCase('en');
@@ -76,7 +77,10 @@ export function buildJourneyRoute(units: readonly UnitSummary[], _memories: read
 
 export function missingTrickWords(stop: UnitSummary, memories: readonly WordMemory[]): string[] {
   const known = new Set(memories.filter((memory) => memory.correct > 0).map((memory) => normalize(memory.key)));
-  return stop.routeTrick?.vocabulary.map(normalize).filter((word) => !known.has(word)) ?? [];
+  return stop.routeTrick?.vocabulary.map(normalize).filter((word) => {
+    const senses = stop.words?.filter((item) => normalize(item.en) === word) ?? [];
+    return senses.length ? senses.some((sense) => !memories.some((memory) => practicedWordMeaning(memory, sense))) : !known.has(word);
+  }) ?? [];
 }
 
 export function completedTrick(stop: UnitSummary, activities: readonly LearningActivity[]): boolean {

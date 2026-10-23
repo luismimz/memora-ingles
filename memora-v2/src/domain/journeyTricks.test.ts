@@ -8,10 +8,21 @@ import { lessonForForm } from './grammarLesson';
 
 const trick: JourneyTrick = { sourceId: 'u1', formId: 'ing', skill: 'present-now', title: 'Di quién', vocabulary: ['play'] };
 const units = (count: number): UnitSummary[] => Array.from({ length: count }, (_, index) => ({ id: `u${index + 1}`, title: `Parada ${index + 1}`, words: [{ en: 'PLAY', es: 'jugar' }], grammarTricks: index === 0 ? [trick] : [] }));
-const known = [{ key: 'play', correct: 1 }] as WordMemory[];
+const known = [{ key: 'play', correct: 1, word: previewUnit.words[0] }] as WordMemory[];
 const activity = { unitId: 'u1', contentVersion: '1', source: 'learner', phase: 'completion', activityId: 'trick-completed:ing' } as LearningActivity;
 
 describe('paradas de gramática con vocabulario preparado', () => {
+  it('la misma grafía con otro sentido o versión no abre el truco y no modifica su memoria', () => {
+    const word = { ...previewUnit.words[0], associationId: 'play-reviewed', associationVersion: 2 };
+    const stop = { ...previewUnit, words: [word], routeTrick: grammarTricks(previewUnit)[0] };
+    const old = [{ key: 'play', correct: 5, word: { ...word, es: 'obra de teatro', associationVersion: 1 } }] as WordMemory[];
+    const before = JSON.stringify(old);
+    expect(missingTrickWords(stop, old)).toEqual(['play']);
+    expect(missingTrickWords(stop, [{ ...old[0], word: { ...word, associationVersion: 1 } }])).toEqual(['play']);
+    expect(missingTrickWords(stop, [{ ...old[0], word }])).toEqual([]);
+    expect(missingTrickWords(stop, [{ key: 'play', correct: 5 }] as WordMemory[])).toEqual(['play']);
+    expect(JSON.stringify(old)).toBe(before);
+  });
   it('el truco de jugando requiere PLAY, no COMPUTER/DESK de la conversación', () => {
     const descriptor = grammarTricks(previewUnit)[0];
     expect(descriptor.vocabulary).toEqual(['play']);

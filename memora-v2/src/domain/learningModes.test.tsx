@@ -27,6 +27,12 @@ beforeEach(() => {
   initializeJournal('learner');
 });
 describe('modos conectados con el progreso real', () => {
+  it('un sentido anterior no habilita gramática que necesita otra equivalencia de la misma palabra', () => {
+    for (const word of unit.words) recordWordRecall('learner', word, 'quick');
+    const changed = { ...unit, words: unit.words.map((word, index) => index === 0 ? { ...word, es: 'otro sentido' } : word) };
+    expect(missingGrammarWords(changed, readWordMemories('learner'))).toContain(unit.words[0].en.toLowerCase());
+    expect(missingGrammarWords(unit, readWordMemories('learner'))).not.toContain(unit.words[0].en.toLowerCase());
+  });
   it('hace la pausa después de quince rondas y no la repite tras aceptar continuar', () => {
     expect(arcadeCheckpointDue(14, 0)).toBe(false);
     expect(arcadeCheckpointDue(15, 0)).toBe(true);
