@@ -5,7 +5,7 @@ import { TypedChatMessage, type ChatMessage } from './TypedChatMessage';
 import type { AtomicUnit } from '../domain/unit';
 import { acceptedConversationAnswer, conversationTurns, demonstratedConversationQuestionSkills, followingConversationTurn, restoredConversationRound, writtenConversationCorrection, type ChatTurn } from '../domain/conversation';
 import { readGrammarAttempts, recordGrammarAttempt } from '../domain/grammarMemory';
-import { recordLearningActivity as persistLearningActivity } from '../domain/learningActivity';
+import { readLearningActivities, recordLearningActivity as persistLearningActivity } from '../domain/learningActivity';
 import { recordSentenceExposure } from '../domain/memory';
 import { KeysScene } from './KeysScene';
 import { GrammarText } from './GrammarText';
@@ -19,6 +19,7 @@ type ChatCheckpoint = {
   revealedAnswer: boolean; savedMessages: string[]; previousAttempt?: string;
   replyTo?: string; serial: number;
   turnId?: ChatTurn['id'];
+  failedAttempts?: number;
   recovery?: Omit<ChatCheckpoint, 'recovery'>;
 };
 const chatKey = (userId: string, unitId: string) => `memora-v2.chat-checkpoint.${userId}.${unitId}`;
@@ -55,6 +56,22 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   const [awaitingNext, setAwaitingNext] = useState(checkpoint?.awaitingNext ?? false);
   const [oral, setOral] = useState(checkpoint?.oral ?? false);
   const [revealedAnswer, setRevealedAnswer] = useState(checkpoint?.revealedAnswer ?? false);
+  const [failedAttempts, setFailedAttempts] = useState(() => {
+    if (Number.isInteger(checkpoint?.failedAttempts) && checkpoint!.failedAttempts! >= 0 && checkpoint!.failedAttempts! <= 2) return checkpoint!.failedAttempts!;
+    const records = new Map(readLearningActivities(userId).map((event) => [event.id, event]));
+    const visited = new Set<string>();
+    let parent = checkpoint?.previousAttempt; let count = 0;
+    while (parent && !visited.has(parent) && count < 2) {
+      visited.add(parent);
+      const event = records.get(parent);
+      if (!event || event.unitId !== unit.id || event.contentVersion !== (unit.contentVersion ?? '1') || event.activityId !== `turn-${turns[checkpoint?.round ?? 0].id}` || event.source !== 'learner' || event.correct !== false) break;
+      count++; parent = event.parentAttemptId;
+    }
+    return count;
+  });
+  const failureCount = useRef(failedAttempts);
+  const helpedRef = useRef(helped);
+  const needsModel = failedAttempts >= 2;
   const previousAttempt = useRef<string | undefined>(checkpoint?.previousAttempt);
   const replyTo = useRef<string | undefined>(checkpoint?.replyTo);
   const savedMessages = useRef(new Set<string>(checkpoint?.savedMessages ?? []));
@@ -63,6 +80,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   const serial = useRef(checkpoint?.serial ?? 0);
   const finished = useRef(false);
   const sending = useRef(false);
+  const advancedTurn = useRef<number>();
   const log = useRef<HTMLDivElement>(null);
   const continueRef = useRef(onContinue); continueRef.current = onContinue;
   const turn = turns[round];
@@ -71,16 +89,19 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   useEffect(() => {
     if (reviewMode || finished.current) return;
     const value: ChatCheckpoint = { version: unit.contentVersion ?? '1', round, turnId: turns[round]?.id, recovery: restored.recovery, messages, activeMessage, busy, input, helped,
-      hintLevel, awaitingNext, oral, revealedAnswer, savedMessages: [...savedMessages.current],
+      hintLevel, awaitingNext, oral, revealedAnswer, failedAttempts, savedMessages: [...savedMessages.current],
       previousAttempt: previousAttempt.current, replyTo: replyTo.current, serial: serial.current };
     try { localStorage.setItem(chatKey(userId, checkpointUnitId), JSON.stringify(value)); }
     catch { /* Losing a local checkpoint never blocks the conversation. */ }
-  }, [reviewMode, round, messages, activeMessage, busy, input, helped, hintLevel, awaitingNext, oral, revealedAnswer, unit.contentVersion, checkpointUnitId, userId]);
+  }, [reviewMode, round, messages, activeMessage, busy, input, helped, hintLevel, awaitingNext, oral, revealedAnswer, failedAttempts, unit.contentVersion, checkpointUnitId, userId]);
 
   useEffect(() => () => { clearTimeout(timer.current); stopSpeech(); }, []);
   useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages, activeMessage]);
   const id = () => `chat-${serial.current++}`;
   function following() {
+    if (advancedTurn.current === round) return;
+    advancedTurn.current = round;
+    stopSpeech();
     clearTimeout(timer.current);
     setAwaitingNext(false);
     const next = followingConversationTurn(round, turns.length);
@@ -89,7 +110,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
       return;
     }
     const nextTurn = turns[next];
-    setRound(next); setInput(''); setHelped(false); setHintLevel(0); setOral(false); setRevealedAnswer(false); previousAttempt.current = undefined; submitted.current = null; sending.current = false;
+    setRound(next); setInput(''); helpedRef.current = false; setHelped(false); failureCount.current = 0; setFailedAttempts(0); setHintLevel(0); setOral(false); setRevealedAnswer(false); previousAttempt.current = undefined; submitted.current = null; sending.current = false;
     if (nextTurn.prompt) {
       const incoming = `prompt-${next}`;
       setBusy(true); setActiveMessage(incoming);
@@ -120,20 +141,22 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     setMessages((current) => [...current, { id: incoming, who: 'partner', text: turn.reply.en, translation: turn.reply.es }]);
   }
   function answer() {
-    if (busy || sending.current || !input.trim() || submitted.current === input) return;
+    if (busy || failureCount.current >= 2 || sending.current || !input.trim() || submitted.current === input) return;
     submitted.current = input;
     const ok = acceptedConversationAnswer(unit, turn, input);
     sending.current = ok;
     const correction = unit.mirror && dialogue.progressiveHints ? mirrorHint({ ...unit.mirror, hints: dialogue.progressiveHints }, input, nextMirrorHint(hintLevel)) : writtenConversationCorrection(input, turn.expected.en);
     if (!reviewMode) {
-      const attempt = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `turn-${turn.id}`, skill: unit.mirror?.id ?? 'look-for-conversation', phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'writing', prompt: turn.prompt?.en ?? turn.context, response: input, expected: turn.expected.en, correct: ok, helped, feedback: ok ? 'La frase encaja en esta situación.' : correction, parentAttemptId: previousAttempt.current });
+      const attempt = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `turn-${turn.id}`, skill: unit.mirror?.id ?? 'look-for-conversation', phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'writing', prompt: turn.prompt?.en ?? turn.context, response: input, expected: turn.expected.en, correct: ok, helped: helpedRef.current, feedback: ok ? 'La frase encaja en esta situación.' : correction, parentAttemptId: previousAttempt.current });
       replyTo.current = attempt.id;
       previousAttempt.current = ok ? undefined : attempt.id;
-      recordGrammarAttempt(userId, { skill: `dialogue:${unit.id}`, unitId: unit.id, check: turn.expected.role, kind: 'write', correct: ok, helped, at: new Date().toISOString() });
+      recordGrammarAttempt(userId, { skill: `dialogue:${unit.id}`, unitId: unit.id, check: turn.expected.role, kind: 'write', correct: ok, helped: helpedRef.current, at: new Date().toISOString() });
       if (ok) recordSentenceExposure(userId, unit.id, { en: turn.expected.en, es: turn.expected.es, slots: [], pronunciationTip: dialogue.rhythmTip });
     }
     setMessages((current) => [...current, { id: id(), who: 'learner', text: input, correct: ok, instant: true }, ...(!ok ? [{ id: id(), who: 'coach' as const, text: correction, instant: true }] : [])]);
     if (!ok) {
+      failureCount.current++; setFailedAttempts(failureCount.current);
+      helpedRef.current = true;
       setHelped(true); setHintLevel((value) => Math.min(3, value + 1));
       if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-hint-${turn.id}-${Math.min(3, hintLevel + 1)}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: correction, expected: '', correct: null, helped: true, feedback: 'Corrección escrita contextual; el alumno puede volver a intentar o pasar.', parentAttemptId: previousAttempt.current });
       void playSpanish(correction);
@@ -151,6 +174,8 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     reply();
   }
   function hint() {
+    if (busy || sending.current) return;
+    helpedRef.current = true;
     setHelped(true);
     if (turn.id !== 'ask' && dialogue.progressiveHints) {
       const next = Math.min(3, hintLevel + 1); const cue = dialogue.progressiveHints[next - 1]; setHintLevel(next);
@@ -166,17 +191,21 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-written-hint-${turn.id}-${next}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: cue, expected: '', correct: null, helped: true, feedback: `Pista escrita ${next} de 3`, parentAttemptId: previousAttempt.current });
   }
   function showAnswerAndPass() {
-    if (busy || revealedAnswer) return;
+    if (busy || revealedAnswer || sending.current) return;
+    sending.current = true;
+    helpedRef.current = true;
     setHelped(true);
     setRevealedAnswer(true);
     setMessages((current) => [...current, { id: id(), who: 'coach', text: `Así se dice: ${turn.expected.en} (${turn.expected.es})`, instant: true }]);
     void playEnglish(turn.expected.en);
-    if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-skip-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: '(pasó con modelo)', expected: turn.expected.en, correct: null, helped: true, feedback: 'Se mostró la respuesta; no cuenta como acierto.', parentAttemptId: previousAttempt.current });
+    if (!reviewMode) replyTo.current = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-skip-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: '(pasó con modelo)', expected: turn.expected.en, correct: null, helped: true, feedback: 'Se mostró la respuesta; no cuenta como acierto.', parentAttemptId: previousAttempt.current }).id;
     reply();
   }
   function listenToModel() {
+    if (busy || sending.current) return;
+    helpedRef.current = true;
     setHelped(true);
-    if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-audio-hint-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'authored', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: 'Modelo inglés escuchado como ayuda.', expected: turn.expected.en, correct: null, helped: true, parentAttemptId: previousAttempt.current });
+    if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-audio-hint-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'authored', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: 'Modelo inglés solicitado como ayuda; no acredita escucha.', expected: '', correct: null, helped: true, parentAttemptId: previousAttempt.current });
     void playEnglish(turn.expected.en);
   }
   return <GameCard className={`conversation-card chat-card ${turns.length === 1 ? 'chat-single-turn' : ''}`}>
@@ -187,11 +216,11 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
       <div className="chat-log" ref={log} role="log" aria-label={`Conversación con ${partner}`} aria-live="polite" aria-relevant="additions">
         {messages.map((message) => <TypedChatMessage key={message.id} message={message} partner={partner} form={form} renderText={unit.mirror ? (text, language) => <MirrorText text={text} lesson={unit.mirror!} language={language} /> : undefined} autoSpeak={message.id === activeMessage} onReady={message.id === activeMessage ? () => messageReady(message.id) : undefined} />)}
       </div>
-      {awaitingNext ? <button type="button" className="primary-action" onClick={following}>{followingConversationTurn(round, turns.length) === null ? 'Terminar la conversación →' : 'Seguir conversando →'}</button> : oral ? <div className="chat-oral"><EchoPractice phrase={turn.expected.en} /><p>Escúchate y compárate. Tu voz no recibe una nota automática.</p><button type="button" onClick={oralReply}>Seguir sin evaluación oral →</button><button type="button" className="quiet-action" onClick={() => setOral(false)}>Prefiero escribir</button></div> : <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); answer(); }}>
+      {awaitingNext ? <button type="button" className="primary-action" onClick={following}>{followingConversationTurn(round, turns.length) === null ? 'Terminar la conversación →' : 'Seguir conversando →'}</button> : needsModel ? <div className="chat-rescue"><p>Tu intento queda guardado. No necesitas repetirlo más ahora.</p><button type="button" className="primary-action" disabled={busy} onClick={showAnswerAndPass}>Ver el modelo y seguir →</button></div> : oral ? <div className="chat-oral"><EchoPractice phrase={turn.expected.en} /><p>Escúchate y compárate. Tu voz no recibe una nota automática.</p><button type="button" onClick={oralReply}>Seguir sin evaluación oral →</button><button type="button" className="quiet-action" onClick={() => setOral(false)}>Prefiero escribir</button></div> : <form className="chat-composer" onSubmit={(event) => { event.preventDefault(); answer(); }}>
         <label htmlFor="dialogue-answer">{turn.id === 'ask' ? 'Pregunta en inglés' : 'Responde en inglés'}<small>{unit.mirror ? <MirrorText text={turn.expected.es} lesson={unit.mirror} language="es" /> : <GrammarText text={turn.expected.es} form={form} language="es" />}</small></label>
         <div><input id="dialogue-answer" aria-label="Tu respuesta en inglés" lang="en" value={input} onChange={(event) => { setInput(event.target.value); submitted.current = null; }} autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={busy} placeholder={busy ? 'Espera el mensaje…' : 'Escribe aquí…'} /><button type="submit" disabled={busy || !input.trim()}>Enviar <span aria-hidden="true">↑</span></button></div>
       </form>}
-      {!awaitingNext ? <div className="chat-tools"><button type="button" className="quiet-action" disabled={busy} onClick={hint}>Pista escrita</button><button type="button" className="quiet-action" disabled={busy} onClick={listenToModel}>🔊 Escuchar modelo</button><button type="button" className="quiet-action" disabled={busy} onClick={() => setOral((value) => !value)}>{oral ? 'Escribir' : 'Prefiero hablar'}</button><button type="button" className="quiet-action" disabled={busy} onClick={showAnswerAndPass}>Ver respuesta y pasar</button></div> : null}
+      {!awaitingNext && !needsModel ? <details className="chat-help"><summary>¿Necesitas ayuda u otra forma de responder?</summary><div className="chat-tools"><button type="button" className="quiet-action" disabled={busy} onClick={hint}>Pista escrita</button><button type="button" className="quiet-action" disabled={busy} onClick={listenToModel}>🔊 Escuchar modelo</button><button type="button" className="quiet-action" disabled={busy} onClick={() => setOral((value) => !value)}>{oral ? 'Escribir' : 'Prefiero hablar'}</button><button type="button" className="quiet-action" disabled={busy} onClick={showAnswerAndPass}>Ver respuesta y pasar</button></div></details> : null}
     </div>
   </GameCard>;
 }
