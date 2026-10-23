@@ -1,4 +1,4 @@
-.grammar-order { display: grid; gap: 14px; min-width: 0; }
+.grammar-order { display: grid; gap: 14px; min-width: 0; position: relative; }
 .order-message, .order-bank { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; }
 .order-message { min-height: 72px; padding: 12px; border: 1px dashed var(--line); border-radius: 16px; }
 .order-message p { margin: 0; font-size: .9rem; color: var(--muted); }
@@ -10,6 +10,8 @@
 .is-puzzle .order-message { border: 2px dashed var(--line); min-height: 100px; transition: border-color .15s, background .15s; }
 .is-puzzle .order-message.is-drop-ready { border-color: var(--accent-ink); background: var(--surface-soft); }
 .is-puzzle .order-empty { display: grid; place-items: center; width: 46px; min-height: 48px; border-radius: 12px; background: var(--surface-soft); color: var(--muted); }
-.is-puzzle .order-bank button { touch-action: none; user-select: none; cursor: grab; box-shadow: 0 4px 0 var(--line); }
-.is-puzzle .order-bank button.is-dragging { position: relative; z-index: 3; pointer-events: none; outline: 3px solid var(--accent-ink); cursor: grabbing; }
+.order-line-piece { display: contents; }
+.is-puzzle .order-bank button, .is-puzzle .order-message button { touch-action: none; user-select: none; cursor: grab; box-shadow: 0 4px 0 var(--line); }
+.is-puzzle button.is-dragging { z-index: 100; pointer-events: none; outline: 3px solid var(--accent-ink); cursor: grabbing; }
+.order-insert { width: 8px; min-height: 48px; border-radius: 8px; background: var(--accent-ink); box-shadow: 0 0 0 4px var(--surface-soft); }
 @media (prefers-reduced-motion: reduce) { .is-puzzle .order-message { transition: none; } }

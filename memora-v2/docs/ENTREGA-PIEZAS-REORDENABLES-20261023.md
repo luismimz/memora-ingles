@@ -1,0 +1,11 @@
+# Entrega parcial: construir y reparar moviendo piezas
+
+23/10/2026. Base5c41c9f. GrammarOrder conserva el motor de intentos, preparación y rescate de GrammarCoach. La referencia de interacción mem-ora se usa sin copiar su motor o contenido.
+
+En una parada de acción conocida, se pueden insertar piezas entre las ya colocadas, no solo añadir al final. Un hueco marca dónde encajará la ficha. Una pieza colocada se puede arrastrar a otro lugar de la frase sin desmontarla; soltar fuera la devuelve, no elimina ni responde. Las fichas siguen al dedo en coordenadas locales de la escena, compatibles con la tarjeta transformada y el scroll. Las filas envueltas consideran también la altura al elegir hueco.
+
+Alternativas: tocar añade/quita como antes; una ficha colocada admite ←/→ por teclado para reordenar sin propagarlas al feed. No obliga a arrastrar. La última pieza comprueba el mensaje una vez; arrastrar sin soltar, soltar fuera, cancelar, moverse al mismo orden, recargar completo o el clic posterior al arrastre no crean respuestas. No valida el inglés por posición/color, sino con el evaluador existente. Mantiene montaje antes de escritura, pistas/historial y máximo intento+reparación→modelo del tramo conocido. Legacy sigue con envío explícito.
+
+Pruebas enfocadas montadas: inserción en medio, reordenado desde la frase, hueco mientras se arrastra sin intento, fuera/cancelación sin pérdida, click no duplicado, teclado y bordes, filas distintas, restauración y recorrido real GrammarCoach. Datos/DOM/gestos aislados simulados; no equivalen a partida móvil o diversión verificada. No audio escuchado ni medios/catálogo nuevos aprobados. Integración/build y despliegue se registran en el checkpoint del chat. Este incremento no completa el curso ni acredita35 palabras aprendidas/día.
+
+Para revisar: Inicio → Continuar → parada de acción ya preparada, o la misma parada desde Gramática. Durante el montaje, coloca primero el comienzo y final de un mensaje y arrastra la pieza intermedia al hueco; después de un error real puedes reparar moviendo la pieza, sin repetir toda la explicación. No producir errores ficticios para poblar cuentas de prueba. La validación humana de claridad, facilidad, diversión, tacto y accesibilidad física sigue pendiente.
