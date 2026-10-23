@@ -13,6 +13,7 @@ import { GrammarActionScene, supportsGrammarAction } from './GrammarActionScene'
 import { GrammarSituation } from './GrammarSituation';
 import { GrammarOrder } from './GrammarOrder';
 import { searchKeysSkill } from '../domain/searchKeysPractice';
+import { bedMakingSkill } from '../domain/bedMakingPractice';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
 export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false }: {
@@ -23,8 +24,8 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // Resume the task that is actually shown, not the unfiltered lesson index.
   // A conversational exchange may take over one of the written checks.
   const generatedContinuous = Boolean(form && !form.lesson && lesson.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
-  const preparedSearch = lesson.id === searchKeysSkill;
-  const stream = puzzle && (generatedContinuous || preparedSearch);
+  const preparedMessage = lesson.id === searchKeysSkill || lesson.id === bedMakingSkill;
+  const stream = puzzle && (generatedContinuous || preparedMessage);
   const checks = grammarChecksForExperience(lesson, conversationAnswers, constructionAnswers).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain'));
   const teachingStage = checkpoint && checkpoint.stage <= lesson.steps.length ? checkpoint.stage : undefined;
   // Filtering earlier questions must not discard an identified unfinished response.
@@ -33,7 +34,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const validOrder = !savedPieces || (!checkpoint?.order ? checkpoint?.feedback !== 'correct' : checkpoint.order.every((index) => Number.isInteger(index) && index >= 0 && index < savedPieces.length) && new Set(checkpoint.order).size === checkpoint.order.length && (checkpoint.feedback !== 'correct' || checkpoint.order.length === savedPieces.length));
   const validCheckpoint = teachingStage !== undefined && checkpoint && savedCheckIndex >= 0 && savedCheckIndex < checks.length
     && validOrder && (checkpoint.checkId !== undefined || (checks.length === lesson.checks.length && !generatedContinuous)) ? { ...checkpoint, checkIndex: savedCheckIndex } : null;
-  const [stage, setStage] = useState(teachingStage ?? (reusePreparedSubject && preparedSearch ? 2 : startAtExample && generatedContinuous ? lesson.steps.length - 1 : startAtPractice ? lesson.steps.length : 0));
+  const [stage, setStage] = useState(teachingStage ?? (reusePreparedSubject && preparedMessage ? 2 : startAtExample && generatedContinuous ? lesson.steps.length - 1 : startAtPractice ? lesson.steps.length : 0));
   const [paused, setPaused] = useState(false);
   const [checkIndex, setCheckIndex] = useState(validCheckpoint?.checkIndex ?? 0);
   const [input, setInput] = useState(validCheckpoint?.input ?? '');
@@ -61,7 +62,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // not an identical translation form immediately before it.
   const check = checks[checkIndex];
   // Limit only the known generated contract; authored lessons need their own review.
-  const bounded = repairLimit === 2 && (generatedContinuous || preparedSearch);
+  const bounded = repairLimit === 2 && (generatedContinuous || preparedMessage);
   const needsModel = bounded && checkFailures >= 2 && feedback !== 'correct';
   const modelMessage = check?.kind === 'explain' ? lesson.steps.at(-1)!.en.map((part) => part.text).join('') : check?.answers[0];
   const helpText = check?.kind === 'write' && correctionResponse !== undefined ? contextualCorrection(correctionResponse, check.answers[0], check.hint) : check?.hint;

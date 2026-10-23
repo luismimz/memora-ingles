@@ -13,6 +13,8 @@ import { GrammarArcade } from './GrammarArcade';
 import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
 import { missingGrammarWords } from '../domain/learningModes';
 import { separatedArcadeUnits } from '../domain/arcadeCadence';
+import { bedMakingLesson } from '../domain/bedMakingPractice';
+import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
   const practiced = new Set([...readGrammarAttempts(userId).filter((attempt) => attempt.correct).map((attempt) => attempt.unitId),
@@ -22,8 +24,16 @@ export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): Atomi
 export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => {
   const activities = readLearningActivities(userId);
   const memories = readWordMemories(userId);
-  return eligibleGrammarUnits(userId, units).filter((unit) => unit.communication?.dialogue && !missingGrammarWords(unit, memories).length
-    && activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)));
+  return eligibleGrammarUnits(userId, units).filter((unit) => {
+    const dialogue = unit.communication?.dialogue;
+    if (!dialogue || missingGrammarWords(unit, memories).length) return false;
+    // A short prepared mission does not prepare WITH A PILLOW in its legacy
+    // sibling. Keep that manual mixed conversation gated by its own response.
+    const legacyBed = bedMakingLesson(unit, 'ing');
+    const legacyAnswers = legacyBed ? new Set(dialogue.turns.filter((turn) => turn.role === 'B').flatMap((turn) => [turn.en, ...turn.acceptedAnswers]).map(normalizeSentenceAnswer)) : null;
+    return activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)
+      && (!legacyAnswers || activity.contentVersion === (unit.contentVersion ?? '1') && legacyAnswers.has(normalizeSentenceAnswer(activity.response))));
+  });
 };
 
 function ArcadeDialog({ children, onExit }: { children: React.ReactNode; onExit: () => void }) {

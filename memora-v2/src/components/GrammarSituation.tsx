@@ -4,6 +4,15 @@ import './grammarSituation.css';
 
 /** A scene describes a meaning; it does not assess or write learner progress. */
 export function SituationScreen({ state }: { state: SituationState }) {
+  if (state === 'making-bed' || state === 'resting-bed') {
+    const making = state === 'making-bed';
+    return <svg viewBox="0 0 200 110" role="img" aria-label={making ? 'Una persona está estirando la ropa de cama y colocando la almohada' : 'Una persona está tumbada descansando sobre la cama'}>
+      <path d="M62 49V101M187 73V101M62 90H187" stroke="#997250" strokeWidth="7" strokeLinecap="round" />
+      <rect x="66" y="61" width="119" height="23" rx="8" fill="#d6d7c1" /><path d={making ? 'M82 60L139 43L184 66L184 81H81Z' : 'M99 60H184V81H99Z'} fill="#356f65" />
+      <rect x="69" y="55" width="32" height="13" rx="5" fill="#fff8df" />
+      {making ? <><circle cx="35" cy="22" r="13" fill="#cc9a51" /><path d="M36 39L51 66M43 50L83 57M44 51L77 40M51 66L32 101M51 66L66 101" fill="none" stroke="#997250" strokeWidth="7" strokeLinecap="round" /></> : <><circle cx="86" cy="47" r="12" fill="#cc9a51" /><path d="M101 50H147L174 58M115 49L137 58" fill="none" stroke="#997250" strokeWidth="8" strokeLinecap="round" /></>}
+    </svg>;
+  }
   if (state === 'search-keys' || state === 'search-phone') return <svg viewBox="0 0 200 110" role="img" aria-label={state === 'search-keys' ? 'Una persona está buscando sus llaves' : 'Una persona está buscando su móvil'}>
     <circle cx="39" cy="28" r="14" fill="#cc9a51" /><path d="M39 45V80M24 101L39 80L56 101M39 54L69 69" fill="none" stroke="#997250" strokeWidth="8" strokeLinecap="round" />
     <circle cx="82" cy="58" r="15" fill="none" stroke="#356f65" strokeWidth="5" /><path d="M91 70L104 85" stroke="#356f65" strokeWidth="7" />
@@ -97,6 +106,6 @@ function SituationDelivery({ check, selected, feedback, onAnswer, onListen, disa
       {scenes.map((item) => <button type="button" ref={(node) => { if (node) destinations.current.set(item.choice, node); else destinations.current.delete(item.choice); }} key={item.choice} data-drop-choice={item.choice} className={drag?.over === item.choice ? 'is-drop-target' : ''} aria-pressed={selected === item.choice} disabled={locked} onClick={() => onAnswer(item.choice)}><SituationScreen state={item.state} /><span>{item.choice}</span></button>)}
     </div>
     {drag ? <div className="situation-token-ghost" aria-hidden="true" style={{ left: drag.x, top: drag.y }} lang="en">{situation.message}</div> : null}
-    {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{feedback === 'correct' ? scene.state === 'search-keys' ? 'Mensaje entregado: el personaje busca las llaves, no el móvil.' : 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'search-phone' ? 'Has señalado el móvil. MY KEYS indica que busca sus llaves.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
+    {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{feedback === 'correct' ? scene.state === 'search-keys' ? 'Mensaje entregado: el personaje busca las llaves, no el móvil.' : scene.state === 'making-bed' ? 'Mensaje entregado: la persona está haciendo la cama, no descansando en ella.' : 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'resting-bed' ? 'En esta imagen la persona descansa. MAKING MY BED cuenta que está haciendo su cama.' : scene.state === 'search-phone' ? 'Has señalado el móvil. MY KEYS indica que busca sus llaves.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
   </div>;
 }

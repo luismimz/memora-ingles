@@ -3,7 +3,7 @@ import { normalizeSentenceAnswer } from './sentenceAnswer';
 
 export interface LessonPiece { text: string; role: 'subject' | 'auxiliary' | 'verb' | 'change' | 'context' }
 export interface LessonStep { caption: string; es: LessonPiece[]; en: LessonPiece[]; captionMarks?: LessonPiece[]; hideEnglish?: boolean; advanceLabel?: string }
-export type SituationState = 'playing' | 'waiting' | 'brushing' | 'brush-ready' | 'cooking' | 'cook-ready' | 'search-keys' | 'search-phone';
+export type SituationState = 'playing' | 'waiting' | 'brushing' | 'brush-ready' | 'cooking' | 'cook-ready' | 'search-keys' | 'search-phone' | 'making-bed' | 'resting-bed';
 export interface LessonCheck {
   id: string;
   kind: 'choose' | 'explain' | 'write';
@@ -52,8 +52,8 @@ export function validateGrammarLesson(value: GrammarLessonData): void {
       if (check.kind === 'write' || !message?.trim() || !taught || !Array.isArray(scenes) || scenes.length !== 2
         || !check.choices || check.choices.length !== scenes.length || new Set(scenes.map((scene) => scene.choice)).size !== scenes.length
         || new Set(scenes.map((scene) => scene.state)).size !== scenes.length
-        || scenes.some((scene) => !check.choices!.includes(scene.choice) || !['playing', 'waiting', 'brushing', 'brush-ready', 'cooking', 'cook-ready', 'search-keys', 'search-phone'].includes(scene.state))
-        || ![['playing', 'waiting'], ['brushing', 'brush-ready'], ['cooking', 'cook-ready'], ['search-keys', 'search-phone']].some((pair) => scenes.every((scene) => pair.includes(scene.state)))) throw new Error('La situación requiere un mensaje enseñado y dos escenas distintas vinculadas a sus opciones.');
+        || scenes.some((scene) => !check.choices!.includes(scene.choice) || !['playing', 'waiting', 'brushing', 'brush-ready', 'cooking', 'cook-ready', 'search-keys', 'search-phone', 'making-bed', 'resting-bed'].includes(scene.state))
+        || ![['playing', 'waiting'], ['brushing', 'brush-ready'], ['cooking', 'cook-ready'], ['search-keys', 'search-phone'], ['making-bed', 'resting-bed']].some((pair) => scenes.every((scene) => pair.includes(scene.state)))) throw new Error('La situación requiere un mensaje enseñado y dos escenas distintas vinculadas a sus opciones.');
     }
   }
   if (!value.checks.some((check) => check.kind === 'explain') || !value.checks.some((check) => check.kind === 'write')) throw new Error('El truco debe comprobar comprensión y uso.');

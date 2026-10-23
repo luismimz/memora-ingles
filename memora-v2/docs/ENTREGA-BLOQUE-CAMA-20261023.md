@@ -1,0 +1,15 @@
+# Preparar la cama con un mensaje aprendido por piezas
+
+Sobrefe9c16b. Adaptación revisada y concreta de m1-bedroom-bed / make-drop-e: su explicación de E→ING no preparaba MY BED ni WITH A PILLOW antes de exigir la frase larga. El primer uso nuevo se centra en I am making my bed. Conserva la fuente larga para las partidas legacy que ya la estaban escribiendo; no se borra ni se cambia su historial.
+
+Se exige MAKE=hacer, BED=cama y PILLOW=almohada practicados por sentido/versión. Se enseña I, I AM, MY BED, el uso MAKE MY BED (hacer la cama, no fabricar una nueva), MAKE→MAKING dentro del mensaje actual y la contracción I'M. La E se explica en MAKE, no como regla universal. I/AM se reutilizan solo con escritura previa correcta sin ayudas de una estructura preparada; MY BED y MAKE→MAKING no se saltan.
+
+Comprensión: llevar el mensaje a la escena de hacer la cama o tocarla, frente a una persona descansando. Dos dibujos nativos distintos y accesibles, sin exigir SLEEP/REST u otro inglés nuevo. Montar cinco piezas por toque/arrastre/teclado, conservar orden parcial, responder una vez a Nora y recibir la consecuencia: deja la almohada a mano. La pregunta y réplica del personaje están en español; su inglés de metadatos no se evalúa ni reproduce. El contexto cambia respecto a buscar llaves o guardar un turno.
+
+Reutiliza el episodio, coach, puzle, conversación, audio, journal, SRS y mapas existentes. Los dos contratos de autor explícitos comparten presentación, no un motor nuevo. Cada uno conserva su namespace, skill y orden-modelo propio. Un acierto de la pregunta antigua sobre E no se transforma en comprensión de la nueva escena. Rescate de dos errores muestra modelo neutral y conserva ayuda; una escritura legacy a medias no se reinicia.
+
+Revisión de compatibilidad de Arcade: el diálogo corto no habilita la conversación larga con WITH A PILLOW. Esa mezcla manual legacy necesita su respuesta propia correcta en la versión vigente; su escena nueva de significado sí puede repasarse tras preparación. No se retiran requisitos ni se genera memoria para desbloquear. Fuente, palabras, asociaciones, estados editoriales, medios y datos reales intactos; no publicación masiva ni activación de candidatos pendientes.
+
+470pruebas/90archivos y build/diff en integración correctos. Revisión posterior del cruce de Arcade con23enfocadas/4archivos y build, sin batería completa redundante. Pruebas montadas recorren preparación, significado, montaje/reload, conversación, única escritura, rescate/modelo neutral y legacy; el contrato de llaves y episodios anteriores siguen pasando. Validación de lección/unidad, sentido/versión y fuente exacta protege contra adaptaciones indiscriminadas.
+
+No inspección visual/móvil, partida física, audio escuchado, diversión humana o memoria diferida acreditados. El SVG no aprueba medios mnemotécnicos externos. No palabras nuevas incorporadas al recuento ni35revisadas/día,1050/3000 o curso terminado. Revisión humana pendiente. Bundle558,69kB/171,99gzip conserva aviso de tamaño.

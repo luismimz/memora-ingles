@@ -20,7 +20,8 @@ import { ConversationPractice } from './ConversationPractice';
 import { GrammarOrder } from './GrammarOrder';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 import { PlayHeader } from './PlayHeader';
-import { preparedSearchKeysPractice, searchKeysIdentity, searchKeysLesson } from '../domain/searchKeysPractice';
+import { preparedSearchKeysPractice, searchKeysIdentity, searchKeysLesson, searchKeysSkill } from '../domain/searchKeysPractice';
+import { bedMakingIdentity, bedMakingLesson, bedMakingSkill, preparedBedMakingPractice } from '../domain/bedMakingPractice';
 
 export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
@@ -31,19 +32,25 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const base = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase())?.es.toLowerCase();
   const legacyLesson = unit.grammarLesson?.id === routeTrick.formId ? unit.grammarLesson : form ? lessonForForm(form, base) : null;
   const [checkpoint] = useState(() => inspection ? null : readTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1'));
-  const [searchPractice] = useState(() => !checkpoint || checkpoint.episodeId === searchKeysIdentity ? preparedSearchKeysPractice(unit, routeTrick.formId, readWordMemories(userId)) : null);
-  const lesson = searchPractice?.lesson ?? legacyLesson;
-  const trick = { ...routeTrick, skill: lesson?.id ?? routeTrick.skill, title: searchPractice ? searchPractice.lesson.title : routeTrick.title };
-  const stream = Boolean(searchPractice || form && !form.lesson && lesson?.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
+  const [authoredPractice] = useState(() => {
+    const memories = readWordMemories(userId);
+    const search = !checkpoint || checkpoint.episodeId === searchKeysIdentity ? preparedSearchKeysPractice(unit, routeTrick.formId, memories) : null;
+    if (search) return { ...search, identity: searchKeysIdentity, modelOrder: [3, 4, 2, 0, 1] };
+    const bed = !checkpoint || checkpoint.episodeId === bedMakingIdentity ? preparedBedMakingPractice(unit, routeTrick.formId, memories) : null;
+    return bed ? { ...bed, identity: bedMakingIdentity, modelOrder: [3, 4, 2, 1, 0] } : null;
+  });
+  const lesson = authoredPractice?.lesson ?? legacyLesson;
+  const trick = { ...routeTrick, skill: lesson?.id ?? routeTrick.skill, title: authoredPractice ? authoredPractice.lesson.title : routeTrick.title };
+  const stream = Boolean(authoredPractice || form && !form.lesson && lesson?.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
   const sceneWord = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase()) ?? unit.words[0];
   const practicedPattern = !inspection && form && !form.lesson && (form.visualContract === 'present-continuous' || form.id === 'ing')
     && readGrammarAttempts(userId).some((attempt) => attempt.skill.startsWith('present-continuous:') && attempt.skill !== trick.skill && attempt.kind === 'write' && attempt.correct && !attempt.helped);
-  const reuseSearchSubject = Boolean(searchPractice && !inspection && readGrammarAttempts(userId).some((attempt) => attempt.skill.startsWith('present-continuous:') && attempt.kind === 'write' && attempt.correct && !attempt.helped));
+  const reuseSubject = Boolean(authoredPractice && !inspection && readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped));
   // An old in-flight coach keeps its identified task/draft, even if an author
   // adds an episode later. Fresh entries opt in only with actual preparation.
-  const [shortPractice] = useState(() => searchPractice?.unit ?? preparedActionPractice(unit, trick.formId, readWordMemories(userId)));
+  const [shortPractice] = useState(() => authoredPractice?.unit ?? preparedActionPractice(unit, trick.formId, readWordMemories(userId)));
   const episodeUnit = shortPractice ?? unit;
-  const episodeIdentity = searchPractice ? searchKeysIdentity : shortPractice ? `${trick.formId}:short-${form!.english}-v1` : trick.formId;
+  const episodeIdentity = authoredPractice?.identity ?? (shortPractice ? `${trick.formId}:short-${form!.english}-v1` : trick.formId);
   const [prepared] = useState(() => Boolean(shortPractice) || preparedGrammarContinuation(unit, trick.formId, readWordMemories(userId), readGrammarAttempts(userId)));
   const episode = prepared && (!checkpoint || checkpoint.episodeId === episodeIdentity);
   const coachState = useRef<TrickCheckpoint>(checkpoint ?? { stage: 0, checkIndex: 0, input: '', feedback: 'idle', helped: false });
@@ -53,7 +60,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const puzzleCheck = shortPractice ? lesson?.checks.find((check) => check.ordering) : undefined;
   const puzzlePieces = puzzleCheck?.ordering;
   const wholeOrder = useRef(continuation?.order ?? []);
-  const unavailable = Boolean(!checkpoint && !searchPractice && searchKeysLesson(unit, trick.formId) || checkpoint?.episodeId && !episode || continuation && (!episode || !sentence || continuation.filledSlots > sentence.slots.length || continuation.phase === 'conversation' && continuation.filledSlots !== sentence.slots.length || puzzlePieces && continuation.order?.some((index) => index >= puzzlePieces.length)));
+  const unavailable = Boolean(!checkpoint && !authoredPractice && (searchKeysLesson(unit, trick.formId) || bedMakingLesson(unit, trick.formId)) || checkpoint?.episodeId && !episode || continuation && (!episode || !sentence || continuation.filledSlots > sentence.slots.length || continuation.phase === 'conversation' && continuation.filledSlots !== sentence.slots.length || puzzlePieces && continuation.order?.some((index) => index >= puzzlePieces.length)));
   const chatAnswers = episode ? conversationPracticeAnswers(episodeUnit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : [];
   const slotKey = continuation ? `${continuation.phase}:${continuation.sentenceIndex}:${continuation.filledSlots}` : 'coach';
   const modelAid = useRef(Boolean(continuation?.modelUsed));
@@ -116,7 +123,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
     if (!continuation || !sentence || !puzzlePieces || continuation.phase !== 'build' || guard.current.key !== slotKey || guard.current.placed || continuation.filledSlots !== 0 || (withModel ? guard.current.failures < 2 : guard.current.failures >= 2)) return;
     guard.current.placed = true;
     modelAid.current ||= withModel;
-    if (withModel) wholeOrder.current = searchPractice ? [3, 4, 2, 0, 1] : ['subject', 'auxiliary', 'verb'].map((role) => puzzlePieces.findIndex((piece) => piece.role === role));
+    if (withModel) wholeOrder.current = authoredPractice?.modelOrder ?? ['subject', 'auxiliary', 'verb'].map((role) => puzzlePieces.findIndex((piece) => piece.role === role));
     if (!inspection) {
       if (withModel) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `trick-build-model:${trick.formId}:${continuation.sentenceIndex}:message`, skill: trick.skill, phase: 'construction', source: 'authored', modality: 'choice', prompt: sentence.es, response: sentence.en, expected: '', correct: null, helped: true, parentAttemptId: previousConstruction.current, feedback: 'Mensaje colocado con modelo, sin acierto ficticio.' });
       sentence.slots.forEach((_, index) => recordChunkExposure(userId, unit.id, sentence, index));
@@ -161,7 +168,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
       : continuation?.phase === 'conversation' ? <ConversationPractice vertical unit={episodeUnit} userId={userId} reviewMode={inspection} checkpointScope={`trick:${episodeIdentity}`} skillId={trick.skill} initialHelped={Boolean(continuation.modelUsed)} onContinue={finish} />
       : continuation?.phase === 'build' && puzzlePieces ? <GameCard vertical stepKey={`message:${continuation.filledSlots}:${continuation.failures ?? 0}`} className="coach-card coach-stream coach-situation-card" onAdvance={continuation.filledSlots === sentence.slots.length ? nextBuild : undefined} advanceLabel="Usar mi mensaje en la conversación"><div className="coach-content"><p className="eyebrow">MONTA EL MENSAJE</p><h2>{sentence.es}</h2>{(continuation.failures ?? 0) >= 2 ? <div className="grammar-repair-model" role="status"><p>Vamos con ayuda. Este es el mensaje:</p><p className="coach-row" lang="en">{sentence.en}</p><button type="button" className="primary-action" onClick={() => placeWholeMessage(true)}>Colocar con ayuda</button></div> : <GrammarOrder puzzle pieces={puzzlePieces} selected={continuation.order ?? []} locked={continuation.filledSlots === sentence.slots.length} onChange={(order) => { if (continuation.filledSlots !== 0 || guard.current.placed || guard.current.key !== slotKey) return; wholeOrder.current = order; saveContinuation({ ...continuation, order, modelUsed: modelAid.current }); }} onAnswer={answerWholeMessage} />}{continuation.filledSlots === 0 && (continuation.failures ?? 0) < 2 ? <details className="coach-tools"><summary>Necesito una pista</summary><button type="button" className="quiet-action" onClick={listenToConstructionModel}>Escuchar modelo</button></details> : null}<p className="coach-feedback" role="status">{continuation.filledSlots === sentence.slots.length ? continuation.modelUsed ? 'Mensaje con modelo. Tu intento queda pendiente; ahora puedes usarlo.' : 'Mensaje montado. Ahora avisa al personaje sin piezas.' : lastError ? contextualCorrection(lastError, sentence.en, puzzleCheck!.hint) : 'Toca o mueve las piezas; puedes cambiar su posición.'}</p></div></GameCard>
       : continuation?.phase === 'build' && form ? <SentenceBuilderCard vertical key={`build-${continuation.sentenceIndex}`} sentence={sentence} vocabulary={unit.words} sceneWord={sceneWord} processForm={form} index={continuation.sentenceIndex} total={sentences.length} filledSlots={continuation.filledSlots} choiceSeed={continuation.sentenceIndex} needsModel={(continuation.failures ?? 0) >= 2} lastIncorrectChoice={lastError} onAcceptModel={() => placeSlot(true)} onAttempt={constructionAttempt} onPick={() => placeSlot()} onNext={nextBuild} />
-      : <GrammarCoach lesson={lesson} form={form} sceneWord={sceneWord} startAtPractice={Boolean(practicedPattern)} startAtExample={Boolean(practicedPattern) && stream} reusePreparedSubject={reuseSearchSubject} omitGeneratedExplanation={Boolean(practicedPattern)} conversationAnswers={chatAnswers} constructionAnswers={episode ? sentences.map((item) => item.en) : []} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} reviewMode={inspection} requirePractice schedulePractice repairLimit={2} puzzle={stream} checkpoint={checkpoint} onProgress={(state) => {
+      : <GrammarCoach lesson={lesson} form={form} sceneWord={sceneWord} startAtPractice={Boolean(practicedPattern)} startAtExample={Boolean(practicedPattern) && stream} reusePreparedSubject={reuseSubject} omitGeneratedExplanation={Boolean(practicedPattern)} conversationAnswers={chatAnswers} constructionAnswers={episode ? sentences.map((item) => item.en) : []} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} reviewMode={inspection} requirePractice schedulePractice repairLimit={2} puzzle={stream} checkpoint={checkpoint} onProgress={(state) => {
         coachState.current = { ...state, ...(episode ? { episodeId: episodeIdentity, episodeStartedAt: started.current } : {}) };
         if (!inspection && !completed.current) writeTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1', coachState.current);
       }} onReady={() => {}} onContinue={continueCoach} />}</section>
