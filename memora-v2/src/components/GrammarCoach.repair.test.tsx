@@ -5,7 +5,7 @@ import { GrammarOrder } from './GrammarOrder';
 import { previewUnit } from '../preview/previewUnit';
 import { grammarTricks } from '../domain/journeyTricks';
 import { readLearningActivities } from '../domain/learningActivity';
-import { readGrammarAttempts } from '../domain/grammarMemory';
+import { readGrammarAttempts, recordGrammarAttempt } from '../domain/grammarMemory';
 import { readTrickCheckpoint } from '../domain/trickCheckpoint';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn() }));
@@ -83,4 +83,45 @@ it('la parada real comprueba al colocar las tres piezas sin buscar Enviar mensaj
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ activityId: 'order-message-v1', correct: true, helped: true }]);
   expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toMatchObject({ order: expect.any(Array), feedback: 'correct' });
   expect(tree.root.findAllByType('input')).toHaveLength(0);
+});
+it('una estructura ya practicada enseña solo el nuevo ejemplo antes del puzle y respeta una partida reanudada', async () => {
+  recordGrammarAttempt(user, { skill: 'present-continuous:brush', unitId: 'prior-isolated', check: 'use', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
+  await mount();
+  expect(text(tree.toJSON())).toContain('UNA ACCIÓN NUEVA');
+  expect(text(tree.toJSON())).toContain('Misma estructura');
+  expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')?.stage).toBe(2);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+  await advance();
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
+  const bank = tree.root.findByProps({ 'aria-label': 'Piezas disponibles' });
+  await act(async () => bank.findAllByType('button').find((node) => text(node) === 'I')!.props.onClick({ detail: 0 }));
+  const saved = readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1');
+  expect(saved).toMatchObject({ stage: 3, order: expect.any(Array) });
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
+  expect(tree.root.findAllByProps({ 'aria-label': 'Quitar I, posición 1' })).toHaveLength(1);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+});
+it('pedir ayuda y enviar inmediatamente conserva la ayuda en las dos evidencias y al recargar', async () => {
+  recordGrammarAttempt(user, { skill: 'present-continuous:brush', unitId: 'prior-isolated', check: 'use', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
+  await mount(); await reachPuzzle();
+  for (const label of ['I', 'AM', 'PLAYING']) {
+    const bank = tree.root.findByProps({ 'aria-label': 'Piezas disponibles' });
+    await act(async () => bank.findAllByType('button').find((node) => text(node) === label)!.props.onClick({ detail: 0 }));
+  }
+  await advance();
+  await act(async () => tree.root.findAllByType('button').find((node) => text(node).startsWith('Estoy ') && text(node).endsWith('ahora.'))!.props.onClick());
+  await advance();
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I am playing' } }));
+  const submit = tree.root.findByType('form').props.onSubmit;
+  const hint = tree.root.findByType('details').props.onToggle;
+  await act(async () => { hint({ currentTarget: { open: true } }); submit({ preventDefault() {} }); });
+  expect(readGrammarAttempts(user).filter((event) => event.check === 'use' && event.unitId === previewUnit.id)).toMatchObject([{ correct: true, helped: true }]);
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'use')).toMatchObject([{ correct: true, helped: true }]);
+  expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toMatchObject({ helped: true, feedback: 'correct' });
+  act(() => tree.unmount()); await mount();
+  expect(readGrammarAttempts(user).filter((event) => event.check === 'use' && event.unitId === previewUnit.id)).toHaveLength(1);
+  expect(tree.root.findByType('input').props.disabled).toBe(true);
 });
