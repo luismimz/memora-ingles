@@ -1,4 +1,5 @@
 import { appendProgress, progressStorage } from './progressJournal';
+import type { AtomicWord } from './unit';
 
 export interface LearningActivity {
   id: string; unitId: string; unitTitle: string; contentVersion: string; activityId: string; skill: string;
@@ -7,6 +8,8 @@ export interface LearningActivity {
   prompt: string; response: string; expected: string; correct: boolean | null; helped: boolean;
   feedback?: string; parentAttemptId?: string; at: string;
   conversationId?: string; speaker?: string;
+  /** Exact taught association for a neutral model consultation; never a mastery flag. */
+  wordSnapshot?: Pick<AtomicWord, 'en' | 'es' | 'bridge' | 'scene' | 'associationId' | 'associationVersion'>;
 }
 export function readLearningActivities(userId: string): LearningActivity[] {
   try { const records = JSON.parse(progressStorage().getItem(`memora-v2.learning.${userId}`) || '[]'); return Array.isArray(records) ? records : []; } catch { return []; }

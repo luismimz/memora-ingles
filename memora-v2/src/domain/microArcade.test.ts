@@ -8,6 +8,7 @@ import { initializeJournal, readJournal } from './progressJournal';
 import { readLearningActivities, recordLearningActivity } from './learningActivity';
 import { restoreProgress } from './restoreProgress';
 import { projectConversations } from './conversationHistory';
+import { recordActiveWordAttempt } from './activeRecall';
 // @ts-expect-error Shared Directus JavaScript contract.
 import { validateProgressBatch } from '../../../backend/extensions/memora-ai/dist/core/progress.js';
 
@@ -25,6 +26,37 @@ beforeEach(() => {
   initializeJournal('learner');
 });
 describe('Arcade: preparar antes de pedir y guardar evidencia real', () => {
+  it('un modelo consultado entra en la práctica existente sin crear memoria/fallo ni exigir palabras no enseñadas', () => {
+    recordActiveWordAttempt('learner', unit, unit.words[0], '', 'skip', true);
+    expect(readWordMemories('learner')).toEqual([]);
+    const rounds = microRounds('learner', [unit]);
+    expect(rounds).toHaveLength(1);
+    expect(rounds[0]).toMatchObject({ pendingModel: true, due: false, options: [], word: { en: unit.words[0].en } });
+    expect(readWordMemories('learner')).toEqual([]);
+    expect(microRounds('learner', [{ ...unit, contentVersion: 'changed' }])).toEqual([]);
+    const changed = structuredClone(unit); changed.words[0].scene += ' Nueva escena.';
+    expect(microRounds('learner', [changed])).toEqual([]);
+    recordActiveWordAttempt('learner', unit, unit.words[1], '', 'skip', true);
+    expect(microRounds('learner', [unit])[0].options.sort()).toEqual([unit.words[0].en, unit.words[1].en].sort());
+    expect(microRounds('learner', [unit]).some((round) => round.word.en === unit.words[2].en)).toBe(false);
+  });
+  it('snapshot de modelo conserva compatibilidad y replay; práctica real sustituye el pendiente sin memoria rival', () => {
+    recordActiveWordAttempt('learner', unit, unit.words[0], '', 'skip', true);
+    const events = readJournal('learner')!.events;
+    expect(validateProgressBatch({ course: 'es-en', events })).toHaveLength(events.length);
+    const restored = restoreProgress('learner', [...events, ...events]);
+    expect(restored.has('memora-v2.memory.learner')).toBe(false);
+    const activities = JSON.parse(restored.get('memora-v2.learning.learner')!);
+    expect(activities).toHaveLength(1); expect(activities[0].wordSnapshot.scene).toBe(unit.words[0].scene);
+    recordWordRecall('learner', unit.words[0], 'quick', new Date(), 'recognition', undefined, true);
+    const memories = readWordMemories('learner');
+    expect(microRounds('learner', [unit])[0].pendingModel).toBeUndefined();
+    expect(readWordMemories('learner')).toEqual(memories);
+  });
+  it('eventos legacy sin snapshot o neutrales ajenos no aprueban una enseñanza no verificada', () => {
+    recordLearningActivity('learner', { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `active-recall:${unit.words[0].en}`, skill: unit.words[0].en, source: 'learner', phase: 'arcade', modality: 'choice', prompt: unit.words[0].es, response: '(pasó con modelo)', expected: unit.words[0].en, correct: null, helped: true });
+    expect(microRounds('learner', [unit])).toEqual([]);
+  });
   it('el catálogo por sí solo no habilita preguntas', () => {
     expect(microRounds('learner', [unit])).toEqual([]);
     recordWordRecall('learner', unit.words[0], 'hesitant', at, 'recognition', undefined, true);

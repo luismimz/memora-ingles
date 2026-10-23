@@ -26,5 +26,6 @@ export function recordActiveWordAttempt(userId: string, unit: AtomicUnit, word: 
   return recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1',
     activityId: `active-recall:${word.en}`, skill: word.en, phase: 'arcade', source: 'learner', modality: mode === 'writing' ? 'writing' : 'choice',
     prompt: word.es, response: mode === 'skip' ? '(pasó con modelo)' : response, expected: word.en, correct, helped: usedCue, parentAttemptId,
+    ...(mode === 'skip' ? { wordSnapshot: { en: word.en, es: word.es, bridge: word.bridge, scene: word.scene, associationId: word.associationId, associationVersion: word.associationVersion } } : {}),
     feedback: correct ? usedCue ? 'Recuperada con apoyo; la volverás a practicar sin pistas.' : 'Recuperada sin opciones ni pistas en este intento. La comprobaremos otro día.' : mode === 'skip' ? 'Modelo consultado. No cuenta como acierto; queda pendiente de práctica sin ayudas.' : 'Vuelve a imaginar la escena y prueba otra vez.' });
 }

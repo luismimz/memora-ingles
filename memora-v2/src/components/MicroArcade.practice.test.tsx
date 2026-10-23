@@ -4,13 +4,14 @@ import { previewUnit } from '../preview/previewUnit';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readWordMemories, recordWordRecall } from '../domain/memory';
 import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
-const hooks = vi.hoisted(() => ({ index: 0, state: new Map<number, unknown>(), expire: () => {}, advance: () => {}, duration: 0 }));
+import { recordActiveWordAttempt } from '../domain/activeRecall';
+const hooks = vi.hoisted(() => ({ index: 0, state: new Map<number, unknown>(), expire: () => {}, advance: () => {}, duration: 0, calm: false }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (initial: unknown) => { const id = hooks.index++; if (!hooks.state.has(id)) hooks.state.set(id, typeof initial === 'function' ? initial() : initial); return [hooks.state.get(id), (value: unknown) => hooks.state.set(id, typeof value === 'function' ? value(hooks.state.get(id)) : value)]; },
   useRef: (current: unknown) => ({ current }), useEffect: () => undefined,
 }));
-vi.mock('./useArcadeClock', () => ({ useArcadeClock: (index: number, _revealed: boolean, _enabled: boolean, expire: () => void, advance: () => void, _feedback: number, duration: number) => {
-  hooks.expire = expire; hooks.advance = advance; hooks.duration = duration;
+vi.mock('./useArcadeClock', () => ({ useArcadeClock: (index: number, _revealed: boolean, _enabled: boolean, expire: () => void, advance: () => void, _feedback: number, duration: number, _interval: number, calm: boolean) => {
+  hooks.expire = expire; hooks.advance = advance; hooks.duration = duration; hooks.calm = calm;
   return { paused: false, remaining: duration, checkpoint: index > 0 && index % 15 === 0, togglePause() {}, continuePlaying() {} };
 } }));
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn() }));
@@ -87,4 +88,14 @@ it('recupera sin reloj al entrar y permite cambiarlo sin tocar el aprendizaje', 
   expect(readArcadeCalm('learner')).toBe(false);
   expect(readWordMemories('learner')).toEqual(memories);
   expect(readLearningActivities('learner')).toEqual([]);
+});
+it('una palabra vista solo con modelo se practica sin reloj y sin alterar la preferencia del alumno', () => {
+  localStorage.setItem('memora-v2.memory.learner', '[]');
+  recordActiveWordAttempt('learner', previewUnit, previewUnit.words[0], '', 'skip', true);
+  render(0, true);
+  expect(hooks.calm).toBe(true);
+  expect(nodes.find((node) => node.props.role === 'status')?.props.children).toContain('Primero la practicamos sin reloj');
+  expect(nodes.some((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')).toBe(false);
+  expect(readArcadeCalm('learner')).toBe(false);
+  expect(readWordMemories('learner')).toEqual([]);
 });

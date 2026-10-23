@@ -20,25 +20,34 @@ export function arcadeCandidateIds(units: readonly UnitSummary[], memories: read
   return [...new Set([...(currentId ? [currentId] : []), ...due.slice(0, 6), ...recent, ...due.slice(6)])].slice(0, 12);
 }
 
-export interface MicroRound { unit: AtomicUnit; word: AtomicWord; phrase: { en: string; es: string; key: string }; options: string[]; due: boolean }
+export interface MicroRound { unit: AtomicUnit; word: AtomicWord; phrase: { en: string; es: string; key: string }; options: string[]; due: boolean; pendingModel?: boolean }
 /** Real prior exposure is required. A catalogue entry/completion flag is not proof. */
 export function microRounds(userId: string, units: AtomicUnit[], now = Date.now()): MicroRound[] {
   const words = readWordMemories(userId);
   const phrases = readSentenceMemories(userId);
+  const activities = readLearningActivities(userId);
   const rounds: MicroRound[] = [];
   const included = new Set<string>();
   for (const unit of units) {
     const taught = unit.words.flatMap((word) => {
       const memory = words.find((value) => value.key === wordKey(word));
-      return memory && memory.word.bridge === word.bridge && memory.word.scene === word.scene && memory.word.es === word.es && memory.word.associationId === word.associationId && memory.word.associationVersion === word.associationVersion ? [memory] : [];
+      if (memory && memory.word.bridge === word.bridge && memory.word.scene === word.scene && memory.word.es === word.es && memory.word.associationId === word.associationId && memory.word.associationVersion === word.associationVersion) return [{ key: memory.key, word: memory.word, due: Date.parse(memory.nextReviewAt) <= now, pendingModel: memory.correct === 0 }];
+      // A consulted model is teaching evidence, not a missed recall or a second SRS.
+      // Legacy events without a snapshot cannot silently approve changed content.
+      const model = activities.some((activity) => {
+        const snapshot = activity.wordSnapshot;
+        return activity.unitId === unit.id && activity.contentVersion === (unit.contentVersion ?? '1') && activity.activityId === `active-recall:${word.en}` && activity.phase === 'arcade' && activity.source === 'learner' && activity.correct === null && activity.helped && activity.response === '(pasó con modelo)' && activity.expected === word.en && activity.prompt === word.es && snapshot &&
+          snapshot.en === word.en && snapshot.es === word.es && snapshot.bridge === word.bridge && snapshot.scene === word.scene && snapshot.associationId === word.associationId && snapshot.associationVersion === word.associationVersion;
+      });
+      return model ? [{ key: wordKey(word), word, due: false, pendingModel: true }] : [];
     });
     for (const memory of taught) {
       if (included.has(memory.key)) continue;
       included.add(memory.key);
       // Arcade repasa la palabra y su puente; no exige una frase ni vocabulario sin enseñar.
-      const options = [...new Set([memory.word.en, ...words.filter((other) => other.key !== memory.key).map((other) => other.word.en)])].slice(0, 3);
+      const options = [...new Set([memory.word.en, ...taught.filter((other) => other.key !== memory.key).map((other) => other.word.en), ...words.filter((other) => other.key !== memory.key).map((other) => other.word.en)])].slice(0, 3);
       const phraseMemory = phrases.find((phrase) => phrase.unitId === unit.id && phrase.sentenceEn === unit.sentence.en);
-      rounds.push({ unit, word: memory.word, phrase: phraseMemory ? { en: phraseMemory.sentenceEn, es: phraseMemory.sentenceEs, key: phraseMemory.key } : { en: unit.sentence.en, es: unit.sentence.es, key: '' }, options: options.length >= 2 ? options.reverse() : [], due: Date.parse(memory.nextReviewAt) <= now });
+      rounds.push({ unit, word: memory.word, phrase: phraseMemory ? { en: phraseMemory.sentenceEn, es: phraseMemory.sentenceEs, key: phraseMemory.key } : { en: unit.sentence.en, es: unit.sentence.es, key: '' }, options: options.length >= 2 ? options.reverse() : [], due: memory.due, ...(memory.pendingModel ? { pendingModel: true } : {}) });
     }
   }
   return rounds.sort((a, b) => Number(b.due) - Number(a.due));
