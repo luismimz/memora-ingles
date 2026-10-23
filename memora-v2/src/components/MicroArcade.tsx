@@ -7,7 +7,7 @@ import type { AtomicUnit } from '../domain/unit';
 import { GameCard } from './GameCard';
 import { SceneVisual } from './SceneVisual';
 import { ArcadeWordReminder } from './ArcadeWordReminder';
-import { playEnglish, playSnap, stopSpeech } from '../services/audio';
+import { playEnglish, playSnap, stopSpeech, type PlaybackResult } from '../services/audio';
 import './microArcade.css';
 import { useArcadeClock } from './useArcadeClock';
 import { ArcadeClock, ArcadeCheckpoint } from './ArcadeClock';
@@ -25,11 +25,15 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const startRound = useRef(initialRound).current;
   const [revealed, setRevealed] = useState(false);
   const [usedHint, setUsedHint] = useState(inspection);
+  const usedHintRef = useRef(usedHint);
   const [feedback, setFeedback] = useState('');
   const [combo, setCombo] = useState(0);
   const [chosen, setChosen] = useState('');
   const [input, setInput] = useState('');
   const [showChoices, setShowChoices] = useState(false);
+  const [audioStatus, setAudioStatus] = useState<'idle' | 'loading' | PlaybackResult['status']>('idle');
+  const audioRequest = useRef(0);
+  const auditoryMode = useRef(false);
   const writing = index % 3 === 2 && !showChoices;
   const durationMs = writing ? 16000 : 6000;
   const answered = useRef(false);
@@ -38,18 +42,32 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const [choiceSeed] = useState(() => Math.floor(Math.random() * 100000));
   const previous = useRef<string>();
   const round: MicroRound | undefined = candidates[index % candidates.length];
-  const roundCalm = calm || Boolean(round?.pendingModel);
+  const meanings = new Map<string, MicroRound>();
+  const sound = (word: MicroRound['word']) => word.ipa?.replace(/[\/\[\]\sˈˌ]/gu, '').toLocaleLowerCase('en');
+  const targetSound = round && sound(round.word);
+  if (round) meanings.set(normalizeSentenceAnswer(round.word.es), round);
+  for (const candidate of candidates) {
+    const meaning = normalizeSentenceAnswer(candidate.word.es);
+    if (meaning && sound(candidate.word) && sound(candidate.word) !== targetSound && !meanings.has(meaning) && candidate.word.en !== round?.word.en) meanings.set(meaning, candidate);
+  }
+  const auditoryRound = index % 3 === 1 && Boolean(targetSound) && meanings.size >= 2;
+  const listening = auditoryRound && !showChoices;
+  auditoryMode.current = listening;
+  const listeningBase = [...meanings.values()].slice(0, 3);
+  const listeningOffset = (choiceSeed + index * 7) % Math.max(1, listeningBase.length);
+  const listeningOptions = [...listeningBase.slice(listeningOffset), ...listeningBase.slice(0, listeningOffset)];
+  const roundCalm = calm || Boolean(round?.pendingModel) || auditoryRound;
   const limit = arcadeSessionLength(candidates.length, automatic);
   const knownOptions = [...new Set(candidates.map((candidate) => candidate.word.en))];
   const baseOptions = round ? [...new Set([round.word.en, ...knownOptions.filter((value) => value !== round.word.en)])].slice(0, 3) : [];
   const offset = (choiceSeed + index * 7) % Math.max(1, baseOptions.length);
   const options = [...baseOptions.slice(offset), ...baseOptions.slice(0, offset)];
-  useEffect(() => { dialog.current?.showModal(); return () => { dialog.current?.close(); stopSpeech(); }; }, []);
+  useEffect(() => { dialog.current?.showModal(); return () => { audioRequest.current++; dialog.current?.close(); stopSpeech(); }; }, []);
   const clock = useArcadeClock(index, revealed, Boolean(round), () => {
     if (!round || answered.current) return;
     answered.current = true;
     if (!inspection) commitMicroTimeout(userId, round, crypto.randomUUID(), `${sessionId}:${index}`, !writing);
-    setRevealed(true); setUsedHint(true); setResult('rescue'); setCombo(0); setFeedback('Recupera el puente.');
+    setRevealed(true); usedHintRef.current = true; setUsedHint(true); setResult('rescue'); setCombo(0); setFeedback('Recupera el puente.');
     void playEnglish(round.word.en, round.word.audioUrl);
   }, () => {
     if (automatic && index - startRound + 1 >= limit) { onExit(); return; }
@@ -59,7 +77,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   function remember() {
     if (!round || revealed || answered.current || clock.paused) return;
     answered.current = true;
-    setUsedHint(true);
+    usedHintRef.current = true; setUsedHint(true);
     setRevealed(true);
     setResult('rescue');
     setFeedback('Recupera tu puente y escucha la palabra.');
@@ -67,51 +85,65 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     void playEnglish(round.word.en, round.word.audioUrl);
   }
 
-  function choose(choice: string) {
+  async function listen() {
     if (!round || revealed || answered.current || clock.paused) return;
+    const request = ++audioRequest.current;
+    setAudioStatus('loading');
+    const result = await Promise.resolve(playEnglish(round.word.en, round.word.audioUrl)).catch(() => ({ status: 'unavailable' as const, source: null }));
+    if (request === audioRequest.current && !answered.current) setAudioStatus(result?.status ?? 'unavailable');
+  }
+
+  function choose(choice: string, meaning?: string) {
+    if (!round || revealed || answered.current || clock.paused || listening && (audioStatus !== 'played' || !auditoryMode.current)) return;
     answered.current = true;
+    audioRequest.current++;
     setChosen(choice);
     const correct = normalizeSentenceAnswer(choice) === normalizeSentenceAnswer(round.word.en);
-    if (!inspection) previous.current = commitMicroAttempt(userId, round, 'word', choice, correct, usedHint, !writing, crypto.randomUUID(), `${sessionId}:${index}`, previous.current).id;
+    if (!inspection) previous.current = commitMicroAttempt(userId, round, 'word', choice, correct, usedHintRef.current, !writing, crypto.randomUUID(), `${sessionId}:${index}`, previous.current, listening ? meaning : undefined).id;
     if (!correct) {
       setFeedback('Vuelve a la historia y prueba otra vez.');
-      setUsedHint(true); setCombo(0);
+      usedHintRef.current = true; setUsedHint(true); setCombo(0);
       setRevealed(true); setResult('rescue');
       void playEnglish(round.word.en, round.word.audioUrl);
       return;
     }
     setRevealed(true);
     setResult('correct'); setCombo((value) => value + 1);
-    setFeedback(usedHint ? 'Respuesta con ayuda.' : writing ? '¡Recuperada sin opciones!' : '¡La reconociste!');
+    setFeedback(usedHintRef.current ? 'Respuesta con ayuda.' : listening ? 'Has reconocido el significado del audio entre opciones.' : writing ? '¡Recuperada sin opciones!' : '¡La reconociste!');
     playSnap();
     void playEnglish(round.word.en, round.word.audioUrl);
   }
 
+  function useTextOptions() {
+    audioRequest.current++; auditoryMode.current = false; usedHintRef.current = true;
+    stopSpeech(); setUsedHint(true); setShowChoices(true);
+  }
   function another() {
+    audioRequest.current++; setAudioStatus('idle');
     answered.current = false; setResult(null);
     setIndex((value) => value + 1); setChosen('');
     setInput(''); setShowChoices(false);
     setRevealed(false);
-    setUsedHint(inspection);
+    usedHintRef.current = inspection; setUsedHint(inspection);
     setFeedback('');
     previous.current = undefined;
     onRoundAdvance?.(index + 1);
   }
 
   const reminder = round ? <ArcadeWordReminder word={round.word} paused={clock.paused} manual={roundCalm} /> : undefined;
-  return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen micro-screen arcade-stream-screen"><header className="game-topbar"><button type="button" className="activity-back" onClick={onExit}>← Salir</button><span>MEMORA ARCADE</span><div className="arcade-stream-tools">{!round?.pendingModel ? <button type="button" className="quiet-action" aria-label="Jugar sin cuenta atrás" aria-pressed={calm} onClick={() => { stopSpeech(); const next = !calm; writeArcadeCalm(userId, next); setCalm(next); }}>{calm ? 'Sin reloj ✓' : 'Sin reloj'}</button> : null}{roundCalm && (revealed) && !clock.checkpoint ? <button type="button" className="quiet-action" disabled={clock.paused} onClick={clock.advanceNow}>Seguir →</button> : null}<button type="button" className="quiet-action" aria-pressed={clock.paused} onClick={() => { stopSpeech(); clock.togglePause(); }}>{clock.paused ? 'Seguir' : 'Pausar'}</button>{onGrammar ? <button type="button" className="quiet-action" onClick={onGrammar}>Gramática</button> : null}{onOnlyWords ? <button type="button" className="quiet-action" onClick={onOnlyWords}>Solo palabras</button> : onMix ? <button type="button" className="quiet-action" onClick={onMix}>Mixto</button> : null}</div></header>
-    <section className="game-stage"><GameCard className={`arcade-stream-card ${result === 'correct' ? 'recall-correct' : 'recall-calm'}`} showBack={!clock.checkpoint && result === 'rescue'} back={reminder}>
+  return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen micro-screen arcade-stream-screen"><header className="game-topbar"><button type="button" className="activity-back" onClick={onExit}>← Salir</button><span>MEMORA ARCADE</span><div className="arcade-stream-tools">{!round?.pendingModel && !auditoryRound ? <button type="button" className="quiet-action" aria-label="Jugar sin cuenta atrás" aria-pressed={calm} onClick={() => { stopSpeech(); const next = !calm; writeArcadeCalm(userId, next); setCalm(next); }}>{calm ? 'Sin reloj ✓' : 'Sin reloj'}</button> : null}{roundCalm && (revealed) && !clock.checkpoint ? <button type="button" className="quiet-action" disabled={clock.paused} onClick={clock.advanceNow}>Seguir →</button> : null}<button type="button" className="quiet-action" aria-pressed={clock.paused} onClick={() => { stopSpeech(); clock.togglePause(); }}>{clock.paused ? 'Seguir' : 'Pausar'}</button>{onGrammar ? <button type="button" className="quiet-action" onClick={onGrammar}>Gramática</button> : null}{onOnlyWords ? <button type="button" className="quiet-action" onClick={onOnlyWords}>Solo palabras</button> : onMix ? <button type="button" className="quiet-action" onClick={onMix}>Mixto</button> : null}</div></header>
+    <section className="game-stage"><GameCard className={`arcade-stream-card ${result === 'correct' ? 'recall-correct' : 'recall-calm'}`} showBack={!clock.checkpoint && result === 'rescue'} back={result === 'rescue' ? reminder : undefined}>
     {clock.checkpoint ? <ArcadeCheckpoint onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : <div className="recall-content">
-      <p className="eyebrow">{writing ? 'SIN OPCIONES' : 'RECUERDA'} · {automatic ? index - startRound + 1 : index % 15 + 1}/{automatic ? limit : 15} <span className={combo >= 3 ? 'combo-hot' : ''}>COMBO x{Math.max(1, combo)}</span></p>
+      <p className="eyebrow">{listening ? 'ESCUCHA Y CONECTA' : writing ? 'SIN OPCIONES' : 'RECUERDA'} · {automatic ? index - startRound + 1 : index % 15 + 1}/{automatic ? limit : 15} <span className={combo >= 3 ? 'combo-hot' : ''}>COMBO x{Math.max(1, combo)}</span></p>
       {roundCalm ? <p role="status">{round?.pendingModel ? 'Primero la practicamos sin reloj · sin prisas' : 'Sin cuenta atrás · a tu ritmo'}</p> : <ArcadeClock remaining={clock.remaining} paused={clock.paused} revealed={revealed} onPause={clock.togglePause} durationMs={durationMs} />}
-      {!writing ? <SceneVisual word={round.word} hideAnswer /> : null}<h1>¿Cómo se dice <em>{round.word.es}</em>?</h1>
-      {writing ? <form className="arcade-write" onSubmit={(event) => { event.preventDefault(); if (input.trim()) choose(input); }}>
+      {!writing && !listening ? <SceneVisual word={round.word} hideAnswer /> : null}<h1>{listening ? 'Escucha y elige lo que significa.' : <>¿Cómo se dice <em>{round.word.es}</em>?</>}</h1>
+      {listening ? <><button type="button" className="primary-action" disabled={revealed || clock.paused || audioStatus === 'loading'} onClick={() => void listen()}>🔊 Reproducir palabra inglesa</button><p role="status">{audioStatus === 'played' ? 'Audio reproducido. Elige su significado; puedes escucharlo otra vez.' : audioStatus === 'loading' ? 'Preparando el audio. No hay cuenta atrás.' : audioStatus === 'idle' ? 'Primero escucha, después conecta con un significado.' : 'No se completó el audio. Puedes repetirlo o practicar con texto.'}</p><div className="recall-choices" aria-label="Significados preparados">{listeningOptions.map((candidate) => <button type="button" lang="es" disabled={revealed || clock.paused || audioStatus !== 'played'} key={candidate.word.en} onClick={() => choose(candidate.word.en, candidate.word.es)}>{candidate.word.es}</button>)}</div><button type="button" className="quiet-action" disabled={revealed || clock.paused} onClick={useTextOptions}>Practicar con texto</button></> : writing ? <form className="arcade-write" onSubmit={(event) => { event.preventDefault(); if (input.trim()) choose(input); }}>
         <label className="sr-only" htmlFor="arcade-word-answer">Escribe la palabra en inglés</label>
         <input id="arcade-word-answer" lang="en" value={input} onChange={(event) => setInput(event.target.value)} disabled={revealed || clock.paused} autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} placeholder="Escribe en inglés" />
         <button type="submit" className="primary-action" disabled={revealed || clock.paused || !input.trim()}>Comprobar →</button>
-        <button type="button" className="quiet-action" disabled={revealed || clock.paused} onClick={() => { setUsedHint(true); setShowChoices(true); }}>Ayúdame con opciones</button>
+        <button type="button" className="quiet-action" disabled={revealed || clock.paused} onClick={useTextOptions}>Ayúdame con opciones</button>
       </form> : <div className="recall-choices" aria-label={inspection ? 'Palabras de prueba' : 'Palabras aprendidas'}>{options.map((choice) => <button type="button" disabled={revealed || clock.paused} className={chosen === choice && result === 'correct' ? 'is-correct' : ''} key={choice} onClick={() => choose(choice)}>{choice}</button>)}</div>}
-      <div className="arcade-stream-foot"><button type="button" className="quiet-action" disabled={revealed || clock.paused} onClick={remember}>Recordar el puente</button>{inspection ? <small>Prueba · no guarda</small> : null}<span className="sr-only" role="status">{feedback}</span></div>
+      <div className="arcade-stream-foot"><button type="button" className="quiet-action" disabled={revealed || clock.paused} onClick={remember}>Recordar el puente</button>{inspection ? <small>Prueba · no guarda</small> : null}<span role="status">{feedback}</span></div>
     </div>}
     </GameCard></section></div></dialog>;
 }
