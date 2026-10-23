@@ -76,6 +76,12 @@ export function lessonForForm(form: GrammarForm, baseSpanish?: string): GrammarL
         answers: [`I am ${form.english}`], hint: `Primero quién: I. Después estoy: AM. Al final la acción: ${form.english.toUpperCase()}.`, success: 'Mensaje construido. Ahora úsalo sin piezas.' },
       { id: 'meaning-now-v1', kind: 'explain', prompt: `Recibes «I am ${form.english}». ¿Qué te cuenta esa persona?`,
         choices: [`Estoy ${form.spanish} ahora.`, `Todavía no estoy ${form.spanish}.`], answers: [`Estoy ${form.spanish} ahora.`],
+        ...(form.englishBase === 'play' && form.english === 'playing' && form.spanish === 'jugando' ? {
+          situation: { message: 'I am playing', scenes: [
+            { choice: 'Estoy jugando ahora.', state: 'playing' as const },
+            { choice: 'Todavía no estoy jugando.', state: 'waiting' as const },
+          ] },
+        } : {}),
         hint: `I AM ${form.english.toUpperCase()} cuenta una acción que está ocurriendo ahora.`, success: 'Has entendido el mensaje: la acción está ocurriendo ahora.' },
       { id: 'use', kind: 'write', prompt: `Dilo en inglés: estoy ${form.spanish}.`, answers: [first.phrase, `I am ${form.english}`], hint: `Para «estoy ${form.spanish}», une I + AM y añade ${form.english.toUpperCase()}. También puedes escribir I'M.`, success: 'Ya has escrito una frase que puedes usar.' },
     ],

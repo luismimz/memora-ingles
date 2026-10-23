@@ -18,7 +18,7 @@ async function mount() {
   await act(async () => { tree = create(<JourneyTrickExperience unit={previewUnit} stop={stop} userId={user} inspection={false} onFinished={finished} onExit={() => {}} onNext={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />); });
 }
 const text = (value: any): string => typeof value === 'string' ? value : Array.isArray(value) ? value.map(text).join(' ') : value?.children ? text(value.children) : '';
-const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node) === label)!;
+const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).trim() === label)!;
 async function advance(double = false) {
   const region = tree.root.findByProps({ role: 'region' });
   const target = { closest: () => null };
@@ -59,7 +59,7 @@ it('la parada real monta antes de escribir y limita ráfagas, recarga y modelo s
   expect(tree.root.findAllByProps({ 'aria-label': 'Continuar con el modelo' })).toHaveLength(1);
   await advance(true);
   expect(tree.root.findAllByType('input')).toHaveLength(0);
-  const answer = tree.root.findAllByType('button').find((node) => text(node).startsWith('Estoy ') && text(node).endsWith('ahora.'))!;
+  const answer = button('Estoy jugando ahora.');
   await act(async () => answer.props.onClick()); await advance();
   expect(tree.root.findAllByType('input')).toHaveLength(1);
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I playing' } }));
@@ -112,7 +112,7 @@ it('pedir ayuda y enviar inmediatamente conserva la ayuda en las dos evidencias 
     await act(async () => bank.findAllByType('button').find((node) => text(node) === label)!.props.onClick({ detail: 0 }));
   }
   await advance();
-  await act(async () => tree.root.findAllByType('button').find((node) => text(node).startsWith('Estoy ') && text(node).endsWith('ahora.'))!.props.onClick());
+  await act(async () => button('Estoy jugando ahora.').props.onClick());
   await advance();
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I am playing' } }));
   const submit = tree.root.findByType('form').props.onSubmit;
@@ -124,4 +124,28 @@ it('pedir ayuda y enviar inmediatamente conserva la ayuda en las dos evidencias 
   act(() => tree.unmount()); await mount();
   expect(readGrammarAttempts(user).filter((event) => event.check === 'use' && event.unitId === previewUnit.id)).toHaveLength(1);
   expect(tree.root.findByType('input').props.disabled).toBe(true);
+});
+it('el mensaje de jugar cambia la escena según el sentido y conserva el primer error al reparar', async () => {
+  await mount(); await reachPuzzle();
+  for (const label of ['I', 'AM', 'PLAYING']) {
+    const bank = tree.root.findByProps({ 'aria-label': 'Piezas disponibles' });
+    await act(async () => bank.findAllByType('button').find((node) => text(node) === label)!.props.onClick({ detail: 0 }));
+  }
+  await advance();
+  expect(tree.root.findAllByProps({ 'aria-label': 'Elige la escena que comunica el mensaje' })).toHaveLength(1);
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  await act(async () => button('Todavía no estoy jugando.').props.onClick());
+  expect(text(tree.toJSON())).toContain('Has dejado el mando guardado');
+  expect(text(tree.toJSON())).not.toContain('Mensaje entregado');
+  const attempts = readLearningActivities(user).filter((event) => event.activityId === 'meaning-now-v1');
+  expect(attempts).toMatchObject([{ correct: false, helped: true }]);
+  act(() => tree.unmount()); await mount();
+  expect(text(tree.toJSON())).toContain('Has dejado el mando guardado');
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'meaning-now-v1')).toEqual(attempts);
+  await act(async () => button('Estoy jugando ahora.').props.onClick());
+  expect(text(tree.toJSON())).toContain('Mensaje entregado');
+  const repaired = readLearningActivities(user).filter((event) => event.activityId === 'meaning-now-v1');
+  expect(repaired).toMatchObject([{ correct: false }, { correct: true, helped: true, parentAttemptId: attempts[0].id }]);
+  await advance();
+  expect(tree.root.findAllByType('input')).toHaveLength(1);
 });

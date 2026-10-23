@@ -71,7 +71,7 @@ it('reanuda la corrección del último envío sin recalcularla sobre texto aún 
 });
 it('un error de opciones conserva su pista revisada, no activa el diagnóstico de escritura', () => {
   const props = { lesson: generatedLesson, checkpoint: { stage: generatedLesson.steps.length, checkIndex: 1, checkId: 'meaning-now-v1', input: '', feedback: 'idle' as const, helped: false } };
-  render(props); button(generatedLesson.checks[1].choices![1]).props.onClick();
+  render(props); nodes.find((node) => node.type === GrammarSituation)!.props.onAnswer(generatedLesson.checks[1].choices![1]);
   expect(render(props)).toContain(generatedLesson.checks[1].hint);
   expect(readLearningActivities('learner')[0].feedback).toBe(generatedLesson.checks[1].hint);
 });
@@ -85,7 +85,7 @@ it('el primer encuentro generado monta el mensaje y después exige escritura, si
   expect(readLearningActivities('learner')[0]).toMatchObject({ activityId: 'order-message-v1', modality: 'choice', helped: true });
   expect(readSentenceMemories('learner')).toHaveLength(0);
   button('Seguir →').props.onClick(); render(props);
-  button(generatedLesson.checks[1].answers[0]).props.onClick(); render(props);
+  nodes.find((node) => node.type === GrammarSituation)!.props.onAnswer(generatedLesson.checks[1].answers[0]); render(props);
   button('Seguir →').props.onClick(); render(props);
   expect(nodes.find((node) => node.type === 'input')).toBeTruthy();
   expect(complete).not.toHaveBeenCalled();
@@ -109,7 +109,7 @@ it('incluso con estructura practicada monta piezas antes de exigir escritura', (
   render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });
   button('Seguir →').props.onClick();
   render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });
-  button(generatedLesson.checks[1].answers[0]).props.onClick();
+  nodes.find((node) => node.type === GrammarSituation)!.props.onAnswer(generatedLesson.checks[1].answers[0]);
   render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });
   button('Seguir →').props.onClick();
   render({ lesson: generatedLesson, startAtPractice: true, omitGeneratedExplanation: true });

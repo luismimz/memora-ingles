@@ -23,4 +23,15 @@ describe('trucos que se comprueban y se usan', () => {
     expect(lesson.checks[2].hint).toContain('I + AM');
     expect(() => validateGrammarLesson({ ...lesson, checks: [lesson.checks[2]] })).toThrow();
   });
+  it('el mensaje preparado de jugar permite elegir una escena sin atribuirla a otras acciones', () => {
+    const form = previewUnit.grammar[0];
+    const lesson = lessonForForm(form, 'jugar')!;
+    expect(() => validateGrammarLesson(lesson)).not.toThrow();
+    expect(lesson.checks[1].situation).toEqual({ message: 'I am playing', scenes: [
+      { choice: 'Estoy jugando ahora.', state: 'playing' },
+      { choice: 'Todavía no estoy jugando.', state: 'waiting' },
+    ] });
+    expect(lessonForForm({ ...form, englishBase: 'read', english: 'reading', spanish: 'leyendo' }, 'leer')!.checks[1].situation).toBeUndefined();
+    expect(lessonForForm({ ...form, spanish: 'bailando' }, 'jugar')!.checks[1].situation).toBeUndefined();
+  });
 });
