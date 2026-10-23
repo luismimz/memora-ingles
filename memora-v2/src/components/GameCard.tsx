@@ -135,7 +135,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
           if (node.scrollHeight > node.clientHeight && node.scrollTop >= node.scrollHeight - node.clientHeight - 2) { armed.current = false; advance(); }
         }}>
         <article className="game-card-face card-vertical-page"><div className="game-card-body">{children}{back ? <details className="card-vertical-memory"><summary>Recordar la escena</summary>{back}</details> : null}</div></article>
-        {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={advanceLabel}><span aria-hidden="true">↑</span> Desliza para continuar<span className="sr-only"> o pulsa aquí. {advanceLabel}</span></button></footer> : null}
+        {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={advanceLabel}><span aria-hidden="true">↑</span><span>{advanceLabel}<small>Desliza o toca para seguir</small></span></button></footer> : null}
       </div>
     </div>;
   }

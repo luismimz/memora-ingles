@@ -16,6 +16,12 @@ function button(node: ReactNode): ReactElement<any> | undefined {
 beforeEach(() => { vi.useFakeTimers(); vi.stubGlobal('window', { setTimeout, clearTimeout }); });
 afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 describe('avance accesible sin gesto obligatorio', () => {
+  it('muestra la acción concreta en vertical, sin sustituirla por navegación genérica', () => {
+    const html = renderToStaticMarkup(<GameCard vertical advanceLabel="Ya la he imaginado" onAdvance={() => {}}>Escena</GameCard>);
+    expect(html).toContain('<span>Ya la he imaginado<small>Desliza o toca para seguir</small></span>');
+    expect(html).not.toContain('Desliza para continuar');
+    expect(renderToStaticMarkup(<GameCard vertical revealFooter={false} onAdvance={() => {}}>Enseñanza pendiente</GameCard>)).not.toContain('card-vertical-next');
+  });
   it('ofrece un botón explícito cuando la tarjeta no tiene su propio control', () => {
     const html = renderToStaticMarkup(<GameCard advanceControl advanceLabel="Ya la he imaginado" onAdvance={() => {}}>Escena</GameCard>);
     expect(html).toContain('class="card-advance"');
