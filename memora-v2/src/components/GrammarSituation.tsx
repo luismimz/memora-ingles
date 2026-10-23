@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState, type PointerEvent } from 'react';
 import type { LessonCheck, SituationState } from '../domain/grammarLesson';
 import './grammarSituation.css';
 
@@ -36,17 +37,60 @@ export function SituationScreen({ state }: { state: SituationState }) {
   </svg>;
 }
 
-export function GrammarSituation({ check, selected, feedback, onAnswer, onListen, disabled = false, listenDisabled = false }: {
+interface GrammarSituationProps {
   check: LessonCheck; selected: string; feedback: 'idle' | 'help' | 'correct'; onAnswer: (answer: string) => void; onListen: () => void; disabled?: boolean; listenDisabled?: boolean;
-}) {
-  if (!check.situation) return null;
-  const scene = check.situation.scenes.find((item) => item.choice === selected);
-  return <div className="grammar-situation">
-    <p className="situation-message" lang="en">{check.situation.message}</p>
+  presentationKey?: string;
+}
+export function GrammarSituation(props: GrammarSituationProps) {
+  if (!props.check.situation) return null;
+  return <SituationDelivery {...props} key={`${props.presentationKey ?? ''}:${props.check.id}:${props.check.situation.message}`} />;
+}
+
+function SituationDelivery({ check, selected, feedback, onAnswer, onListen, disabled = false, listenDisabled = false, presentationKey = '' }: GrammarSituationProps) {
+  const root = useRef<HTMLDivElement>(null);
+  const destinations = useRef(new Map<string, HTMLButtonElement>());
+  const gesture = useRef<{ id: number; x: number; y: number }>();
+  const [drag, setDrag] = useState<{ x: number; y: number; over?: string }>();
+  const available = useRef({ disabled, feedback, onAnswer });
+  available.current = { disabled, feedback, onAnswer };
+  const locked = disabled || feedback === 'correct';
+  useEffect(() => { if (locked) { gesture.current = undefined; setDrag(undefined); } }, [locked]);
+  const situation = check.situation!;
+  // Stable across help, feedback and reload, but not always the same side for
+  // every message. Presentation only; no new learner store or random answer.
+  const hash = [...`${presentationKey}:${check.id}:${situation.message}`].reduce((value, char) => Math.imul(value ^ char.charCodeAt(0), 16777619), 2166136261);
+  const scenes = (hash ^ hash >>> 16) & 1 ? [...situation.scenes].reverse() : situation.scenes;
+  function destination(x: number, y: number) {
+    return scenes.find((item) => { const box = destinations.current.get(item.choice)?.getBoundingClientRect(); return box && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom; })?.choice;
+  }
+  function move(event: PointerEvent<HTMLDivElement>) {
+    if (gesture.current?.id !== event.pointerId) return;
+    event.stopPropagation();
+    const box = root.current?.getBoundingClientRect();
+    if (box) setDrag({ x: event.clientX - box.left, y: event.clientY - box.top, over: destination(event.clientX, event.clientY) });
+  }
+  function cancel() { gesture.current = undefined; setDrag(undefined); }
+  function release(event: PointerEvent<HTMLDivElement>) {
+    const start = gesture.current;
+    if (start?.id !== event.pointerId) return;
+    event.stopPropagation();
+    const choice = destination(event.clientX, event.clientY);
+    const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y) >= 8;
+    cancel();
+    if (choice && moved && !available.current.disabled && available.current.feedback !== 'correct') available.current.onAnswer(choice);
+  }
+  const scene = situation.scenes.find((item) => item.choice === selected);
+  return <div ref={root} className="grammar-situation">
+    <p className="situation-instruction">Lleva el mensaje a su escena, o toca la escena.</p>
+    <div className={`situation-message situation-token${drag ? ' is-held' : ''}`} lang="en" role="group" aria-label={`Mensaje inglés: ${situation.message}`} draggable={!locked}
+      onDragStart={(event) => event.preventDefault()}
+      onPointerDown={(event) => { if (locked || event.button !== 0 || event.isPrimary === false) return; event.preventDefault(); event.stopPropagation(); gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY }; event.currentTarget.setPointerCapture?.(event.pointerId); move(event); }}
+      onPointerMove={move} onPointerUp={release} onPointerCancel={cancel} onLostPointerCapture={cancel}>{situation.message}<small lang="es">↘ Lleva este mensaje</small></div>
     <button type="button" className="quiet-action" disabled={listenDisabled} onClick={onListen} aria-label="Escuchar el mensaje inglés">🔊 Escuchar</button>
     <div className="situation-options" role="group" aria-label="Elige la escena que comunica el mensaje">
-      {check.situation.scenes.map((item) => <button type="button" key={item.choice} aria-pressed={selected === item.choice} disabled={disabled || feedback === 'correct'} onClick={() => onAnswer(item.choice)}><SituationScreen state={item.state} /><span>{item.choice}</span></button>)}
+      {scenes.map((item) => <button type="button" ref={(node) => { if (node) destinations.current.set(item.choice, node); else destinations.current.delete(item.choice); }} key={item.choice} data-drop-choice={item.choice} className={drag?.over === item.choice ? 'is-drop-target' : ''} aria-pressed={selected === item.choice} disabled={locked} onClick={() => onAnswer(item.choice)}><SituationScreen state={item.state} /><span>{item.choice}</span></button>)}
     </div>
+    {drag ? <div className="situation-token-ghost" aria-hidden="true" style={{ left: drag.x, top: drag.y }} lang="en">{situation.message}</div> : null}
     {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{feedback === 'correct' ? 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
   </div>;
 }

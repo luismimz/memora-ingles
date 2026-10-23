@@ -1,5 +1,6 @@
 import { expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { act, create } from 'react-test-renderer';
 import { GrammarSituation } from './GrammarSituation';
 import { lessonForForm } from '../domain/grammarLesson';
 import { previewUnit } from '../preview/previewUnit';
@@ -29,17 +30,19 @@ it('presenta dos escenas accesibles, mensaje inglés y escucha sin temporizador 
 });
 it('cada elección dispara su propio mensaje y el botón de audio sigue disponible tras responder', () => {
   const answer = vi.fn(); const listen = vi.fn();
-  const tree = GrammarSituation({ check, selected: check.answers[0], feedback: 'correct', onAnswer: answer, onListen: listen })!;
-  const children = tree.props.children;
-  children[1].props.onClick();
+  let tree: ReturnType<typeof create>;
+  act(() => { tree = create(<GrammarSituation check={check} selected={check.answers[0]} feedback="correct" onAnswer={answer} onListen={listen} />); });
+  act(() => tree.root.findByProps({ 'aria-label': 'Escuchar el mensaje inglés' }).props.onClick());
   expect(listen).toHaveBeenCalledOnce();
-  const buttons = children[2].props.children;
+  const buttons = tree!.root.findAllByType('button').filter((button) => button.props['data-drop-choice']);
   expect(buttons.every((button: any) => button.props.disabled)).toBe(true);
-  expect(buttons.map((button: any) => button.props['aria-pressed'])).toEqual([false, true]);
-  const idle = GrammarSituation({ check, selected: '', feedback: 'idle', onAnswer: answer, onListen: listen })!;
-  idle.props.children[2].props.children[0].props.onClick();
-  idle.props.children[2].props.children[1].props.onClick();
-  expect(answer.mock.calls.map(([value]) => value)).toEqual(check.choices);
+  expect(buttons.filter((button) => button.props['aria-pressed']).map((button) => button.props['data-drop-choice'])).toEqual(check.answers);
+  act(() => tree.update(<GrammarSituation check={check} selected="" feedback="idle" onAnswer={answer} onListen={listen} />));
+  const idle = tree!.root.findAllByType('button').filter((button) => button.props['data-drop-choice']);
+  for (const choice of idle) act(() => choice.props.onClick());
+  expect(answer.mock.calls.map(([value]) => value)).toEqual(idle.map((button) => button.props['data-drop-choice']));
+  expect(new Set(answer.mock.calls.map(([value]) => value))).toEqual(new Set(check.choices));
+  act(() => tree.unmount());
 });
 it('el resultado refleja la escena elegida y ofrece reparación sin declarar dominio', () => {
   const wrong = renderToStaticMarkup(<GrammarSituation check={check} selected={check.choices![0]} feedback="help" onAnswer={() => {}} onListen={() => {}} />);

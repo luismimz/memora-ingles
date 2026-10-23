@@ -1,4 +1,10 @@
-.grammar-situation { display: grid; gap: 8px; min-width: 0; }
+.grammar-situation { position: relative; display: grid; gap: 8px; min-width: 0; }
+.situation-instruction { margin: 0; color: var(--muted); font-size: .85rem; }
+.situation-token { padding: 12px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); cursor: grab; touch-action: none; user-select: none; }
+.situation-token small { display: block; font-size: .72rem; font-weight: 400; color: var(--muted); }
+.situation-token.is-held { opacity: .45; cursor: grabbing; }
+.situation-token-ghost { position: absolute; z-index: 5; transform: translate(-50%, -50%); pointer-events: none; max-width: 90%; padding: 10px 14px; border: 2px solid var(--accent-ink); border-radius: 14px; background: var(--surface-strong); color: var(--ink); box-shadow: var(--shadow); font-weight: 750; }
+.situation-options button.is-drop-target { outline: 3px dashed var(--accent-ink); outline-offset: 2px; }
 .situation-message { margin: 0; font-size: clamp(1.5rem, 5vw, 2.25rem); font-weight: 800; overflow-wrap: anywhere; }
 .situation-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 .situation-options button { display: grid; gap: 4px; min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); color: var(--ink); font: inherit; cursor: pointer; }
