@@ -13,6 +13,13 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('conserva reparación y consulta del modelo sin aceptar contadores inválidos', () => {
+    const state = { ...initialGame, phase: 'build' as const, buildRepair: { failures: 2, choice: 'wrong', previousAttemptId: 'prior' }, buildModelUsed: true };
+    writeGameCheckpoint('learner', 'repair', '1', state);
+    expect(readGameCheckpoint('learner', 'repair', '1')).toEqual(state);
+    writeGameCheckpoint('learner', 'invalid-repair', '1', { ...state, buildRepair: { ...state.buildRepair, failures: 15 } });
+    expect(readGameCheckpoint('learner', 'invalid-repair', '1')).toBeNull();
+  });
   it('restaura el desenlace de una respuesta sin convertir el checkpoint en intento y rechaza valores corruptos', () => {
     const state = { ...initialGame, phase: 'recall' as const, recallAnswered: true, recallOutcome: 'wrong' as const };
     writeGameCheckpoint('learner', 'feedback', '1', state);

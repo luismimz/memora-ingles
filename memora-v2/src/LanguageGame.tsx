@@ -162,6 +162,18 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
     if (!saved) return start;
     if (saved.wordIndex >= unit.words.length || saved.recallIndex >= unit.words.length || saved.grammarIndex >= Math.max(1, getPlayableGrammar(unit).length) || saved.sentenceIndex >= getUnitSentences(unit).length) return start;
     if (saved.phase === 'conversation' && !unit.communication?.dialogue) return initialGame;
+    if (saved.phase === 'build' && !saved.buildRepair) {
+      const slot = getUnitSentences(unit)[saved.sentenceIndex]?.slots[saved.filledSlots];
+      const activityId = `build-${saved.sentenceIndex}-${saved.filledSlots}`;
+      const recent = readLearningActivities(userId).filter((event) => event.unitId === unit.id && event.contentVersion === (unit.contentVersion ?? '1') && event.phase === 'construction' && [activityId, `build-model-${saved.sentenceIndex}-${saved.filledSlots}`, `constructed-${saved.sentenceIndex}`].includes(event.activityId)).reverse();
+      const errors = [];
+      for (const event of recent) {
+        if (!slot || event.activityId !== activityId || event.source !== 'learner' || event.correct !== false || event.expected !== slot.en || event.prompt !== slot.es || !slot.choices.includes(event.response)) break;
+        errors.push(event);
+        if (errors.length === 2) break;
+      }
+      if (errors.length) saved.buildRepair = { failures: errors.length, choice: errors[0].response, previousAttemptId: errors[0].id };
+    }
     const preparedSteps = getUnitSentences(unit)[saved.sentenceIndex]?.slots[saved.filledSlots]?.preparation?.length ?? 0;
     return saved.preparationStep !== undefined && saved.preparationStep > preparedSteps ? { ...saved, preparationStep: 0 } : saved;
   });
@@ -189,7 +201,10 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   const locked = useRef(false);
   const completedSession = useRef(false);
   const sessionStarted = useRef(new Date().toISOString());
-  const previousConstructionAttempt = useRef<string>();
+  const previousConstructionAttempt = useRef<string | undefined>(state.buildRepair?.previousAttemptId);
+  const constructionKey = `${state.sentenceIndex}:${state.filledSlots}`;
+  const constructionGuard = useRef({ key: constructionKey, failures: state.buildRepair?.failures ?? 0, placed: false });
+  if (constructionGuard.current.key !== constructionKey) constructionGuard.current = { key: constructionKey, failures: state.buildRepair?.failures ?? 0, placed: false };
   const usedReviewJump = useRef(false);
   const word = unit.words[state.wordIndex];
   const acquisitionIndexes = unit.words.map((item, index) => item.learningRole === 'review' ? -1 : index).filter((index) => index >= 0);
@@ -294,6 +309,35 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   const currentReviewStep = `${state.phase}-${state.phase === 'associate' ? state.wordIndex : state.phase === 'recall' ? state.recallIndex : state.phase === 'grammar' ? state.grammarIndex : state.phase === 'build' ? state.sentenceIndex : 0}`;
 
   const acquisitionPosition = Math.max(0, acquisitionIndexes.indexOf(state.wordIndex));
+  function constructionAttempt(choice: string, correct: boolean, slotIndex: number): false | void {
+    const guard = constructionGuard.current;
+    const slot = sentence.slots[slotIndex];
+    if (guard.key !== constructionKey || guard.placed || guard.failures >= 2 || slotIndex !== state.filledSlots || !slot?.choices.includes(choice)) return false;
+    if (!correct) guard.failures += 1;
+    let attemptId: string | undefined;
+    if (!reviewMode) {
+      const item = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `build-${state.sentenceIndex}-${slotIndex}`, skill: currentForm.id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, feedback: constructionFeedback(sentence, slotIndex, choice, unit.words), parentAttemptId: previousConstructionAttempt.current });
+      attemptId = item.id;
+    }
+    previousConstructionAttempt.current = correct ? undefined : attemptId;
+    if (!correct) dispatch({ type: 'constructionError', slotIndex, choice, previousAttemptId: attemptId });
+  }
+  function placeConstruction(withModel = false) {
+    const guard = constructionGuard.current;
+    if (state.phase !== 'build' || guard.key !== constructionKey || state.filledSlots >= sentence.slots.length || guard.placed || (withModel ? guard.failures < 2 : guard.failures >= 2)) return;
+    guard.placed = true;
+    if (!reviewMode) {
+      const slot = sentence.slots[state.filledSlots];
+      if (withModel) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `build-model-${state.sentenceIndex}-${state.filledSlots}`, skill: currentForm.id, phase: 'construction', source: 'authored', modality: 'choice', prompt: slot.es, response: slot.en, expected: '', correct: null, helped: true, parentAttemptId: previousConstructionAttempt.current, feedback: 'Pieza colocada con modelo; no es un acierto.' });
+      recordChunkExposure(userId, unit.id, sentence, state.filledSlots);
+      if (state.filledSlots === sentence.slots.length - 1) {
+        recordSentenceExposure(userId, unit.id, sentence);
+        recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `constructed-${state.sentenceIndex}`, skill: currentForm.id, phase: 'construction', source: withModel || state.buildModelUsed ? 'authored' : 'learner', modality: 'choice', prompt: sentence.es, response: sentence.en, expected: withModel || state.buildModelUsed ? '' : sentence.en, correct: withModel || state.buildModelUsed ? null : true, helped: true, feedback: withModel || state.buildModelUsed ? 'Frase montada consultando un modelo; pendiente de práctica.' : 'Frase construida con piezas.' });
+      }
+    }
+    previousConstructionAttempt.current = undefined;
+    dispatch({ type: 'chooseSlot', correct: true, slotCount: sentence.slots.length, withModel });
+  }
   const finishUnit = () => {
     if (onComplete) onComplete({ correct: state.correct, attempted: usedReviewJump.current ? 0 : unit.words.length });
     else onNext();
@@ -326,9 +370,9 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
 
         {state.phase === 'grammar' ? canFastReview && expandedGrammarIndex !== state.grammarIndex ? <GameCard key={`grammar-revisit-${state.grammarIndex}`} className="grammar-review-card"><div className="reward-content"><p className="eyebrow">ESTE TRUCO YA LO HAS VISTO</p><h1>Vamos a usarlo en una frase.</h1><p><strong lang="es">{currentForm.spanish}</strong> → <strong lang="en">{currentForm.english}</strong></p><button type="button" className="primary-action" onClick={() => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); }}>Usarlo ahora →</button><button type="button" className="quiet-action" onClick={() => setExpandedGrammarIndex(state.grammarIndex)}>Volver a ver el truco</button></div></GameCard> : currentLesson ? <GrammarCoach key={currentForm.id} lesson={currentLesson} form={currentForm} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} conversationAnswers={learningMode === 'adventure' ? conversationPracticeAnswers(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : []} reviewMode={reviewMode} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : <GrammarLesson key={currentForm.id} form={currentForm} baseSpanish={baseSpanish} index={state.grammarIndex} total={grammarForms.length} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : null}
 
-        {state.phase === 'build' ? <SentenceBuilderCard key={`build-${state.sentenceIndex}`} sentence={sentence} vocabulary={unit.words} sceneWord={unit.words[0]} processForm={unit.grammar.find((form) => form.id === 'ing') ?? unit.grammar[0]} index={state.sentenceIndex} total={sentences.length} filledSlots={state.filledSlots} choiceSeed={sessionSeed + state.sentenceIndex}
+        {state.phase === 'build' ? <SentenceBuilderCard key={`build-${state.sentenceIndex}`} vertical={!reviewMode} sentence={sentence} vocabulary={unit.words} sceneWord={unit.words[0]} processForm={unit.grammar.find((form) => form.id === 'ing') ?? unit.grammar[0]} index={state.sentenceIndex} total={sentences.length} filledSlots={state.filledSlots} choiceSeed={sessionSeed + state.sentenceIndex} needsModel={(state.buildRepair?.failures ?? 0) >= 2} lastIncorrectChoice={state.buildRepair?.choice} onAcceptModel={() => placeConstruction(true)}
           preparationStep={state.preparationStep ?? 0} onPreparationChange={(step) => dispatch({ type: 'prepareSlot', sentenceIndex: state.sentenceIndex, slotIndex: state.filledSlots, step, stepCount: sentence.slots[state.filledSlots]?.preparation?.length ?? 0 })}
-          onAttempt={(choice, correct, slotIndex) => { if (!reviewMode) { const slot = sentence.slots[slotIndex]; const item = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `build-${state.sentenceIndex}-${slotIndex}`, skill: currentForm.id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, feedback: constructionFeedback(sentence, slotIndex, choice, unit.words), parentAttemptId: previousConstructionAttempt.current }); previousConstructionAttempt.current = correct ? undefined : item.id; } }} onPick={() => { if (!reviewMode) { recordChunkExposure(userId, unit.id, sentence, state.filledSlots); if (state.filledSlots === sentence.slots.length - 1) { recordSentenceExposure(userId, unit.id, sentence); recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `constructed-${state.sentenceIndex}`, skill: currentForm.id, phase: 'construction', source: 'learner', modality: 'choice', prompt: sentence.es, response: sentence.en, expected: sentence.en, correct: true, helped: true, feedback: 'Frase construida con piezas.' }); } } dispatch({ type: 'chooseSlot', correct: true, slotCount: sentence.slots.length }); }} onNext={() => dispatch({ type: 'continue', sentenceCount: sentences.length, slotCount: sentence.slots.length, conversation: learningMode === 'adventure' && Boolean(unit.communication?.dialogue) })} /> : null}
+          onAttempt={constructionAttempt} onPick={() => placeConstruction()} onNext={() => dispatch({ type: 'continue', sentenceCount: sentences.length, slotCount: sentence.slots.length, conversation: learningMode === 'adventure' && Boolean(unit.communication?.dialogue) })} /> : null}
         {state.phase === 'conversation' && unit.communication?.dialogue ? <ConversationPractice unit={unit} userId={userId} reviewMode={reviewMode} onContinue={() => dispatch({ type: 'continue' })} /> : null}
 
 {state.phase === 'complete' ? <GameCard key="complete" className="complete-card" onAdvance={onEvolution ? undefined : finishUnit} advanceLabel=""><div className="complete-content"><div className="reward-burst" aria-hidden="true">✦</div><p className="eyebrow">{reviewMode ? 'VISTA DE REVISIÓN' : 'MUNDO 1 · ESCENA CONSEGUIDA'}</p><h1>{learningMode === 'grammar' ? 'Has practicado el truco.' : unit.communication?.dialogue ? 'Has practicado la escena.' : unit.communication?.intent ? 'Ya puedes usarlo.' : '¡Ya puedes decirlo!'}</h1>{unit.communication?.intent ? <p className="capability-earned">{unit.communication?.dialogue ? 'Has trabajado: ' : '✓ '}{unit.communication.intent}</p> : null}<p className="assembled-phrase">{sentences[sentences.length - 1].en}</p><p className="subject-translation">{sentences[sentences.length - 1].es}</p><EchoPractice phrase={sentences[sentences.length - 1].en} parts={sentences[sentences.length - 1].slots.map((slot) => slot.en)} reply={unit.communication?.reply} />{!reviewMode ? <p className="next-review">Volveremos a esta escena {state.correct === unit.words.length ? 'en 1 hora' : 'en 10 minutos'} para fijarla.</p> : null}<div className="complete-voluntary"><button type="button" className="primary-action" onClick={finishUnit}>{nextLabel}</button>{onPractice ? <button type="button" className="arcade-invitation" onClick={onPractice}>✦ Arcade de asociaciones</button> : null}{onEvolution ? <button type="button" onClick={onEvolution}>Ver Mi evolución</button> : null}<button type="button" className="quiet-action" onClick={onExit}>Terminar por hoy</button></div></div></GameCard> : null}
