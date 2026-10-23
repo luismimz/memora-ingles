@@ -38,20 +38,23 @@ function readChatCheckpoint(userId: string, unitId: string, version: string, tur
 }
 
 /** Incoming message → learner's answer → reply. The chat never swipes away. */
-export function ConversationPractice({ unit, userId, reviewMode, checkpointScope = 'story', onContinue }: { unit: AtomicUnit; userId: string; reviewMode: boolean; checkpointScope?: string; onContinue: () => void }) {
+export function ConversationPractice({ unit, userId, reviewMode, checkpointScope = 'story', skillId, initialHelped = false, onContinue }: { unit: AtomicUnit; userId: string; reviewMode: boolean; checkpointScope?: string; skillId?: string; initialHelped?: boolean; onContinue: () => void }) {
   const checkpointUnitId = checkpointScope === 'story' ? unit.id : `${unit.id}:${checkpointScope}`;
   const dialogue = unit.communication!.dialogue!;
+  const partnerMessage = (id: string, pair: { en: string; es?: string }): ChatMessage => dialogue.partnerLanguage === 'es'
+    ? { id, who: 'partner', text: pair.es!, language: 'es' }
+    : { id, who: 'partner', text: pair.en, translation: pair.es };
   const turns = useMemo(() => conversationTurns(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))), [unit, userId]);
   const partner = dialogue.partner ?? (unit.id === 'm1-entry-keys' ? 'Emma' : 'Alguien de casa');
-  const recordLearningActivity = (owner: string, value: Parameters<typeof persistLearningActivity>[1]) => persistLearningActivity(owner, { ...value, conversationId: `person:${partner.normalize('NFKC').trim().toLocaleLowerCase('es')}`, speaker: value.source === 'learner' ? 'Tú' : value.activityId.startsWith('partner-') ? partner : 'Memora' });
+  const recordLearningActivity = (owner: string, value: Parameters<typeof persistLearningActivity>[1]) => persistLearningActivity(owner, { ...value, skill: skillId ?? value.skill, conversationId: `person:${partner.normalize('NFKC').trim().toLocaleLowerCase('es')}`, speaker: value.source === 'learner' ? 'Tú' : value.activityId.startsWith('partner-') ? partner : 'Memora' });
   const [restored] = useState(() => reviewMode ? { checkpoint: null } : readChatCheckpoint(userId, checkpointUnitId, unit.contentVersion ?? '1', turns, !(dialogue.roleSwap && dialogue.questionSkillId)));
   const checkpoint = restored.checkpoint;
   const [round, setRound] = useState(checkpoint?.round ?? 0);
-  const [messages, setMessages] = useState<ChatMessage[]>(() => checkpoint?.messages ?? [{ id: 'prompt-0', who: 'partner', text: turns[0].prompt!.en, translation: turns[0].prompt!.es }]);
+  const [messages, setMessages] = useState<ChatMessage[]>(() => checkpoint?.messages ?? [partnerMessage('prompt-0', turns[0].prompt!)]);
   const [activeMessage, setActiveMessage] = useState(checkpoint?.activeMessage ?? 'prompt-0');
   const [busy, setBusy] = useState(checkpoint?.busy ?? true);
   const [input, setInput] = useState(checkpoint?.input ?? '');
-  const [helped, setHelped] = useState(checkpoint?.helped ?? false);
+  const [helped, setHelped] = useState(checkpoint?.helped ?? initialHelped);
   const [hintLevel, setHintLevel] = useState(checkpoint?.hintLevel ?? 0);
   const [awaitingNext, setAwaitingNext] = useState(checkpoint?.awaitingNext ?? false);
   const [oral, setOral] = useState(checkpoint?.oral ?? false);
@@ -84,6 +87,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   const log = useRef<HTMLDivElement>(null);
   const continueRef = useRef(onContinue); continueRef.current = onContinue;
   const turn = turns[round];
+  const displayedPrompt = turn.prompt ? partnerMessage('', turn.prompt).text : turn.context;
   const form = unit.grammar[0];
 
   useEffect(() => {
@@ -114,7 +118,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     if (nextTurn.prompt) {
       const incoming = `prompt-${next}`;
       setBusy(true); setActiveMessage(incoming);
-      setMessages((current) => [...current, { id: incoming, who: 'partner', text: nextTurn.prompt!.en, translation: nextTurn.prompt!.es }]);
+      setMessages((current) => [...current, partnerMessage(incoming, nextTurn.prompt!)]);
     } else {
       setBusy(false); setActiveMessage('');
     }
@@ -124,7 +128,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     if (!reviewMode && !savedMessages.current.has(messageId)) {
       savedMessages.current.add(messageId);
       const isPrompt = messageId.startsWith('prompt-');
-      const text = isPrompt ? turn.prompt!.en : turn.reply.en;
+      const text = partnerMessage(messageId, isPrompt ? turn.prompt! : turn.reply).text;
       const translation = isPrompt ? turn.prompt!.es : turn.reply.es;
       recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `partner-${messageId}`, skill: unit.mirror?.id ?? 'look-for-conversation', phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'authored', modality: 'choice', prompt: isPrompt ? turn.context : turn.expected.en, response: text, expected: '', correct: null, helped: true, feedback: `${partner}: ${translation ?? 'Mensaje del personaje'}`, parentAttemptId: isPrompt ? undefined : replyTo.current });
     }
@@ -138,7 +142,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     setBusy(true); setOral(false); setInput('');
     const incoming = `reply-${round}`;
     setActiveMessage(incoming);
-    setMessages((current) => [...current, { id: incoming, who: 'partner', text: turn.reply.en, translation: turn.reply.es }]);
+    setMessages((current) => [...current, partnerMessage(incoming, turn.reply)]);
   }
   function answer() {
     if (busy || failureCount.current >= 2 || sending.current || !input.trim() || submitted.current === input) return;
@@ -147,10 +151,10 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     sending.current = ok;
     const correction = unit.mirror && dialogue.progressiveHints ? mirrorHint({ ...unit.mirror, hints: dialogue.progressiveHints }, input, nextMirrorHint(hintLevel)) : writtenConversationCorrection(input, turn.expected.en);
     if (!reviewMode) {
-      const attempt = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `turn-${turn.id}`, skill: unit.mirror?.id ?? 'look-for-conversation', phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'writing', prompt: turn.prompt?.en ?? turn.context, response: input, expected: turn.expected.en, correct: ok, helped: helpedRef.current, feedback: ok ? 'La frase encaja en esta situación.' : correction, parentAttemptId: previousAttempt.current });
+      const attempt = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `turn-${turn.id}`, skill: unit.mirror?.id ?? 'look-for-conversation', phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'writing', prompt: displayedPrompt, response: input, expected: turn.expected.en, correct: ok, helped: helpedRef.current, feedback: ok ? 'La frase encaja en esta situación.' : correction, parentAttemptId: previousAttempt.current });
       replyTo.current = attempt.id;
       previousAttempt.current = ok ? undefined : attempt.id;
-      recordGrammarAttempt(userId, { skill: `dialogue:${unit.id}`, unitId: unit.id, check: turn.expected.role, kind: 'write', correct: ok, helped: helpedRef.current, at: new Date().toISOString() });
+      recordGrammarAttempt(userId, { skill: skillId ?? `dialogue:${unit.id}`, unitId: unit.id, check: turn.expected.role, kind: 'write', correct: ok, helped: helpedRef.current, at: new Date().toISOString() });
       if (ok) recordSentenceExposure(userId, unit.id, { en: turn.expected.en, es: turn.expected.es, slots: [], pronunciationTip: dialogue.rhythmTip });
     }
     setMessages((current) => [...current, { id: id(), who: 'learner', text: input, correct: ok, instant: true }, ...(!ok ? [{ id: id(), who: 'coach' as const, text: correction, instant: true }] : [])]);
@@ -158,7 +162,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
       failureCount.current++; setFailedAttempts(failureCount.current);
       helpedRef.current = true;
       setHelped(true); setHintLevel((value) => Math.min(3, value + 1));
-      if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-hint-${turn.id}-${Math.min(3, hintLevel + 1)}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: correction, expected: '', correct: null, helped: true, feedback: 'Corrección escrita contextual; el alumno puede volver a intentar o pasar.', parentAttemptId: previousAttempt.current });
+      if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-hint-${turn.id}-${Math.min(3, hintLevel + 1)}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: displayedPrompt, response: correction, expected: '', correct: null, helped: true, feedback: 'Corrección escrita contextual; el alumno puede volver a intentar o pasar.', parentAttemptId: previousAttempt.current });
       void playSpanish(correction);
       clearTimeout(timer.current);
       timer.current = setTimeout(() => { submitted.current = null; }, 350);
@@ -169,7 +173,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   function oralReply() {
     if (busy || sending.current) return;
     sending.current = true;
-    if (!reviewMode) replyTo.current = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `oral-${turn.id}`, skill: unit.mirror?.id ?? 'look-for-conversation', phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'oral', prompt: turn.prompt?.en ?? turn.context, response: 'Continuación oral sin transcripción ni verificación.', expected: turn.expected.en, correct: null, helped: true, feedback: 'La grabación es temporal y no se evalúa ni se sube.' }).id;
+    if (!reviewMode) replyTo.current = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `oral-${turn.id}`, skill: unit.mirror?.id ?? 'look-for-conversation', phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'oral', prompt: displayedPrompt, response: 'Continuación oral sin transcripción ni verificación.', expected: turn.expected.en, correct: null, helped: true, feedback: 'La grabación es temporal y no se evalúa ni se sube.' }).id;
     setMessages((current) => [...current, { id: id(), who: 'coach', text: 'Ensayo oral sin evaluación. No se registra como un acierto.', instant: true }]);
     reply();
   }
@@ -180,7 +184,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     if (turn.id !== 'ask' && dialogue.progressiveHints) {
       const next = Math.min(3, hintLevel + 1); const cue = dialogue.progressiveHints[next - 1]; setHintLevel(next);
       setMessages((current) => [...current, { id: id(), who: 'coach', text: cue, instant: true }]);
-      if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-hint-${next}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: cue, expected: '', correct: null, helped: true, feedback: `Pista ${next} de 3`, parentAttemptId: previousAttempt.current });
+      if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-hint-${next}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: displayedPrompt, response: cue, expected: '', correct: null, helped: true, feedback: `Pista ${next} de 3`, parentAttemptId: previousAttempt.current });
       return;
     }
     const next = Math.min(hintLevel + 1, 3);
@@ -188,7 +192,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     const chunks = turn.id === 'respond' ? unit.sentence.slots.map((slot) => slot.en.replace(/[.!?]$/u, '')) : turn.expected.en.split(/\s+/u);
     const cue = next === 1 ? `Empieza por «${chunks[0]}».` : next === 2 ? `Sigue con «${chunks.slice(0, Math.min(2, chunks.length)).join(' ')}».` : `Modelo completo: ${turn.expected.en}`;
     setMessages((current) => [...current, { id: id(), who: 'coach', text: cue, instant: true }]);
-    if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-written-hint-${turn.id}-${next}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: cue, expected: '', correct: null, helped: true, feedback: `Pista escrita ${next} de 3`, parentAttemptId: previousAttempt.current });
+    if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-written-hint-${turn.id}-${next}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: displayedPrompt, response: cue, expected: '', correct: null, helped: true, feedback: `Pista escrita ${next} de 3`, parentAttemptId: previousAttempt.current });
   }
   function showAnswerAndPass() {
     if (busy || revealedAnswer || sending.current) return;
@@ -198,14 +202,14 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     setRevealedAnswer(true);
     setMessages((current) => [...current, { id: id(), who: 'coach', text: `Así se dice: ${turn.expected.en} (${turn.expected.es})`, instant: true }]);
     void playEnglish(turn.expected.en);
-    if (!reviewMode) replyTo.current = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-skip-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: '(pasó con modelo)', expected: turn.expected.en, correct: null, helped: true, feedback: 'Se mostró la respuesta; no cuenta como acierto.', parentAttemptId: previousAttempt.current }).id;
+    if (!reviewMode) replyTo.current = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-skip-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'choice', prompt: displayedPrompt, response: '(pasó con modelo)', expected: turn.expected.en, correct: null, helped: true, feedback: 'Se mostró la respuesta; no cuenta como acierto.', parentAttemptId: previousAttempt.current }).id;
     reply();
   }
   function listenToModel() {
     if (busy || sending.current) return;
     helpedRef.current = true;
     setHelped(true);
-    if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-audio-hint-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'authored', modality: 'choice', prompt: turn.prompt?.en ?? turn.context, response: 'Modelo inglés solicitado como ayuda; no acredita escucha.', expected: '', correct: null, helped: true, parentAttemptId: previousAttempt.current });
+    if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-audio-hint-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'authored', modality: 'choice', prompt: displayedPrompt, response: 'Modelo inglés solicitado como ayuda; no acredita escucha.', expected: '', correct: null, helped: true, parentAttemptId: previousAttempt.current });
     void playEnglish(turn.expected.en);
   }
   return <GameCard className={`conversation-card chat-card ${turns.length === 1 ? 'chat-single-turn' : ''}`}>

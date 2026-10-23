@@ -1,6 +1,7 @@
 import { progressStorage } from './progressJournal';
 
-export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string }
+export interface TrickContinuationCheckpoint { phase: 'build' | 'conversation'; sentenceIndex: number; filledSlots: number; previousAttempt?: string; failures?: number; modelUsed?: boolean; order?: number[] }
+export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string; episodeId?: string; episodeStartedAt?: string; continuation?: TrickContinuationCheckpoint }
 const key = (userId: string, stopId: string) => `memora-v2.trick.${userId}.${stopId}`;
 export function readTrickCheckpoint(userId: string, stopId: string, version: string): TrickCheckpoint | null {
   try {
@@ -10,6 +11,13 @@ export function readTrickCheckpoint(userId: string, stopId: string, version: str
     if (saved.state.correctionResponse !== undefined && typeof saved.state.correctionResponse !== 'string') return null;
     if (saved.state.checkFailures !== undefined && (!Number.isInteger(saved.state.checkFailures) || saved.state.checkFailures < 0 || saved.state.checkFailures > 2)) return null;
     if (saved.state.previousAttemptId !== undefined && typeof saved.state.previousAttemptId !== 'string') return null;
+    if (saved.state.episodeId !== undefined && typeof saved.state.episodeId !== 'string') return null;
+    if (saved.state.episodeStartedAt !== undefined && !Number.isFinite(Date.parse(saved.state.episodeStartedAt))) return null;
+    const continuation = saved.state.continuation;
+    if (continuation && (!saved.state.episodeId || !['build', 'conversation'].includes(continuation.phase) || !Number.isInteger(continuation.sentenceIndex) || continuation.sentenceIndex < 0 || !Number.isInteger(continuation.filledSlots) || continuation.filledSlots < 0 || continuation.previousAttempt !== undefined && typeof continuation.previousAttempt !== 'string')) return null;
+    if (continuation?.failures !== undefined && (!Number.isInteger(continuation.failures) || continuation.failures < 0 || continuation.failures > 2)) return null;
+    if (continuation?.modelUsed !== undefined && typeof continuation.modelUsed !== 'boolean') return null;
+    if (continuation?.order !== undefined && (!Array.isArray(continuation.order) || continuation.order.length > 8 || new Set(continuation.order).size !== continuation.order.length || continuation.order.some((index: number) => !Number.isInteger(index) || index < 0 || index > 7))) return null;
     return saved.state;
   } catch { return null; }
 }

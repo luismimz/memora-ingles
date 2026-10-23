@@ -1,4 +1,5 @@
-import { validateGrammarLesson, type GrammarLessonData } from './grammarLesson';
+import { lessonForForm, validateGrammarLesson, type GrammarLessonData } from './grammarLesson';
+import { normalizeSentenceAnswer } from './sentenceAnswer';
 import { validateMirrorLesson, type MirrorLessonData } from './mirrorLesson';
 /** Curriculum identifier. The backend visual contract decides how it behaves. */
 export type NutId = string;
@@ -130,6 +131,8 @@ export interface AtomicUnit {
   /** Recall without the picture first, with optional aids and recognition fallback. */
   activeRecall?: boolean;
   grammarPrerequisites?: { vocabulary: string[] };
+  /** Explicit opt-in; declaring requirements is not editorial approval. */
+  grammarContinuation?: { formId: string; vocabulary: string[]; grammarSkills: string[]; status?: 'needs_review' | 'approved' };
   location?: { world: string; zone: string; locus: string; label: string };
   words: AtomicWord[];
   grammar: GrammarForm[];
@@ -146,7 +149,7 @@ export interface AtomicUnit {
     replyMode: 'target' | 'receptive_chunk';
     practicePrompt?: string;
     acceptedAnswers?: string[];
-    dialogue?: { context: string; turns: [DialogueTurn, DialogueTurn]; rhythmTip: string; transfer?: DialogueTurn; transferContext?: string; partner?: string; reply?: { en: string; es: string }; roleSwap?: boolean; questionSkillId?: string; progressiveHints?: [string, string, string]; continueMode?: 'manual' | 'automatic' };
+    dialogue?: { context: string; turns: [DialogueTurn, DialogueTurn]; rhythmTip: string; transfer?: DialogueTurn; transferContext?: string; partner?: string; partnerLanguage?: 'en' | 'es'; reply?: { en: string; es: string }; roleSwap?: boolean; questionSkillId?: string; progressiveHints?: [string, string, string]; continueMode?: 'manual' | 'automatic' };
   };
 }
 
@@ -354,6 +357,8 @@ export function validateUnit(value: unknown): AtomicUnit {
     if (!unit.communication.practicePrompt?.trim() || !Array.isArray(unit.communication.acceptedAnswers) || !unit.communication.acceptedAnswers.length || unit.communication.acceptedAnswers.some((answer) => typeof answer !== 'string' || !answer.trim())) throw new Error('La práctica de conversación necesita una pregunta y respuestas revisadas.');
   }
   const dialogue = unit.communication?.dialogue;
+  if (dialogue?.partnerLanguage !== undefined && !['en', 'es'].includes(dialogue.partnerLanguage)) throw new Error('El idioma del personaje debe ser explícito.');
+  if (dialogue?.partnerLanguage === 'es' && (dialogue.roleSwap || !dialogue.reply?.es?.trim())) throw new Error('El personaje en español requiere réplica española y no exige una pregunta inglesa sin preparar.');
   if (dialogue?.continueMode !== undefined && !['manual', 'automatic'].includes(dialogue.continueMode)) throw new Error('La continuidad del diálogo no es válida.');
   if (dialogue?.roleSwap !== undefined && typeof dialogue.roleSwap !== 'boolean' || dialogue?.progressiveHints !== undefined && (!Array.isArray(dialogue.progressiveHints) || dialogue.progressiveHints.length !== 3 || dialogue.progressiveHints.some((hint) => typeof hint !== 'string' || !hint.trim()))) throw new Error('El chat necesita un cambio de papel válido y pistas completas.');
   if (dialogue?.questionSkillId !== undefined && (typeof dialogue.questionSkillId !== 'string' || !dialogue.questionSkillId.trim())) throw new Error('La pregunta necesita una habilidad gramatical identificable.');
@@ -383,6 +388,37 @@ export function validateUnit(value: unknown): AtomicUnit {
     if (sentence.slots.map((slot) => slot.en).join(' ').replace(/\s+/g, ' ').trim() !== sentence.en.trim()) {
       throw new Error('Los segmentos no reconstruyen exactamente la frase inglesa.');
     }
+  }
+  const continuation = unit.grammarContinuation;
+  if (continuation) {
+    // The common validation above has already checked words/forms/sentences.
+    const validated = unit as AtomicUnit;
+    const lexicalWords = validated.words;
+    const forms = validated.grammar;
+    const preparedSentences = getUnitSentences(validated);
+    const strings = (value: unknown): value is string[] => Array.isArray(value) && value.every((item) => typeof item === 'string' && Boolean(item.trim()));
+    const key = (text: string) => text.trim().toLocaleLowerCase('en');
+    const lessons = forms.flatMap((form) => {
+      const lesson = lessonForForm(form, lexicalWords.find((word) => key(word.en) === key(form.englishBase ?? ''))?.es.toLowerCase());
+      return lesson ? [{ formId: form.id, lesson }] : [];
+    });
+    const current = lessons.find((item) => item.formId === continuation.formId);
+    if (['vocabulary-pack', 'grammar-lesson'].includes(unit.kind ?? '') || !current || !dialogue || !strings(continuation.vocabulary) || !continuation.vocabulary.length || !strings(continuation.grammarSkills) || sentences.length > 2
+      || continuation.status !== undefined && !['needs_review', 'approved'].includes(continuation.status)
+      || continuation.vocabulary.some((en) => !lexicalWords.some((word) => key(word.en) === key(en)))
+      || continuation.grammarSkills.some((skill) => !lessons.some((item) => item.lesson.id === skill))
+      || preparedSentences.some((sentence) => sentence.slots.some((slot) => slot.preparation?.length))) throw new Error('La continuación necesita un truco, vocabulario y piezas previos explícitos, sin novedades ocultas.');
+    if (dialogue.partnerLanguage !== 'es' && (!dialogue.questionSkillId || !continuation.grammarSkills.includes(dialogue.questionSkillId))) throw new Error('Prepara la pregunta inglesa o presenta el personaje en español.');
+    const taught = [current.lesson, ...lessons.filter((item) => continuation.grammarSkills.includes(item.lesson.id)).map((item) => item.lesson)]
+      .flatMap((lesson) => lesson.steps.filter((step) => !step.hideEnglish).map((step) => step.en.map((part) => part.text).join('')));
+    const words = new Set([...taught, ...continuation.vocabulary].flatMap((text) => normalizeSentenceAnswer(text).split(' ')));
+    const targets = [...preparedSentences.flatMap((sentence) => [sentence.en, ...sentence.slots.flatMap((slot) => slot.choices)]), ...dialogue.turns[1].acceptedAnswers, ...(unit.communication?.acceptedAnswers ?? []),
+      ...(dialogue.transfer?.acceptedAnswers ?? []), ...(dialogue.partnerLanguage === 'es' ? [] : [...dialogue.turns[0].acceptedAnswers, dialogue.reply?.en ?? unit.communication!.reply])];
+    if (targets.some((target) => normalizeSentenceAnswer(target).split(' ').some((token) => !words.has(token)))) throw new Error('Cada respuesta, réplica y distractor necesita palabras o piezas ya preparadas.');
+    const requiredBases = lessons.filter((item) => item.formId === continuation.formId || continuation.grammarSkills.includes(item.lesson.id)).flatMap((item) => forms.find((form) => form.id === item.formId)?.englishBase ?? []);
+    const targetWords = lexicalWords.filter((word) => targets.some((text) => ` ${normalizeSentenceAnswer(text)} `.includes(` ${normalizeSentenceAnswer(word.en)} `))).map((word) => word.en);
+    if ([...requiredBases, ...targetWords].some((en) => !continuation.vocabulary.some((word) => key(word) === key(en)))) throw new Error('Declara también el vocabulario usado por las estructuras y los distractores.');
+    if (new Set(preparedSentences.map((sentence) => normalizeSentenceAnswer(sentence.en))).size !== preparedSentences.length || dialogue.transfer && normalizeSentenceAnswer(dialogue.transfer.en) === normalizeSentenceAnswer(dialogue.turns[1].en)) throw new Error('No repitas el mismo mensaje como otra construcción o transferencia.');
   }
   return unit as AtomicUnit;
 }

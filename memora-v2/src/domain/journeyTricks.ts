@@ -26,7 +26,7 @@ export function grammarTricks(unit: AtomicUnit): JourneyTrick[] {
     // Keep only lexical items actually used by this lesson; its grammatical pieces
     // are explained in the lesson itself, not demanded as prior vocabulary.
     const english = normalize(lesson ? [...lesson.steps.map((step) => step.en.map((part) => part.text).join('')), ...lesson.checks.filter((check) => check.kind === 'write').flatMap((check) => check.answers)].join(' ') : '').replace(/[^\p{L}\p{N}]+/gu, ' ');
-    const vocabulary = [...new Set([...(form.englishBase ? [normalize(form.englishBase)] : []), ...unit.words.filter((word) => (` ${english} `).includes(` ${normalize(word.en)} `)).map((word) => normalize(word.en))])];
+    const vocabulary = [...new Set([...(form.englishBase ? [normalize(form.englishBase)] : []), ...unit.words.filter((word) => (` ${english} `).includes(` ${normalize(word.en)} `)).map((word) => normalize(word.en)), ...(unit.grammarContinuation?.status === 'approved' && unit.grammarContinuation.formId === form.id ? unit.grammarContinuation.vocabulary.map(normalize) : [])])];
     return lesson ? [{ sourceId: unit.id, formId: form.id, skill: lesson.id, title: lesson.title === 'Lo que estás haciendo' ? `Estoy ${form.spanish}` : lesson.title, vocabulary, concept: form.lesson ? lesson.id : form.visualContract ?? form.id }] : [];
   });
 }

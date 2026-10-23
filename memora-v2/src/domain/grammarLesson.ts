@@ -19,9 +19,11 @@ export interface GrammarLessonData { id: string; title: string; language: 'en'; 
 export const piece = (text: string, role: LessonPiece['role'] = 'context'): LessonPiece => ({ text, role });
 
 /** Defer only a written task that will actually be answered in this chat. */
-export function grammarChecksForExperience(lesson: GrammarLessonData, conversationAnswers: string[] = []): LessonCheck[] {
+export function grammarChecksForExperience(lesson: GrammarLessonData, conversationAnswers: string[] = [], constructionAnswers: string[] = []): LessonCheck[] {
   const practiced = new Set(conversationAnswers.map(normalizeSentenceAnswer));
-  return lesson.checks.filter((check) => check.kind !== 'write' || !check.answers.some((answer) => practiced.has(normalizeSentenceAnswer(answer))));
+  const constructed = new Set(constructionAnswers.map(normalizeSentenceAnswer));
+  return lesson.checks.filter((check) => !(check.kind === 'write' && check.answers.some((answer) => practiced.has(normalizeSentenceAnswer(answer))))
+    && !(check.ordering && check.answers.some((answer) => constructed.has(normalizeSentenceAnswer(answer)))));
 }
 
 export function validateGrammarLesson(value: GrammarLessonData): void {

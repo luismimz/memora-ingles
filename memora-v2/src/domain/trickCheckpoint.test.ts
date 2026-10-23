@@ -40,3 +40,14 @@ it('conserva dos fallos y el enlace al intento, sin aceptar cuotas inválidas ni
   }
   expect(readTrickCheckpoint('isolated', 'valid', '1')).toEqual(state);
 });
+
+it('reanuda episodio y piezas parciales con ayuda sin aceptar índices duplicados o fases inventadas', () => {
+  const state = { stage: 3, checkIndex: 1, input: '', feedback: 'correct' as const, helped: false, episodeId: 'ing:short-playing-v1', episodeStartedAt: '2026-10-23T10:00:00.000Z', continuation: { phase: 'build' as const, sentenceIndex: 0, filledSlots: 0, order: [1], failures: 1, modelUsed: true, previousAttempt: 'first' } };
+  writeTrickCheckpoint('isolated', 'valid', '1', state);
+  expect(readTrickCheckpoint('isolated', 'valid', '1')).toEqual(state);
+  for (const continuation of [{ ...state.continuation, order: [1, 1] }, { ...state.continuation, order: [8] }, { ...state.continuation, failures: 3 }, { ...state.continuation, modelUsed: 'true' }, { ...state.continuation, phase: 'finished' }]) {
+    localStorage.setItem('memora-v2.trick.isolated.invalid', JSON.stringify({ version: '1', state: { ...state, continuation } }));
+    expect(readTrickCheckpoint('isolated', 'invalid', '1')).toBeNull();
+  }
+  expect(readTrickCheckpoint('isolated', 'valid', '1')).toEqual(state);
+});

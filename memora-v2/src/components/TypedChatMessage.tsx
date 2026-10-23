@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { playEnglish } from '../services/audio';
+import { playEnglish, playSpanish } from '../services/audio';
 import type { GrammarForm } from '../domain/unit';
 import { GrammarText } from './GrammarText';
 
-export interface ChatMessage { id: string; who: 'partner' | 'learner' | 'coach'; text: string; translation?: string; audioHint?: string; correct?: boolean; instant?: boolean }
+export interface ChatMessage { id: string; who: 'partner' | 'learner' | 'coach'; text: string; language?: 'en' | 'es'; translation?: string; audioHint?: string; correct?: boolean; instant?: boolean }
 export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, renderText }: { message: ChatMessage; partner: string; form: GrammarForm; autoSpeak: boolean; onReady?: () => void; renderText?: (text: string, language: 'en' | 'es') => ReactNode }) {
   const [visible, setVisible] = useState(message.instant ? message.text.length : 0);
   const ready = useRef(onReady); ready.current = onReady;
@@ -14,7 +14,7 @@ export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, r
     const finish = () => {
       if (!active) return;
       setVisible(message.text.length);
-      if (message.who === 'partner' && speak.current) void playEnglish(message.text);
+      if (message.who === 'partner' && speak.current) void (message.language === 'es' ? playSpanish : playEnglish)(message.text);
       ready.current?.();
     };
     if (message.instant) { setVisible(message.text.length); return; }
@@ -34,11 +34,11 @@ export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, r
   const revealed = visible >= message.text.length;
   return <article className={`chat-bubble chat-${message.who} ${message.correct === false ? 'chat-retry' : ''}`}>
     <small className="chat-speaker">{message.who === 'partner' ? partner : message.who === 'learner' ? 'Tú' : 'Memora · una pista'}</small>
-    {visible === 0 && !revealed ? <div className="chat-typing" role="status"><span className="sr-only">{partner} está escribiendo</span><span aria-hidden="true">● ● ●</span></div> : <p className="chat-message-text" lang={message.who === 'coach' ? 'es' : 'en'}>
-      {revealed ? message.who === 'coach' ? message.text : renderText ? renderText(message.text, 'en') : <GrammarText text={message.text} form={form} /> : <><span aria-hidden="true">{message.text.slice(0, visible)}</span><span className="sr-only">{message.text}</span><span className="chat-cursor" aria-hidden="true" /></>}
+    {visible === 0 && !revealed ? <div className="chat-typing" role="status"><span className="sr-only">{partner} está escribiendo</span><span aria-hidden="true">● ● ●</span></div> : <p className="chat-message-text" lang={message.who === 'coach' ? 'es' : message.language ?? 'en'}>
+      {revealed ? message.who === 'coach' ? message.text : renderText ? renderText(message.text, message.language ?? 'en') : <GrammarText text={message.text} form={form} language={message.language ?? 'en'} /> : <><span aria-hidden="true">{message.text.slice(0, visible)}</span><span className="sr-only">{message.text}</span><span className="chat-cursor" aria-hidden="true" /></>}
     </p>}
     {revealed && message.translation ? <p className="chat-translation" lang="es">{renderText ? renderText(message.translation, 'es') : <GrammarText text={message.translation} form={form} language="es" />}</p> : null}
-    {revealed && message.who === 'partner' ? <button type="button" className="chat-listen" aria-label={`Escuchar a ${partner}: ${message.text}`} onClick={() => void playEnglish(message.text)}>🔊 Escuchar</button> : null}
+    {revealed && message.who === 'partner' ? <button type="button" className="chat-listen" aria-label={`Escuchar a ${partner}: ${message.text}`} onClick={() => void (message.language === 'es' ? playSpanish : playEnglish)(message.text)}>🔊 Escuchar</button> : null}
     {message.audioHint ? <button type="button" className="chat-audio-hint" onClick={() => void playEnglish(message.audioHint!)}>🔊 Escuchar una ayuda</button> : null}
     {message.correct === true ? <small className="chat-accepted">✓ Respuesta admitida</small> : null}
   </article>;
