@@ -48,7 +48,10 @@ it('error muestra consecuencia y modelo sin puntuar otro acierto; audio solicita
   await act(async () => { answer('Todavía no estoy jugando.'); answer('Estoy jugando ahora.'); });
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ correct: false }]);
   expect(text(tree.toJSON())).toContain('Modelo:');
-  expect(tree.root.findByType('fieldset').props.disabled).toBe(true);
+  expect(tree.root.findByType(GrammarSituation).props.disabled).toBe(true);
+  await act(async () => tree.root.findByType(GrammarSituation).props.onListen());
+  expect(playEnglish).toHaveBeenCalledTimes(2);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(1);
   await act(async () => { vi.advanceTimersByTime(20000); });
   expect(exit).not.toHaveBeenCalled();
 });

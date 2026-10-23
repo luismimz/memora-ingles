@@ -15,16 +15,16 @@ export function SituationScreen({ state }: { state: 'playing' | 'waiting' }) {
   </svg>;
 }
 
-export function GrammarSituation({ check, selected, feedback, onAnswer, onListen }: {
-  check: LessonCheck; selected: string; feedback: 'idle' | 'help' | 'correct'; onAnswer: (answer: string) => void; onListen: () => void;
+export function GrammarSituation({ check, selected, feedback, onAnswer, onListen, disabled = false, listenDisabled = false }: {
+  check: LessonCheck; selected: string; feedback: 'idle' | 'help' | 'correct'; onAnswer: (answer: string) => void; onListen: () => void; disabled?: boolean; listenDisabled?: boolean;
 }) {
   if (!check.situation) return null;
   const scene = check.situation.scenes.find((item) => item.choice === selected);
   return <div className="grammar-situation">
     <p className="situation-message" lang="en">{check.situation.message}</p>
-    <button type="button" className="quiet-action" onClick={onListen} aria-label="Escuchar el mensaje inglés">🔊 Escuchar</button>
+    <button type="button" className="quiet-action" disabled={listenDisabled} onClick={onListen} aria-label="Escuchar el mensaje inglés">🔊 Escuchar</button>
     <div className="situation-options" role="group" aria-label="Elige la escena que comunica el mensaje">
-      {check.situation.scenes.map((item) => <button type="button" key={item.choice} aria-pressed={selected === item.choice} disabled={feedback === 'correct'} onClick={() => onAnswer(item.choice)}><SituationScreen state={item.state} /><span>{item.choice}</span></button>)}
+      {check.situation.scenes.map((item) => <button type="button" key={item.choice} aria-pressed={selected === item.choice} disabled={disabled || feedback === 'correct'} onClick={() => onAnswer(item.choice)}><SituationScreen state={item.state} /><span>{item.choice}</span></button>)}
     </div>
     {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{feedback === 'correct' ? 'Mensaje entregado: la pantalla muestra la acción en marcha.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
   </div>;
