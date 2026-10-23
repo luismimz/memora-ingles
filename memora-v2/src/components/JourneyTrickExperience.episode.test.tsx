@@ -79,11 +79,18 @@ it('enseñar → comprender → montar → conversar se recorre completo sin mon
   expect(vi.mocked(playSpanish).mock.calls.some(([message]) => message.includes('¿Qué estás haciendo'))).toBe(true);
   expect(tree.root.findAllByType('input')).toHaveLength(1);
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: "I'm playing" } }));
+  const beforeScroll = learner();
+  await advance();
+  expect(learner()).toEqual(beforeScroll);
+  expect(finished).not.toHaveBeenCalled();
+  expect(tree.root.findByType('input').props.value).toBe("I'm playing");
   act(() => tree.unmount()); await mount();
   expect(tree.root.findByType('input').props.value).toBe("I'm playing");
   await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
   expect(text(tree.toJSON())).toContain('Te guardo el siguiente turno');
-  await act(async () => { const follow = button('Terminar la conversación →').props.onClick; follow(); follow(); });
+  expect(button('Terminar la conversación →')).toBeUndefined();
+  expect(text(tree.toJSON())).toContain('Mensaje recibido. Puedes seguir cuando quieras.');
+  await advance();
   expect(finished).toHaveBeenCalledOnce();
   expect(readGrammarAttempts(user).filter((attempt) => attempt.kind === 'write')).toMatchObject([{ skill: 'present-continuous:play', correct: true, helped: false }]);
   expect(learner().filter((event) => event.modality === 'writing' && event.correct !== null)).toHaveLength(1);
@@ -153,7 +160,7 @@ it('PLAY publicado enlaza un episodio corto sin habilitar COMPUTER/DESK u otra c
   expect(learner().filter((event) => event.modality === 'writing' && event.correct !== null)).toHaveLength(1);
   expect(readWordMemories(user).map((memory) => memory.key)).toEqual(['play']);
   expect(readSentenceMemories(user).every((memory) => memory.sentenceEn === 'I am playing.')).toBe(true);
-  await act(async () => button('Terminar la conversación →').props.onClick());
+  await advance();
   expect(finished).toHaveBeenCalledOnce();
 });
 

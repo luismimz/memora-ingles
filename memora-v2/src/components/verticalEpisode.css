@@ -11,5 +11,8 @@
 .coach-stream details { text-align: left; color: var(--muted); font-size: .85rem; }
 .coach-stream summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .coach-stream .coach-content { min-height: 0; }
+.card-vertical.chat-card .chat-log { flex: none; overflow: visible; min-height: 0; }
+.card-vertical.chat-card .chat-content { flex: none; width: 100%; }
+.chat-flow-ready { color: var(--muted); font-size: .88rem; text-align: center; }
 @media (max-width: 500px) { .card-vertical-scroll { border-radius: 20px; } .card-vertical .card-vertical-page { border-radius: 20px; } }
 @media (prefers-reduced-motion: reduce) { .card-vertical-scroll { transition: none; } }
