@@ -23,8 +23,14 @@ const text = (value: any): string => typeof value === 'string' ? value : Array.i
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).trim() === label)!;
 const checkpoint = () => readTrickCheckpoint(user, stop.id, unit.contentVersion ?? '1');
 const learner = () => readLearningActivities(user).filter((event) => event.source === 'learner');
-async function mount(value = unit) {
-  await act(async () => { tree = create(<JourneyTrickExperience unit={value} stop={stop} userId={user} inspection={false} onFinished={finished} onNext={next} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />); });
+async function mount(value = unit, sceneBoxes?: Map<string, { left: number; top: number; right: number; bottom: number }>) {
+  await act(async () => { tree = create(<JourneyTrickExperience unit={value} stop={stop} userId={user} inspection={false} onFinished={finished} onNext={next} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />, { createNodeMock: (node) => {
+    if (!sceneBoxes) return null;
+    if (node.props.className === 'grammar-situation') return { getBoundingClientRect: () => ({ left: 100, top: 100 }) };
+    const choice = node.props['data-drop-choice'];
+    if (choice) { if (!sceneBoxes.has(choice)) { const left = 100 + sceneBoxes.size * 200; sceneBoxes.set(choice, { left, top: 300, right: left + 150, bottom: 450 }); } return { getBoundingClientRect: () => sceneBoxes.get(choice) }; }
+    return null;
+  } }); });
 }
 async function advance() {
   const region = tree.root.findByProps({ role: 'region' });
@@ -57,6 +63,31 @@ beforeEach(() => {
   recordWordRecall(user, unit.words[0], 'hesitant', new Date(), 'recognition', undefined, true);
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('entregar una ficha a escena registra el primer error, reanuda y corrige sin borrar ayuda ni duplicar intento', async () => {
+  const boxes = new Map<string, { left: number; top: number; right: number; bottom: number }>();
+  await mount(previewUnit, boxes);
+  for (let index = 0; index < 3; index++) await advance();
+  const token = () => tree.root.findByProps({ 'aria-label': 'Mensaje inglés: I am playing' });
+  const order = () => tree.root.findAllByType('button').filter((node) => node.props['data-drop-choice']).map((node) => node.props['data-drop-choice']);
+  const firstOrder = order();
+  const event = (x: number, y: number) => ({ pointerId: 1, button: 0, isPrimary: true, clientX: x, clientY: y, preventDefault() {}, stopPropagation() {}, currentTarget: { setPointerCapture() {} } });
+  const wrong = boxes.get('Todavía no estoy jugando.')!;
+  await act(async () => { token().props.onPointerDown(event(150, 150)); token().props.onPointerMove(event(wrong.left + 20, wrong.top + 20)); });
+  expect(learner()).toHaveLength(0);
+  await act(async () => token().props.onPointerUp(event(wrong.left + 20, wrong.top + 20)));
+  const first = learner()[0]; expect(first).toMatchObject({ activityId: 'meaning-now-v1', correct: false, helped: true });
+  expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toMatchObject({ feedback: 'help', checkId: 'meaning-now-v1' });
+  act(() => tree.unmount()); await mount(previewUnit, boxes);
+  expect(order()).toEqual(firstOrder); expect(learner()).toHaveLength(1);
+  const right = boxes.get('Estoy jugando ahora.')!;
+  const release = event(right.left + 20, right.top + 20);
+  await act(async () => { token().props.onPointerDown(event(150, 150)); token().props.onPointerMove(release); token().props.onPointerUp(release); token().props.onPointerUp(release); });
+  expect(learner()).toMatchObject([{ id: first.id, correct: false }, { correct: true, helped: true, parentAttemptId: first.id }]);
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.kind === 'write')).toHaveLength(0);
+  await advance(); expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
+  expect(finished).not.toHaveBeenCalled();
+});
 
 it('enseñar → comprender → montar → conversar se recorre completo sin montaje/escritura duplicados', async () => {
   await reachBuild();
