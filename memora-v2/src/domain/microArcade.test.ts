@@ -64,10 +64,24 @@ describe('Arcade: preparar antes de pedir y guardar evidencia real', () => {
   });
   it('el tiempo agotado de escritura no se inventa como respuesta ni acierto', () => {
     const round = teach();
+    const before = readWordMemories('learner');
     const attempt = commitMicroTimeout('learner', round, crypto.randomUUID(), 'writing-clock', false);
     expect(attempt.modality).toBe('writing');
     expect(attempt.correct).toBeNull();
-    expect(readWordMemories('learner')[0].capabilities?.recall?.independentCorrect).toBe(0);
+    expect(readWordMemories('learner')).toEqual(before);
+  });
+  it('la omisión por reloj conserva exactamente memoria, demora y capacidad existentes, una sola vez', () => {
+    const round = teach();
+    commitMicroAttempt('learner', round, 'word', round.word.en, true, false, false, crypto.randomUUID(), 'known');
+    const before = readWordMemories('learner');
+    const sentenceBefore = readSentenceMemories('learner');
+    const id = crypto.randomUUID();
+    const activity = commitMicroTimeout('learner', round, id, 'clock');
+    commitMicroTimeout('learner', round, id, 'clock');
+    expect(activity.correct).toBeNull();
+    expect(readWordMemories('learner')).toEqual(before);
+    expect(readSentenceMemories('learner')).toEqual(sentenceBefore);
+    expect(readLearningActivities('learner').filter((row) => row.id === id)).toHaveLength(1);
   });
   it('reconocimiento, ayuda y recuperación independiente no otorgan el mismo dominio', () => {
     const round = teach();

@@ -40,8 +40,8 @@ describe('modos conectados con el progreso real', () => {
     const first = commitMicroTimeout('learner', round, id, 'round-one');
     expect(commitMicroTimeout('learner', round, id, 'round-one').id).toBe(first.id);
     expect(first.correct).toBeNull();
-    expect(readWordMemories('learner')[0].attempts).toBe(1);
-    expect(readWordMemories('learner')[0].capabilities?.recognition?.independentCorrect).toBe(0);
+    expect(readWordMemories('learner')).toEqual([]);
+    expect(readLearningActivities('learner').filter((event) => event.id === id)).toHaveLength(1);
   });
   it('terminar palabras o gramática conserva la práctica sin completar la misión', () => {
     const result = { correct: 2, attempted: 4, completedAt: new Date().toISOString(), nextReviewAt: new Date().toISOString() };
@@ -81,11 +81,13 @@ describe('modos conectados con el progreso real', () => {
     expect(memories[0].attempts).toBe(2);
     expect(JSON.parse(restored.get('memora-v2.learning.learner')!)).toHaveLength(2);
   });
-  it('al pasar se programa repaso y no se inventa un acierto', () => {
+  it('al consultar un modelo conserva pendiente neutral e intervalo previo, sin inventar intento o acierto', () => {
+    recordWordRecall('learner', unit.words[0], 'quick', new Date(), 'recall', undefined, false);
+    const before = readWordMemories('learner');
     const attempt = recordActiveWordAttempt('learner', unit, unit.words[0], '', 'skip', true);
     expect(attempt.correct).toBeNull();
-    expect(readWordMemories('learner')[0].correct).toBe(0);
-    expect(readWordMemories('learner')[0].nextReviewAt).toBeTruthy();
+    expect(readWordMemories('learner')).toEqual(before);
+    expect(readLearningActivities('learner')).toMatchObject([{ correct: null, helped: true }]);
   });
   it('la primera recuperación no contiene la escena, el puente ni la respuesta', () => {
     const html = renderToStaticMarkup(<ActiveRecallCard unit={unit} word={unit.words[0]} choices={unit.words.slice(0, 3)} position={0} userId="preview" inspection onFinish={() => {}} />);

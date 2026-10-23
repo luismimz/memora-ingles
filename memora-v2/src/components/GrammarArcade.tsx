@@ -37,7 +37,7 @@ export function GrammarArcade({ units, userId, inspection, onExit, onWords, init
       const now = new Date();
       recordLearningActivity(userId, { unitId: round.unit.id, unitTitle: round.unit.title, contentVersion: round.unit.contentVersion ?? '1', activityId: `micro:${sessionId}:grammar:${index}`, skill: round.skill, phase: 'arcade', source: 'learner', modality: 'choice', prompt: round.conceptual ? round.slot.es : round.sentence.es, response: response ?? '(sin respuesta)', expected: round.slot.en, correct: response === null ? null : correct, helped: true, feedback: correct ? 'Pieza reconocida entre opciones.' : round.slot.note ?? `Recuerda: ${round.slot.es} → ${round.slot.en}` });
       if (response !== null) recordGrammarAttempt(userId, { skill: round.skill, unitId: round.unit.id, check: `arcade:${round.slotIndex}`, kind: 'choose', correct, helped: true, at: now.toISOString() });
-      if (!round.conceptual) {
+      if (!round.conceptual && response !== null) {
         recordChunkExposure(userId, round.unit.id, round.sentence, round.slotIndex);
         recordChunkRecall(userId, chunkKey(round.unit.id, round.sentence, round.slotIndex), correct ? 'hesitant' : 'missed', now);
       }
