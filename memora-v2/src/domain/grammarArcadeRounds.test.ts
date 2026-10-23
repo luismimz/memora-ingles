@@ -20,6 +20,8 @@ it('el catálogo no habilita preguntas; solo reutiliza el chequeo correcto ya pr
   expect(rounds[0].slot.es).toBe(check.prompt);
   expect(rounds[0].slot.choices).toEqual(check.choices);
   expect(rounds[0].slot.note).toBe(check.hint);
+  expect(rounds[0].situation).toEqual(check);
+  expect(grammarArcadeRounds('learner', [{ ...previewUnit, words: previewUnit.words.map((word, index) => index ? word : { ...word, es: 'interpretar una obra' }) }])).toEqual([]);
 });
 it('no incluye las frases ampliadas hasta que se hayan enseñado realmente', () => {
   for (const word of previewUnit.words) recordWordRecall('learner', word, 'quick');

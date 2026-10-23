@@ -12,3 +12,4 @@
 .game-card-anchor.coach-situation-card::before, .coach-situation-card .game-card-flip, .coach-situation-card .game-card-face { min-height: 0; }
 .coach-situation-card .coach-content { min-height: 0; gap: 12px; padding: 0; }
 .coach-situation-card .coach-practice h2 { font-size: clamp(1.1rem, 4vw, 1.5rem); }
+.arcade-situation { border: 0; padding: 0; margin: 0; width: 100%; min-width: 0; }

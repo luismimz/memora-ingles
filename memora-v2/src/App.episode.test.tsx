@@ -1,0 +1,70 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { previewUnit } from './preview/previewUnit';
+import { grammarTricks, trickStop } from './domain/journeyTricks';
+import { recordWordRecall } from './domain/memory';
+import { readLearningActivities } from './domain/learningActivity';
+import { readTrickCheckpoint } from './domain/trickCheckpoint';
+import { GrammarOrder } from './components/GrammarOrder';
+
+vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
+vi.mock('./services/progressSync', async (original) => ({ ...await original<typeof import('./services/progressSync')>(), startProgressSync: (_id: string, callback: (status: string) => void) => { callback('saved'); return { stop: vi.fn() }; } }));
+vi.mock('./services/directus', async (original) => ({
+  ...await original<typeof import('./services/directus')>(),
+  hasSession: () => true,
+  loadIdentity: async () => ({ id: 'app-episode-isolated', isAdmin: false }),
+  loadPublishedUnitSummaries: async () => [{ ...previewUnit, grammarTricks: grammarTricks(previewUnit) }],
+  loadUnit: async () => previewUnit,
+  loadKeysPilot: async () => null, loadMirrorPilot: async () => null,
+  loadAsset: async () => '',
+}));
+let tree: ReactTestRenderer;
+const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
+const click = async (label: string) => { await act(async () => tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick()); };
+async function advance() {
+  const target = { closest: () => null };
+  await act(async () => {
+    const region = tree.root.findByProps({ role: 'region' });
+    region.props.onTouchStart({ target, touches: [{ clientY: 300 }] });
+    region.props.onTouchMove({ target, touches: [{ clientY: 250 }] });
+    region.props.onScroll({ currentTarget: { scrollTop: 100, scrollHeight: 700, clientHeight: 600 } });
+    vi.advanceTimersByTime(230);
+  });
+}
+afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('App real monta Inicio→episodio→salir/reanudar→chat→cierre sin sustituir hooks ni progreso', async () => {
+  vi.useFakeTimers();
+  const values = new Map<string, string>();
+  const local = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
+  vi.stubGlobal('localStorage', local);
+  vi.stubGlobal('window', { localStorage: local, location: { search: '' }, addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(), setTimeout, clearTimeout, setInterval, clearInterval, matchMedia: () => ({ matches: true }), getSelection: () => null });
+  vi.stubGlobal('document', { documentElement: { dataset: {}, style: {} } });
+  const user = 'app-episode-isolated';
+  const stop = trickStop(previewUnit, grammarTricks(previewUnit)[0]);
+  recordWordRecall(user, previewUnit.words[0], 'hesitant', new Date(), 'recognition', undefined, true);
+  local.setItem(`memora-v2.resume.${user}`, stop.id);
+  local.setItem(`memora-v2.resume-mode.${user}`, 'grammar');
+  const App = (await import('./App')).default;
+  await act(async () => { tree = create(<App />); });
+  await click('Continuar jugando');
+  for (let step = 0; step < 3; step++) await advance();
+  await click('Estoy jugando ahora.'); await advance();
+  await click('I');
+  const checkpoint = readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1');
+  expect(checkpoint?.continuation?.order).toHaveLength(1);
+  await click('← Recorrido');
+  expect(text(tree.toJSON())).toContain('Continuar jugando');
+  await click('Continuar jugando');
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual(checkpoint?.continuation?.order);
+  await click('AM'); await click('PLAYING'); await advance();
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I am playing' } }));
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  expect(text(tree.toJSON())).toContain('Te guardo el siguiente turno');
+  await advance();
+  expect(text(tree.toJSON())).toContain('¡Tus palabras ya dicen algo nuevo!');
+  const activities = readLearningActivities(user);
+  expect(activities.filter((event) => event.source === 'learner' && event.modality === 'writing' && event.correct !== null)).toMatchObject([{ correct: true, helped: false }]);
+  expect(activities.filter((event) => event.phase === 'completion')).toHaveLength(1);
+  expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toBeNull();
+});

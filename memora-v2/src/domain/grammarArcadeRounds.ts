@@ -1,12 +1,12 @@
 import { getPlayableGrammar, getUnitSentences, type AtomicUnit, type GrammarForm, type UnitSentence } from './unit';
 import { readGrammarAttempts } from './grammarMemory';
-import { readSentenceMemories, readWordMemories } from './memory';
+import { practicedWordMeaning, readSentenceMemories, readWordMemories } from './memory';
 import { grammarTricks } from './journeyTricks';
 import { missingGrammarWords } from './learningModes';
-import { lessonForForm } from './grammarLesson';
+import { lessonForForm, type LessonCheck } from './grammarLesson';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 
-export interface GrammarArcadeRound { unit: AtomicUnit; form?: GrammarForm; skill: string; sentence: UnitSentence; slotIndex: number; slot: { en: string; es: string; choices: string[]; note?: string }; conceptual: boolean }
+export interface GrammarArcadeRound { unit: AtomicUnit; form?: GrammarForm; skill: string; sentence: UnitSentence; slotIndex: number; slot: { en: string; es: string; choices: string[]; note?: string }; conceptual: boolean; situation?: LessonCheck }
 
 /** Reuse the authored question and distractors, never invent the next grammar topic. */
 export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspection = false): GrammarArcadeRound[] {
@@ -15,19 +15,23 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
   const memories = readWordMemories(userId);
   const known = new Set(memories.filter((memory) => memory.correct > 0).map((memory) => memory.key.toLowerCase()));
   return units.flatMap<GrammarArcadeRound>((unit) => {
+    const preparedWord = (en: string) => {
+      const word = unit.words.find((item) => item.en.trim().toLowerCase() === en.trim().toLowerCase());
+      return word ? memories.some((memory) => practicedWordMeaning(memory, word)) : known.has(en.trim().toLowerCase());
+    };
     if (unit.kind === 'grammar-lesson' && unit.grammarLesson) {
       const lesson = unit.grammarLesson;
-      if (!inspection && unit.grammarPrerequisites?.vocabulary.some((word) => !known.has(word.trim().toLowerCase()))) return [];
+      if (!inspection && unit.grammarPrerequisites?.vocabulary.some((word) => !preparedWord(word))) return [];
       return lesson.checks.filter((check) => check.kind !== 'write' && check.choices && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
-        .map((check, index) => ({ unit, skill: lesson.id, sentence: unit.sentence, slotIndex: index, slot: { en: check.answers[0], es: check.prompt, choices: check.choices!, note: check.hint }, conceptual: true }));
+        .map((check, index) => ({ unit, skill: lesson.id, sentence: unit.sentence, slotIndex: index, slot: { en: check.answers[0], es: check.prompt, choices: check.choices!, note: check.hint }, conceptual: true, ...(check.situation ? { situation: check } : {}) }));
     }
     const checks = getPlayableGrammar(unit).flatMap((form) => {
       const prerequisites = grammarTricks(unit).find((trick) => trick.formId === form.id)?.vocabulary;
-      if (!inspection && (!prerequisites || prerequisites.some((word) => !known.has(word)))) return [];
+      if (!inspection && (!prerequisites || prerequisites.some((word) => !preparedWord(word)))) return [];
       const base = unit.words.find((word) => word.en.toLowerCase() === form.englishBase?.toLowerCase())?.es.toLowerCase();
       const lesson = lessonForForm(form, base);
       return lesson?.checks.filter((check) => check.kind !== 'write' && check.choices && check.choices.length >= 2 && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
-        .map((check, index) => ({ unit, form, skill: lesson.id, sentence: unit.sentence, slotIndex: index, slot: { en: check.answers[0], es: check.prompt, choices: check.choices!, note: check.hint }, conceptual: true })) ?? [];
+        .map((check, index) => ({ unit, form, skill: lesson.id, sentence: unit.sentence, slotIndex: index, slot: { en: check.answers[0], es: check.prompt, choices: check.choices!, note: check.hint }, conceptual: true, ...(check.situation ? { situation: check } : {}) })) ?? [];
     });
     const form = getPlayableGrammar(unit)[0];
     if (!form) return checks;
