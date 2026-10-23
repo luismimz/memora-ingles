@@ -15,10 +15,10 @@ import { GrammarOrder } from './GrammarOrder';
 import { searchKeysSkill } from '../domain/searchKeysPractice';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
-export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false }: {
+export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false }: {
   lesson: GrammarLessonData; form?: GrammarForm; sceneWord?: AtomicWord; userId: string; unitId: string; unitTitle?: string; contentVersion?: string; conversationAnswers?: string[]; startAtPractice?: boolean; reviewMode: boolean; onReady: () => void; onContinue: () => void;
   checkpoint?: TrickCheckpoint | null; onProgress?: (state: TrickCheckpoint) => void; requirePractice?: boolean; schedulePractice?: boolean; omitGeneratedExplanation?: boolean;
-  repairLimit?: 2; puzzle?: boolean; startAtExample?: boolean; constructionAnswers?: string[];
+  repairLimit?: 2; puzzle?: boolean; startAtExample?: boolean; constructionAnswers?: string[]; reusePreparedSubject?: boolean;
 }) {
   // Resume the task that is actually shown, not the unfiltered lesson index.
   // A conversational exchange may take over one of the written checks.
@@ -33,7 +33,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const validOrder = !savedPieces || (!checkpoint?.order ? checkpoint?.feedback !== 'correct' : checkpoint.order.every((index) => Number.isInteger(index) && index >= 0 && index < savedPieces.length) && new Set(checkpoint.order).size === checkpoint.order.length && (checkpoint.feedback !== 'correct' || checkpoint.order.length === savedPieces.length));
   const validCheckpoint = teachingStage !== undefined && checkpoint && savedCheckIndex >= 0 && savedCheckIndex < checks.length
     && validOrder && (checkpoint.checkId !== undefined || (checks.length === lesson.checks.length && !generatedContinuous)) ? { ...checkpoint, checkIndex: savedCheckIndex } : null;
-  const [stage, setStage] = useState(teachingStage ?? (startAtExample && generatedContinuous ? lesson.steps.length - 1 : startAtPractice ? lesson.steps.length : 0));
+  const [stage, setStage] = useState(teachingStage ?? (reusePreparedSubject && preparedSearch ? 2 : startAtExample && generatedContinuous ? lesson.steps.length - 1 : startAtPractice ? lesson.steps.length : 0));
   const [paused, setPaused] = useState(false);
   const [checkIndex, setCheckIndex] = useState(validCheckpoint?.checkIndex ?? 0);
   const [input, setInput] = useState(validCheckpoint?.input ?? '');
