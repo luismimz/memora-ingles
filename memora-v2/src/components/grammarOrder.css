@@ -6,3 +6,10 @@
 .order-bank button:disabled { opacity: .4; cursor: default; }
 .grammar-order button:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 .grammar-order small { color: var(--muted); }
+.is-puzzle .order-instruction { margin: 0; font-size: 1rem; }
+.is-puzzle .order-message { border: 2px dashed var(--line); min-height: 100px; transition: border-color .15s, background .15s; }
+.is-puzzle .order-message.is-drop-ready { border-color: var(--accent-ink); background: var(--surface-soft); }
+.is-puzzle .order-empty { display: grid; place-items: center; width: 46px; min-height: 48px; border-radius: 12px; background: var(--surface-soft); color: var(--muted); }
+.is-puzzle .order-bank button { touch-action: none; user-select: none; cursor: grab; box-shadow: 0 4px 0 var(--line); }
+.is-puzzle .order-bank button.is-dragging { position: relative; z-index: 3; pointer-events: none; outline: 3px solid var(--accent-ink); cursor: grabbing; }
+@media (prefers-reduced-motion: reduce) { .is-puzzle .order-message { transition: none; } }

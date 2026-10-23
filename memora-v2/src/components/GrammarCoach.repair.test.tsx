@@ -19,16 +19,32 @@ async function mount() {
 }
 const text = (value: any): string => typeof value === 'string' ? value : Array.isArray(value) ? value.map(text).join(' ') : value?.children ? text(value.children) : '';
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node) === label)!;
-const press = async (label: string) => { await act(async () => button(label).props.onClick()); };
+async function advance(double = false) {
+  const region = tree.root.findByProps({ role: 'region' });
+  const target = { closest: () => null };
+  await act(async () => {
+    region.props.onTouchStart({ target, touches: [{ clientY: 300 }] });
+    region.props.onTouchMove({ target, touches: [{ clientY: 250 }] });
+    region.props.onScroll({ currentTarget: { scrollTop: 100, scrollHeight: 700, clientHeight: 600 } });
+    if (double) { region.props.onScroll({ currentTarget: { scrollTop: 100, scrollHeight: 700, clientHeight: 600 } }); }
+    vi.advanceTimersByTime(230);
+  });
+}
+async function reachPuzzle() {
+  for (let count = 0; count < 10 && !tree.root.findAllByType(GrammarOrder).length; count++) await advance();
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+}
 beforeEach(() => {
+  vi.useFakeTimers();
+  vi.stubGlobal('window', { setTimeout, clearTimeout, dispatchEvent: vi.fn(), matchMedia: () => ({ matches: false }) });
   finished.mockClear();
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) });
 });
-afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
+afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 it('la parada real monta antes de escribir y limita ráfagas, recarga y modelo sin fabricar aciertos', async () => {
-  await mount(); await press('Ya lo entiendo · probarlo');
+  await mount(); await reachPuzzle();
   expect(tree.root.findAllByType('input')).toHaveLength(0);
   const staleSubmit = tree.root.findByType(GrammarOrder).props.onAnswer;
   await act(async () => { for (let n = 0; n < 15; n++) staleSubmit('PLAYING I AM'); });
@@ -40,20 +56,31 @@ it('la parada real monta antes de escribir y limita ráfagas, recarga y modelo s
   expect(readLearningActivities(user).filter((event) => event.activityId === 'model:order-message-v1')).toHaveLength(1);
   await act(async () => tree.unmount()); await mount();
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toEqual(errors);
-  expect(button('Seguir con el modelo →')).toBeDefined();
-  const advance = button('Seguir con el modelo →').props.onClick;
-  await act(async () => { advance(); advance(); });
+  expect(tree.root.findAllByProps({ 'aria-label': 'Continuar con el modelo' })).toHaveLength(1);
+  await advance(true);
   expect(tree.root.findAllByType('input')).toHaveLength(0);
   const answer = tree.root.findAllByType('button').find((node) => text(node).startsWith('Estoy ') && text(node).endsWith('ahora.'))!;
-  await act(async () => answer.props.onClick()); await press('Seguir →');
+  await act(async () => answer.props.onClick()); await advance();
   expect(tree.root.findAllByType('input')).toHaveLength(1);
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I playing' } }));
   const submit = tree.root.findByType('form').props.onSubmit;
   await act(async () => { for (let n = 0; n < 15; n++) submit({ preventDefault() {} }); });
   expect(readGrammarAttempts(user).filter((event) => event.check === 'use')).toHaveLength(2);
-  expect(button('Seguir con el modelo →')).toBeDefined();
-  await press('Seguir con el modelo →');
+  expect(tree.root.findAllByProps({ 'aria-label': 'Continuar con el modelo' })).toHaveLength(1);
+  await advance();
   expect(finished).toHaveBeenCalledOnce();
   expect(readLearningActivities(user).filter((event) => event.activityId === 'use').map((event) => event.correct)).toEqual([false, false]);
   expect(readLearningActivities(user).filter((event) => event.activityId === 'model:use')).toHaveLength(1);
+});
+it('la parada real comprueba al colocar las tres piezas sin buscar Enviar mensaje', async () => {
+  await mount(); await reachPuzzle();
+  expect(button('Enviar mensaje →')).toBeUndefined();
+  for (const label of ['I', 'AM', 'PLAYING']) {
+    const bank = tree.root.findByProps({ 'aria-label': 'Piezas disponibles' });
+    const piece = bank.findAllByType('button').find((node) => text(node) === label)!;
+    await act(async () => piece.props.onClick({ detail: 0 }));
+  }
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ activityId: 'order-message-v1', correct: true, helped: true }]);
+  expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toMatchObject({ order: expect.any(Array), feedback: 'correct' });
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
 });

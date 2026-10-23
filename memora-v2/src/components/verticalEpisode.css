@@ -1,0 +1,13 @@
+.game-card-anchor.card-vertical::before { display: none; }
+.card-vertical-scroll { height: max(360px, calc(100svh - 150px)); overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; touch-action: pan-y; scrollbar-width: thin; border-radius: 28px; background: var(--surface-strong); box-shadow: var(--shadow); transition: transform .23s ease; }
+.game-card-anchor.card-vertical .card-vertical-page { position: relative; min-height: 100%; height: auto; border-radius: 28px; box-shadow: none; }
+.card-vertical .game-card-body { padding: clamp(18px, 4vw, 30px); }
+.card-vertical-next { min-height: 88px; display: grid; place-items: center; border-top: 1px solid var(--line); }
+.card-vertical-next button { display: flex; gap: .6rem; align-items: center; border: 0; background: transparent; color: var(--muted); padding: 20px; min-height: 48px; font: inherit; cursor: pointer; }
+.card-vertical-scroll:focus-visible, .card-vertical-next button:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: -4px; }
+.coach-stream .coach-actions { justify-content: center; }
+.coach-stream details { text-align: left; color: var(--muted); font-size: .85rem; }
+.coach-stream summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; justify-content: center; }
+.coach-stream .coach-content { min-height: 0; }
+@media (max-width: 500px) { .card-vertical-scroll { border-radius: 20px; } .card-vertical .card-vertical-page { border-radius: 20px; } }
+@media (prefers-reduced-motion: reduce) { .card-vertical-scroll { transition: none; } }
