@@ -4,6 +4,20 @@ import { grammarExamples } from '../preview/grammarExamples';
 import { previewUnit } from '../preview/previewUnit';
 
 describe('trucos que se comprueban y se usan', () => {
+  it.each([
+    ['brush', 'brushing', 'cepillar', 'cepillando', 'brushing', 'brush-ready'],
+    ['cook', 'cooking', 'cocinar', 'cocinando', 'cooking', 'cook-ready'],
+  ])('prepara escenas distintas para %s sin ampliar el inglés exigido', (base, action, baseEs, actionEs, active, waiting) => {
+    const form = { ...previewUnit.grammar[0], englishBase: base, english: action, englishRoot: base, englishNut: 'ing', spanish: actionEs, spanishStem: actionEs.slice(0, -4), spanishEnding: 'ando', subjects: [{ en: "I'm", expandedEn: 'I am', es: 'Yo estoy', phrase: `I'm ${action}` }] };
+    const lesson = lessonForForm(form, baseEs)!;
+    expect(() => validateGrammarLesson(lesson)).not.toThrow();
+    expect(lesson.checks[1].situation).toEqual({ message: `I am ${action}`, scenes: [
+      { choice: `Estoy ${actionEs} ahora.`, state: active }, { choice: `Todavía no estoy ${actionEs}.`, state: waiting },
+    ] });
+    expect(lessonForForm(form, 'otro sentido')!.checks[1].situation).toBeUndefined();
+    const mixed = structuredClone(lesson); mixed.checks[1].situation!.scenes[1].state = 'waiting';
+    expect(() => validateGrammarLesson(mixed)).toThrow();
+  });
   it('exige comprensión y producción en cada estructura de ejemplo', () => {
     for (const lesson of grammarExamples) expect(() => validateGrammarLesson(lesson)).not.toThrow();
     expect(() => validateGrammarLesson({ ...grammarExamples[0], checks: grammarExamples[0].checks.slice(0, 1) })).toThrow();

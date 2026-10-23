@@ -1,8 +1,23 @@
 import { expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { GrammarSituation } from './GrammarSituation';
+import { lessonForForm } from '../domain/grammarLesson';
+import { previewUnit } from '../preview/previewUnit';
 import { meaningFixture as deskMeaningLesson } from '../test/grammarPracticeFixtures';
 const check = deskMeaningLesson.checks[0];
+it.each([
+  ['brush', 'brushing', 'cepillar', 'cepillando', 'cepillando los dientes', 'El cepillo sigue en su vaso', 'El cepillo sigue en el vaso'],
+  ['cook', 'cooking', 'cocinar', 'cocinando', 'removiendo una olla', 'La olla está apartada', 'La olla sigue apartada'],
+])('vincula %s con acción física y reparación propias, no un escritorio decorado', (base, action, baseEs, actionEs, active, waiting, help) => {
+  const form = { ...previewUnit.grammar[0], englishBase: base, english: action, englishRoot: base, englishNut: 'ing', spanish: actionEs, spanishStem: actionEs.slice(0, -4), spanishEnding: 'ando', subjects: [{ en: "I'm", expandedEn: 'I am', es: 'Yo estoy', phrase: `I'm ${action}` }] };
+  const task = lessonForForm(form, baseEs)!.checks[1];
+  const html = renderToStaticMarkup(<GrammarSituation check={task} selected="" feedback="idle" onAnswer={() => {}} onListen={() => {}} />);
+  expect(html).toContain(active); expect(html).toContain(waiting); expect(html).not.toContain('mando'); expect(html).not.toContain('situation-result');
+  const wrong = renderToStaticMarkup(<GrammarSituation check={task} selected={task.choices![1]} feedback="help" onAnswer={() => {}} onListen={() => {}} />);
+  expect(wrong).toContain(help); expect(wrong).not.toContain('Mensaje entregado');
+  const right = renderToStaticMarkup(<GrammarSituation check={task} selected={task.answers[0]} feedback="correct" onAnswer={() => {}} onListen={() => {}} />);
+  expect(right).toContain('Mensaje entregado'); expect(right).toContain('aria-pressed="true"');
+});
 it('presenta dos escenas accesibles, mensaje inglés y escucha sin temporizador ni respuesta marcada', () => {
   const html = renderToStaticMarkup(<GrammarSituation check={check} selected="" feedback="idle" onAnswer={() => {}} onListen={() => {}} />);
   expect(html).toContain('Una persona está jugando con el mando');

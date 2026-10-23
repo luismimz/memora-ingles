@@ -3,6 +3,7 @@ import { normalizeSentenceAnswer } from './sentenceAnswer';
 
 export interface LessonPiece { text: string; role: 'subject' | 'auxiliary' | 'verb' | 'change' | 'context' }
 export interface LessonStep { caption: string; es: LessonPiece[]; en: LessonPiece[]; captionMarks?: LessonPiece[]; hideEnglish?: boolean; advanceLabel?: string }
+export type SituationState = 'playing' | 'waiting' | 'brushing' | 'brush-ready' | 'cooking' | 'cook-ready';
 export interface LessonCheck {
   id: string;
   kind: 'choose' | 'explain' | 'write';
@@ -11,7 +12,7 @@ export interface LessonCheck {
   answers: string[];
   hint: string;
   success: string;
-  situation?: { message: string; scenes: { choice: string; state: 'playing' | 'waiting' }[] };
+  situation?: { message: string; scenes: { choice: string; state: SituationState }[] };
   /** Authored shuffled pieces; reconstruction remains assisted practice. */
   ordering?: LessonPiece[];
 }
@@ -51,7 +52,8 @@ export function validateGrammarLesson(value: GrammarLessonData): void {
       if (check.kind === 'write' || !message?.trim() || !taught || !Array.isArray(scenes) || scenes.length !== 2
         || !check.choices || check.choices.length !== scenes.length || new Set(scenes.map((scene) => scene.choice)).size !== scenes.length
         || new Set(scenes.map((scene) => scene.state)).size !== scenes.length
-        || scenes.some((scene) => !check.choices!.includes(scene.choice) || !['playing', 'waiting'].includes(scene.state))) throw new Error('La situación requiere un mensaje enseñado y dos escenas distintas vinculadas a sus opciones.');
+        || scenes.some((scene) => !check.choices!.includes(scene.choice) || !['playing', 'waiting', 'brushing', 'brush-ready', 'cooking', 'cook-ready'].includes(scene.state))
+        || ![['playing', 'waiting'], ['brushing', 'brush-ready'], ['cooking', 'cook-ready']].some((pair) => scenes.every((scene) => pair.includes(scene.state)))) throw new Error('La situación requiere un mensaje enseñado y dos escenas distintas vinculadas a sus opciones.');
     }
   }
   if (!value.checks.some((check) => check.kind === 'explain') || !value.checks.some((check) => check.kind === 'write')) throw new Error('El truco debe comprobar comprensión y uso.');
@@ -82,6 +84,16 @@ export function lessonForForm(form: GrammarForm, baseSpanish?: string): GrammarL
           situation: { message: 'I am playing', scenes: [
             { choice: 'Estoy jugando ahora.', state: 'playing' as const },
             { choice: 'Todavía no estoy jugando.', state: 'waiting' as const },
+          ] },
+        } : form.englishBase === 'brush' && baseSpanish === 'cepillar' && form.english === 'brushing' && form.spanish === 'cepillando' ? {
+          situation: { message: 'I am brushing', scenes: [
+            { choice: 'Estoy cepillando ahora.', state: 'brushing' as const },
+            { choice: 'Todavía no estoy cepillando.', state: 'brush-ready' as const },
+          ] },
+        } : form.englishBase === 'cook' && baseSpanish === 'cocinar' && form.english === 'cooking' && form.spanish === 'cocinando' ? {
+          situation: { message: 'I am cooking', scenes: [
+            { choice: 'Estoy cocinando ahora.', state: 'cooking' as const },
+            { choice: 'Todavía no estoy cocinando.', state: 'cook-ready' as const },
           ] },
         } : {}),
         hint: `I AM ${form.english.toUpperCase()} cuenta una acción que está ocurriendo ahora.`, success: 'Has entendido el mensaje: la acción está ocurriendo ahora.' },
