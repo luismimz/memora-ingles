@@ -12,7 +12,7 @@ import { syncLabels, type SyncStatus } from '../services/progressSync';
 import type { Appearance } from '../useAppearance';
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { readWordMemories, recordChunkExposure, recordSentenceExposure } from '../domain/memory';
-import { preparedGrammarContinuation, preparedPlayingPractice } from '../domain/grammarContinuation';
+import { preparedGrammarContinuation, preparedActionPractice } from '../domain/grammarContinuation';
 import { conversationPracticeAnswers, demonstratedConversationQuestionSkills } from '../domain/conversation';
 import { constructionFeedback } from '../domain/sentenceConstruction';
 import { SentenceBuilderCard } from './SentenceBuilderCard';
@@ -35,9 +35,9 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const [checkpoint] = useState(() => inspection ? null : readTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1'));
   // An old in-flight coach keeps its identified task/draft, even if an author
   // adds an episode later. Fresh entries opt in only with actual preparation.
-  const [shortPractice] = useState(() => preparedPlayingPractice(unit, trick.formId, readWordMemories(userId)));
+  const [shortPractice] = useState(() => preparedActionPractice(unit, trick.formId, readWordMemories(userId)));
   const episodeUnit = shortPractice ?? unit;
-  const episodeIdentity = shortPractice ? `${trick.formId}:short-playing-v1` : trick.formId;
+  const episodeIdentity = shortPractice ? `${trick.formId}:short-${form!.english}-v1` : trick.formId;
   const [prepared] = useState(() => Boolean(shortPractice) || preparedGrammarContinuation(unit, trick.formId, readWordMemories(userId), readGrammarAttempts(userId)));
   const episode = prepared && (!checkpoint || checkpoint.episodeId === episodeIdentity);
   const coachState = useRef<TrickCheckpoint>(checkpoint ?? { stage: 0, checkIndex: 0, input: '', feedback: 'idle', helped: false });

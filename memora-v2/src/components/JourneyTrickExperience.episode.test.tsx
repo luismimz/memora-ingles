@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { contextualProcessFixture as unit } from '../test/contextualProcessFixture';
-import { previewUnit } from '../preview/previewUnit';
+import { previewUnit, reviewUnits } from '../preview/previewUnit';
 import { JourneyTrickExperience } from './JourneyTrickExperience';
 import { SentenceBuilderCard } from './SentenceBuilderCard';
 import { ConversationPractice } from './ConversationPractice';
@@ -44,9 +44,9 @@ async function reachBuild(value = unit) {
     await advance();
   }
   expect(learner()).toHaveLength(0);
-  await act(async () => button('Estoy jugando ahora.').props.onClick());
+  await act(async () => button(`Estoy ${value.grammar[0].spanish} ahora.`).props.onClick());
   await advance();
-  expect(tree.root.findAllByType(value === previewUnit ? GrammarOrder : SentenceBuilderCard)).toHaveLength(1);
+  expect(tree.root.findAllByType(value.grammarContinuation ? SentenceBuilderCard : GrammarOrder)).toHaveLength(1);
 }
 beforeEach(() => {
   vi.useFakeTimers(); finished.mockClear(); next.mockClear(); vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
@@ -194,4 +194,26 @@ it('consultar audio antes de montar conserva ayuda aunque se coloquen fichas inm
   expect(readLearningActivities(user).find((event) => event.activityId.startsWith('trick-build-audio:'))).toMatchObject({ correct: null, source: 'authored', helped: true });
   await advance();
   expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+});
+
+it.each([
+  ['brush', 'BRUSHING', 'I am brushing', 'Espero fuera del baño'],
+  ['cook', 'COOKING', 'I am cooking', 'preparo los platos'],
+])('la acción preparada %s cambia la intención y respuesta del personaje sin exigir vocabulario de la misión larga', async (base, action, response, consequence) => {
+  const source = reviewUnits.find((item) => item.grammar.some((form) => form.englishBase === base) && !item.grammar[0].lesson && item.words.some((word) => word.en.toLowerCase() === base))!;
+  expect(source).toBeDefined();
+  const word = source.words.find((item) => item.en.toLowerCase() === base)!;
+  recordWordRecall(user, word, 'hesitant', new Date(), 'recognition', undefined, true);
+  await reachBuild(source);
+  for (const piece of ['I', 'AM', action]) await act(async () => button(piece).props.onClick());
+  await advance();
+  const dialogue = tree.root.findByType(ConversationPractice).props.unit.communication.dialogue;
+  expect(dialogue.partnerLanguage).toBe('es');
+  expect(dialogue.context).not.toContain('organiza la partida');
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: response } }));
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  expect(text(tree.toJSON())).toContain(consequence);
+  expect(vi.mocked(playEnglish).mock.calls.some(([message]) => /outside|table|kitchen|there|teeth|dinner/iu.test(message))).toBe(false);
+  expect(learner().filter((event) => event.modality === 'writing' && event.correct !== null)).toMatchObject([{ expected: `${response}.`, helped: false }]);
+  expect(readWordMemories(user).map((memory) => memory.key).sort()).toEqual([base, 'play'].sort());
 });

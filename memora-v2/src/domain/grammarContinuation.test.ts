@@ -1,7 +1,7 @@
 import { expect, it } from 'vitest';
 import { contextualProcessFixture as unit } from '../test/contextualProcessFixture';
-import { previewUnit } from '../preview/previewUnit';
-import { preparedGrammarContinuation, preparedPlayingPractice } from './grammarContinuation';
+import { previewUnit, reviewUnits } from '../preview/previewUnit';
+import { preparedGrammarContinuation, preparedActionPractice } from './grammarContinuation';
 import { validateUnit } from './unit';
 import { grammarChecksForExperience, lessonForForm } from './grammarLesson';
 import type { WordMemory } from './memory';
@@ -9,9 +9,22 @@ import type { GrammarAttempt } from './grammarMemory';
 import { grammarTricks, missingTrickWords, trickStop } from './journeyTricks';
 
 const memories = [{ key: 'play', correct: 1, word: unit.words[0] }] as WordMemory[];
+it.each(['brush', 'cook'])('la aplicación de %s exige su sentido y forma exactos y deja intactas sus piezas fuente', (base) => {
+  const source = reviewUnits.find((item) => item.grammar.some((form) => form.englishBase === base) && !item.grammar[0].lesson && item.words.some((word) => word.en.toLowerCase() === base))!;
+  const word = source.words.find((item) => item.en.toLowerCase() === base)!;
+  const own = [{ key: base, correct: 1, word }] as WordMemory[];
+  const before = JSON.stringify(source);
+  const practice = preparedActionPractice(source, 'ing', own)!;
+  expect(practice.sentence.en).toBe(`I am ${source.grammar[0].english}.`);
+  expect(() => validateUnit(practice)).not.toThrow();
+  expect(preparedActionPractice(source, 'ing', memories)).toBeNull();
+  expect(preparedActionPractice(source, 'ing', [{ ...own[0], word: { ...word, es: 'otro sentido' } }])).toBeNull();
+  expect(preparedActionPractice({ ...source, grammar: [{ ...source.grammar[0], english: 'playing' }] }, 'ing', own)).toBeNull();
+  expect(JSON.stringify(source)).toBe(before);
+});
 it('el tramo público de PLAY usa solo la frase ya enseñada, preserva la fuente y no aprueba un borrador', () => {
   const before = JSON.stringify(previewUnit);
-  const practice = preparedPlayingPractice(previewUnit, 'ing', memories)!;
+  const practice = preparedActionPractice(previewUnit, 'ing', memories)!;
   expect(practice.id).toBe(previewUnit.id);
   expect(practice.contentVersion).toBe(previewUnit.contentVersion);
   expect(practice.grammarContinuation).toBeUndefined();
@@ -20,9 +33,9 @@ it('el tramo público de PLAY usa solo la frase ya enseñada, preserva la fuente
   expect(practice.practiceSentences).toEqual([]);
   expect(practice.communication!.dialogue!.partnerLanguage).toBe('es');
   expect(() => validateUnit(practice)).not.toThrow();
-  expect(preparedPlayingPractice(previewUnit, 'ing', [])).toBeNull();
-  expect(preparedPlayingPractice({ ...unit, grammarContinuation: { ...unit.grammarContinuation!, status: 'needs_review' } }, 'ing', memories)).toBeNull();
-  expect(preparedPlayingPractice({ ...previewUnit, words: previewUnit.words.map((word, index) => index ? word : { ...word, es: 'tocar un instrumento' }) }, 'ing', memories)).toBeNull();
+  expect(preparedActionPractice(previewUnit, 'ing', [])).toBeNull();
+  expect(preparedActionPractice({ ...unit, grammarContinuation: { ...unit.grammarContinuation!, status: 'needs_review' } }, 'ing', memories)).toBeNull();
+  expect(preparedActionPractice({ ...previewUnit, words: previewUnit.words.map((word, index) => index ? word : { ...word, es: 'tocar un instrumento' }) }, 'ing', memories)).toBeNull();
   expect(JSON.stringify(previewUnit)).toBe(before);
 });
 it('solo enlaza opt-in revisado, sentido y habilidades realmente preparados, sin modificar memoria', () => {
