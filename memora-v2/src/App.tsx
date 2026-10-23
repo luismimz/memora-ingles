@@ -11,7 +11,7 @@ import { ContentManager } from './components/ContentManager';
 import { ArcadeExperience, eligibleGrammarUnits } from './components/ArcadeExperience';
 import { readLearningActivities } from './domain/learningActivity';
 import { shouldOfferMicroArcade, microRounds, arcadeCandidateIds } from './domain/microArcade';
-import { completeArcadeCadence, consumeAutomaticArcade, pendingAutomaticArcade, type AutomaticArcadeMode } from './domain/arcadeCadence';
+import { completeArcadeCadence, consumeAutomaticArcade, pendingAutomaticArcade, separatedArcadeUnits, type AutomaticArcadeMode } from './domain/arcadeCadence';
 import { PhrasalFusionDemo } from './components/PhrasalFusionDemo';
 import { GrammarWorkshop } from './components/GrammarWorkshop';
 import { EvolutionView } from './components/EvolutionView';
@@ -329,7 +329,7 @@ export default function App() {
     if (pending) void openArcade(true, pending, current);
   }
 
-  async function openArcade(automatic = false, initialMode: AutomaticArcadeMode = 'associations', resumedUnit?: AtomicUnit) {
+  async function openArcade(automatic = false, initialMode: AutomaticArcadeMode = 'associations', resumedUnit?: AtomicUnit, advanceIfEmpty = false) {
     if (arcadeOpening.current || microSession) return;
     arcadeOpening.current = true;
     const request = ++arcadeRequest.current;
@@ -342,13 +342,16 @@ export default function App() {
       );
       if (request !== arcadeRequest.current) return;
       const candidates = preview ? (current ? [current] : reviewUnits) : loaded.flatMap((result) => result.status === 'fulfilled' && result.value ? [result.value] : []);
+      const practiceCandidates = automatic && !preview && !reviewMode ? separatedArcadeUnits(candidates, readLearningActivities(userId)) : candidates;
       // No synthetic recall or exposure is inferred from a completion flag.
       // Opening/closing the modal keeps the underlying lesson mounted.
-      const hasGrammar = initialMode === 'grammar' && eligibleGrammarUnits(userId, candidates).length > 0;
-      if (automatic && !hasGrammar && !microRounds(userId, candidates).some((round) => round.options.length >= 2)) {
+      const hasGrammar = initialMode === 'grammar' && eligibleGrammarUnits(userId, practiceCandidates).length > 0;
+      if (automatic && !hasGrammar && !microRounds(userId, practiceCandidates).some((round) => round.options.length >= 2)) {
         // Keep the pending round if content is temporarily unavailable. Never manufacture exposure.
         if (loaded.some((result) => result.status === 'rejected')) setUnitError('El repaso aún no se pudo cargar. Tu ronda sigue guardada; puedes reintentar al continuar.');
-        else if (!resumedUnit) advanceAfterUnit();
+        // Finishing an activity may prepare a surprise, but must not remove its
+        // feedback. Only the learner's explicit continuation can leave it.
+        else if (advanceIfEmpty && !resumedUnit) advanceAfterUnit();
         return;
       }
       // Opening is not finishing: reload must keep an interrupted surprise pending.
@@ -428,7 +431,7 @@ export default function App() {
   function continueAfterUnit() {
     if (microSession || arcadeOpening.current) return;
     const pending = !preview && !reviewMode && pendingAutomaticArcade(userId);
-    if (pending) { void openArcade(true, pending); return; }
+    if (pending) { void openArcade(true, pending, undefined, true); return; }
     advanceAfterUnit();
   }
 

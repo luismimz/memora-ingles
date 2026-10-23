@@ -12,6 +12,7 @@ import { stopSpeech } from '../services/audio';
 import { GrammarArcade } from './GrammarArcade';
 import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
 import { missingGrammarWords } from '../domain/learningModes';
+import { separatedArcadeUnits } from '../domain/arcadeCadence';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
   const practiced = new Set([...readGrammarAttempts(userId).filter((attempt) => attempt.correct).map((attempt) => attempt.unitId),
@@ -32,7 +33,10 @@ function ArcadeDialog({ children, onExit }: { children: React.ReactNode; onExit:
 }
 
 /** Optional modes share the same attempts, SRS and conversation history. */
-export function ArcadeExperience({ userId, units, inspection, onExit, initialMode = 'associations', automatic = false }: { userId: string; units: AtomicUnit[]; inspection: boolean; onExit: () => void; initialMode?: 'associations' | 'grammar'; automatic?: boolean }) {
+export function ArcadeExperience({ userId, units: sourceUnits, inspection, onExit, initialMode = 'associations', automatic = false }: { userId: string; units: AtomicUnit[]; inspection: boolean; onExit: () => void; initialMode?: 'associations' | 'grammar'; automatic?: boolean }) {
+  // Freeze a prepared pool for this session; answering one round must not erase
+  // its own feedback or change the next round underneath the learner.
+  const [units] = useState(() => automatic && !inspection ? separatedArcadeUnits(sourceUnits, readLearningActivities(userId)) : sourceUnits);
   const [stage, setStage] = useState<'associations' | 'grammar' | 'build' | 'chat' | 'finish'>(() => initialMode === 'grammar' && (inspection || eligibleGrammarUnits(userId, units).length) ? 'grammar' : 'associations');
   const [mixed, setMixed] = useState(false);
   const [selected, setSelected] = useState<AtomicUnit>(() => (inspection ? units.filter((unit) => unit.communication?.dialogue) : eligibleMixedUnits(userId, units))[0]);

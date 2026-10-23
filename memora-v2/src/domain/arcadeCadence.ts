@@ -1,6 +1,30 @@
 import { progressStorage } from './progressJournal';
+import type { LearningActivity } from './learningActivity';
 
 export type AutomaticArcadeMode = 'associations' | 'grammar';
+
+/** Presentation variety from existing evidence, not another memory schedule.
+ * Three different answered actions must intervene before the same scene returns
+ * as a surprise. Navigation, models and repeated repairs do not fill that gap.
+ * Manual practice remains available and SRS due dates are unchanged. */
+export function separatedArcadeUnits<T extends { id: string }>(units: readonly T[], activities: readonly LearningActivity[]): T[] {
+  const ordered = activities.filter((event) => event.source === 'learner' && typeof event.correct === 'boolean' && event.phase !== 'completion' && Number.isFinite(Date.parse(event.at)))
+    .map((event, index) => ({ event, index })).sort((a, b) => Date.parse(b.event.at) - Date.parse(a.event.at) || b.index - a.index);
+  const actions = new Set<string>();
+  const recent = new Set<string>();
+  let cutoff: number | undefined;
+  for (const { event } of ordered) {
+    const at = Date.parse(event.at);
+    // Sync may reorder events with an identical timestamp. Do not pretend we
+    // know which one was last: defer the entire tied boundary conservatively.
+    if (cutoff !== undefined && at < cutoff) break;
+    const identity = JSON.stringify([event.unitId, event.skill, event.phase, event.prompt, event.expected]);
+    if (actions.has(identity)) continue;
+    actions.add(identity); recent.add(event.unitId);
+    if (actions.size >= 3 && cutoff === undefined) cutoff = at;
+  }
+  return units.filter((unit) => !recent.has(unit.id));
+}
 interface Cadence { seen: string[]; words: number; pending: AutomaticArcadeMode | null; calm?: boolean }
 const key = (userId: string) => `memora-v2.arcade-cadence.${userId}`;
 function read(userId: string): Cadence {

@@ -6,6 +6,8 @@ import { recordWordRecall } from './domain/memory';
 import { readLearningActivities } from './domain/learningActivity';
 import { readTrickCheckpoint } from './domain/trickCheckpoint';
 import { GrammarOrder } from './components/GrammarOrder';
+import { MicroArcade } from './components/MicroArcade';
+import { pendingAutomaticArcade } from './domain/arcadeCadence';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('./services/progressSync', async (original) => ({ ...await original<typeof import('./services/progressSync')>(), startProgressSync: (_id: string, callback: (status: string) => void) => { callback('saved'); return { stop: vi.fn() }; } }));
@@ -63,8 +65,17 @@ it('App real monta Inicio→episodio→salir/reanudar→chat→cierre sin sustit
   expect(text(tree.toJSON())).toContain('Te guardo el siguiente turno');
   await advance();
   expect(text(tree.toJSON())).toContain('¡Tus palabras ya dicen algo nuevo!');
+  expect(tree.root.findAllByType('dialog')).toHaveLength(0);
+  expect(pendingAutomaticArcade(user)).toBe('grammar');
+  await act(async () => { vi.advanceTimersByTime(20000); });
+  expect(text(tree.toJSON())).toContain('¡Tus palabras ya dicen algo nuevo!');
   const activities = readLearningActivities(user);
   expect(activities.filter((event) => event.source === 'learner' && event.modality === 'writing' && event.correct !== null)).toMatchObject([{ correct: true, helped: false }]);
   expect(activities.filter((event) => event.phase === 'completion')).toHaveLength(1);
   expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toBeNull();
+  await click('← Recorrido');
+  await click('Arcade');
+  expect(tree.root.findAllByType('dialog')).toHaveLength(1);
+  expect(tree.root.findByType(MicroArcade).props.onGrammar).toBeTypeOf('function');
+  expect(pendingAutomaticArcade(user)).toBe('grammar');
 });
