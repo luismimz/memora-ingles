@@ -11,3 +11,5 @@ El orden de escenas se deriva de la identidad estable del encuentro y mensaje, n
 No inspección visual/móvil, partida física, escucha real, diversión o memoria diferida acreditadas. No contenido/medios editoriales activados, cuenta tocada, progreso migrado ni palabras añadidas al recuento. Curso35mínimo sinmáximo/1050/3000 y aceptación humana de la experiencia siguen pendientes.
 
 Verificación posterior adicional: episodio real montado desde enseñanza hasta entrega errónea de ficha, salir/reanudar, entrega correcta y constructor. Mover no escribe, primer error y ayuda quedan, corrección enlaza parentAttemptId, misma disposición al recargar, segundo pointerup no duplica y no escritura ficticia.15enfocadas/2archivos y TypeScript correctos; solo test/documento, runtime/build no cambiados ni batería completa repetida.
+
+Revisión de claridad: el coach muestra «Entrega el mensaje» como objetivo de la acción, sin repetir en un título la frase inglesa y la pregunta de cuestionario. El prompt original permanece en el journal para conservar su significado e historial. Test de episodio verifica ambos, sin cambiar respuestas ni evaluador.

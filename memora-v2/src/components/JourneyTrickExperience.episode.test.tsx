@@ -68,6 +68,7 @@ it('entregar una ficha a escena registra el primer error, reanuda y corrige sin 
   const boxes = new Map<string, { left: number; top: number; right: number; bottom: number }>();
   await mount(previewUnit, boxes);
   for (let index = 0; index < 3; index++) await advance();
+  expect(text(tree.root.findByType('h2'))).toBe('Entrega el mensaje');
   const token = () => tree.root.findByProps({ 'aria-label': 'Mensaje inglés: I am playing' });
   const order = () => tree.root.findAllByType('button').filter((node) => node.props['data-drop-choice']).map((node) => node.props['data-drop-choice']);
   const firstOrder = order();
@@ -76,7 +77,7 @@ it('entregar una ficha a escena registra el primer error, reanuda y corrige sin 
   await act(async () => { token().props.onPointerDown(event(150, 150)); token().props.onPointerMove(event(wrong.left + 20, wrong.top + 20)); });
   expect(learner()).toHaveLength(0);
   await act(async () => token().props.onPointerUp(event(wrong.left + 20, wrong.top + 20)));
-  const first = learner()[0]; expect(first).toMatchObject({ activityId: 'meaning-now-v1', correct: false, helped: true });
+  const first = learner()[0]; expect(first).toMatchObject({ activityId: 'meaning-now-v1', correct: false, helped: true, prompt: 'Recibes «I am playing». ¿Qué te cuenta esa persona?' });
   expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toMatchObject({ feedback: 'help', checkId: 'meaning-now-v1' });
   act(() => tree.unmount()); await mount(previewUnit, boxes);
   expect(order()).toEqual(firstOrder); expect(learner()).toHaveLength(1);
