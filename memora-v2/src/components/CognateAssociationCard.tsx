@@ -8,11 +8,11 @@ import { AssociationAudioStatus } from './AssociationAudioStatus';
 import type { AssociationAudioState } from './useAssociationAudio';
 
 /** Same visual card as PLAY; a transparent cognate is not a made-up acoustic bridge. */
-export function CognateAssociationCard({ word, index, total, audioState, onListen, onConnect }: {
-  word: AtomicWord; index: number; total: number; audioState?: AssociationAudioState; onListen?: () => void; onConnect: () => void;
+export function CognateAssociationCard({ word, index, total, audioState, onListen, onConnect, vertical = false }: {
+  word: AtomicWord; index: number; total: number; audioState?: AssociationAudioState; onListen?: () => void; onConnect: () => void; vertical?: boolean;
 }) {
   const visual = wordVisual(word);
-  return <GameCard onAdvance={onConnect} advanceControl advanceLabel="Ya la he conectado" back={<div className="hint-face"><SceneVisual word={visual} showMemoryLink /><p><strong lang="en">{word.en}</strong> → <strong>{word.es}</strong></p><p>Se parecen y comparten este significado.</p></div>}>
+  return <GameCard vertical={vertical} onAdvance={onConnect} advanceControl advanceLabel="Ya la he conectado" back={<div className="hint-face"><SceneVisual word={visual} showMemoryLink /><p><strong lang="en">{word.en}</strong> → <strong>{word.es}</strong></p><p>Se parecen y comparten este significado.</p></div>}>
     <div className="association-content cognate-association is-revealed">
       <p className="eyebrow">ASOCIACIÓN {index + 1}/{total}</p>
       <WordHeading en={word.en} es={word.es.toUpperCase()} />

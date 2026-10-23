@@ -6,6 +6,8 @@ export interface GameState {
   wordIndex: number;
   recallIndex: number;
   recallAnswered: boolean;
+  /** Restores the visible feedback, not a new attempt or memory score. */
+  recallOutcome?: 'correct' | 'wrong';
   correct: number;
   combo: number;
   maxCombo: number;
@@ -44,13 +46,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'answered': {
       if (state.phase !== 'recall' || state.recallAnswered) return state;
       const combo = action.correct ? state.combo + 1 : 0;
-      return { ...state, recallAnswered: true, correct: state.correct + Number(action.correct), combo, maxCombo: Math.max(state.maxCombo, combo) };
+      return { ...state, recallAnswered: true, recallOutcome: action.correct ? 'correct' : 'wrong', correct: state.correct + Number(action.correct), combo, maxCombo: Math.max(state.maxCombo, combo) };
     }
     case 'nextRecall':
       if (state.phase !== 'recall' || !state.recallAnswered) return state;
       return state.recallIndex >= (action.wordCount ?? 3) - 1
         ? { ...state, phase: 'reward' }
-        : { ...state, recallIndex: state.recallIndex + 1, recallAnswered: false };
+        : { ...state, recallIndex: state.recallIndex + 1, recallAnswered: false, recallOutcome: undefined };
     case 'continue':
       if (state.phase === 'reward') return { ...state, phase: 'grammar', grammarIndex: 0 };
       if (state.phase === 'grammar' && state.grammarPlayed) return state.grammarIndex >= (action.grammarCount ?? 4) - 1

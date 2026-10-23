@@ -20,8 +20,8 @@ function usePracticeCheckpoint<T>(key: string, initial: T, inspection: boolean) 
   return [state, setState, clear] as const;
 }
 
-export function SceneReconstruction({ unit, word, userId, inspection, onContinue }: {
-  unit: AtomicUnit; word: AtomicWord; userId: string; inspection: boolean; onContinue: () => void;
+export function SceneReconstruction({ unit, word, userId, inspection, onContinue, vertical = false }: {
+  unit: AtomicUnit; word: AtomicWord; userId: string; inspection: boolean; onContinue: () => void; vertical?: boolean;
 }) {
   const puzzle = word.reconstruction!;
   const [state, setState, clear] = usePracticeCheckpoint(`memora-v2.scene.${userId}.${unit.id}.${unit.contentVersion}.${word.id}`,
@@ -36,18 +36,19 @@ export function SceneReconstruction({ unit, word, userId, inspection, onContinue
     setState({ result: correct ? '¡Esa es la escena! Ahora imagínala en movimiento.' : puzzle.cue, helped: !correct, done: correct || answer === null, parent: attempt?.id ?? state.parent });
     if (correct) playSnap();
   }
-  return <GameCard className="active-memory-card"><div className="active-memory-content">
+  const continueScene = () => { clear(); onContinue(); };
+  return <GameCard vertical={vertical} stepKey={state.done ? 'scene-result' : 'scene-puzzle'} onAdvance={vertical && state.done ? continueScene : undefined} advanceLabel="Seguir la historia" className="active-memory-card"><div className="active-memory-content">
     <p className="eyebrow">DALE VIDA AL RECUERDO</p>
     <div className="memory-mystery" aria-hidden="true">{word.emojis[0]} <span>?</span></div>
     <h1>{puzzle.prompt}</h1>
     <p>No es un examen: reconstruye lo que acabas de imaginar.</p>
     <div className="memory-feedback" role="status">{state.result}</div>
-    {state.done ? <><p><MnemonicSceneText word={word} /></p><button type="button" className="primary-action" onClick={() => { clear(); onContinue(); }}>Seguir la historia →</button></> : <><div className="memory-options">{puzzle.choices.map((choice) => <button type="button" key={choice} onClick={() => choose(choice)}>{choice}</button>)}</div><button type="button" className="quiet-action" onClick={() => choose(null)}>Recordar la escena y seguir</button></>}
+    {state.done ? <><p><MnemonicSceneText word={word} /></p>{!vertical ? <button type="button" className="primary-action" onClick={continueScene}>Seguir la historia →</button> : null}</> : <><div className="memory-options">{puzzle.choices.map((choice) => <button type="button" key={choice} onClick={() => choose(choice)}>{choice}</button>)}</div><button type="button" className="quiet-action" onClick={() => choose(null)}>Recordar la escena y seguir</button></>}
   </div></GameCard>;
 }
 
-export function ActiveRecallCard({ unit, word, choices, position, userId, inspection, onFinish }: {
-  unit: AtomicUnit; word: AtomicWord; choices: AtomicWord[]; position: number; userId: string; inspection: boolean; onFinish: (independent: boolean) => void;
+export function ActiveRecallCard({ unit, word, choices, position, userId, inspection, onFinish, vertical = false }: {
+  unit: AtomicUnit; word: AtomicWord; choices: AtomicWord[]; position: number; userId: string; inspection: boolean; onFinish: (independent: boolean) => void; vertical?: boolean;
 }) {
   const [state, setState, clear] = usePracticeCheckpoint(`memora-v2.recall.${userId}.${unit.id}.${unit.contentVersion}.${word.id}`,
     { input: '', level: 0, helped: false, choosing: false, done: false, independent: false, feedback: '', parent: '' }, inspection);
@@ -72,11 +73,12 @@ export function ActiveRecallCard({ unit, word, choices, position, userId, inspec
       level: correct ? current.level : Math.max(1, current.level), feedback: correct ? independent ? '¡Te has acordado sin pistas!' : '¡Conexión recuperada! La volveremos a probar sin apoyo.' : mode === 'skip' ? 'Ahora la ves. Volveremos a ella en el repaso.' : `Aún no. ${wordRecallHint(word, 1)}` }));
     if (correct || mode === 'skip') { if (correct) playSnap(); void playEnglish(word.en, word.audioUrl); }
   }
-  return <GameCard className="active-memory-card"><div className="active-memory-content">
+  const continueRecall = () => { clear(); onFinish(state.independent); };
+  return <GameCard vertical={vertical} stepKey={state.done ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.done ? continueRecall : undefined} advanceLabel="Continuar con otra palabra" className="active-memory-card"><div className="active-memory-content">
     <p className="eyebrow">RECUERDA A TU RITMO · {position + 1}/{unit.words.length}</p>
     <p>Ahora sin la imagen y en otro orden.</p><h1><small>En inglés, ¿cómo se dice</small>«{word.es}»?</h1>
     <div className="memory-feedback" role="status">{state.feedback}</div>
-    {state.done ? <><strong className="memory-answer" lang="en">{word.en}</strong><SceneVisual word={word} compact /><button type="button" className="primary-action" onClick={() => { clear(); onFinish(state.independent); }}>Continuar →</button></> : <>
+    {state.done ? <><strong className="memory-answer" lang="en">{word.en}</strong><SceneVisual word={word} compact />{!vertical ? <button type="button" className="primary-action" onClick={continueRecall}>Continuar →</button> : null}</> : <>
       {state.choosing ? <div className="memory-options">{choices.map((choice) => <button type="button" key={choice.id} onClick={() => answer(choice.en, 'choice')}>{choice.en}</button>)}</div> : <form className="memory-write" onSubmit={(event) => { event.preventDefault(); answer(state.input, 'writing'); }}><label className="sr-only" htmlFor="word-recall">La palabra en inglés</label><input id="word-recall" lang="en" value={state.input} onChange={(event) => setState((current) => ({ ...current, input: event.target.value }))} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="Prueba a recordarla…" /><button type="submit" disabled={!state.input.trim()}>Comprobar</button></form>}
       <div className="memory-tools"><button type="button" onClick={() => hint('scene')}>{state.level ? 'Una pista más' : 'Recordar la historia'}</button><button type="button" onClick={() => hint('audio')}>🔊 Escuchar la palabra</button>{!state.choosing ? <button type="button" onClick={() => hint('options')}>Prefiero elegir</button> : null}<button type="button" onClick={() => answer('', 'skip')}>Ver palabra y pasar</button></div>
     </>}

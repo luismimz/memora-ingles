@@ -127,7 +127,7 @@ function GrammarLesson({ form, baseSpanish, index, total, onReady, onContinue }:
   );
 }
 
-function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void }) {
+function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean }) {
   const { audioState, listen } = useAssociationAudio(word);
   const [reconstruct, setReconstruct] = useState(false);
   const rejectionKey = `memora-v2.rejected-association.${userId}.${word.en.toLocaleLowerCase('en-US')}`;
@@ -138,20 +138,21 @@ function AssociationCard({ unit, inspection, word, index, total, userId, locatio
     if (word.reconstruction && !associationRejected) setReconstruct(true);
     else onConnect();
   }
-  if (reconstruct) return <SceneReconstruction unit={unit} word={word} userId={userId} inspection={inspection} onContinue={onConnect} />;
-  if (word.associationMode === 'cognate') return <CognateAssociationCard word={word} index={index} total={total} audioState={audioState} onListen={listen} onConnect={connect} />;
+  if (reconstruct) return <SceneReconstruction vertical={vertical} unit={unit} word={word} userId={userId} inspection={inspection} onContinue={onConnect} />;
+  if (word.associationMode === 'cognate') return <CognateAssociationCard vertical={vertical} word={word} index={index} total={total} audioState={audioState} onListen={listen} onConnect={connect} />;
 
-  return <GameCard onAdvance={connect} advanceControl={!word.reconstruction || associationRejected} advanceLabel="Ya la he imaginado" back={<div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
+  return <GameCard vertical={vertical} onAdvance={connect} advanceControl={!word.reconstruction || associationRejected} advanceLabel="Ya la he imaginado" back={<div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
     <div className="association-content is-revealed">
       {location ? <p className="association-location">{location}</p> : null}
       <p className="eyebrow">ASOCIACIÓN {index + 1}/{total}</p><WordHeading en={word.en} es={word.es.toUpperCase()} /><p className="ipa">{word.ipa}</p><SceneVisual word={word} showMemoryLink={!associationRejected} /><div className={`bridge-row ${word.bridge && !associationRejected ? '' : 'is-direct'}`}>{word.bridge && !associationRejected ? <div><small>RECUERDA CON</small><b>{word.bridge}</b></div> : <div><small>IMAGEN DIRECTA</small><b>Sin palabra puente</b></div>}<button type="button" className="round-audio" onClick={listen} aria-label={`Escuchar ${word.en}`}>🔊</button></div>{!associationRejected ? <BridgeSoundNote word={word} explain /> : null}<AssociationAudioStatus state={audioState} />{associationRejected ? <p className="scene-copy">Mira, escucha y conecta directamente con <strong>{word.es.toUpperCase()}</strong>.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
       {word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; setAssociationRejected(next); if (next) localStorage.setItem(rejectionKey, '1'); else localStorage.removeItem(rejectionKey); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
-      {word.reconstruction ? <><small>{word.bridgeEvidence?.soundRelation}</small><button type="button" className="quiet-action" onClick={connect}>Ya lo he imaginado →</button></> : null}
+      {word.reconstruction ? <><small>{word.bridgeEvidence?.soundRelation}</small>{!vertical ? <button type="button" className="quiet-action" onClick={connect}>Ya lo he imaginado →</button> : null}</> : null}
     </div>
   </GameCard>;
 }
 
 export function LanguageGame({ unit, userId, learningMode = 'adventure', preview = false, reviewMode = false, startInConversation = false, nextLabel = 'Seguir →', positionLabel = 'EN JUEGO', syncStatus, onFinished, onNext, onExit, onEvolution, onPractice, onComplete, appearance, onToggleAppearance }: { unit: AtomicUnit; userId: string; learningMode?: LearningMode; preview?: boolean; reviewMode?: boolean; startInConversation?: boolean; nextLabel?: string; positionLabel?: string; syncStatus?: SyncStatus; onFinished?: () => void; onNext: () => void; onExit: () => void; onEvolution?: () => void; onPractice?: () => void; onComplete?: (result: { correct: number; attempted: number }) => void; appearance: Appearance; onToggleAppearance: () => void }) {
+  const vertical = learningMode === 'vocabulary' && !reviewMode;
   const checkpointId = learningMode === 'adventure' ? unit.id : `${unit.id}:${learningMode}`;
   const [state, dispatch] = useReducer(gameReducer, initialGame, () => {
     const start = learningMode === 'grammar' ? { ...initialGame, phase: 'grammar' as const } : initialGame;
@@ -165,7 +166,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
     return saved.preparationStep !== undefined && saved.preparationStep > preparedSteps ? { ...saved, preparationStep: 0 } : saved;
   });
   const [expandedGrammarIndex, setExpandedGrammarIndex] = useState<number | null>(null);
-  const [recallFeedback, setRecallFeedback] = useState<'idle' | 'correct' | 'wrong' | 'missed'>('idle');
+  const [recallFeedback, setRecallFeedback] = useState<'idle' | 'correct' | 'wrong' | 'missed'>(() => state.phase === 'recall' && state.recallAnswered ? state.recallOutcome ?? 'missed' : 'idle');
   const recallStartedAt = useRef(0);
   const [sessionSeed] = useState(() => Math.floor(Math.random() * 0x7fffffff));
   const sentences = useMemo(() => {
@@ -251,11 +252,11 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   }, [unit.words.length]);
 
   useEffect(() => {
-    if (!unit.activeRecall && state.phase === 'recall' && state.recallAnswered && transitionTimer.current === null) {
+    if (!unit.activeRecall && state.phase === 'recall' && state.recallAnswered && transitionTimer.current === null && (!vertical || state.recallOutcome === 'correct')) {
       // A reload during answer feedback must continue without recording the answer twice.
       transitionTimer.current = window.setTimeout(advanceRecall, 1100);
     }
-  }, [advanceRecall, state.phase, state.recallAnswered, unit.activeRecall]);
+  }, [advanceRecall, state.phase, state.recallAnswered, state.recallOutcome, unit.activeRecall, vertical]);
 
   const answerRecall = useCallback((chosen: string | null) => {
     if (locked.current || state.phase !== 'recall' || state.recallAnswered) return;
@@ -273,8 +274,8 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       playSnap();
       void playEnglish(recallWord.en.toLowerCase(), recallWord.audioUrl);
     } else playMiss();
-    transitionTimer.current = window.setTimeout(advanceRecall, correct ? 1100 : 5000);
-  }, [advanceRecall, recallWord, reviewMode, state.phase, state.recallAnswered, unit.id, userId]);
+    if (correct || !vertical) transitionTimer.current = window.setTimeout(advanceRecall, correct ? 1100 : 5000);
+  }, [advanceRecall, recallWord, reviewMode, state.phase, state.recallAnswered, unit.id, userId, vertical]);
 
   function jumpToStep(value: string) {
     usedReviewJump.current = true;
@@ -311,16 +312,16 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       <p className="game-save-status" role="status">{reviewMode ? 'Vista de revisión · no guarda progreso' : syncStatus ? syncLabels[syncStatus] : 'Progreso en este dispositivo'}</p>
       {reviewMode && learningMode === 'adventure' ? <nav className="review-nav" aria-label="Revisar pasos de la unidad"><label htmlFor="review-step">Revisar fase</label><select id="review-step" value={currentReviewStep} onChange={(event) => jumpToStep(event.target.value)}>{unit.words.map((item, index) => <option key={`associate-${index}`} value={`associate-${index}`}>{index + 1}. Asociación {item.en}</option>)}{unit.words.map((_, index) => <option key={`recall-${index}`} value={`recall-${index}`}>Recordar {unit.words[recalledWordIndex(unit, index)].en}</option>)}<option value="reward-0">Resultado de memoria</option>{grammarForms.map((form, index) => <option key={`grammar-${index}`} value={`grammar-${index}`}>Transformación {index + 1}: {form.english}</option>)}{sentences.map((_, index) => <option key={`build-${index}`} value={`build-${index}`}>Construir frase {index + 1}/{sentences.length}</option>)}{unit.communication?.dialogue ? <option value="conversation-0">Practicar conversación</option> : null}<option value="complete-0">Final de unidad</option></select><span>No guarda progreso</span></nav> : null}
       <section className="game-stage" aria-live="off">
-        {state.phase === 'associate' ? <AssociationCard key={`associate-${state.wordIndex}`} unit={unit} inspection={reviewMode} word={word} index={acquisitionPosition} total={acquisitionIndexes.length} userId={userId} location={unit.location?.label} onConnect={() => { const next = acquisitionIndexes[acquisitionPosition + 1]; playSnap(); dispatch({ type: 'connected', isLast: next === undefined, nextWordIndex: next, wordCount: unit.words.length }); }} /> : null}
+        {state.phase === 'associate' ? <AssociationCard vertical={vertical} key={`associate-${state.wordIndex}`} unit={unit} inspection={reviewMode} word={word} index={acquisitionPosition} total={acquisitionIndexes.length} userId={userId} location={unit.location?.label} onConnect={() => { const next = acquisitionIndexes[acquisitionPosition + 1]; playSnap(); dispatch({ type: 'connected', isLast: next === undefined, nextWordIndex: next, wordCount: unit.words.length }); }} /> : null}
 
-        {state.phase === 'recall' && unit.activeRecall ? <ActiveRecallCard key={`active-recall-${state.recallIndex}`} unit={unit} word={recallWord} choices={choices} position={state.recallIndex} userId={userId} inspection={reviewMode} onFinish={(independent) => { dispatch({ type: 'answered', correct: independent }); dispatch({ type: 'nextRecall', wordCount: unit.words.length }); }} /> : null}
+        {state.phase === 'recall' && unit.activeRecall ? <ActiveRecallCard vertical={vertical} key={`active-recall-${state.recallIndex}`} unit={unit} word={recallWord} choices={choices} position={state.recallIndex} userId={userId} inspection={reviewMode} onFinish={(independent) => { dispatch({ type: 'answered', correct: independent }); dispatch({ type: 'nextRecall', wordCount: unit.words.length }); }} /> : null}
 
-        {state.phase === 'recall' && !unit.activeRecall ? <GameCard key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>
+        {state.phase === 'recall' && !unit.activeRecall ? <GameCard vertical={vertical} onAdvance={vertical && state.recallAnswered && recallFeedback !== 'correct' ? advanceRecall : undefined} advanceLabel="Continuar con otra palabra" key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>
           <div className="recall-content"><p className="eyebrow">RECUERDA · {state.recallIndex + 1}/{unit.words.length} <span key={state.combo} className={state.combo > 1 ? 'combo-hot' : ''}>COMBO x{Math.max(1, state.combo)}</span></p><SceneVisual hideAnswer={recallFeedback === 'idle'} word={recallWord} showMemoryLink={recallFeedback === 'wrong' || recallFeedback === 'missed'} /><h1>¿Cómo se dice <em>{recallWord.es}</em>?</h1><div className="recall-answer-slot" aria-live="polite">{recallFeedback === 'wrong' || recallFeedback === 'missed' ? <div className="recall-hint"><p>Vuelve a la escena:</p><strong>{recallWord.bridge ? `${recallWord.bridge} → ` : ''}{recallWord.en}</strong><small>{recallWord.es.toUpperCase()}</small><p className="recall-memory-scene"><MnemonicSceneText word={recallWord} /></p></div> : recallFeedback === 'correct' ? <p className="success-copy">¡CLAC! +10 XP</p> : <div className="recall-choices">{choices.map((choice) => <button type="button" disabled={recallFeedback !== 'idle'} onClick={() => answerRecall(choice.en)} key={choice.id}>{choice.en}</button>)}</div>}</div></div>
         </GameCard> : null}
 
-        {state.phase === 'reward' ? <GameCard key="reward" onAdvance={leaveReward} advanceLabel={learningMode === 'vocabulary' ? 'Más palabras' : 'Usar las palabras'}>
-          <div className="reward-content"><SceneVisual word={unit.words[0]} compact />{state.correct >= Math.min(2, unit.words.length) ? <div className="reward-burst" aria-hidden="true">✨</div> : null}<p className="eyebrow">{state.correct}/{unit.words.length} {unit.activeRecall ? 'RECORDADAS SIN PISTAS' : 'RECONOCIDAS'}</p><h1>{learningMode === 'vocabulary' ? 'Más palabras para ti.' : 'Ahora, úsalas con Emma.'}</h1><p className="reward-note">Con ayuda o sin ella, has practicado. El repaso volverá a las que lo necesiten.</p><button type="button" className="primary-action" onClick={leaveReward}>{learningMode === 'vocabulary' ? nextLabel : 'Usar las palabras →'}</button>{onPractice ? <button type="button" className="arcade-invitation" onClick={onPractice}>✦ Jugar con mis asociaciones</button> : null}{learningMode === 'vocabulary' ? <button type="button" className="quiet-action" onClick={onExit}>Terminar por ahora</button> : null}</div>
+        {state.phase === 'reward' ? <GameCard vertical={vertical} key="reward" onAdvance={leaveReward} advanceLabel={learningMode === 'vocabulary' ? nextLabel : 'Usar las palabras'}>
+          <div className="reward-content"><SceneVisual word={unit.words[0]} compact />{state.correct >= Math.min(2, unit.words.length) ? <div className="reward-burst" aria-hidden="true">✨</div> : null}<p className="eyebrow">{state.correct}/{unit.words.length} {unit.activeRecall ? 'RECORDADAS SIN PISTAS' : 'RECONOCIDAS'}</p><h1>{learningMode === 'vocabulary' ? 'Palabras listas para practicar.' : 'Ahora, úsalas con Emma.'}</h1><p className="reward-note">Con ayuda o sin ella, has practicado. El repaso volverá a las que lo necesiten.</p>{!vertical ? <><button type="button" className="primary-action" onClick={leaveReward}>{learningMode === 'vocabulary' ? nextLabel : 'Usar las palabras →'}</button>{onPractice ? <button type="button" className="arcade-invitation" onClick={onPractice}>✦ Jugar con mis asociaciones</button> : null}{learningMode === 'vocabulary' ? <button type="button" className="quiet-action" onClick={onExit}>Terminar por ahora</button> : null}</> : <p className="reward-note">Puedes continuar o salir por «Recorrido». Lo realizado queda guardado.</p>}</div>
         </GameCard> : null}
 
         {state.phase === 'grammar' ? canFastReview && expandedGrammarIndex !== state.grammarIndex ? <GameCard key={`grammar-revisit-${state.grammarIndex}`} className="grammar-review-card"><div className="reward-content"><p className="eyebrow">ESTE TRUCO YA LO HAS VISTO</p><h1>Vamos a usarlo en una frase.</h1><p><strong lang="es">{currentForm.spanish}</strong> → <strong lang="en">{currentForm.english}</strong></p><button type="button" className="primary-action" onClick={() => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); }}>Usarlo ahora →</button><button type="button" className="quiet-action" onClick={() => setExpandedGrammarIndex(state.grammarIndex)}>Volver a ver el truco</button></div></GameCard> : currentLesson ? <GrammarCoach key={currentForm.id} lesson={currentLesson} form={currentForm} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} conversationAnswers={learningMode === 'adventure' ? conversationPracticeAnswers(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : []} reviewMode={reviewMode} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : <GrammarLesson key={currentForm.id} form={currentForm} baseSpanish={baseSpanish} index={state.grammarIndex} total={grammarForms.length} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : null}

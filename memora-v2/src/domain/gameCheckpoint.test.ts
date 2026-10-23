@@ -13,6 +13,14 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('restaura el desenlace de una respuesta sin convertir el checkpoint en intento y rechaza valores corruptos', () => {
+    const state = { ...initialGame, phase: 'recall' as const, recallAnswered: true, recallOutcome: 'wrong' as const };
+    writeGameCheckpoint('learner', 'feedback', '1', state);
+    expect(readGameCheckpoint('learner', 'feedback', '1')).toEqual(state);
+    data.set('memora-v2.checkpoint.learner.invalid-feedback', JSON.stringify({ version: '1', state: { ...state, recallOutcome: 'passed' } }));
+    expect(readGameCheckpoint('learner', 'invalid-feedback', '1')).toBeNull();
+    expect(readGameCheckpoint('learner', 'feedback', '1')).toEqual(state);
+  });
   it('guarda la subposición de preparación con el checkpoint existente sin cruzar usuario ni versión', () => {
     const state = { ...initialGame, phase: 'build' as const, filledSlots: 1, preparationStep: 2 };
     writeGameCheckpoint('learner', 'prepared', 'draft-1', state);

@@ -11,6 +11,7 @@ export function readGameCheckpoint(userId: string, unitId: string, version: stri
     const saved = value as { version?: string; state?: Partial<GameState> };
     if (saved.version !== version || !saved.state) return null;
     const state = saved.state;
+    if (state.recallOutcome !== undefined && !['correct', 'wrong'].includes(state.recallOutcome)) return null;
     if (!['associate', 'recall', 'reward', 'grammar', 'build', 'conversation'].includes(state.phase ?? '')) return null;
     if (![state.wordIndex, state.recallIndex, state.grammarIndex, state.sentenceIndex].every((index) => Number.isInteger(index) && index! >= 0)) return null;
     if (state.preparationStep !== undefined && (!Number.isInteger(state.preparationStep) || state.preparationStep < 0 || state.preparationStep > 3)) return null;
