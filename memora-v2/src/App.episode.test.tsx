@@ -27,8 +27,9 @@ async function advance() {
   const target = { closest: () => null };
   await act(async () => {
     const region = tree.root.findByProps({ role: 'region' });
-    region.props.onTouchStart({ target, touches: [{ clientY: 300 }] });
-    region.props.onTouchMove({ target, touches: [{ clientY: 250 }] });
+    const currentTarget = { scrollTop: 100, scrollHeight: 700, clientHeight: 600 };
+    region.props.onTouchStart({ target, currentTarget, touches: [{ clientY: 350 }] });
+    region.props.onTouchMove({ target, currentTarget, touches: [{ clientY: 250 }] });
     region.props.onScroll({ currentTarget: { scrollTop: 100, scrollHeight: 700, clientHeight: 600 } });
     vi.advanceTimersByTime(230);
   });
