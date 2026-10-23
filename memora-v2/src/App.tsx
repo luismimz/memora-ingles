@@ -214,7 +214,7 @@ export default function App() {
     cancelArcadeLaunch();
     setPreparingGrammar(null);
     if (summary.routeTrick) {
-      const missing = missingTrickWords(summary, readWordMemories(userId));
+      const missing = missingTrickWords(summary, readWordMemories(userId), userId);
       if (!preview && missing.length) { setUnitError(`Prepara primero estas palabras: ${missing.join(', ')}.`); return; }
       setLoading(true); setUnit(null); setLibraryMode(null); setUnitError(null); setReviewMode(false); setConversationStart(false); setExpansionTest(null);
       try {
@@ -223,7 +223,7 @@ export default function App() {
         if (!source || !grammarTricks(source).some((trick) => trick.formId === summary.routeTrick!.formId && trick.skill === summary.routeTrick!.skill)) throw new Error('Este truco ha cambiado y necesita recargar el recorrido.');
         // Recheck current content, not just potentially stale Home metadata.
         const current = { ...summary, words: source.words, contentVersion: source.contentVersion, routeTrick: grammarTricks(source).find((trick) => trick.formId === summary.routeTrick!.formId)! };
-        if (!preview && missingTrickWords(current, readWordMemories(userId)).length) throw new Error('Este truco necesita palabras que aún no has practicado. Puedes seguir con las palabras.');
+        if (!preview && missingTrickWords(current, readWordMemories(userId), userId).length) throw new Error('Este truco necesita palabras que aún no has practicado. Puedes seguir con las palabras.');
         setActiveTrick(current); setLearningMode('grammar'); rememberUnit(current.id, 'grammar'); setUnit(source);
         resumeAutomaticArcade(source);
       } catch (reason) { if (request === lessonRequest.current) { setActiveTrick(null); setUnitError(reason instanceof Error ? reason.message : 'No se pudo abrir el truco.'); } }
@@ -394,7 +394,7 @@ export default function App() {
     setPreparingGrammar(null);
     const source = libraryUnits.find((candidate) => candidate.id === (stop.routeTrick?.sourceId ?? stop.id));
     if (!source) { setLibraryNotice('No se pudo abrir este truco. Recarga el recorrido para intentarlo de nuevo.'); return; }
-    const missing = missingGrammarStop(stop, libraryUnits, readWordMemories(userId));
+    const missing = missingGrammarStop(stop, libraryUnits, readWordMemories(userId), userId);
     if (!preview && missing.length) { setLibraryNotice(`Prepara primero en Inicio: ${missing.join(', ')}.`); return; }
     if (!stop.routeTrick) { openLibraryUnit(source, 'grammar'); return; }
     setActiveTrick(stop); setLearningMode('grammar'); setConversationStart(false); setExpansionTest(null); setReviewMode(false); setLibraryNotice(null);
@@ -405,7 +405,7 @@ export default function App() {
   async function prepareGrammarStop(stop: UnitSummary) {
     const request = ++lessonRequest.current;
     cancelArcadeLaunch();
-    const missing = missingGrammarStop(stop, libraryUnits, readWordMemories(userId));
+    const missing = missingGrammarStop(stop, libraryUnits, readWordMemories(userId), userId);
     if (!missing.length) { openGrammarStop(stop); return; }
     const candidate = grammarPreparationCandidate(stop, units, libraryUnits, readWordMemories(userId));
     if (!candidate) {
@@ -469,7 +469,7 @@ export default function App() {
     ? libraryUnits
     : reviewMode ? reviewUnits : journeyRoute;
   const nextScene = unit ? libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit.id) : !libraryMode && !reviewMode ? followingJourneyStop(activeTrick?.id ?? unit.id) : nextPlayableUnit(unit.id, playableUnits) : undefined;
-  const nextLabel = preparingGrammar ? missingGrammarStop(preparingGrammar, libraryUnits, readWordMemories(userId)).length ? 'Seguir preparando palabras →' : 'Entrar al truco →' : nextScene ? 'Continuar jugando →' : 'Volver al recorrido →';
+  const nextLabel = preparingGrammar ? missingGrammarStop(preparingGrammar, libraryUnits, readWordMemories(userId), userId).length ? 'Seguir preparando palabras →' : 'Entrar al truco →' : nextScene ? 'Continuar jugando →' : 'Volver al recorrido →';
   const routePosition = unit ? (libraryMode || reviewMode ? orderedJourneyUnits(playableUnits) : playableUnits).findIndex((candidate) => candidate.id === (activeTrick?.id ?? unit.id)) : -1;
   function rememberAfterCompletion() {
     if (preview || reviewMode) return;

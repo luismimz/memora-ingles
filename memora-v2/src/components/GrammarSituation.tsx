@@ -4,6 +4,12 @@ import './grammarSituation.css';
 
 /** A scene describes a meaning; it does not assess or write learner progress. */
 export function SituationScreen({ state }: { state: SituationState }) {
+  if (state === 'search-keys' || state === 'search-phone') return <svg viewBox="0 0 200 110" role="img" aria-label={state === 'search-keys' ? 'Una persona está buscando sus llaves' : 'Una persona está buscando su móvil'}>
+    <circle cx="39" cy="28" r="14" fill="#cc9a51" /><path d="M39 45V80M24 101L39 80L56 101M39 54L69 69" fill="none" stroke="#997250" strokeWidth="8" strokeLinecap="round" />
+    <circle cx="82" cy="58" r="15" fill="none" stroke="#356f65" strokeWidth="5" /><path d="M91 70L104 85" stroke="#356f65" strokeWidth="7" />
+    <rect x="108" y="10" width="80" height="75" rx="18" fill="#d6d7c1" /><path d="M111 68L94 78L111 42" fill="#d6d7c1" />
+    {state === 'search-keys' ? <g stroke="#997250" strokeWidth="5" fill="none"><circle cx="133" cy="36" r="10" /><path d="M139 44L158 66L166 60M151 58L160 51" /><circle cx="157" cy="35" r="9" /><path d="M157 44V67H169M157 58H166" /></g> : <g><rect x="134" y="22" width="29" height="49" rx="5" fill="#383c36" /><rect x="138" y="28" width="21" height="31" rx="2" fill="#356f65" /><circle cx="148" cy="65" r="2" fill="#fff8df" /></g>}
+  </svg>;
   if (state === 'brushing' || state === 'brush-ready') {
     const active = state === 'brushing';
     return <svg viewBox="0 0 200 110" role="img" aria-label={active ? 'Una persona se está cepillando los dientes' : 'El cepillo sigue en su vaso; la persona aún no empieza'}>
@@ -91,6 +97,6 @@ function SituationDelivery({ check, selected, feedback, onAnswer, onListen, disa
       {scenes.map((item) => <button type="button" ref={(node) => { if (node) destinations.current.set(item.choice, node); else destinations.current.delete(item.choice); }} key={item.choice} data-drop-choice={item.choice} className={drag?.over === item.choice ? 'is-drop-target' : ''} aria-pressed={selected === item.choice} disabled={locked} onClick={() => onAnswer(item.choice)}><SituationScreen state={item.state} /><span>{item.choice}</span></button>)}
     </div>
     {drag ? <div className="situation-token-ghost" aria-hidden="true" style={{ left: drag.x, top: drag.y }} lang="en">{situation.message}</div> : null}
-    {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{feedback === 'correct' ? 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
+    {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{feedback === 'correct' ? scene.state === 'search-keys' ? 'Mensaje entregado: el personaje busca las llaves, no el móvil.' : 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'search-phone' ? 'Has señalado el móvil. MY KEYS indica que busca sus llaves.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
   </div>;
 }

@@ -5,6 +5,7 @@ import { grammarTricks } from './journeyTricks';
 import { missingGrammarWords } from './learningModes';
 import { lessonForForm, type LessonCheck } from './grammarLesson';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
+import { searchKeysLesson } from './searchKeysPractice';
 
 export interface GrammarArcadeRound { unit: AtomicUnit; form?: GrammarForm; skill: string; sentence: UnitSentence; slotIndex: number; slot: { en: string; es: string; choices: string[]; note?: string }; conceptual: boolean; situation?: LessonCheck }
 
@@ -29,7 +30,7 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       const prerequisites = grammarTricks(unit).find((trick) => trick.formId === form.id)?.vocabulary;
       if (!inspection && (!prerequisites || prerequisites.some((word) => !preparedWord(word)))) return [];
       const base = unit.words.find((word) => word.en.toLowerCase() === form.englishBase?.toLowerCase())?.es.toLowerCase();
-      const lesson = lessonForForm(form, base);
+      const lesson = searchKeysLesson(unit, form.id) ?? lessonForForm(form, base);
       return lesson?.checks.filter((check) => check.kind !== 'write' && check.choices && check.choices.length >= 2 && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
         .map((check, index) => ({ unit, form, skill: lesson.id, sentence: unit.sentence, slotIndex: index, slot: { en: check.answers[0], es: check.prompt, choices: check.choices!, note: check.hint }, conceptual: true, ...(check.situation ? { situation: check } : {}) })) ?? [];
     });

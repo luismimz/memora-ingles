@@ -4,12 +4,13 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { JourneyHome } from './JourneyHomeV2';
 import { initialGame } from '../domain/game';
 import { writeGameCheckpoint } from '../domain/gameCheckpoint';
-import { previewUnit } from '../preview/previewUnit';
+import { previewUnit, reviewUnits } from '../preview/previewUnit';
 import { lessonForForm } from '../domain/grammarLesson';
 import { buildJourneyRoute, grammarTricks } from '../domain/journeyTricks';
 import { recordLearningActivity } from '../domain/learningActivity';
 import { readLearningActivities } from '../domain/learningActivity';
 import { recordWordRecall } from '../domain/memory';
+import { writeTrickCheckpoint } from '../domain/trickCheckpoint';
 
 beforeEach(() => {
   const rows = new Map<string, string>();
@@ -29,6 +30,18 @@ function home() {
   return renderToStaticMarkup(<JourneyHome units={units} userId="learner" resumeUnitId="pack-10" resumeLearningMode="vocabulary" onOpen={() => {}} onConverse={() => {}} onExit={() => {}} onProfile={() => {}} appearance="light" onToggleAppearance={() => {}} />);
 }
 describe('posición de Home después de parar', () => {
+  it('retoma la escritura de llaves antigua sin imponer el nuevo distractor PHONE a mitad del borrador', async () => {
+    const source = reviewUnits.find((unit) => unit.id === 'm1-entry-keys')!;
+    const input = [{ ...source, grammarTricks: grammarTricks(source) }];
+    const stop = buildJourneyRoute(input).find((item) => item.routeTrick)!;
+    recordWordRecall('learner', { ...source.words[0], en: 'LOOK', es: 'mirar' }, 'quick');
+    writeTrickCheckpoint('learner', stop.id, source.contentVersion ?? '1', { stage: 2, checkIndex: 1, checkId: 'use', input: "I'm looking", feedback: 'help', helped: true });
+    const onOpen = vi.fn();
+    const mounted = await openMap(input, stop.id, onOpen);
+    await act(async () => mounted.root.findAllByType('button').find((node) => text(node).startsWith('Continuar jugando'))!.props.onClick());
+    expect(onOpen).toHaveBeenCalledWith(stop);
+    expect(readLearningActivities('learner')).toHaveLength(0);
+  });
   it('mantiene la siguiente parada aunque aún no tenga checkpoint y deja el mapa como opción secundaria', async () => {
     const html = home();
     expect(html).toContain('PARADA 11 DE 12');

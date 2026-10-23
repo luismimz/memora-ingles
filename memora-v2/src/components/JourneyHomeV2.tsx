@@ -43,7 +43,7 @@ export function JourneyHome(props: Props) {
   const catalogue = catalogueStats(units);
   const memories = readWordMemories(userId);
   const stories = buildJourneyRoute(units, memories);
-  const lockedIds = new Set(stories.filter((stop) => missingTrickWords(stop, memories).length).map((stop) => stop.id));
+  const lockedIds = new Set(stories.filter((stop) => missingTrickWords(stop, memories, userId).length).map((stop) => stop.id));
   const knownUnitIds = new Set(stories.flatMap((unit) => [unit.id, ...(unit.routeTrick ? [unit.routeTrick.sourceId] : [])]));
   const activities = readLearningActivities(userId).filter((item) => knownUnitIds.has(item.unitId));
   const completed = stories.filter((unit) => unit.routeTrick ? completedTrick(unit, activities) : readUnitProgress(userId, unit.id) || completedVocabularyStop(unit, activities));

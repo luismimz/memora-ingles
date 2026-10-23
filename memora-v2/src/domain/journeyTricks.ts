@@ -6,6 +6,8 @@ import { orderedJourneyUnits } from './journey';
 import type { LearningActivity } from './learningActivity';
 import type { WordMemory } from './memory';
 import { practicedWordMeaning } from './memory';
+import { searchKeysLesson, searchKeysSkill } from './searchKeysPractice';
+import { readTrickCheckpoint } from './trickCheckpoint';
 
 export interface JourneyTrick { sourceId: string; formId: string; skill: string; title: string; vocabulary: string[]; concept?: string }
 const normalize = (word: string) => word.trim().toLocaleLowerCase('en');
@@ -21,12 +23,13 @@ export function grammarTricks(unit: AtomicUnit): JourneyTrick[] {
   if (unit.kind === 'vocabulary-pack') return [];
   return getPlayableGrammar(unit).flatMap((form) => {
     const base = unit.words.find((word) => normalize(word.en) === normalize(form.englishBase ?? ''))?.es.toLowerCase();
-    const lesson = lessonForForm(form, base);
+    const searchLesson = searchKeysLesson(unit, form.id);
+    const lesson = searchLesson ?? lessonForForm(form, base);
     // A short trick does not teach the source mission's context or conversation.
     // Keep only lexical items actually used by this lesson; its grammatical pieces
     // are explained in the lesson itself, not demanded as prior vocabulary.
     const english = normalize(lesson ? [...lesson.steps.map((step) => step.en.map((part) => part.text).join('')), ...lesson.checks.filter((check) => check.kind === 'write').flatMap((check) => check.answers)].join(' ') : '').replace(/[^\p{L}\p{N}]+/gu, ' ');
-    const vocabulary = [...new Set([...(form.englishBase ? [normalize(form.englishBase)] : []), ...unit.words.filter((word) => (` ${english} `).includes(` ${normalize(word.en)} `)).map((word) => normalize(word.en)), ...(unit.grammarContinuation?.status === 'approved' && unit.grammarContinuation.formId === form.id ? unit.grammarContinuation.vocabulary.map(normalize) : [])])];
+    const vocabulary = searchLesson ? ['key', 'phone'] : [...new Set([...(form.englishBase ? [normalize(form.englishBase)] : []), ...unit.words.filter((word) => (` ${english} `).includes(` ${normalize(word.en)} `)).map((word) => normalize(word.en)), ...(unit.grammarContinuation?.status === 'approved' && unit.grammarContinuation.formId === form.id ? unit.grammarContinuation.vocabulary.map(normalize) : [])])];
     return lesson ? [{ sourceId: unit.id, formId: form.id, skill: lesson.id, title: lesson.title === 'Lo que estás haciendo' ? `Estoy ${form.spanish}` : lesson.title, vocabulary, concept: form.lesson ? lesson.id : form.visualContract ?? form.id }] : [];
   });
 }
@@ -75,8 +78,14 @@ export function buildJourneyRoute(units: readonly UnitSummary[], _memories: read
   return route;
 }
 
-export function missingTrickWords(stop: UnitSummary, memories: readonly WordMemory[]): string[] {
+export function missingTrickWords(stop: UnitSummary, memories: readonly WordMemory[], userId?: string): string[] {
   const known = new Set(memories.filter((memory) => memory.correct > 0).map((memory) => normalize(memory.key)));
+  // Only a validated, identified old writing task keeps its old prerequisite.
+  // Fresh encounters still require both senses used by the new scene.
+  if (userId && stop.routeTrick?.sourceId === 'm1-entry-keys' && stop.routeTrick.formId === 'looking-for' && stop.routeTrick.skill === searchKeysSkill) {
+    const saved = readTrickCheckpoint(userId, stop.id, stop.contentVersion ?? '1');
+    if (saved && !saved.episodeId && saved.stage === 2 && (saved.checkId === 'use' || saved.checkId === undefined && saved.checkIndex === 1)) return known.has('look') ? [] : ['look'];
+  }
   return stop.routeTrick?.vocabulary.map(normalize).filter((word) => {
     const senses = stop.words?.filter((item) => normalize(item.en) === word) ?? [];
     return senses.length ? senses.some((sense) => !memories.some((memory) => practicedWordMeaning(memory, sense))) : !known.has(word);

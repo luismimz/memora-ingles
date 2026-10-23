@@ -71,6 +71,10 @@ describe('modos conectados con el progreso real', () => {
     expect(eligibleMixedUnits('learner', [unit])).toEqual([]);
     recordGrammarAttempt('learner', { skill: 'looking-for-now', unitId: unit.id, check: 'teach', kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
     expect(eligibleMixedUnits('learner', [unit])).toEqual([]);
+    // The replacement scene is a different skill/check. The retired AM question
+    // cannot silently grant its practice, even with the same source unit.
+    recordGrammarAttempt('learner', { skill: 'search-keys-prepared-v1', unitId: unit.id, check: 'search-meaning-v1', kind: 'explain', correct: true, helped: true, at: new Date().toISOString() });
+    expect(eligibleMixedUnits('learner', [unit])).toEqual([]);
     recordLearningActivity('learner', { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: 'respond', skill: 'respond', phase: 'dialogue', source: 'learner', modality: 'writing', prompt: unit.communication!.dialogue!.turns[0].en, response: unit.communication!.dialogue!.turns[1].en, expected: unit.communication!.dialogue!.turns[1].en, correct: true, helped: false });
     expect(eligibleMixedUnits('learner', [unit])).toEqual([unit]);
   });

@@ -32,8 +32,8 @@ export function grammarJourney(units: readonly AtomicUnit[]): UnitSummary[] {
   });
 }
 
-export function missingGrammarStop(stop: UnitSummary, units: readonly AtomicUnit[], memories: readonly WordMemory[]): string[] {
-  if (stop.routeTrick) return missingTrickWords(stop, memories);
+export function missingGrammarStop(stop: UnitSummary, units: readonly AtomicUnit[], memories: readonly WordMemory[], userId?: string): string[] {
+  if (stop.routeTrick) return missingTrickWords(stop, memories, userId);
   const unit = units.find((candidate) => candidate.id === stop.id);
   const known = new Set(memories.filter((memory) => memory.correct > 0).map((memory) => memory.key.toLowerCase()));
   return unit ? requiredGrammarWords(unit).filter((word) => !known.has(word.toLowerCase())) : ['contenido pendiente'];

@@ -12,6 +12,7 @@ import { recordSentenceExposure } from '../domain/memory';
 import { GrammarActionScene, supportsGrammarAction } from './GrammarActionScene';
 import { GrammarSituation } from './GrammarSituation';
 import { GrammarOrder } from './GrammarOrder';
+import { searchKeysSkill } from '../domain/searchKeysPractice';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
 export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false }: {
@@ -22,7 +23,8 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // Resume the task that is actually shown, not the unfiltered lesson index.
   // A conversational exchange may take over one of the written checks.
   const generatedContinuous = Boolean(form && !form.lesson && lesson.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
-  const stream = puzzle && generatedContinuous;
+  const preparedSearch = lesson.id === searchKeysSkill;
+  const stream = puzzle && (generatedContinuous || preparedSearch);
   const checks = grammarChecksForExperience(lesson, conversationAnswers, constructionAnswers).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain'));
   const teachingStage = checkpoint && checkpoint.stage <= lesson.steps.length ? checkpoint.stage : undefined;
   // Filtering earlier questions must not discard an identified unfinished response.
@@ -59,7 +61,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // not an identical translation form immediately before it.
   const check = checks[checkIndex];
   // Limit only the known generated contract; authored lessons need their own review.
-  const bounded = repairLimit === 2 && generatedContinuous;
+  const bounded = repairLimit === 2 && (generatedContinuous || preparedSearch);
   const needsModel = bounded && checkFailures >= 2 && feedback !== 'correct';
   const modelMessage = check?.kind === 'explain' ? lesson.steps.at(-1)!.en.map((part) => part.text).join('') : check?.answers[0];
   const helpText = check?.kind === 'write' && correctionResponse !== undefined ? contextualCorrection(correctionResponse, check.answers[0], check.hint) : check?.hint;

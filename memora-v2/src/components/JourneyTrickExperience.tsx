@@ -20,25 +20,29 @@ import { ConversationPractice } from './ConversationPractice';
 import { GrammarOrder } from './GrammarOrder';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 import { PlayHeader } from './PlayHeader';
+import { preparedSearchKeysPractice, searchKeysIdentity, searchKeysLesson } from '../domain/searchKeysPractice';
 
 export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
   syncStatus: SyncStatus; appearance: Appearance; onToggleAppearance: () => void; nextLabel?: string;
 }) {
-  const trick = stop.routeTrick!;
-  const form = unit.grammar.find((candidate) => candidate.id === trick.formId);
+  const routeTrick = stop.routeTrick!;
+  const form = unit.grammar.find((candidate) => candidate.id === routeTrick.formId);
   const base = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase())?.es.toLowerCase();
-  const lesson = unit.grammarLesson?.id === trick.formId ? unit.grammarLesson : form ? lessonForForm(form, base) : null;
-  const stream = Boolean(form && !form.lesson && lesson?.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
+  const legacyLesson = unit.grammarLesson?.id === routeTrick.formId ? unit.grammarLesson : form ? lessonForForm(form, base) : null;
+  const [checkpoint] = useState(() => inspection ? null : readTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1'));
+  const [searchPractice] = useState(() => !checkpoint || checkpoint.episodeId === searchKeysIdentity ? preparedSearchKeysPractice(unit, routeTrick.formId, readWordMemories(userId)) : null);
+  const lesson = searchPractice?.lesson ?? legacyLesson;
+  const trick = { ...routeTrick, skill: lesson?.id ?? routeTrick.skill, title: searchPractice ? searchPractice.lesson.title : routeTrick.title };
+  const stream = Boolean(searchPractice || form && !form.lesson && lesson?.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
   const sceneWord = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase()) ?? unit.words[0];
   const practicedPattern = !inspection && form && !form.lesson && (form.visualContract === 'present-continuous' || form.id === 'ing')
     && readGrammarAttempts(userId).some((attempt) => attempt.skill.startsWith('present-continuous:') && attempt.skill !== trick.skill && attempt.kind === 'write' && attempt.correct && !attempt.helped);
-  const [checkpoint] = useState(() => inspection ? null : readTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1'));
   // An old in-flight coach keeps its identified task/draft, even if an author
   // adds an episode later. Fresh entries opt in only with actual preparation.
-  const [shortPractice] = useState(() => preparedActionPractice(unit, trick.formId, readWordMemories(userId)));
+  const [shortPractice] = useState(() => searchPractice?.unit ?? preparedActionPractice(unit, trick.formId, readWordMemories(userId)));
   const episodeUnit = shortPractice ?? unit;
-  const episodeIdentity = shortPractice ? `${trick.formId}:short-${form!.english}-v1` : trick.formId;
+  const episodeIdentity = searchPractice ? searchKeysIdentity : shortPractice ? `${trick.formId}:short-${form!.english}-v1` : trick.formId;
   const [prepared] = useState(() => Boolean(shortPractice) || preparedGrammarContinuation(unit, trick.formId, readWordMemories(userId), readGrammarAttempts(userId)));
   const episode = prepared && (!checkpoint || checkpoint.episodeId === episodeIdentity);
   const coachState = useRef<TrickCheckpoint>(checkpoint ?? { stage: 0, checkIndex: 0, input: '', feedback: 'idle', helped: false });
@@ -48,7 +52,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const puzzleCheck = shortPractice ? lesson?.checks.find((check) => check.ordering) : undefined;
   const puzzlePieces = puzzleCheck?.ordering;
   const wholeOrder = useRef(continuation?.order ?? []);
-  const unavailable = Boolean(checkpoint?.episodeId && !episode || continuation && (!episode || !sentence || continuation.filledSlots > sentence.slots.length || continuation.phase === 'conversation' && continuation.filledSlots !== sentence.slots.length || puzzlePieces && continuation.order?.some((index) => index >= puzzlePieces.length)));
+  const unavailable = Boolean(!checkpoint && !searchPractice && searchKeysLesson(unit, trick.formId) || checkpoint?.episodeId && !episode || continuation && (!episode || !sentence || continuation.filledSlots > sentence.slots.length || continuation.phase === 'conversation' && continuation.filledSlots !== sentence.slots.length || puzzlePieces && continuation.order?.some((index) => index >= puzzlePieces.length)));
   const chatAnswers = episode ? conversationPracticeAnswers(episodeUnit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : [];
   const slotKey = continuation ? `${continuation.phase}:${continuation.sentenceIndex}:${continuation.filledSlots}` : 'coach';
   const modelAid = useRef(Boolean(continuation?.modelUsed));
@@ -111,7 +115,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
     if (!continuation || !sentence || !puzzlePieces || continuation.phase !== 'build' || guard.current.key !== slotKey || guard.current.placed || continuation.filledSlots !== 0 || (withModel ? guard.current.failures < 2 : guard.current.failures >= 2)) return;
     guard.current.placed = true;
     modelAid.current ||= withModel;
-    if (withModel) wholeOrder.current = ['subject', 'auxiliary', 'verb'].map((role) => puzzlePieces.findIndex((piece) => piece.role === role));
+    if (withModel) wholeOrder.current = searchPractice ? [3, 4, 2, 0, 1] : ['subject', 'auxiliary', 'verb'].map((role) => puzzlePieces.findIndex((piece) => piece.role === role));
     if (!inspection) {
       if (withModel) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `trick-build-model:${trick.formId}:${continuation.sentenceIndex}:message`, skill: trick.skill, phase: 'construction', source: 'authored', modality: 'choice', prompt: sentence.es, response: sentence.en, expected: '', correct: null, helped: true, parentAttemptId: previousConstruction.current, feedback: 'Mensaje colocado con modelo, sin acierto ficticio.' });
       sentence.slots.forEach((_, index) => recordChunkExposure(userId, unit.id, sentence, index));

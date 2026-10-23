@@ -20,12 +20,12 @@ export function GrammarJourney({ units, userId, inspection, resumeId, notice, on
   const memories = readWordMemories(userId);
   const activities = readLearningActivities(userId);
   const completedIds = new Set(route.filter((stop) => completedGrammarStop(stop, activities)).map((stop) => stop.id));
-  const lockedIds = new Set(inspection ? [] : route.filter((stop) => missingGrammarStop(stop, units, memories).length).map((stop) => stop.id));
+  const lockedIds = new Set(inspection ? [] : route.filter((stop) => missingGrammarStop(stop, units, memories, userId).length).map((stop) => stop.id));
   const resumed = route.find((stop) => stop.id === resumeId && !lockedIds.has(stop.id));
   const current = (resumed && !completedIds.has(resumed.id) ? resumed : undefined) ?? route.find((stop) => !lockedIds.has(stop.id) && !completedIds.has(stop.id)) ?? resumed ?? route.find((stop) => !lockedIds.has(stop.id)) ?? route[0];
   const selectedLocked = selected && lockedIds.has(selected.id) ? selected : null;
   const requirementStop = selectedLocked ?? current;
-  const missing = requirementStop ? missingGrammarStop(requirementStop, units, memories) : [];
+  const missing = requirementStop ? missingGrammarStop(requirementStop, units, memories, userId) : [];
   const needsWords = route.length > 0 && !route.some((stop) => !lockedIds.has(stop.id));
   return <main className="journey-screen home-v2 grammar-journey">
     <div className={`home-play-hub ${route.length ? 'has-map' : ''}`}>
