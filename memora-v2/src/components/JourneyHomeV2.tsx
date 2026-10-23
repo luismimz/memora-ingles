@@ -4,7 +4,6 @@ import { isReviewDue, readUnitProgress } from '../domain/journey';
 import { readLearningActivities } from '../domain/learningActivity';
 import { loadLearningProfile, readAvatar } from '../domain/learningProfile';
 import { isKnownForDirection, readWordMemories } from '../domain/memory';
-import { shouldOfferMicroArcade } from '../domain/microArcade';
 import { catalogueStats } from '../domain/catalogueStats';
 import { completedVocabularyStop, journeyPresentation } from '../domain/journeyMap';
 import { JourneyMap } from './JourneyMap';
@@ -40,6 +39,7 @@ export function JourneyHome(props: Props) {
     onFusionDemo, onGrammarReview, onEvolution, onMirror, onTryPreview, onExit, onProfile,
     appearance, onToggleAppearance, onWords, onGrammar, resumeLearningMode = 'adventure' } = props;
   const [showAllWords, setShowAllWords] = useState(false);
+  const [showMap, setShowMap] = useState(false);
   const catalogue = catalogueStats(units);
   const memories = readWordMemories(userId);
   const stories = buildJourneyRoute(units, memories);
@@ -66,7 +66,6 @@ export function JourneyHome(props: Props) {
   const retainedWords = uniqueWords.filter((memory) => isKnownForDirection(memory, 'recall') || isKnownForDirection(memory, 'production'));
   const conversations = new Set(activities.filter((item) => item.source === 'learner' && (item.phase === 'dialogue' || item.phase === 'transfer')).map((item) => item.unitId)).size;
   const conversationUnit = [...completed].reverse().find((unit) => unit.hasDialogue && activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)));
-  const inviteArcade = Boolean(onArcade && uniqueWords.length && featured && (dueCount > 0 || shouldOfferMicroArcade(userId, featured.id)));
   const avatar = readAvatar(userId);
   const currentIndex = featured ? stories.findIndex((unit) => unit.id === featured.id) + 1 : 0;
   const missionLabel = featured?.routeTrick ? 'Un truco breve con palabras que ya has practicado' : resume ? gameCheckpoint ? activityLabels[gameCheckpoint.phase] : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
@@ -90,23 +89,21 @@ export function JourneyHome(props: Props) {
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
     <div className="home-hub-content">
       <div className="home-intro"><div><h1>Tu aventura</h1><p className="home-catalogue" aria-label="Contenido disponible"><strong>{catalogue.words}</strong> {catalogue.words === 1 ? 'palabra en el catálogo' : 'palabras en el catálogo'}{catalogue.expressions > 0 ? <> · <strong>{catalogue.expressions}</strong> {catalogue.expressions === 1 ? 'expresión' : 'expresiones'}</> : null}</p></div><span>{completed.length} de {stories.length} paradas completadas</span></div>
-      {stories.length ? <JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} onLockedOpen={onOpen} /> : null}
     </div>
     </div>
 
     <div className="home-body">
       {featured ? <section className="home-adventure" aria-labelledby="home-adventure-title">
         <div className="home-adventure-art">{featuredPresentation?.pack ? <JourneyScene scene={featuredPresentation.scene} /> : <img src="/house-adventure.svg" alt="Ilustración de la Casa Viva: una puerta iluminada, un kiwi travieso y unas llaves escondidas" />}<span>{featuredPresentation?.place}</span></div>
-        <div className="home-adventure-copy"><p className="eyebrow">{resume ? 'JUSTO DONDE LO DEJASTE' : `PARADA ${currentIndex} DE ${stories.length}`}</p><h2 id="home-adventure-title">{featuredPresentation?.title}</h2><p className="home-adventure-story">{featuredPresentation?.subtitle}</p>{featuredPresentation?.pack ? <p className="home-current-words" lang="en">{featuredPresentation.terms}</p> : null}<p className="home-current-step"><span aria-hidden="true">✦</span> {missionLabel}</p><button type="button" className="primary-action" onClick={() => onOpen(featured)}>{resume ? 'Continuar jugando' : readUnitProgress(userId, featured.id) ? 'Volver a jugar' : featuredPresentation?.pack ? 'Descubrir palabras' : 'Empezar misión'} <span aria-hidden="true">→</span></button><div className="home-adventure-progress"><div role="progressbar" aria-label="Misiones completadas del mundo" aria-valuemin={0} aria-valuemax={stories.length} aria-valuenow={completed.length}><span style={{ width: `${stories.length ? completed.length / stories.length * 100 : 0}%` }} /></div><small>{completed.length}/{stories.length} misiones de este recorrido</small></div></div>
+        <div className="home-adventure-copy"><p className="eyebrow">{resume ? 'JUSTO DONDE LO DEJASTE' : `PARADA ${currentIndex} DE ${stories.length}`}</p><h2 id="home-adventure-title">{featuredPresentation?.title}</h2><p className="home-adventure-story">{featuredPresentation?.subtitle}</p>{featuredPresentation?.pack ? <p className="home-current-words" lang="en">{featuredPresentation.terms}</p> : null}<p className="home-current-step"><span aria-hidden="true">✦</span> {missionLabel}</p><button type="button" className="primary-action" onClick={() => onOpen(featured)}>{completedIds.has(featured.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">→</span></button><p className="home-flow-hint">Una acción cada vez: desliza para avanzar y toca las piezas para jugar. Puedes salir y volver.</p><div className="home-adventure-progress"><div role="progressbar" aria-label="Misiones completadas del mundo" aria-valuemin={0} aria-valuemax={stories.length} aria-valuenow={completed.length}><span style={{ width: `${stories.length ? completed.length / stories.length * 100 : 0}%` }} /></div><small>{completed.length}/{stories.length} misiones de este recorrido</small></div></div>
       </section> : <section className="journey-empty"><h2>La aventura está preparándose.</h2><p>Aún no hay una misión publicada.</p>{onTryPreview ? <button type="button" className="primary-action" onClick={onTryPreview}>Probar la experiencia →</button> : null}</section>}
 
-      <section className="home-modes" aria-label="Elige cómo aprender"><div className="home-section-heading"><p className="eyebrow">ELIGE TU MOMENTO</p><h2>¿Qué te apetece hacer?</h2></div><div className="home-mode-grid">
+      {stories.length ? <details className="home-map-panel" onToggle={(event) => setShowMap(event.currentTarget.open)}><summary>Ver mi recorrido · elegir otra parada</summary>{showMap ? <JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} onLockedOpen={onOpen} /> : null}</details> : null}
+      <details className="home-practice-panel"><summary>Practicar algo concreto</summary><section className="home-modes" aria-label="Elige cómo aprender"><div className="home-mode-grid">
         <button type="button" className="home-mode home-mode-words" onClick={onWords}><span aria-hidden="true">◈</span><strong>Aprender palabras</strong><small>Historias absurdas que se quedan contigo.</small><b aria-hidden="true">↗</b></button>
         <button type="button" className="home-mode home-mode-arcade" onClick={onArcade} disabled={!onArcade}><span aria-hidden="true">✦</span><strong>Arcade</strong><small>Recuerda las palabras con sus asociaciones.</small><b aria-hidden="true">↗</b></button>
         <button type="button" className="home-mode home-mode-chat" onClick={onGrammar} disabled={!onGrammar}><span aria-hidden="true">◌</span><strong>Gramática fácil</strong><small>Trucos y frases con tus palabras aprendidas.</small><b aria-hidden="true">↗</b></button>
-      </div>{conversationUnit ? <button type="button" className="home-text-button" onClick={() => onConverse(conversationUnit)}>Volver a mi conversación conocida →</button> : null}</section>
-
-      {inviteArcade ? <aside className="home-arcade-invite" aria-label="Invitación a Arcade"><div><p className="eyebrow">UNA RONDA OPCIONAL</p><h2>¿Aún recuerdas la escena?</h2><p>{dueCount ? `${dueCount} ${dueCount === 1 ? 'recuerdo espera' : 'recuerdos esperan'} una vuelta rápida.` : 'Una asociación corta para cambiar el ritmo.'} Puedes volver a la historia cuando quieras.</p></div><button type="button" onClick={onArcade}>Jugar una ronda <span aria-hidden="true">↗</span></button></aside> : null}
+      </div>{conversationUnit ? <button type="button" className="home-text-button" onClick={() => onConverse(conversationUnit)}>Volver a mi conversación conocida →</button> : null}</section></details>
 
       <section className="home-progress" aria-label="Tu progreso real"><div><strong>{uniqueWords.length}</strong><span>palabras practicadas</span><small>{retainedWords.length} recuperadas después sin pistas</small></div><div><strong>{conversations}</strong><span>{conversations === 1 ? 'escena conversada' : 'escenas conversadas'}</span></div><div><strong>{dueCount}</strong><span>{dueCount === 1 ? 'repaso pendiente' : 'repasos pendientes'}</span></div><button type="button" onClick={onEvolution} disabled={!onEvolution}>Ver Mi evolución <span aria-hidden="true">→</span></button></section>
 

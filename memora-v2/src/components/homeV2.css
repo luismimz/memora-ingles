@@ -35,6 +35,10 @@
 .home-current-step span { font-size: 1.3rem; }
 .home-current-words { margin: 12px 0 0; color: var(--accent-ink); font-size: .8rem; font-weight: 750; overflow-wrap: anywhere; }
 .home-adventure-copy .primary-action { margin-top: 21px; }
+.home-flow-hint { margin: 12px 0 0; max-width: 40ch; color: var(--muted); font-size: .82rem; line-height: 1.5; }
+.home-map-panel, .home-practice-panel { padding: 14px 18px; border: 1px solid var(--line); border-radius: 20px; background: var(--surface-strong); }
+.home-map-panel > summary, .home-practice-panel > summary { min-height: 44px; padding: 12px 0; color: var(--accent-ink); font-weight: 750; cursor: pointer; }
+.home-map-panel[open] > summary, .home-practice-panel[open] > summary { margin-bottom: 12px; }
 .home-adventure-progress { width: 100%; margin-top: 25px; }
 .home-adventure-progress > div { height: 7px; overflow: hidden; border-radius: 999px; background: var(--surface-soft); }
 .home-adventure-progress > div > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, #e49e7b, #8acabc); }
@@ -96,7 +100,7 @@
 @media (max-width: 700px) {
   .home-v2 { padding: 12px; }
   .home-play-hub { display: flex; flex-direction: column; }
-  .home-play-hub.has-map { height: calc(100svh - 24px); min-height: 540px; }
+  .home-play-hub.has-map { height: auto; min-height: 0; }
   .home-header { flex: 0 0 auto; gap: 8px; }
   .home-header .journey-brand .brand-mark { width: 40px; height: 40px; font-size: 1.45rem; }
   .home-header .home-profile { min-height: 44px; letter-spacing: 0; }
@@ -114,6 +118,9 @@
   .home-hub-content .journey-map-toolbar, .home-hub-content .journey-map-footer { flex: 0 0 auto; padding: 6px 12px; }
   .home-hub-content .journey-map-viewport { flex: 1; height: auto; min-height: 160px; }
   .home-body { padding-top: 20px; }
+  .home-adventure-copy { grid-row: 1; }
+  .home-adventure-art { grid-row: 2; min-height: 140px; max-height: 180px; }
+  .home-map-panel .journey-map-viewport { height: min(60svh, 480px); }
 }
 @media (max-width: 350px) {
   .home-nav { grid-template-columns: repeat(4, minmax(0, 1fr)); }
