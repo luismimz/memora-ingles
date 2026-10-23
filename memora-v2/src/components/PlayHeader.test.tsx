@@ -1,0 +1,37 @@
+import { expect, it, vi } from 'vitest';
+import { act, create } from 'react-test-renderer';
+import { PlayHeader } from './PlayHeader';
+import { syncLabels } from '../services/progressSync';
+
+it('la instrucción y salida son primarias; apariencia, porcentaje y estado quedan en opciones', () => {
+  const exit = vi.fn(); const theme = vi.fn();
+  let tree: ReturnType<typeof create>;
+  act(() => { tree = create(<PlayHeader title="Monta tu mensaje" onExit={exit} appearance="light" onToggleAppearance={theme} syncStatus="saved" progress={42} />); });
+  const root = tree!.root;
+  expect(root.findByProps({ className: 'play-intention' }).children).toEqual(['Monta tu mensaje']);
+  const buttons = root.findAllByType('button');
+  expect(buttons).toHaveLength(2);
+  expect(buttons[0].findAllByType('details')).toHaveLength(0);
+  expect(buttons[1].parent!.findAllByType('small').length).toBeGreaterThan(0);
+  expect(root.findAllByType('details')).toHaveLength(1);
+  expect(root.findByProps({ className: 'play-options' }).props.open).toBeUndefined();
+  act(() => { buttons[0].props.onClick(); buttons[1].props.onClick(); });
+  expect(exit).toHaveBeenCalledOnce(); expect(theme).toHaveBeenCalledOnce();
+  act(() => tree!.unmount());
+});
+
+it.each(['offline', 'error', 'storage-full'] as const)('el aviso %s no queda escondido en opciones', (syncStatus) => {
+  const tree = create(<PlayHeader title="Encuentra la palabra" onExit={() => {}} appearance="light" onToggleAppearance={() => {}} syncStatus={syncStatus} />);
+  const warning = tree.root.findByProps({ className: 'play-save-warning' });
+  expect(warning.children).toEqual([syncLabels[syncStatus]]);
+  expect(warning.props.role).toBe(syncStatus === 'storage-full' ? 'alert' : 'status');
+  expect(warning.parent!.type).not.toBe('details');
+  tree.unmount();
+});
+
+it('la revisión permanece explícita y no afirma que se guarda progreso', () => {
+  const tree = create(<PlayHeader inspection title="Descubre cómo decirlo" onExit={() => {}} appearance="dark" onToggleAppearance={() => {}} syncStatus="error" />);
+  expect(tree.root.findByProps({ role: 'status' }).children).toEqual(['Vista de revisión · no guarda progreso']);
+  expect(tree.root.findAllByProps({ className: 'play-save-warning' })).toHaveLength(0);
+  tree.unmount();
+});

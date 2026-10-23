@@ -11,9 +11,9 @@ describe('cognados con la presentación visual original', () => {
     const html = renderToStaticMarkup(<CognateAssociationCard word={adult} index={0} total={3} onConnect={() => undefined} />);
     expect(html).toContain('scene-visual');
     expect(html).toContain('🧑');
-    expect(html).toContain('SE PARECE A');
+    expect(html).toContain('Mismo significado; escucha cómo suena en inglés.');
     expect(html).toContain('round-audio');
-    expect(html).toContain('ASOCIACIÓN 1/3');
+    expect(html).toContain('PALABRA 1/3');
     expect(html).not.toContain('PUENTE SONORO');
     expect(html).not.toContain('No necesitas inventar');
   });

@@ -8,7 +8,7 @@ import { clearTrickCheckpoint, readTrickCheckpoint, writeTrickCheckpoint, type T
 import { GrammarCoach } from './GrammarCoach';
 import { GameCard } from './GameCard';
 import { playEnglish, playSnap, stopSpeech } from '../services/audio';
-import { syncLabels, type SyncStatus } from '../services/progressSync';
+import type { SyncStatus } from '../services/progressSync';
 import type { Appearance } from '../useAppearance';
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { readWordMemories, recordChunkExposure, recordSentenceExposure } from '../domain/memory';
@@ -19,6 +19,7 @@ import { SentenceBuilderCard } from './SentenceBuilderCard';
 import { ConversationPractice } from './ConversationPractice';
 import { GrammarOrder } from './GrammarOrder';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
+import { PlayHeader } from './PlayHeader';
 
 export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
@@ -148,9 +149,8 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
     }
     setFinished(true);
   }
-  return <main className="game-screen journey-trick">
-    <header className="game-topbar"><button type="button" className="activity-back" onClick={() => { stopSpeech(); onExit(); }}>← Recorrido</button><span>✦ PARADA TRUCO</span><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button></header>
-    <p className="mirror-save" role="status">{inspection ? 'Vista de prueba · no guarda progreso' : syncLabels[syncStatus]}</p>
+  return <main className={`game-screen journey-trick${!inspection ? ' play-flow' : ''}`}>
+    <PlayHeader title={finished ? 'Objetivo practicado' : continuation?.phase === 'build' ? 'Monta tu mensaje' : continuation?.phase === 'conversation' ? 'Responde al personaje' : 'Descubre cómo decirlo'} onExit={() => { stopSpeech(); onExit(); }} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} inspection={inspection} />
     {!finished && lesson ? <h1 className="sr-only">{trick.title}</h1> : null}
     <section className="game-stage">{!lesson || unavailable ? <GameCard><h1>Esta escena necesita preparación.</h1><p>Tu progreso se conserva. Puedes seguir con las palabras.</p><button type="button" onClick={onNext}>Continuar con las palabras →</button></GameCard> : finished ? <GameCard vertical={stream || episode} stepKey="completed" onAdvance={stream || episode ? onNext : undefined} advanceLabel={nextLabel} className="complete-card"><div className="complete-content"><div className="reward-burst" aria-hidden="true">✦</div><p className="eyebrow">UNA PIEZA MÁS</p><h1>¡Tus palabras ya dicen algo nuevo!</h1><p>{trick.title}</p><p>Una práctica, no una promesa de dominio. Tus intentos quedan en Mi evolución.</p>{!stream && !episode ? <button type="button" className="primary-action" onClick={onNext}>{nextLabel}</button> : null}{!stream && !episode ? <button type="button" className="quiet-action" onClick={onExit}>Terminar por hoy</button> : null}</div></GameCard>
       : continuation?.phase === 'conversation' ? <ConversationPractice vertical unit={episodeUnit} userId={userId} reviewMode={inspection} checkpointScope={`trick:${episodeIdentity}`} skillId={trick.skill} initialHelped={Boolean(continuation.modelUsed)} onContinue={finish} />

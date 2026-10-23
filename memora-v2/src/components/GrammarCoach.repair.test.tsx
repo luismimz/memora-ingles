@@ -116,7 +116,7 @@ it('pedir ayuda y enviar inmediatamente conserva la ayuda en las dos evidencias 
   await advance();
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I am playing' } }));
   const submit = tree.root.findByType('form').props.onSubmit;
-  const hint = tree.root.findByType('details').props.onToggle;
+  const hint = tree.root.findAllByType('details').find((node) => typeof node.props.onToggle === 'function')!.props.onToggle;
   await act(async () => { hint({ currentTarget: { open: true } }); submit({ preventDefault() {} }); });
   expect(readGrammarAttempts(user).filter((event) => event.check === 'use' && event.unitId === previewUnit.id)).toMatchObject([{ correct: true, helped: true }]);
   expect(readLearningActivities(user).filter((event) => event.activityId === 'use')).toMatchObject([{ correct: true, helped: true }]);

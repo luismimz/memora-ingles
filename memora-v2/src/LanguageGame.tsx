@@ -28,6 +28,7 @@ import { getExpandedEnglishSubject, getPlayableGrammar, getSpanishSubjectLabel, 
 import { playEnglish, playMiss, playSnap, playSpanish, prefetchSpeech, stopSpeech } from './services/audio';
 import type { Appearance } from './useAppearance';
 import { syncLabels, type SyncStatus } from './services/progressSync';
+import { PlayHeader } from './components/PlayHeader';
 
 function GrammarLesson({ form, baseSpanish, index, total, onReady, onContinue }: {
   form: GrammarForm;
@@ -144,9 +145,15 @@ function AssociationCard({ unit, inspection, word, index, total, userId, locatio
   return <GameCard vertical={vertical} onAdvance={connect} advanceControl={!word.reconstruction || associationRejected} advanceLabel="Ya la he imaginado" back={<div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
     <div className="association-content is-revealed">
       {location ? <p className="association-location">{location}</p> : null}
-      <p className="eyebrow">ASOCIACIÓN {index + 1}/{total}</p><WordHeading en={word.en} es={word.es.toUpperCase()} /><p className="ipa">{word.ipa}</p><SceneVisual word={word} showMemoryLink={!associationRejected} /><div className={`bridge-row ${word.bridge && !associationRejected ? '' : 'is-direct'}`}>{word.bridge && !associationRejected ? <div><small>RECUERDA CON</small><b>{word.bridge}</b></div> : <div><small>IMAGEN DIRECTA</small><b>Sin palabra puente</b></div>}<button type="button" className="round-audio" onClick={listen} aria-label={`Escuchar ${word.en}`}>🔊</button></div>{!associationRejected ? <BridgeSoundNote word={word} explain /> : null}<AssociationAudioStatus state={audioState} />{associationRejected ? <p className="scene-copy">Mira, escucha y conecta directamente con <strong>{word.es.toUpperCase()}</strong>.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
+      <p className="eyebrow">PALABRA {index + 1}/{total}</p>
+      <div className="association-word-top"><WordHeading en={word.en} es={word.es.toUpperCase()} /><button type="button" className="round-audio" onClick={listen} aria-label={`Escuchar ${word.en}`}>🔊</button></div>
+      <SceneVisual word={word} showMemoryLink={!associationRejected} />
+      {associationRejected ? <p className="scene-copy">Mira, escucha y conecta directamente con <strong>{word.es.toUpperCase()}</strong>.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
+      <p className="association-instruction">{word.bridge && !associationRejected ? <>Imagina la historia. El puente te ayuda a recordar; 🔊 enseña el sonido inglés.</> : <>Mira la escena y escucha la palabra inglesa.</>}</p>
+      <details className="association-help"><summary>Sonido y ayuda para recordar</summary><p className="ipa">{word.ipa}</p><AssociationAudioStatus state={audioState} />{word.bridge && !associationRejected ? <div className="bridge-row"><div><small>RECUERDA CON</small><b>{word.bridge}</b></div></div> : null}{!associationRejected ? <BridgeSoundNote word={word} explain /> : null}
       {word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; setAssociationRejected(next); if (next) localStorage.setItem(rejectionKey, '1'); else localStorage.removeItem(rejectionKey); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
-      {word.reconstruction ? <><small>{word.bridgeEvidence?.soundRelation}</small>{!vertical ? <button type="button" className="quiet-action" onClick={connect}>Ya lo he imaginado →</button> : null}</> : null}
+      </details>
+      {word.reconstruction && !vertical ? <button type="button" className="quiet-action" onClick={connect}>Ya lo he imaginado →</button> : null}
     </div>
   </GameCard>;
 }
@@ -348,12 +355,15 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       : state.phase === 'reward' ? 60 : state.phase === 'grammar' ? 60 + Math.round(state.grammarIndex * 12 / grammarForms.length)
         : state.phase === 'build' ? 72 + Math.round((state.sentenceIndex + state.filledSlots / sentence.slots.length) * 18 / sentences.length) : state.phase === 'conversation' ? 94 : 100;
   const progress = learningMode === 'vocabulary' ? Math.min(100, Math.round(adventureProgress / 60 * 100)) : learningMode === 'grammar' ? Math.min(100, Math.max(0, Math.round((adventureProgress - 60) / 40 * 100))) : adventureProgress;
+  const intention = { associate: 'Mira, escucha e imagina', recall: unit.activeRecall ? 'Recuerda sin mirar el modelo' : 'Encuentra la palabra', reward: 'Tanda practicada', grammar: 'Descubre cómo decirlo', build: 'Monta tu mensaje', conversation: 'Responde al personaje', complete: 'Tu mensaje ya tiene sentido' }[state.phase];
 
   return (
-    <main className="game-screen">
+    <main className={`game-screen${!reviewMode ? ' play-flow' : ''}`}>
+      {!reviewMode ? <PlayHeader title={intention} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} progress={progress} position={positionLabel} /> : <>
       <header className="game-topbar"><button type="button" className="activity-back" onClick={onExit}>← Recorrido</button><span>MEMORA <small>· {reviewMode ? 'REVISIÓN' : preview ? 'VISTA PREVIA' : positionLabel}</small></span><div className="game-topbar-actions"><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`} title={`Modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button><span>{progress}%</span></div></header>
       <div className="game-progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progress}%` }} /></div>
       <p className="game-save-status" role="status">{reviewMode ? 'Vista de revisión · no guarda progreso' : syncStatus ? syncLabels[syncStatus] : 'Progreso en este dispositivo'}</p>
+      </>}
       {reviewMode && learningMode === 'adventure' ? <nav className="review-nav" aria-label="Revisar pasos de la unidad"><label htmlFor="review-step">Revisar fase</label><select id="review-step" value={currentReviewStep} onChange={(event) => jumpToStep(event.target.value)}>{unit.words.map((item, index) => <option key={`associate-${index}`} value={`associate-${index}`}>{index + 1}. Asociación {item.en}</option>)}{unit.words.map((_, index) => <option key={`recall-${index}`} value={`recall-${index}`}>Recordar {unit.words[recalledWordIndex(unit, index)].en}</option>)}<option value="reward-0">Resultado de memoria</option>{grammarForms.map((form, index) => <option key={`grammar-${index}`} value={`grammar-${index}`}>Transformación {index + 1}: {form.english}</option>)}{sentences.map((_, index) => <option key={`build-${index}`} value={`build-${index}`}>Construir frase {index + 1}/{sentences.length}</option>)}{unit.communication?.dialogue ? <option value="conversation-0">Practicar conversación</option> : null}<option value="complete-0">Final de unidad</option></select><span>No guarda progreso</span></nav> : null}
       <section className="game-stage" aria-live="off">
         {state.phase === 'associate' ? <AssociationCard vertical={vertical} key={`associate-${state.wordIndex}`} unit={unit} inspection={reviewMode} word={word} index={acquisitionPosition} total={acquisitionIndexes.length} userId={userId} location={unit.location?.label} onConnect={() => { const next = acquisitionIndexes[acquisitionPosition + 1]; playSnap(); dispatch({ type: 'connected', isLast: next === undefined, nextWordIndex: next, wordCount: unit.words.length }); }} /> : null}
