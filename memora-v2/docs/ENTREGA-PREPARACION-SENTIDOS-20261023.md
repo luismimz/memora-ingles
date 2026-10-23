@@ -6,6 +6,8 @@ Inicio, mapa de gramática y selección mixta comprueban ahora la equivalencia e
 
 El resumen del catálogo conserva asociaciónId/associationVersion para que Inicio no dé un desbloqueo que la escena completa después rechaza. Requisitos externos que solo declaran una grafía, sin significado en la unidad, conservan el comportamiento anterior; deben ampliarse editorialmente para distinguir nuevos sentidos. No afirmar que esto resuelve toda la preparación de todas las expresiones.
 
+Seguimiento técnico: al descargar la escena desde Inicio se sustituyen también sus palabras en los metadatos de revalidación. No basta actualizar contentVersion dejando equivalencias antiguas del mapa. Prueba de App simula cambio de sentido entre mapa y descarga y exige conservar memoria/borrador sin abrir el truco incorrecto.
+
 Arcade usa el modelo actual de una palabra cuyo sentido/escena/asociación ya coinciden con la evidencia preparada, no la IPA o audioURL antiguos del snapshot de memoria. Esto selecciona la fuente vigente, no aprueba el audio ni registra una escucha/acierto por leerlo. No hay segundo motor, migración masiva ni modificación del backend.
 
 Pruebas cubren sentido y versión distintos, preparación correcta, memoria incompleta, conservación del estado previo, metadatos del catálogo y actualización del modelo sin cambios en memoria. Fixtures antiguos que solo contenían key/correct se completan con el sentido realmente practicado, no se debilita el requisito para mantener tests verdes. Integración/build y copias en checkpoint. Pendientes revisión editorial, partida física/móvil, escucha humana y cobertura1050/3000.

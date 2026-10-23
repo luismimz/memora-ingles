@@ -2,7 +2,7 @@ import type { ReactElement } from 'react';
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { previewUnit, reviewUnits } from './preview/previewUnit';
 import { vocabularyPreviewPacks } from './preview/vocabularyPacks';
-import { grammarTricks } from './domain/journeyTricks';
+import { grammarTricks, trickStop } from './domain/journeyTricks';
 import { recordWordRecall, readWordMemories } from './domain/memory';
 import { grammarJourney } from './domain/grammarJourney';
 import { lessonForForm } from './domain/grammarLesson';
@@ -61,6 +61,23 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
+  it('revalida el sentido recién descargado y no abre el truco con metadatos antiguos de Inicio', async () => {
+    const source = { ...previewUnit, id: 'changing-source' };
+    const descriptor = grammarTricks(source)[0];
+    const summary = { ...source, grammarTricks: [descriptor] };
+    const stop = trickStop(summary, descriptor);
+    recordWordRecall('learner', source.words[0], 'quick');
+    const before = readWordMemories('learner');
+    const changed = { ...source, words: source.words.map((word, index) => index === 0 ? { ...word, es: 'representar una obra' } : word) };
+    api.loadUnit.mockResolvedValue(changed);
+    hooks.states.set(2, null); hooks.states.set(15, [summary]); hooks.states.set(22, false);
+    await game().props.onOpen(stop);
+    expect(api.loadUnit).toHaveBeenCalledWith(source.id);
+    expect(game().props.error).toContain('necesita palabras');
+    expect(hooks.states.get(2)).toBeNull();
+    expect(readWordMemories('learner')).toEqual(before);
+    expect(readLearningActivities('learner')).toHaveLength(0);
+  });
   it('aplica cada acción preparada entre palabras mezcladas, sin esperar cuatro misiones ni mover Gramática', async () => {
     // Synthetic attempts in an isolated Map, not a learner account or a manual/browser playthrough.
     const hotel = vocabularyPreviewPacks.find((candidate) => candidate.words.some((word) => word.en === 'HOTEL'))!;

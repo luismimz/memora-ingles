@@ -222,7 +222,7 @@ export default function App() {
         if (request !== lessonRequest.current) return;
         if (!source || !grammarTricks(source).some((trick) => trick.formId === summary.routeTrick!.formId && trick.skill === summary.routeTrick!.skill)) throw new Error('Este truco ha cambiado y necesita recargar el recorrido.');
         // Recheck current content, not just potentially stale Home metadata.
-        const current = { ...summary, contentVersion: source.contentVersion, routeTrick: grammarTricks(source).find((trick) => trick.formId === summary.routeTrick!.formId)! };
+        const current = { ...summary, words: source.words, contentVersion: source.contentVersion, routeTrick: grammarTricks(source).find((trick) => trick.formId === summary.routeTrick!.formId)! };
         if (!preview && missingTrickWords(current, readWordMemories(userId)).length) throw new Error('Este truco necesita palabras que aún no has practicado. Puedes seguir con las palabras.');
         setActiveTrick(current); setLearningMode('grammar'); rememberUnit(current.id, 'grammar'); setUnit(source);
         resumeAutomaticArcade(source);
