@@ -7,6 +7,7 @@ import { lessonForForm, type LessonCheck } from './grammarLesson';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 import { searchKeysLesson } from './searchKeysPractice';
 import { bedMakingLesson } from './bedMakingPractice';
+import { computerPlayingLesson, computerPlayingSkill, preparedComputerPlayingPractice } from './computerPlayingPractice';
 
 export interface GrammarArcadeRound { unit: AtomicUnit; form?: GrammarForm; skill: string; sentence: UnitSentence; slotIndex: number; slot: { en: string; es: string; choices: string[]; note?: string }; conceptual: boolean; situation?: LessonCheck }
 
@@ -31,13 +32,18 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       const prerequisites = grammarTricks(unit).find((trick) => trick.formId === form.id)?.vocabulary;
       if (!inspection && (!prerequisites || prerequisites.some((word) => !preparedWord(word)))) return [];
       const base = unit.words.find((word) => word.en.toLowerCase() === form.englishBase?.toLowerCase())?.es.toLowerCase();
-      const lesson = searchKeysLesson(unit, form.id) ?? bedMakingLesson(unit, form.id) ?? lessonForForm(form, base);
+      const computer = computerPlayingLesson(unit, form.id);
+      const usedComputer = computer && preparedWord('computer') && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === computer.id && attempt.check === 'computer-meaning-v1' && attempt.correct);
+      const lesson = (usedComputer ? computer : null) ?? searchKeysLesson(unit, form.id) ?? bedMakingLesson(unit, form.id) ?? lessonForForm(form, base);
       return lesson?.checks.filter((check) => check.kind !== 'write' && check.choices && check.choices.length >= 2 && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
         .map((check, index) => ({ unit, form, skill: lesson.id, sentence: unit.sentence, slotIndex: index, slot: { en: check.answers[0], es: check.prompt, choices: check.choices!, note: check.hint }, conceptual: true, ...(check.situation ? { situation: check } : {}) })) ?? [];
     });
     const form = getPlayableGrammar(unit)[0];
     if (!form) return checks;
-    return [...checks, ...getUnitSentences(unit).filter((sentence) => inspection || !missingGrammarWords(unit, memories).length && sentences.some((memory) => memory.unitId === unit.id && normalizeSentenceAnswer(memory.sentenceEn) === normalizeSentenceAnswer(sentence.en)))
+    // The new message does not prepare the legacy AT MY DESK distractor.
+    const computerReview = attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === computerPlayingSkill && attempt.correct)
+      ? preparedComputerPlayingPractice(unit, form.id, memories)?.unit : null;
+    return [...checks, ...getUnitSentences(computerReview ?? unit).filter((sentence) => inspection || !missingGrammarWords(unit, memories).length && sentences.some((memory) => memory.unitId === unit.id && normalizeSentenceAnswer(memory.sentenceEn) === normalizeSentenceAnswer(sentence.en)))
       .flatMap((sentence) => sentence.slots.map((slot, slotIndex) => ({ unit, form, skill: form.lesson?.id ?? form.id, sentence, slotIndex, slot, conceptual: false })))];
   });
 }

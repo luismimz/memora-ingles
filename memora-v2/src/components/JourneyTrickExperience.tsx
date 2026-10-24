@@ -22,6 +22,7 @@ import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 import { PlayHeader } from './PlayHeader';
 import { preparedSearchKeysPractice, searchKeysIdentity, searchKeysLesson, searchKeysSkill } from '../domain/searchKeysPractice';
 import { bedMakingIdentity, bedMakingLesson, bedMakingSkill, preparedBedMakingPractice } from '../domain/bedMakingPractice';
+import { computerPlayingIdentity, computerPlayingSkill, preparedComputerPlayingPractice } from '../domain/computerPlayingPractice';
 
 export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
@@ -37,7 +38,9 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
     const search = !checkpoint || checkpoint.episodeId === searchKeysIdentity ? preparedSearchKeysPractice(unit, routeTrick.formId, memories) : null;
     if (search) return { ...search, identity: searchKeysIdentity, modelOrder: [3, 4, 2, 0, 1] };
     const bed = !checkpoint || checkpoint.episodeId === bedMakingIdentity ? preparedBedMakingPractice(unit, routeTrick.formId, memories) : null;
-    return bed ? { ...bed, identity: bedMakingIdentity, modelOrder: [3, 4, 2, 1, 0] } : null;
+    if (bed) return { ...bed, identity: bedMakingIdentity, modelOrder: [3, 4, 2, 1, 0] };
+    const computer = !checkpoint || checkpoint.episodeId === computerPlayingIdentity ? preparedComputerPlayingPractice(unit, routeTrick.formId, memories) : null;
+    return computer ? { ...computer, identity: computerPlayingIdentity, modelOrder: [2, 3, 1, 0] } : null;
   });
   const lesson = authoredPractice?.lesson ?? legacyLesson;
   const trick = { ...routeTrick, skill: lesson?.id ?? routeTrick.skill, title: authoredPractice ? authoredPractice.lesson.title : routeTrick.title };
@@ -45,7 +48,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const sceneWord = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase()) ?? unit.words[0];
   const practicedPattern = !inspection && form && !form.lesson && (form.visualContract === 'present-continuous' || form.id === 'ing')
     && readGrammarAttempts(userId).some((attempt) => attempt.skill.startsWith('present-continuous:') && attempt.skill !== trick.skill && attempt.kind === 'write' && attempt.correct && !attempt.helped);
-  const reuseSubject = Boolean(authoredPractice && !inspection && readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped));
+  const reuseSubject = Boolean(authoredPractice && !inspection && readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill, computerPlayingSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped));
   // An old in-flight coach keeps its identified task/draft, even if an author
   // adds an episode later. Fresh entries opt in only with actual preparation.
   const [shortPractice] = useState(() => authoredPractice?.unit ?? preparedActionPractice(unit, trick.formId, readWordMemories(userId)));

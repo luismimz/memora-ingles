@@ -4,6 +4,16 @@ import './grammarSituation.css';
 
 /** A scene describes a meaning; it does not assess or write learner progress. */
 export function SituationScreen({ state }: { state: SituationState }) {
+  if (state === 'computer-playing' || state === 'console-playing') {
+    const computer = state === 'computer-playing';
+    return <svg viewBox="0 0 200 110" role="img" aria-label={computer ? 'Una persona juega usando teclado y ratón de un ordenador' : 'Una persona juega con un mando y una consola, sin ordenador'}>
+      <rect x="92" y="12" width="86" height="52" rx="5" fill="#383c36" /><rect x="98" y="18" width="74" height="38" rx="3" fill="#356f65" /><circle cx="134" cy="37" r="7" fill="#cc9a51" />
+      <path d="M74 82H187M84 82V103M177 82V103" stroke="#997250" strokeWidth="6" strokeLinecap="round" />
+      <circle cx="35" cy="32" r="14" fill="#cc9a51" /><path d="M35 50V82M20 103L35 82L53 103" stroke="#997250" strokeWidth="8" strokeLinecap="round" />
+      {computer ? <><path d="M35 58L67 71L114 72M35 60L58 77L147 77" fill="none" stroke="#997250" strokeWidth="6" strokeLinecap="round" /><rect x="101" y="68" width="37" height="10" rx="2" fill="#667566" /><ellipse cx="151" cy="75" rx="7" ry="4" fill="#383c36" /><rect x="161" y="66" width="17" height="13" rx="2" fill="#383c36" /><path d="M135 64V68" stroke="#383c36" strokeWidth="5" /></>
+        : <><path d="M35 58L65 66M35 59L54 70" stroke="#997250" strokeWidth="7" strokeLinecap="round" /><rect x="53" y="62" width="30" height="15" rx="5" fill="#383c36" /><path d="M58 69H66M62 65V73" stroke="#fff8df" strokeWidth="2" /><circle cx="75" cy="69" r="2" fill="#cc9a51" /><rect x="119" y="68" width="48" height="10" rx="3" fill="#667566" /></>}
+    </svg>;
+  }
   if (state === 'making-bed' || state === 'resting-bed') {
     const making = state === 'making-bed';
     return <svg viewBox="0 0 200 110" role="img" aria-label={making ? 'Una persona está estirando la ropa de cama y colocando la almohada' : 'Una persona está tumbada descansando sobre la cama'}>
@@ -106,6 +116,6 @@ function SituationDelivery({ check, selected, feedback, onAnswer, onListen, disa
       {scenes.map((item) => <button type="button" ref={(node) => { if (node) destinations.current.set(item.choice, node); else destinations.current.delete(item.choice); }} key={item.choice} data-drop-choice={item.choice} className={drag?.over === item.choice ? 'is-drop-target' : ''} aria-pressed={selected === item.choice} disabled={locked} onClick={() => onAnswer(item.choice)}><SituationScreen state={item.state} /><span>{item.choice}</span></button>)}
     </div>
     {drag ? <div className="situation-token-ghost" aria-hidden="true" style={{ left: drag.x, top: drag.y }} lang="en">{situation.message}</div> : null}
-    {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{feedback === 'correct' ? scene.state === 'search-keys' ? 'Mensaje entregado: el personaje busca las llaves, no el móvil.' : scene.state === 'making-bed' ? 'Mensaje entregado: la persona está haciendo la cama, no descansando en ella.' : 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'resting-bed' ? 'En esta imagen la persona descansa. MAKING MY BED cuenta que está haciendo su cama.' : scene.state === 'search-phone' ? 'Has señalado el móvil. MY KEYS indica que busca sus llaves.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
+    {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{scene.state === 'computer-playing' ? 'Mensaje entregado: está jugando usando su ordenador.' : scene.state === 'console-playing' ? 'Las dos personas juegan, pero esta usa una consola. ON MY COMPUTER indica el ordenador.' : feedback === 'correct' ? scene.state === 'search-keys' ? 'Mensaje entregado: el personaje busca las llaves, no el móvil.' : scene.state === 'making-bed' ? 'Mensaje entregado: la persona está haciendo la cama, no descansando en ella.' : 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'resting-bed' ? 'En esta imagen la persona descansa. MAKING MY BED cuenta que está haciendo su cama.' : scene.state === 'search-phone' ? 'Has señalado el móvil. MY KEYS indica que busca sus llaves.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
   </div>;
 }
