@@ -18,6 +18,7 @@ import { EvolutionView } from './components/EvolutionView';
 import { MirrorLessonExperience } from './components/MirrorLessonExperience';
 import { PlayingGrammarReview } from './components/PlayingGrammarReview';
 import type { AtomicUnit } from './domain/unit';
+import type { MeatPreparationTarget } from './domain/meatCookingPractice';
 import { nextPlayableUnit, orderedJourneyUnits, readUnitProgress } from './domain/journey';
 import { previewUnit, reviewUnits } from './preview/previewUnit';
 import { DirectusError, endSession, hasSession, loadPublishedUnitSummaries, loadUnit, loadKeysPilot, loadMirrorPilot, logIn, loadIdentity, clearAssetCache, type UnitSummary } from './services/directus';
@@ -209,7 +210,7 @@ export default function App() {
     setFusionOpen(false);
   }
 
-  async function openUnit(summary: UnitSummary, directConversation = false) {
+  async function openUnit(summary: UnitSummary, directConversation = false, requestedMode?: LearningMode) {
     const request = ++lessonRequest.current;
     cancelArcadeLaunch();
     setPreparingGrammar(null);
@@ -231,7 +232,7 @@ export default function App() {
       return;
     }
     setActiveTrick(null);
-    const mode = directConversation ? 'adventure' : summary.id === lastOpenedUnitId ? resumeMode : 'vocabulary';
+    const mode = requestedMode ?? (directConversation ? 'adventure' : summary.id === lastOpenedUnitId ? resumeMode : 'vocabulary');
     setLearningMode(mode); setLibraryMode(null);
     setConversationStart(directConversation);
     setExpansionTest(null);
@@ -249,6 +250,14 @@ export default function App() {
     }
     catch (reason) { if (request === lessonRequest.current) setUnitError(reason instanceof Error ? reason.message : 'No se pudo abrir esta escena.'); }
     finally { if (request === lessonRequest.current) setLoading(false); }
+  }
+
+  function prepareFoodSource(target: MeatPreparationTarget) {
+    const source = units.find((candidate) => candidate.id === target.unitId);
+    const trick = target.mode === 'grammar' ? source?.grammarTricks?.find((candidate) => candidate.formId === 'ing') : undefined;
+    if (!source || target.mode === 'grammar' && !trick) { setUnitError('No está disponible la preparación de esta escena. Tu progreso se conserva.'); return; }
+    if (trick) void openUnit(trickStop(source, trick));
+    else void openUnit(source, false, 'vocabulary');
   }
 
   function openReview(id: string) {
@@ -497,7 +506,7 @@ export default function App() {
   if (unit) {
     // Admins playing from Home are learners too. Only explicit editorial review is read-only.
     const inspectionMode = reviewMode || preview;
-    if (activeTrick) return <><JourneyTrickExperience key={`${activeTrick.id}-${userId}`} unit={unit} stop={activeTrick} preparationSources={units} userId={userId} inspection={inspectionMode} onFinished={rememberAfterCompletion} onNext={continueAfterUnit} nextLabel={nextLabel} onExit={leaveLesson} syncStatus={syncStatus} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}{lessonNotice}</>;
+    if (activeTrick) return <><JourneyTrickExperience key={`${activeTrick.id}-${userId}`} unit={unit} stop={activeTrick} preparationSources={units} onPrepare={prepareFoodSource} userId={userId} inspection={inspectionMode} onFinished={rememberAfterCompletion} onNext={continueAfterUnit} nextLabel={nextLabel} onExit={leaveLesson} syncStatus={syncStatus} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}{lessonNotice}</>;
     if (preview && learningMode === 'grammar' && unit.grammar.some((form) => form.englishBase === 'play')) return <PlayingGrammarReview key={`playing-review-${unit.id}`} unit={previewUnit} mirrorUnit={reviewUnits.find((item) => item.mirror)!} onExit={() => { stopSpeech(); setUnit(null); setLibraryMode('grammar'); setLibraryUnits(reviewUnits); }} />;
     if (unit.mirror && learningMode !== 'vocabulary') return <><MirrorLessonExperience grammarOnly={learningMode === 'grammar'} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} inspection={inspectionMode} syncStatus={syncStatus} onFinished={rememberAfterCompletion} onExit={leaveLesson} onNext={continueAfterUnit} nextLabel={nextLabel} onEvolution={() => { leaveLesson(); setLibraryMode(null); if (!inspectionMode) setEvolutionOpen(true); }} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}{lessonNotice}</>;
 return <><LanguageGame learningMode={learningMode} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} preview={preview} reviewMode={inspectionMode} startInConversation={conversationStart} nextLabel={nextLabel} positionLabel={preparingGrammar ? 'PREPARA EL TRUCO' : routePosition >= 0 ? `PARADA ${routePosition + 1}` : undefined} syncStatus={syncStatus} onFinished={rememberAfterCompletion} onNext={continueAfterUnit} onComplete={expansionTest ? finishExpansionTest : undefined} onExit={leaveLesson} onEvolution={!inspectionMode ? () => { leaveLesson(); setLibraryMode(null); setEvolutionOpen(true); } : undefined} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}{lessonNotice}</>;

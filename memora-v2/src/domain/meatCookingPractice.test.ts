@@ -1,6 +1,6 @@
 import { expect, it } from 'vitest';
 import { reviewUnits } from '../preview/previewUnit';
-import { meatCookingLesson, preparedMeatCookingPractice } from './meatCookingPractice';
+import { meatCookingLesson, preparedMeatCookingPractice, meatCookingPreparation } from './meatCookingPractice';
 import { dinnerCookingSkill } from './dinnerCookingPractice';
 import { grammarChecksForExperience, validateGrammarLesson } from './grammarLesson';
 import { validateUnit } from './unit';
@@ -20,6 +20,14 @@ it('reutiliza COOK vigente de otra ficha y prepara MEAT antes de comprender, mon
   expect(result.unit.communication?.dialogue?.partnerLanguage).toBe('es'); expect(result.unit.practiceSentences).toEqual([]);
   expect([result.unit.sentence.en, ...result.unit.sentence.slots.flatMap((slot) => slot.choices)].join(' ')).not.toMatch(/\b(eggs|keys|desk|pan|and)\b/);
   expect(JSON.stringify([source, kitchen])).toBe(before);
+});
+it('la ayuda deriva el paso faltante sin confundir palabras con uso ni inventar una fuente ausente', () => {
+  const need = (words = memories, attempts: GrammarAttempt[] = [], sources = [kitchen]) => meatCookingPreparation(source, 'ing', words, attempts, sources);
+  expect(need([], [], []).status).toBe('catalogue'); expect(need([], [], []).target).toBeUndefined();
+  expect(need([]).target).toMatchObject({ unitId: kitchen.id, mode: 'vocabulary' });
+  expect(need(memories.filter((memory) => memory.key !== 'meat')).target).toMatchObject({ unitId: source.id, mode: 'vocabulary' });
+  expect(need().target).toMatchObject({ unitId: kitchen.id, mode: 'grammar' });
+  expect(need(memories, [prior]).status).toBe('ready');
 });
 it('una clave COOK, otro sentido, asociación anterior o escritura ayudada no sustituyen preparación transversal', () => {
   const run = (words = memories, attempts = [prior], sources = [kitchen]) => preparedMeatCookingPractice(source, 'ing', words, attempts, sources);

@@ -30,12 +30,13 @@ import { teethBrushingIdentity, teethBrushingSkill, preparedTeethBrushingPractic
 import { mirrorLocationIdentity, mirrorLocationSkill, preparedMirrorLocationPractice } from '../domain/mirrorLocationPractice';
 import { dogWalkingIdentity, dogWalkingSkill, preparedDogWalkingPractice } from '../domain/dogWalkingPractice';
 import { treeLocationIdentity, treeLocationSkill, preparedTreeLocationPractice } from '../domain/treeLocationPractice';
-import { meatCookingIdentity, meatCookingSkill, meatCookingLesson, preparedMeatCookingPractice } from '../domain/meatCookingPractice';
+import { meatCookingIdentity, meatCookingSkill, meatCookingLesson, preparedMeatCookingPractice, meatCookingPreparation, type MeatPreparationTarget } from '../domain/meatCookingPractice';
 
-export function JourneyTrickExperience({ unit, stop, preparationSources = [], userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
+export function JourneyTrickExperience({ unit, stop, preparationSources = [], onPrepare, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
   syncStatus: SyncStatus; appearance: Appearance; onToggleAppearance: () => void; nextLabel?: string;
   preparationSources?: readonly UnitSummary[];
+  onPrepare?: (target: MeatPreparationTarget) => void;
 }) {
   const routeTrick = stop.routeTrick!;
   const form = unit.grammar.find((candidate) => candidate.id === routeTrick.formId);
@@ -189,6 +190,15 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], us
     }
     setFinished(true);
   }
+  const preparation = meatCookingLesson(unit, trick.formId) && (!lesson || unavailable)
+    ? meatCookingPreparation(unit, trick.formId, readWordMemories(userId), readGrammarAttempts(userId), preparationSources) : null;
+  if (preparation && preparation.status !== 'ready') return <main className={`game-screen journey-trick${!inspection ? ' play-flow' : ''}`}>
+    <PlayHeader title="Prepara tu siguiente mensaje" onExit={() => { stopSpeech(); onExit(); }} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} inspection={inspection} />
+    <section className="game-stage"><GameCard><h1>Un paso antes de cocinar carne</h1><p>{preparation.caption}</p>
+      {preparation.target && onPrepare ? <button type="button" className="primary-action" onClick={() => { stopSpeech(); onPrepare(preparation.target!); }}>{preparation.target.label}</button> : null}
+      <button type="button" className="quiet-action" onClick={onNext}>Seguir con otras palabras →</button>
+    </GameCard></section>
+  </main>;
   return <main className={`game-screen journey-trick${!inspection ? ' play-flow' : ''}`}>
     <PlayHeader title={finished ? 'Objetivo practicado' : continuation?.phase === 'build' ? 'Monta tu mensaje' : continuation?.phase === 'conversation' ? 'Responde al personaje' : authoredPractice?.lesson.title ?? 'Descubre cómo decirlo'} onExit={() => { stopSpeech(); onExit(); }} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} inspection={inspection} trail={episode && !unavailable ? { steps: ['Descubre', 'Monta', 'Conversa', 'Tu práctica'], current: finished ? 3 : continuation?.phase === 'build' ? 1 : continuation?.phase === 'conversation' ? 2 : 0 } : undefined} />
     {!finished && lesson ? <h1 className="sr-only">{trick.title}</h1> : null}

@@ -23,18 +23,19 @@ const stop = trickStop(source, grammarTricks(source)[0]);
 const user = 'meat-episode-isolated';
 let tree: ReactTestRenderer;
 const finished = vi.fn();
+const prepare = vi.fn();
 const text = (value: any): string => typeof value === 'string' ? value : Array.isArray(value) ? value.map(text).join(' ') : value?.children ? text(value.children) : '';
 const visible = () => text(tree.toJSON()).replace(/\s+/gu, '');
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).trim() === label)!;
 const checkpoint = () => readTrickCheckpoint(user, stop.id, source.contentVersion ?? '1');
 const learner = () => readLearningActivities(user).filter((event) => event.source === 'learner');
-async function mount(sources: AtomicUnit[] = [kitchen]) { await act(async () => { tree = create(<JourneyTrickExperience unit={source} stop={stop} preparationSources={sources} userId={user} inspection={false} onFinished={finished} onNext={() => {}} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />); }); }
+async function mount(sources: AtomicUnit[] = [kitchen]) { await act(async () => { tree = create(<JourneyTrickExperience unit={source} stop={stop} preparationSources={sources} onPrepare={prepare} userId={user} inspection={false} onFinished={finished} onNext={() => {}} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />); }); }
 async function advance() {
   const region = tree.root.findByProps({ role: 'region' }); const target = { closest: () => null }; const currentTarget = { scrollTop: 100, scrollHeight: 700, clientHeight: 600 };
   await act(async () => { region.props.onTouchStart({ target, currentTarget, touches: [{ clientY: 350 }] }); region.props.onTouchMove({ target, currentTarget, touches: [{ clientY: 250 }] }); vi.advanceTimersByTime(230); });
 }
 beforeEach(() => {
-  vi.useFakeTimers(); finished.mockClear(); vi.mocked(playEnglish).mockClear();
+  vi.useFakeTimers(); finished.mockClear(); prepare.mockClear(); vi.mocked(playEnglish).mockClear();
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) });
   vi.stubGlobal('window', { setTimeout, clearTimeout, dispatchEvent: vi.fn(), matchMedia: () => ({ matches: true }), getSelection: () => null });
@@ -72,7 +73,11 @@ it('comprende carne en preparación, reanuda piezas y coordina el acompañamient
 });
 it('el formato sin versión exige su presentación exacta y no crea intentos al faltar', async () => {
   await mount([{ ...kitchen, words: kitchen.words.map((word) => ({ ...word, scene: 'Otra historia.' })) }]);
-  expect(visible()).toContain('Estaescenanecesitapreparación'); expect(learner()).toHaveLength(0);
+  expect(visible()).toContain('PrepararCOOK:cocinar'); expect(learner()).toHaveLength(0);
+  const before = readLearningActivities(user);
+  await act(async () => button('Preparar COOK: cocinar').props.onClick());
+  expect(prepare).toHaveBeenCalledWith({ unitId: kitchen.id, mode: 'vocabulary', label: 'Preparar COOK: cocinar' });
+  expect(readLearningActivities(user)).toEqual(before);
 });
 it('un borrador sin lección legacy compatible no se borra ni se sustituye por la aplicación nueva', async () => {
   writeTrickCheckpoint(user, stop.id, source.contentVersion ?? '1', { stage: 3, checkIndex: 2, checkId: 'use', input: 'I am cook', feedback: 'help', helped: true });

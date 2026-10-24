@@ -30,18 +30,27 @@ export function meatCookingLesson(unit: AtomicUnit, formId: string): GrammarLess
   ] };
 }
 
-export function preparedMeatCookingPractice(unit: AtomicUnit, formId: string, memories: readonly WordMemory[], attempts: readonly GrammarAttempt[], sources: readonly UnitSummary[]): { lesson: GrammarLessonData; unit: AtomicUnit } | null {
-  const lesson = meatCookingLesson(unit, formId);
+export interface MeatPreparationTarget { unitId: string; mode: 'vocabulary' | 'grammar'; label: string }
+export interface MeatPreparation { status: 'catalogue' | 'cook' | 'meat' | 'dinner' | 'ready'; caption: string; target?: MeatPreparationTarget }
+export function meatCookingPreparation(unit: AtomicUnit, formId: string, memories: readonly WordMemory[], attempts: readonly GrammarAttempt[], sources: readonly UnitSummary[]): MeatPreparation {
+  if (!meatCookingLesson(unit, formId)) return { status: 'catalogue', caption: 'Esta versión de la escena necesita revisión. Tu progreso se conserva.' };
   const source = sources.find((candidate) => candidate.id === 'm1-test-kitchen' && candidate.sentence?.en === "I'm cooking dinner in the kitchen.");
   const cook = source?.words?.find((word) => word.en === 'COOK' && word.es === 'cocinar');
-  const cookedMeaning = cook && memories.some((memory) => practicedWordMeaning(memory, cook)
+  if (!cook || !(cook.associationId && cook.associationVersion !== undefined || cook.bridge && cook.scene && cook.ipa)) return { status: 'catalogue', caption: 'Falta la ficha actual de COOK: cocinar. No vamos a adivinarla ni cambiar lo que ya has hecho. Puedes seguir con otras palabras.' };
+  const cookedMeaning = memories.some((memory) => practicedWordMeaning(memory, cook) && memory.word.associationMode === cook.associationMode
     && (cook.associationId && cook.associationVersion !== undefined
       ? true
       : Boolean(cook.bridge && cook.scene && cook.ipa && memory.word.associationId === cook.associationId && memory.word.associationVersion === cook.associationVersion
         && memory.word.bridge === cook.bridge && memory.word.scene === cook.scene && memory.word.ipa === cook.ipa)));
-  if (!lesson || !cookedMeaning
-    || !memories.some((memory) => practicedWordMeaning(memory, unit.words.find((word) => word.en === 'MEAT')!))
-    || !attempts.some((attempt) => attempt.unitId === source!.id && attempt.skill === dinnerCookingSkill && attempt.kind === 'write' && attempt.correct && !attempt.helped)) return null;
+  if (!cookedMeaning) return { status: 'cook', caption: 'Primero vamos a preparar COOK: cocinar, con su historia y sonido actuales. Después podrás aplicarlo a la carne.', target: { unitId: source!.id, mode: 'vocabulary', label: 'Preparar COOK: cocinar' } };
+  if (!memories.some((memory) => practicedWordMeaning(memory, unit.words.find((word) => word.en === 'MEAT')!))) return { status: 'meat', caption: 'La acción ya está preparada. Ahora vamos con MEAT: carne, su historia y su sonido.', target: { unitId: unit.id, mode: 'vocabulary', label: 'Preparar MEAT: carne' } };
+  if (!attempts.some((attempt) => attempt.unitId === source!.id && attempt.skill === dinnerCookingSkill && attempt.kind === 'write' && attempt.correct && !attempt.helped)) return { status: 'dinner', caption: 'Ya tienes las palabras. Practica primero el aviso de la cena: así podrás aplicar lo que haces ahora a otro alimento.', target: { unitId: source!.id, mode: 'grammar', label: 'Practicar el aviso de la cena' } };
+  return { status: 'ready', caption: 'Palabras y aplicación anterior preparadas.' };
+}
+
+export function preparedMeatCookingPractice(unit: AtomicUnit, formId: string, memories: readonly WordMemory[], attempts: readonly GrammarAttempt[], sources: readonly UnitSummary[]): { lesson: GrammarLessonData; unit: AtomicUnit } | null {
+  const lesson = meatCookingLesson(unit, formId);
+  if (!lesson || meatCookingPreparation(unit, formId, memories, attempts, sources).status !== 'ready') return null;
   const en = 'I am cooking meat.';
   return { lesson, unit: { ...unit, sentence: { en, es: 'Estoy cocinando carne.', pronunciationTip: 'Escucha MEAT dentro del mensaje completo; MITIN es solo un apoyo para recordar.', slots: [
     { en: 'I', es: 'Yo', choices: ['I', 'am'] }, { en: 'am', es: 'estoy', choices: ['am', 'I'] }, { en: 'cooking', es: 'cocinando', choices: ['cooking', 'I'] }, { en: 'meat.', es: 'carne', choices: ['meat.', 'cooking'] },
