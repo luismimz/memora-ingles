@@ -8,6 +8,9 @@ export interface GameState {
   recallAnswered: boolean;
   /** Restores the visible feedback, not a new attempt or memory score. */
   recallOutcome?: 'correct' | 'wrong';
+  /** Opt-in for fresh vocabulary sessions; absent means keep the legacy task. */
+  recognitionStyle?: 'scene-delivery-v1';
+  recallChoice?: string;
   correct: number;
   combo: number;
   maxCombo: number;
@@ -25,7 +28,7 @@ export interface GameState {
 
 export type GameAction =
   | { type: 'connected'; isLast?: boolean; nextWordIndex?: number; wordCount?: number }
-  | { type: 'answered'; correct: boolean }
+  | { type: 'answered'; correct: boolean; choice?: string }
   | { type: 'nextRecall'; wordCount?: number }
   | { type: 'continue'; grammarCount?: number; sentenceCount?: number; slotCount?: number; conversation?: boolean; wordCount?: number; grammarOnly?: boolean }
   | { type: 'reviewJump'; phase: Phase; index?: number }
@@ -50,13 +53,13 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'answered': {
       if (state.phase !== 'recall' || state.recallAnswered) return state;
       const combo = action.correct ? state.combo + 1 : 0;
-      return { ...state, recallAnswered: true, recallOutcome: action.correct ? 'correct' : 'wrong', correct: state.correct + Number(action.correct), combo, maxCombo: Math.max(state.maxCombo, combo) };
+      return { ...state, recallAnswered: true, recallOutcome: action.correct ? 'correct' : 'wrong', recallChoice: action.choice, correct: state.correct + Number(action.correct), combo, maxCombo: Math.max(state.maxCombo, combo) };
     }
     case 'nextRecall':
       if (state.phase !== 'recall' || !state.recallAnswered) return state;
       return state.recallIndex >= (action.wordCount ?? 3) - 1
         ? { ...state, phase: 'reward' }
-        : { ...state, recallIndex: state.recallIndex + 1, recallAnswered: false, recallOutcome: undefined };
+        : { ...state, recallIndex: state.recallIndex + 1, recallAnswered: false, recallOutcome: undefined, recallChoice: undefined };
     case 'continue':
       if (state.phase === 'reward') return { ...state, phase: 'grammar', grammarIndex: 0 };
       if (state.phase === 'grammar' && state.grammarPlayed) return state.grammarIndex >= (action.grammarCount ?? 4) - 1

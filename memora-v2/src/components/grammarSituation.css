@@ -19,3 +19,10 @@
 .coach-situation-card .coach-content { min-height: 0; gap: 12px; padding: 0; }
 .coach-situation-card .coach-practice h2 { font-size: clamp(1.1rem, 4vw, 1.5rem); }
 .arcade-situation { border: 0; padding: 0; margin: 0; width: 100%; min-width: 0; }
+.word-scene-delivery { display: grid; gap: 12px; width: 100%; min-width: 0; }
+.word-scene-delivery h1 { margin: 0; font-size: clamp(1.35rem, 5vw, 1.9rem); }
+.word-scene-delivery .scene-visual { width: 100%; margin: 0; }
+.word-scene-delivery .situation-options button:disabled { opacity: 1; cursor: default; }
+.word-scene-result { padding: 12px; border-radius: 16px; background: var(--surface-soft); }
+.word-scene-result p { margin: 8px 0; }
+.word-scene-result small { color: var(--muted); }

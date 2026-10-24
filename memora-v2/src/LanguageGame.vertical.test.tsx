@@ -125,3 +125,62 @@ it('el recuerdo sin ayudas no admite scroll como respuesta y conserva el intento
   expect(checkpoint()).toMatchObject({ recallIndex: 1, correct: 1 });
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toEqual(attempts);
 });
+
+const sceneButtons = () => tree.root.findAllByType('button').filter((node) => node.props['data-drop-choice']);
+
+it('tanda nueva enseña primero y conecta inglés con dos escenas conocidas sin responder al desplazar', async () => {
+  await mount();
+  expect(checkpoint()?.recognitionStyle).toBe('scene-delivery-v1');
+  for (const _word of unit.words) await swipe();
+  expect(text(tree.toJSON())).toContain('¿A qué escena va?');
+  const targets = sceneButtons();
+  expect(targets).toHaveLength(2);
+  expect(targets.map((node) => node.props['data-drop-choice'])).toContain(unit.words[0].en);
+  for (const node of targets) {
+    const word = unit.words.find((item) => item.en === node.props['data-drop-choice'])!;
+    expect(text(node)).toContain(word.es);
+  }
+  await swipe();
+  expect(checkpoint()).toMatchObject({ phase: 'recall', recallIndex: 0, recallAnswered: false });
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
+});
+
+it.each([true, false])('entrega nueva acierto=%s espera, reanuda elección y registra exactamente un reconocimiento ayudado', async (correct) => {
+  await mount();
+  for (const _word of unit.words) await swipe();
+  const before = sceneButtons().map((node) => node.props['data-drop-choice']);
+  const choice = sceneButtons().find((node) => (node.props['data-drop-choice'] === unit.words[0].en) === correct)!;
+  const response = choice.props['data-drop-choice'];
+  await act(async () => { choice.props.onClick(); choice.props.onClick(); });
+  const attempts = readLearningActivities(user).filter((row) => row.source === 'learner');
+  expect(attempts).toHaveLength(1);
+  expect(attempts[0]).toMatchObject({ activityId: `word-scene-v1:${unit.words[0].en}`, prompt: unit.words[0].en, response, correct, helped: true, modality: 'choice' });
+  await act(async () => { vi.advanceTimersByTime(20000); });
+  expect(checkpoint()).toMatchObject({ recallIndex: 0, recallAnswered: true, recallChoice: response });
+  act(() => tree.unmount()); await mount();
+  expect(sceneButtons().map((node) => node.props['data-drop-choice'])).toEqual(before);
+  expect(sceneButtons().find((node) => node.props['aria-pressed'])?.props['data-drop-choice']).toBe(response);
+  expect(sceneButtons().every((node) => node.props.disabled)).toBe(true);
+  expect(text(tree.toJSON())).toContain(correct ? 'La palabra ha llegado a su escena.' : 'Mira la conexión:');
+  await act(async () => { vi.advanceTimersByTime(20000); });
+  expect(checkpoint()?.recallIndex).toBe(0);
+  await swipe();
+  expect(checkpoint()).toMatchObject({ recallIndex: 1, recallAnswered: false, correct: Number(correct) });
+  expect(checkpoint()?.recallChoice).toBeUndefined();
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toEqual(attempts);
+});
+
+it('la tanda anterior conserva sus opciones escritas aunque estuviese todavía en la enseñanza', async () => {
+  writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...initialGame, wordIndex: unit.words.length - 1 });
+  await mount(); await swipe();
+  expect(checkpoint()?.recognitionStyle).toBeUndefined();
+  expect(tree.root.findAllByProps({ className: 'recall-choices' })).toHaveLength(1);
+  expect(sceneButtons()).toHaveLength(0);
+});
+
+it('sin dos significados distintos no inventa una escena ni un distractor externo', async () => {
+  const single: AtomicUnit = { ...unit, words: [unit.words[0]] };
+  await mount(single); await swipe();
+  expect(sceneButtons()).toHaveLength(0);
+  expect(tree.root.findByProps({ className: 'recall-choices' }).findAllByType('button')).toHaveLength(1);
+});

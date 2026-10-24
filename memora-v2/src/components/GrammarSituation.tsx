@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type PointerEvent } from 'react';
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import type { LessonCheck, SituationState } from '../domain/grammarLesson';
 import './grammarSituation.css';
 
@@ -81,6 +81,19 @@ export function GrammarSituation(props: GrammarSituationProps) {
 }
 
 function SituationDelivery({ check, selected, feedback, onAnswer, onListen, disabled = false, listenDisabled = false, presentationKey = '' }: GrammarSituationProps) {
+  const situation = check.situation!;
+  const scene = situation.scenes.find((item) => item.choice === selected);
+  return <SceneDelivery message={situation.message} presentationKey={`${presentationKey}:${check.id}`} selected={selected} feedback={feedback} onAnswer={onAnswer} onListen={onListen} disabled={disabled} listenDisabled={listenDisabled} options={situation.scenes.map((item) => ({ choice: item.choice, label: item.choice, visual: <SituationScreen state={item.state} /> }))}>
+    {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{scene.state === 'desk-playing' ? 'Mensaje entregado: está jugando en su escritorio.' : scene.state === 'floor-playing' ? 'Esta persona juega en el suelo. AT MY DESK indica el escritorio.' : scene.state === 'computer-playing' ? 'Mensaje entregado: está jugando usando su ordenador.' : scene.state === 'console-playing' ? 'Las dos personas juegan, pero esta usa una consola. ON MY COMPUTER indica el ordenador.' : feedback === 'correct' ? scene.state === 'search-keys' ? 'Mensaje entregado: el personaje busca las llaves, no el móvil.' : scene.state === 'making-bed' ? 'Mensaje entregado: la persona está haciendo la cama, no descansando en ella.' : 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'resting-bed' ? 'En esta imagen la persona descansa. MAKING MY BED cuenta que está haciendo su cama.' : scene.state === 'search-phone' ? 'Has señalado el móvil. MY KEYS indica que busca sus llaves.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
+  </SceneDelivery>;
+}
+
+/** Shared presentation gesture only. The caller owns attempts, help and progress. */
+export function SceneDelivery({ message, options, selected, feedback, onAnswer, onListen, disabled = false, listenDisabled = false, presentationKey = '', instruction = 'Lleva el mensaje a su escena, o toca la escena.', children }: {
+  message: string; options: { choice: string; label: string; visual: ReactNode }[];
+  selected: string; feedback: 'idle' | 'help' | 'correct'; onAnswer: (answer: string) => void; onListen: () => void;
+  disabled?: boolean; listenDisabled?: boolean; presentationKey?: string; instruction?: string; children?: ReactNode;
+}) {
   const root = useRef<HTMLDivElement>(null);
   const destinations = useRef(new Map<string, HTMLButtonElement>());
   const gesture = useRef<{ id: number; x: number; y: number }>();
@@ -89,11 +102,10 @@ function SituationDelivery({ check, selected, feedback, onAnswer, onListen, disa
   available.current = { disabled, feedback, onAnswer };
   const locked = disabled || feedback === 'correct';
   useEffect(() => { if (locked) { gesture.current = undefined; setDrag(undefined); } }, [locked]);
-  const situation = check.situation!;
   // Stable across help, feedback and reload, but not always the same side for
   // every message. Presentation only; no new learner store or random answer.
-  const hash = [...`${presentationKey}:${check.id}:${situation.message}`].reduce((value, char) => Math.imul(value ^ char.charCodeAt(0), 16777619), 2166136261);
-  const scenes = (hash ^ hash >>> 16) & 1 ? [...situation.scenes].reverse() : situation.scenes;
+  const hash = [...`${presentationKey}:${message}`].reduce((value, char) => Math.imul(value ^ char.charCodeAt(0), 16777619), 2166136261);
+  const scenes = (hash ^ hash >>> 16) & 1 ? [...options].reverse() : options;
   function destination(x: number, y: number) {
     return scenes.find((item) => { const box = destinations.current.get(item.choice)?.getBoundingClientRect(); return box && x >= box.left && x <= box.right && y >= box.top && y <= box.bottom; })?.choice;
   }
@@ -113,18 +125,17 @@ function SituationDelivery({ check, selected, feedback, onAnswer, onListen, disa
     cancel();
     if (choice && moved && !available.current.disabled && available.current.feedback !== 'correct') available.current.onAnswer(choice);
   }
-  const scene = situation.scenes.find((item) => item.choice === selected);
   return <div ref={root} className="grammar-situation">
-    <p className="situation-instruction">Lleva el mensaje a su escena, o toca la escena.</p>
-    <div className={`situation-message situation-token${drag ? ' is-held' : ''}`} lang="en" role="group" aria-label={`Mensaje inglés: ${situation.message}`} draggable={!locked}
+    <p className="situation-instruction">{instruction}</p>
+    <div className={`situation-message situation-token${drag ? ' is-held' : ''}`} lang="en" role="group" aria-label={`Mensaje inglés: ${message}`} draggable={!locked}
       onDragStart={(event) => event.preventDefault()}
       onPointerDown={(event) => { if (locked || event.button !== 0 || event.isPrimary === false) return; event.preventDefault(); event.stopPropagation(); gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY }; event.currentTarget.setPointerCapture?.(event.pointerId); move(event); }}
-      onPointerMove={move} onPointerUp={release} onPointerCancel={cancel} onLostPointerCapture={cancel}>{situation.message}<small lang="es">↘ Lleva este mensaje</small></div>
+      onPointerMove={move} onPointerUp={release} onPointerCancel={cancel} onLostPointerCapture={cancel}>{message}<small lang="es">↘ Lleva este mensaje</small></div>
     <button type="button" className="quiet-action" disabled={listenDisabled} onClick={onListen} aria-label="Escuchar el mensaje inglés">🔊 Escuchar</button>
     <div className="situation-options" role="group" aria-label="Elige la escena que comunica el mensaje">
-      {scenes.map((item) => <button type="button" ref={(node) => { if (node) destinations.current.set(item.choice, node); else destinations.current.delete(item.choice); }} key={item.choice} data-drop-choice={item.choice} className={drag?.over === item.choice ? 'is-drop-target' : ''} aria-pressed={selected === item.choice} disabled={locked} onClick={() => onAnswer(item.choice)}><SituationScreen state={item.state} /><span>{item.choice}</span></button>)}
+      {scenes.map((item) => <button type="button" ref={(node) => { if (node) destinations.current.set(item.choice, node); else destinations.current.delete(item.choice); }} key={item.choice} data-drop-choice={item.choice} className={drag?.over === item.choice ? 'is-drop-target' : ''} aria-pressed={selected === item.choice} disabled={locked} onClick={() => onAnswer(item.choice)}>{item.visual}<span>{item.label}</span></button>)}
     </div>
-    {drag ? <div className="situation-token-ghost" aria-hidden="true" style={{ left: drag.x, top: drag.y }} lang="en">{situation.message}</div> : null}
-    {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{scene.state === 'desk-playing' ? 'Mensaje entregado: está jugando en su escritorio.' : scene.state === 'floor-playing' ? 'Esta persona juega en el suelo. AT MY DESK indica el escritorio.' : scene.state === 'computer-playing' ? 'Mensaje entregado: está jugando usando su ordenador.' : scene.state === 'console-playing' ? 'Las dos personas juegan, pero esta usa una consola. ON MY COMPUTER indica el ordenador.' : feedback === 'correct' ? scene.state === 'search-keys' ? 'Mensaje entregado: el personaje busca las llaves, no el móvil.' : scene.state === 'making-bed' ? 'Mensaje entregado: la persona está haciendo la cama, no descansando en ella.' : 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'resting-bed' ? 'En esta imagen la persona descansa. MAKING MY BED cuenta que está haciendo su cama.' : scene.state === 'search-phone' ? 'Has señalado el móvil. MY KEYS indica que busca sus llaves.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
+    {drag ? <div className="situation-token-ghost" aria-hidden="true" style={{ left: drag.x, top: drag.y }} lang="en">{message}</div> : null}
+    {children}
   </div>;
 }
