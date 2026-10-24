@@ -1,0 +1,33 @@
+import { expect, it } from 'vitest';
+import { reviewUnits } from '../preview/previewUnit';
+import { mirrorLocationLesson, preparedMirrorLocationPractice } from './mirrorLocationPractice';
+import { teethBrushingSkill } from './teethBrushingPractice';
+import { grammarChecksForExperience, validateGrammarLesson } from './grammarLesson';
+import { validateUnit } from './unit';
+import type { WordMemory } from './memory';
+import type { GrammarAttempt } from './grammarMemory';
+const source = reviewUnits.find((unit) => unit.id === 'm1-bathroom-brush')!;
+const memories = source.words.map((word) => ({ key: word.en.toLowerCase(), correct: 1, word })) as WordMemory[];
+const prior = { unitId: source.id, skill: teethBrushingSkill, kind: 'write', correct: true, helped: false } as GrammarAttempt;
+it('prepara THE MIRROR y BY THE MIRROR antes de comprender, montar y escribir una vez', () => {
+  const before = JSON.stringify(source);
+  const result = preparedMirrorLocationPractice(source, 'ing', memories, [prior])!;
+  expect(() => validateGrammarLesson(result.lesson)).not.toThrow();
+  expect(() => validateUnit(result.unit)).not.toThrow();
+  expect(result.lesson.steps[3].en.map((part) => part.text).join('')).toBe('THE MIRROR');
+  expect(result.lesson.steps[4].caption).toContain('proximidad');
+  expect([3, 4, 2, 1, 0].map((index) => result.lesson.checks[0].ordering![index].text).join(' ')).toBe('I AM BRUSHING MY TEETH BY THE MIRROR');
+  expect(grammarChecksForExperience(result.lesson, [result.unit.sentence.en], [result.unit.sentence.en]).map((check) => check.id)).toEqual(['mirror-meaning-v1']);
+  expect(result.unit.communication?.dialogue?.partnerLanguage).toBe('es');
+  expect(result.unit.practiceSentences).toEqual([]);
+  expect(JSON.stringify(result.unit.sentence)).not.toContain('phone');
+  expect(JSON.stringify(source)).toBe(before);
+});
+it('no asume MIRROR ni la aplicación previa por un acierto ayudado o de otra unidad', () => {
+  expect(preparedMirrorLocationPractice(source, 'ing', memories, [])).toBeNull();
+  expect(preparedMirrorLocationPractice(source, 'ing', memories, [{ ...prior, helped: true }])).toBeNull();
+  expect(preparedMirrorLocationPractice(source, 'ing', memories, [{ ...prior, unitId: 'other' }])).toBeNull();
+  expect(preparedMirrorLocationPractice(source, 'ing', memories.slice(0, 2), [prior])).toBeNull();
+  expect(preparedMirrorLocationPractice({ ...source, words: source.words.map((word) => ({ ...word, associationVersion: 30 })) }, 'ing', memories, [prior])).toBeNull();
+  expect(mirrorLocationLesson({ ...source, id: 'other' }, 'ing')).toBeNull();
+});

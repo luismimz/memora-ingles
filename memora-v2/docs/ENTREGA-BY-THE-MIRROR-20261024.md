@@ -1,0 +1,11 @@
+# Junto al espejo: proximidad preparada
+
+Pendiente exacto sobre6100b4c. Nueva práctica manual tras BRUSH/TEETH/MIRROR por sentido/versión y escritura de dientes correcta sin ayuda; no reinicia ni cambia los checkpoints corto/dientes. Contrato fuente exacto m1-bathroom-brush, sin reemplazar autoría o activar unidades.
+
+Seis pasos: I/IAM/acción conocida, THE MIRROR como espejo compartido de casa, BY THE MIRROR como proximidad (no BY=POR universal), mensaje completo/contracción. Cinco piezas→única escritura. Ambas escenas muestran cepillarse dientes; espejo con reflejo frente a ventana con árbol/sol. Nora deja el peine junto al espejo al recibir ubicación. Pregunta/reacción españolas, ningún WHERE/YOUR/COMB nuevo evaluado. El objetivo cambia respecto a guardar merienda, no solo decorado.
+
+Skill mirror-location-prepared-v1, namespace ing:prepared-mirror-location-v1, checks mirror-order/meaning/use-v1. I/AM abreviables con evidencia sin saltar THE/BY. Dos errores→modelo finito[3,4,2,1,0]; conserva primer intento/ayuda/draft/piezas/reload. Arcade mantiene mensajes dientes y proximidad separados, chequeo propio y slots seguros. Aunque la frase nueva coincide con la fuente larga, su skill no habilita diálogo mixto legacy con my keys/by the phone/pregunta inglesa.
+
+8enfocadas/2archivos,520/100integración/build/TypeScript/diff correctos. Tests montados cubren error/reload/corrección→cinco piezas/parcial-reload→una escritura→reacción; prioridad checkpoint dientes y modelo de cinco bloques con ayuda conservada. Dos SVG propios renderizados/inspeccionados600×330. No app/móvil jugados, audio escuchado, diversión ni retención acreditados. Bundle614,39kB/185,22gzip, aviso conservado.
+
+Ruta: Inicio→Gramática→Estoy cepillando, práctica nueva posterior tras aviso de dientes sin ayuda/MIRROR preparado. No forzar repetición inmediata ni borrar progreso. Catálogo, medios externos, cuentas, Directus, sources, piloto yClaude intactos; no palabra/cobertura nueva aprobada por este uso. Copias, huellas y versión realmente servida en checkpoint superior. Siguiente independiente del tramo inicial: WALK/DOG con MY DOG explícito antes de exigir el paseo; NEAR THE TREE queda separado hasta preparación propia.

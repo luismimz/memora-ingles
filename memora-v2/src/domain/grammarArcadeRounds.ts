@@ -12,6 +12,7 @@ import { deskLocationLesson, deskLocationSkill, preparedDeskLocationPractice } f
 import { dinnerCookingLesson, dinnerCookingSkill, preparedDinnerCookingPractice } from './dinnerCookingPractice';
 import { kitchenLocationLesson, kitchenLocationSkill, preparedKitchenLocationPractice } from './kitchenLocationPractice';
 import { teethBrushingLesson, teethBrushingSkill, preparedTeethBrushingPractice } from './teethBrushingPractice';
+import { mirrorLocationLesson, mirrorLocationSkill, preparedMirrorLocationPractice } from './mirrorLocationPractice';
 
 export interface GrammarArcadeRound { unit: AtomicUnit; form?: GrammarForm; skill: string; sentence: UnitSentence; slotIndex: number; slot: { en: string; es: string; choices: string[]; note?: string }; conceptual: boolean; situation?: LessonCheck }
 
@@ -46,7 +47,9 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       const usedKitchen = kitchen && preparedKitchenLocationPractice(unit, form.id, memories, attempts) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === kitchen.id && attempt.check === 'kitchen-meaning-v1' && attempt.correct);
       const teeth = teethBrushingLesson(unit, form.id);
       const usedTeeth = teeth && preparedTeethBrushingPractice(unit, form.id, memories) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === teeth.id && attempt.check === 'teeth-meaning-v1' && attempt.correct);
-      const preparedLessons = [usedComputer ? computer : null, usedDesk ? desk : null, usedDinner ? dinner : null, usedKitchen ? kitchen : null, usedTeeth ? teeth : null].filter((lesson): lesson is GrammarLessonData => Boolean(lesson));
+      const mirror = mirrorLocationLesson(unit, form.id);
+      const usedMirror = mirror && preparedMirrorLocationPractice(unit, form.id, memories, attempts) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === mirror.id && attempt.check === 'mirror-meaning-v1' && attempt.correct);
+      const preparedLessons = [usedComputer ? computer : null, usedDesk ? desk : null, usedDinner ? dinner : null, usedKitchen ? kitchen : null, usedTeeth ? teeth : null, usedMirror ? mirror : null].filter((lesson): lesson is GrammarLessonData => Boolean(lesson));
       const fallback = searchKeysLesson(unit, form.id) ?? bedMakingLesson(unit, form.id) ?? lessonForForm(form, base);
       const lessons = preparedLessons.length ? preparedLessons : fallback ? [fallback] : [];
       return lessons.flatMap((lesson) => lesson.checks.filter((check) => check.kind !== 'write' && check.choices && check.choices.length >= 2 && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
@@ -65,7 +68,9 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       ? preparedKitchenLocationPractice(unit, form.id, memories, attempts)?.unit : null;
     const teethReview = attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === teethBrushingSkill && attempt.correct)
       ? preparedTeethBrushingPractice(unit, form.id, memories)?.unit : null;
-    return [...checks, ...getUnitSentences(teethReview ?? kitchenReview ?? dinnerReview ?? deskReview ?? computerReview ?? unit).filter((sentence) => inspection || !missingGrammarWords(unit, memories).length && sentences.some((memory) => memory.unitId === unit.id && normalizeSentenceAnswer(memory.sentenceEn) === normalizeSentenceAnswer(sentence.en)))
+    const mirrorReview = attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === mirrorLocationSkill && attempt.correct)
+      ? preparedMirrorLocationPractice(unit, form.id, memories, attempts)?.unit : null;
+    return [...checks, ...getUnitSentences(mirrorReview ?? teethReview ?? kitchenReview ?? dinnerReview ?? deskReview ?? computerReview ?? unit).filter((sentence) => inspection || !missingGrammarWords(unit, memories).length && sentences.some((memory) => memory.unitId === unit.id && normalizeSentenceAnswer(memory.sentenceEn) === normalizeSentenceAnswer(sentence.en)))
       .flatMap((sentence) => sentence.slots.map((slot, slotIndex) => ({ unit, form, skill: form.lesson?.id ?? form.id, sentence, slotIndex, slot, conceptual: false })))];
   });
 }
