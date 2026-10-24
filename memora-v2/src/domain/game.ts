@@ -10,6 +10,8 @@ export interface GameState {
   recallOutcome?: 'correct' | 'wrong' | 'modeled';
   /** Opt-in for fresh vocabulary sessions; absent means keep the legacy task. */
   recognitionStyle?: 'scene-delivery-v1';
+  /** Neutral consultations excluded from session attempts; not a memory score. */
+  recognitionModels?: number;
   recallChoice?: string;
   correct: number;
   combo: number;
@@ -58,7 +60,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     }
     case 'recognitionModel':
       if (state.phase !== 'recall' || state.recallAnswered || state.recognitionStyle !== 'scene-delivery-v1') return state;
-      return { ...state, recallAnswered: true, recallOutcome: 'modeled', recallChoice: undefined };
+      return { ...state, recallAnswered: true, recallOutcome: 'modeled', recallChoice: undefined, recognitionModels: (state.recognitionModels ?? 0) + 1 };
     case 'nextRecall':
       if (state.phase !== 'recall' || !state.recallAnswered) return state;
       return state.recallIndex >= (action.wordCount ?? 3) - 1

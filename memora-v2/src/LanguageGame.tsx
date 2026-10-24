@@ -169,6 +169,17 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
     if (startInConversation && unit.communication?.dialogue) return { ...initialGame, phase: 'conversation' as const };
     const saved = readGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1');
     if (!saved) return start;
+    if ((saved.recognitionModels ?? 0) > unit.words.length) return start;
+    if (saved.recognitionStyle === 'scene-delivery-v1' && saved.recognitionModels === undefined) {
+      // Additive compatibility with the just-published model outcome: restore
+      // actual consultations since this unit's last completed vocabulary run.
+      const events = readLearningActivities(userId).filter((event) => event.unitId === unit.id && event.contentVersion === (unit.contentVersion ?? '1'));
+      const lastComplete = events.reduce((last, event, index) => event.activityId === 'vocabulary-completed' ? index : last, -1);
+      const visited = new Set(unit.words.slice(0, saved.recallIndex + Number(saved.recallAnswered)).map((item) => item.en));
+      const models = new Set(events.slice(lastComplete + 1).filter((event) => event.source === 'authored' && event.correct === null && event.activityId === `word-scene-model-v1:${event.skill}` && visited.has(event.skill)).map((event) => event.skill));
+      if (saved.recallOutcome === 'modeled') models.add(unit.words[saved.recallIndex]?.en);
+      saved.recognitionModels = models.size;
+    }
     if (saved.wordIndex >= unit.words.length || saved.recallIndex >= unit.words.length || saved.grammarIndex >= Math.max(1, getPlayableGrammar(unit).length) || saved.sentenceIndex >= getUnitSentences(unit).length) return start;
     if (saved.phase === 'conversation' && !unit.communication?.dialogue) return initialGame;
     if (saved.phase === 'build' && !saved.buildRepair) {
@@ -269,7 +280,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
     }
     const finished = new Date();
     const grammarAttempts = learningMode === 'grammar' ? readLearningActivities(userId).filter((activity) => activity.unitId === unit.id && activity.at >= sessionStarted.current && activity.source === 'learner' && activity.correct !== null && ['grammar', 'construction'].includes(activity.phase)) : [];
-    const result = { correct: learningMode === 'grammar' ? grammarAttempts.filter((attempt) => attempt.correct).length : state.correct, attempted: learningMode === 'grammar' ? grammarAttempts.length : unit.words.length, completedAt: finished.toISOString(), nextReviewAt: nextReviewAt(finished, state.correct === unit.words.length ? 0 : -1).toISOString() };
+    const result = { correct: learningMode === 'grammar' ? grammarAttempts.filter((attempt) => attempt.correct).length : state.correct, attempted: learningMode === 'grammar' ? grammarAttempts.length : Math.max(0, unit.words.length - (state.recognitionModels ?? 0)), completedAt: finished.toISOString(), nextReviewAt: nextReviewAt(finished, state.correct === unit.words.length ? 0 : -1).toISOString() };
     try {
       completeLearningMode(userId, unit, learningMode, result);
       onFinished?.();

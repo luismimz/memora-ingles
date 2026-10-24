@@ -9,6 +9,7 @@ import { initializeJournal } from './domain/progressJournal';
 import type { AtomicUnit } from './domain/unit';
 import { recalledWordIndex } from './domain/activeRecall';
 import { readWordMemories } from './domain/memory';
+import { readAttempts, readSessions } from './domain/learningProfile';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -207,4 +208,25 @@ it('consultar la conexión antes de responder no inventa fallo, acierto ni memor
   expect(checkpoint()).toMatchObject({ recallIndex: 1, recallAnswered: false, correct: 0 });
   expect(readLearningActivities(user)).toEqual(records);
   expect(readWordMemories(user)).toEqual(before);
+});
+
+it('el cierre excluye también las consultas de modelo del denominador de intentos de sesión', async () => {
+  await mount();
+  for (const _word of unit.words) await swipe();
+  for (let index = 0; index < unit.words.length; index++) {
+    await act(async () => button('No me sale: ver la conexión').props.onClick());
+    if (index === 0) {
+      const saved = checkpoint()!;
+      // Simulate the briefly served model checkpoint before the session counter.
+      writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...saved, recognitionModels: undefined });
+      act(() => tree.unmount()); await mount();
+    }
+    expect(checkpoint()?.recognitionModels).toBe(index + 1);
+    await swipe();
+  }
+  expect(readSessions(user)).toHaveLength(1);
+  expect(readSessions(user)[0]).toMatchObject({ correct: 0, attempted: 0 });
+  expect(readAttempts(user)).toHaveLength(0);
+  expect(readWordMemories(user)).toHaveLength(0);
+  expect(finished).toHaveBeenCalledOnce();
 });

@@ -13,6 +13,7 @@ export function readGameCheckpoint(userId: string, unitId: string, version: stri
     const state = saved.state;
     if (state.recognitionStyle !== undefined && state.recognitionStyle !== 'scene-delivery-v1') return null;
     if (state.recallChoice !== undefined && typeof state.recallChoice !== 'string') return null;
+    if (state.recognitionModels !== undefined && (state.recognitionStyle !== 'scene-delivery-v1' || !Number.isInteger(state.recognitionModels) || state.recognitionModels < 0)) return null;
     if (state.recallOutcome !== undefined && !['correct', 'wrong', 'modeled'].includes(state.recallOutcome)) return null;
     if (state.recallOutcome === 'modeled' && state.recognitionStyle !== 'scene-delivery-v1') return null;
     if (!['associate', 'recall', 'reward', 'grammar', 'build', 'conversation'].includes(state.phase ?? '')) return null;
