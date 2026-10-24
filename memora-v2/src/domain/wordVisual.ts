@@ -1,6 +1,6 @@
 import type { AtomicWord } from './unit';
 
-export type MnemonicSceneKind = 'computer-compota' | 'desk-disco' | 'pan-panda';
+export type MnemonicSceneKind = 'computer-compota' | 'desk-disco' | 'pan-panda' | 'egg-ego' | 'meat-mitin';
 /** Only depict the already authored story, never replace another author's cue. */
 export function mnemonicSceneKind(word: AtomicWord): MnemonicSceneKind | undefined {
   if (word.associationMode !== 'acoustic_bridge' || word.imageUrl) return undefined;
@@ -10,6 +10,10 @@ export function mnemonicSceneKind(word: AtomicWord): MnemonicSceneKind | undefin
     && word.scene === 'Un DISCO despliega patas y se convierte en ESCRITORIO.') return 'desk-disco';
   if (word.en === 'PAN' && word.es === 'sartén' && word.bridge === 'PANDA'
     && word.scene === 'Un PANDA se pone la SARTÉN de sombrero.') return 'pan-panda';
+  if (word.en === 'EGG' && word.es === 'huevo' && word.bridge === 'EGO'
+    && word.scene === 'Un EGO enorme sale del HUEVO y aplaude.') return 'egg-ego';
+  if (word.en === 'MEAT' && word.es === 'carne' && word.bridge === 'MITIN'
+    && word.scene === 'Un MITIN lanza CARNE desde la tribuna de cocina.') return 'meat-mitin';
   return undefined;
 }
 

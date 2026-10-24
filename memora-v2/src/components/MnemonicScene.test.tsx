@@ -54,3 +54,41 @@ it('PAN recupera al panda con sartén, no el falso amigo del pan de comer', () =
   expect(mnemonicSceneKind({ ...word, associationMode: 'cognate' })).toBeUndefined();
   expect(JSON.stringify(word)).toBe(before);
 });
+
+it('EGG mantiene su historia de EGO saliendo del huevo sin convertir la vocal española en pronunciación inglesa', () => {
+  const word = reviewUnits.find((unit) => unit.id === 'm1-kitchen-pan')!.words.find((item) => item.en === 'EGG')!;
+  const before = JSON.stringify(word);
+  expect(mnemonicSceneKind(word)).toBe('egg-ego');
+  const hidden = renderToStaticMarkup(<SceneVisual word={word} hideAnswer />);
+  expect(hidden).toContain('data-mnemonic-scene="egg-ego"');
+  expect(hidden).toContain('aria-label="Recuerda la imagen aprendida"');
+  expect(hidden).not.toContain('EGO'); expect(hidden).not.toContain('HUEVO');
+  expect(hidden).not.toContain('memory-english'); expect(hidden).not.toContain('<text');
+  const teaching = renderToStaticMarkup(<SceneVisual word={word} showMemoryLink />);
+  expect(teaching).toContain('EGO'); expect(teaching).toContain('EGG'); expect(teaching).toContain('HUEVO');
+  expect(mnemonicSceneKind({ ...word, imageUrl: 'own-image' })).toBeUndefined();
+  expect(mnemonicSceneKind({ ...word, es: 'otro sentido' })).toBeUndefined();
+  expect(mnemonicSceneKind({ ...word, bridge: 'otro' })).toBeUndefined();
+  expect(mnemonicSceneKind({ ...word, scene: 'Un huevo normal.' })).toBeUndefined();
+  expect(mnemonicSceneKind({ ...word, associationMode: 'cognate' })).toBeUndefined();
+  expect(JSON.stringify(word)).toBe(before);
+});
+
+it('MEAT visualiza el mitin lanzando carne sin sustituir otro sentido o medio propio', () => {
+  const word = reviewUnits.find((unit) => unit.id === 'm1-kitchen-pan')!.words.find((item) => item.en === 'MEAT')!;
+  const before = JSON.stringify(word);
+  expect(mnemonicSceneKind(word)).toBe('meat-mitin');
+  const hidden = renderToStaticMarkup(<SceneVisual word={word} hideAnswer />);
+  expect(hidden).toContain('data-mnemonic-scene="meat-mitin"');
+  expect(hidden).toContain('aria-label="Recuerda la imagen aprendida"');
+  expect(hidden).not.toContain('MITIN'); expect(hidden).not.toContain('CARNE');
+  expect(hidden).not.toContain('memory-english'); expect(hidden).not.toContain('<text');
+  const teaching = renderToStaticMarkup(<SceneVisual word={word} showMemoryLink />);
+  expect(teaching).toContain('MITIN'); expect(teaching).toContain('MEAT'); expect(teaching).toContain('CARNE');
+  expect(mnemonicSceneKind({ ...word, imageUrl: 'own-image' })).toBeUndefined();
+  expect(mnemonicSceneKind({ ...word, es: 'otro sentido' })).toBeUndefined();
+  expect(mnemonicSceneKind({ ...word, bridge: 'otro' })).toBeUndefined();
+  expect(mnemonicSceneKind({ ...word, scene: 'Otra escena de carne.' })).toBeUndefined();
+  expect(mnemonicSceneKind({ ...word, associationMode: 'cognate' })).toBeUndefined();
+  expect(JSON.stringify(word)).toBe(before);
+});
