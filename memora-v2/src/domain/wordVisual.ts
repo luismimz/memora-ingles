@@ -1,6 +1,6 @@
 import type { AtomicWord } from './unit';
 
-export type MnemonicSceneKind = 'computer-compota' | 'desk-disco';
+export type MnemonicSceneKind = 'computer-compota' | 'desk-disco' | 'pan-panda';
 /** Only depict the already authored story, never replace another author's cue. */
 export function mnemonicSceneKind(word: AtomicWord): MnemonicSceneKind | undefined {
   if (word.associationMode !== 'acoustic_bridge' || word.imageUrl) return undefined;
@@ -8,6 +8,8 @@ export function mnemonicSceneKind(word: AtomicWord): MnemonicSceneKind | undefin
     && word.scene === 'La COMPOTA brota de un ORDENADOR y pega sus teclas.') return 'computer-compota';
   if (word.en === 'DESK' && word.es === 'escritorio' && word.bridge === 'DISCO'
     && word.scene === 'Un DISCO despliega patas y se convierte en ESCRITORIO.') return 'desk-disco';
+  if (word.en === 'PAN' && word.es === 'sartén' && word.bridge === 'PANDA'
+    && word.scene === 'Un PANDA se pone la SARTÉN de sombrero.') return 'pan-panda';
   return undefined;
 }
 
