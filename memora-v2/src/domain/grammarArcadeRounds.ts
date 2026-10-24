@@ -15,11 +15,12 @@ import { teethBrushingLesson, teethBrushingSkill, preparedTeethBrushingPractice 
 import { mirrorLocationLesson, mirrorLocationSkill, preparedMirrorLocationPractice } from './mirrorLocationPractice';
 import { dogWalkingLesson, dogWalkingSkill, preparedDogWalkingPractice } from './dogWalkingPractice';
 import { treeLocationLesson, treeLocationSkill, preparedTreeLocationPractice } from './treeLocationPractice';
+import { meatCookingLesson, meatCookingSkill, preparedMeatCookingPractice } from './meatCookingPractice';
 
 export interface GrammarArcadeRound { unit: AtomicUnit; form?: GrammarForm; skill: string; sentence: UnitSentence; slotIndex: number; slot: { en: string; es: string; choices: string[]; note?: string }; conceptual: boolean; situation?: LessonCheck }
 
 /** Reuse the authored question and distractors, never invent the next grammar topic. */
-export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspection = false): GrammarArcadeRound[] {
+export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspection = false, preparationSources: readonly AtomicUnit[] = units): GrammarArcadeRound[] {
   const attempts = readGrammarAttempts(userId);
   const sentences = readSentenceMemories(userId);
   const memories = readWordMemories(userId);
@@ -55,7 +56,9 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       const usedDog = dog && preparedDogWalkingPractice(unit, form.id, memories) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === dog.id && attempt.check === 'dog-meaning-v1' && attempt.correct);
       const tree = treeLocationLesson(unit, form.id);
       const usedTree = tree && preparedTreeLocationPractice(unit, form.id, memories, attempts) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === tree.id && attempt.check === 'tree-meaning-v1' && attempt.correct);
-      const preparedLessons = [usedComputer ? computer : null, usedDesk ? desk : null, usedDinner ? dinner : null, usedKitchen ? kitchen : null, usedTeeth ? teeth : null, usedMirror ? mirror : null, usedDog ? dog : null, usedTree ? tree : null].filter((lesson): lesson is GrammarLessonData => Boolean(lesson));
+      const meat = meatCookingLesson(unit, form.id);
+      const usedMeat = meat && preparedMeatCookingPractice(unit, form.id, memories, attempts, preparationSources) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === meat.id && attempt.check === 'meat-meaning-v1' && attempt.correct);
+      const preparedLessons = [usedComputer ? computer : null, usedDesk ? desk : null, usedDinner ? dinner : null, usedKitchen ? kitchen : null, usedTeeth ? teeth : null, usedMirror ? mirror : null, usedDog ? dog : null, usedTree ? tree : null, usedMeat ? meat : null].filter((lesson): lesson is GrammarLessonData => Boolean(lesson));
       const fallback = searchKeysLesson(unit, form.id) ?? bedMakingLesson(unit, form.id) ?? lessonForForm(form, base);
       const lessons = preparedLessons.length ? preparedLessons : fallback ? [fallback] : [];
       return lessons.flatMap((lesson) => lesson.checks.filter((check) => check.kind !== 'write' && check.choices && check.choices.length >= 2 && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
@@ -80,7 +83,9 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       ? preparedDogWalkingPractice(unit, form.id, memories)?.unit : null;
     const treeReview = attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === treeLocationSkill && attempt.correct)
       ? preparedTreeLocationPractice(unit, form.id, memories, attempts)?.unit : null;
-    return [...checks, ...getUnitSentences(treeReview ?? dogReview ?? mirrorReview ?? teethReview ?? kitchenReview ?? dinnerReview ?? deskReview ?? computerReview ?? unit).filter((sentence) => inspection || !missingGrammarWords(unit, memories).length && sentences.some((memory) => memory.unitId === unit.id && normalizeSentenceAnswer(memory.sentenceEn) === normalizeSentenceAnswer(sentence.en)))
+    const meatReview = attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === meatCookingSkill && attempt.correct)
+      ? preparedMeatCookingPractice(unit, form.id, memories, attempts, preparationSources)?.unit : null;
+    return [...checks, ...getUnitSentences(meatReview ?? treeReview ?? dogReview ?? mirrorReview ?? teethReview ?? kitchenReview ?? dinnerReview ?? deskReview ?? computerReview ?? unit).filter((sentence) => inspection || !missingGrammarWords(unit, memories).length && sentences.some((memory) => memory.unitId === unit.id && normalizeSentenceAnswer(memory.sentenceEn) === normalizeSentenceAnswer(sentence.en)))
       .flatMap((sentence) => sentence.slots.map((slot, slotIndex) => ({ unit, form, skill: form.lesson?.id ?? form.id, sentence, slotIndex, slot, conceptual: false })))];
   });
 }

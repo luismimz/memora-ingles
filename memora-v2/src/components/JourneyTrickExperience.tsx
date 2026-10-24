@@ -30,10 +30,12 @@ import { teethBrushingIdentity, teethBrushingSkill, preparedTeethBrushingPractic
 import { mirrorLocationIdentity, mirrorLocationSkill, preparedMirrorLocationPractice } from '../domain/mirrorLocationPractice';
 import { dogWalkingIdentity, dogWalkingSkill, preparedDogWalkingPractice } from '../domain/dogWalkingPractice';
 import { treeLocationIdentity, treeLocationSkill, preparedTreeLocationPractice } from '../domain/treeLocationPractice';
+import { meatCookingIdentity, meatCookingSkill, meatCookingLesson, preparedMeatCookingPractice } from '../domain/meatCookingPractice';
 
-export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
+export function JourneyTrickExperience({ unit, stop, preparationSources = [], userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
   syncStatus: SyncStatus; appearance: Appearance; onToggleAppearance: () => void; nextLabel?: string;
+  preparationSources?: readonly UnitSummary[];
 }) {
   const routeTrick = stop.routeTrick!;
   const form = unit.grammar.find((candidate) => candidate.id === routeTrick.formId);
@@ -42,6 +44,8 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const [checkpoint] = useState(() => inspection ? null : readTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1'));
   const [authoredPractice] = useState(() => {
     const memories = readWordMemories(userId);
+    const meat = !checkpoint || checkpoint.episodeId === meatCookingIdentity ? preparedMeatCookingPractice(unit, routeTrick.formId, memories, readGrammarAttempts(userId), preparationSources) : null;
+    if (meat) return { ...meat, identity: meatCookingIdentity, modelOrder: [2, 3, 1, 0] };
     const tree = !checkpoint || checkpoint.episodeId === treeLocationIdentity ? preparedTreeLocationPractice(unit, routeTrick.formId, memories, readGrammarAttempts(userId)) : null;
     if (tree) return { ...tree, identity: treeLocationIdentity, modelOrder: [3, 4, 2, 1, 0] };
     const dog = !checkpoint || checkpoint.episodeId === dogWalkingIdentity ? preparedDogWalkingPractice(unit, routeTrick.formId, memories) : null;
@@ -69,7 +73,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const sceneWord = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase()) ?? unit.words[0];
   const practicedPattern = !inspection && form && !form.lesson && (form.visualContract === 'present-continuous' || form.id === 'ing')
     && readGrammarAttempts(userId).some((attempt) => attempt.skill.startsWith('present-continuous:') && attempt.skill !== trick.skill && attempt.kind === 'write' && attempt.correct && !attempt.helped);
-  const reuseSubject = Boolean(authoredPractice && !inspection && readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill, treeLocationSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped));
+  const reuseSubject = Boolean(authoredPractice && !inspection && readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill, treeLocationSkill, meatCookingSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped));
   // An old in-flight coach keeps its identified task/draft, even if an author
   // adds an episode later. Fresh entries opt in only with actual preparation.
   const [shortPractice] = useState(() => authoredPractice?.unit ?? preparedActionPractice(unit, trick.formId, readWordMemories(userId)));
@@ -84,7 +88,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const puzzleCheck = shortPractice ? lesson?.checks.find((check) => check.ordering) : undefined;
   const puzzlePieces = puzzleCheck?.ordering;
   const wholeOrder = useRef(continuation?.order ?? []);
-  const unavailable = Boolean(!checkpoint && !authoredPractice && (searchKeysLesson(unit, trick.formId) || bedMakingLesson(unit, trick.formId)) || checkpoint?.episodeId && !episode || continuation && (!episode || !sentence || continuation.filledSlots > sentence.slots.length || continuation.phase === 'conversation' && continuation.filledSlots !== sentence.slots.length || puzzlePieces && continuation.order?.some((index) => index >= puzzlePieces.length)));
+  const unavailable = Boolean(!checkpoint && !authoredPractice && (searchKeysLesson(unit, trick.formId) || bedMakingLesson(unit, trick.formId) || meatCookingLesson(unit, trick.formId)) || checkpoint?.episodeId && !episode || continuation && (!episode || !sentence || continuation.filledSlots > sentence.slots.length || continuation.phase === 'conversation' && continuation.filledSlots !== sentence.slots.length || puzzlePieces && continuation.order?.some((index) => index >= puzzlePieces.length)));
   const chatAnswers = episode ? conversationPracticeAnswers(episodeUnit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : [];
   const slotKey = continuation ? `${continuation.phase}:${continuation.sentenceIndex}:${continuation.filledSlots}` : 'coach';
   const modelAid = useRef(Boolean(continuation?.modelUsed));

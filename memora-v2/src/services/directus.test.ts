@@ -107,6 +107,7 @@ describe('lectura tolerante de gramática publicada', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ data: [{ id: content.id, title: content.title, status: 'published', content }] }), { headers: { 'content-type': 'application/json' } })));
     const summaries = await loadPublishedUnitSummaries();
     expect(summaries[0].words![0]).toMatchObject({ en: content.words[0].en, es: content.words[0].es, associationId: 'reviewed-play', associationVersion: 2 });
+    expect(summaries[0].words![0]).toMatchObject({ bridge: content.words[0].bridge, scene: content.words[0].scene, ipa: content.words[0].ipa });
     expect(fetch).toHaveBeenCalledOnce();
   });
   it('estabiliza el catálogo por ID aunque Directus responda en otro orden', async () => {

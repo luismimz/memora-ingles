@@ -21,12 +21,13 @@ import { teethBrushingLesson, teethBrushingSkill } from '../domain/teethBrushing
 import { mirrorLocationSkill } from '../domain/mirrorLocationPractice';
 import { dogWalkingLesson, dogWalkingSkill } from '../domain/dogWalkingPractice';
 import { treeLocationSkill } from '../domain/treeLocationPractice';
+import { meatCookingLesson, meatCookingSkill } from '../domain/meatCookingPractice';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
   const practiced = new Set([...readGrammarAttempts(userId).filter((attempt) => attempt.correct).map((attempt) => attempt.unitId),
     ...readLearningActivities(userId).filter((attempt) => attempt.phase === 'construction' && attempt.correct).map((attempt) => attempt.unitId)]);
-  return units.filter((unit) => practiced.has(unit.id) && grammarArcadeRounds(userId, [unit]).length > 0);
+  return units.filter((unit) => practiced.has(unit.id) && grammarArcadeRounds(userId, [unit], false, units).length > 0);
 }
 export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => {
   const activities = readLearningActivities(userId);
@@ -41,12 +42,14 @@ export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => {
     const legacyDinner = dinnerCookingLesson(unit, 'ing');
     const legacyTeeth = teethBrushingLesson(unit, 'ing');
     const legacyDog = dogWalkingLesson(unit, 'ing');
-    const legacyAnswers = legacyBed || legacyComputer || legacyDinner || legacyTeeth || legacyDog ? new Set(dialogue.turns.filter((turn) => turn.role === 'B').flatMap((turn) => [turn.en, ...turn.acceptedAnswers]).map(normalizeSentenceAnswer)) : null;
+    const legacyMeat = meatCookingLesson(unit, 'ing');
+    const legacyAnswers = legacyBed || legacyComputer || legacyDinner || legacyTeeth || legacyDog || legacyMeat ? new Set(dialogue.turns.filter((turn) => turn.role === 'B').flatMap((turn) => [turn.en, ...turn.acceptedAnswers]).map(normalizeSentenceAnswer)) : null;
     return activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)
       && (!legacyComputer || activity.skill !== computerPlayingSkill)
       && (!legacyDinner || ![dinnerCookingSkill, kitchenLocationSkill].includes(activity.skill))
       && (!legacyTeeth || ![teethBrushingSkill, mirrorLocationSkill].includes(activity.skill))
       && (!legacyDog || ![dogWalkingSkill, treeLocationSkill].includes(activity.skill))
+      && (!legacyMeat || activity.skill !== meatCookingSkill)
       && (!legacyAnswers || activity.contentVersion === (unit.contentVersion ?? '1') && legacyAnswers.has(normalizeSentenceAnswer(activity.response))));
   });
 };

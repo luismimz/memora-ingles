@@ -1,0 +1,35 @@
+import { expect, it } from 'vitest';
+import { reviewUnits } from '../preview/previewUnit';
+import { meatCookingLesson, preparedMeatCookingPractice } from './meatCookingPractice';
+import { dinnerCookingSkill } from './dinnerCookingPractice';
+import { grammarChecksForExperience, validateGrammarLesson } from './grammarLesson';
+import { validateUnit } from './unit';
+import type { WordMemory } from './memory';
+import type { GrammarAttempt } from './grammarMemory';
+const source = reviewUnits.find((unit) => unit.id === 'm1-kitchen-pan')!;
+const kitchen = reviewUnits.find((unit) => unit.id === 'm1-test-kitchen')!;
+const memories = [...source.words, ...kitchen.words].map((word) => ({ key: word.en.toLowerCase(), correct: 1, word })) as WordMemory[];
+const prior = { unitId: kitchen.id, skill: dinnerCookingSkill, kind: 'write', correct: true, helped: false } as GrammarAttempt;
+it('reutiliza COOK vigente de otra ficha y prepara MEAT antes de comprender, montar y escribir una vez', () => {
+  const before = JSON.stringify([source, kitchen]);
+  const result = preparedMeatCookingPractice(source, 'ing', memories, [prior], [kitchen])!;
+  expect(() => validateGrammarLesson(result.lesson)).not.toThrow(); expect(() => validateUnit(result.unit)).not.toThrow();
+  expect(result.lesson.steps[3].en.map((part) => part.text).join('')).toBe('MEAT');
+  expect([2, 3, 1, 0].map((index) => result.lesson.checks[0].ordering![index].text).join(' ')).toBe('I AM COOKING MEAT');
+  expect(grammarChecksForExperience(result.lesson, [result.unit.sentence.en], [result.unit.sentence.en]).map((check) => check.id)).toEqual(['meat-meaning-v1']);
+  expect(result.unit.communication?.dialogue?.partnerLanguage).toBe('es'); expect(result.unit.practiceSentences).toEqual([]);
+  expect([result.unit.sentence.en, ...result.unit.sentence.slots.flatMap((slot) => slot.choices)].join(' ')).not.toMatch(/\b(eggs|keys|desk|pan|and)\b/);
+  expect(JSON.stringify([source, kitchen])).toBe(before);
+});
+it('una clave COOK, otro sentido, asociación anterior o escritura ayudada no sustituyen preparación transversal', () => {
+  const run = (words = memories, attempts = [prior], sources = [kitchen]) => preparedMeatCookingPractice(source, 'ing', words, attempts, sources);
+  expect(run(memories, [prior], [])).toBeNull(); expect(run(memories, [])).toBeNull();
+  expect(run(memories, [{ ...prior, helped: true }])).toBeNull(); expect(run(memories, [{ ...prior, unitId: source.id }])).toBeNull();
+  expect(run(memories.filter((memory) => memory.word.en !== 'MEAT'))).toBeNull();
+  expect(run(memories.map((memory) => memory.key === 'cook' ? { ...memory, word: { ...memory.word, es: 'cocinero' } } : memory))).toBeNull();
+  expect(run(memories, [prior], [{ ...kitchen, words: kitchen.words.map((word) => ({ ...word, associationVersion: 40 })) }])).toBeNull();
+  expect(run(memories, [prior], [{ ...kitchen, words: kitchen.words.map((word) => ({ ...word, scene: 'Otra historia de cocinar.' })) }])).toBeNull();
+  expect(run(memories, [prior], [{ ...kitchen, words: kitchen.words.map((word) => ({ ...word, bridge: '' })) }])).toBeNull();
+  expect(run(memories, [prior], [{ ...kitchen, sentence: { ...kitchen.sentence, en: 'Other authored message.' } }])).toBeNull();
+  expect(meatCookingLesson({ ...source, id: 'other' }, 'ing')).toBeNull();
+});

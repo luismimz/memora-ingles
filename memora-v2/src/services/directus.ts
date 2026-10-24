@@ -99,7 +99,7 @@ export interface UnitSummary {
   location?: AtomicUnit['location'];
   hasDialogue?: boolean;
   teaser?: string;
-  words?: Array<Pick<AtomicUnit['words'][number], 'en' | 'es' | 'associationMode' | 'associationId' | 'associationVersion'>>;
+  words?: Array<Pick<AtomicUnit['words'][number], 'en' | 'es' | 'associationMode' | 'associationId' | 'associationVersion'> & Partial<Pick<AtomicUnit['words'][number], 'bridge' | 'scene' | 'ipa'>>>;
   sentence?: Pick<AtomicUnit['sentence'], 'en' | 'es'>;
 }
 
@@ -237,7 +237,7 @@ export async function loadPublishedUnitSummaries(signal?: AbortSignal): Promise<
         location: unit?.location,
         hasDialogue: Boolean(unit?.communication?.dialogue),
         teaser: unit?.communication?.dialogue?.context,
-        words: Array.isArray(unit?.words) ? unit.words.filter((word) => word && typeof word.en === 'string' && typeof word.es === 'string').map(({ en, es, associationMode, associationId, associationVersion }) => ({ en, es, associationMode, ...(associationId !== undefined ? { associationId } : {}), ...(associationVersion !== undefined ? { associationVersion } : {}) })) : undefined,
+        words: Array.isArray(unit?.words) ? unit.words.filter((word) => word && typeof word.en === 'string' && typeof word.es === 'string').map(({ en, es, associationMode, associationId, associationVersion, bridge, scene, ipa }) => ({ en, es, associationMode, ...(associationId !== undefined ? { associationId } : {}), ...(associationVersion !== undefined ? { associationVersion } : {}), ...(typeof bridge === 'string' ? { bridge } : {}), ...(typeof scene === 'string' ? { scene } : {}), ...(typeof ipa === 'string' ? { ipa } : {}) })) : undefined,
         sentence: unit?.sentence?.en && unit.sentence.es ? { en: unit.sentence.en, es: unit.sentence.es } : undefined,
       };
     }).filter((unit): unit is UnitSummary => unit !== null);
