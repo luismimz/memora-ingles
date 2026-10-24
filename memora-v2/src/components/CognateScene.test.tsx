@@ -4,8 +4,8 @@ import { vocabularyPreviewPacks } from '../preview/vocabularyPacks';
 import { SceneVisual } from './SceneVisual';
 import { CognateAssociationCard } from './CognateAssociationCard';
 import { cognateSceneKind } from '../domain/wordVisual';
-import radioScene from '../assets/cognate-radio-v1.svg';
-import musicScene from '../assets/cognate-music-v1.svg';
+import radioScene from '../assets/cognate-radio-v1.svg?no-inline';
+import musicScene from '../assets/cognate-music-v1.svg?no-inline';
 
 const words = vocabularyPreviewPacks.flatMap((pack) => pack.words).filter((word) => word.associationMode === 'cognate');
 describe('cognados visuales, no fichas solo informativas', () => {

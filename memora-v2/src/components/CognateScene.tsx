@@ -1,6 +1,6 @@
 import type { CognateSceneKind } from '../domain/wordVisual';
-import radioScene from '../assets/cognate-radio-v1.svg';
-import musicScene from '../assets/cognate-music-v1.svg';
+import radioScene from '../assets/cognate-radio-v1.svg?no-inline';
+import musicScene from '../assets/cognate-music-v1.svg?no-inline';
 
 /** Direct-meaning scenes: no invented sound bridge and no written answer in Arcade. */
 export function CognateScene({ kind }: { kind: CognateSceneKind }) {

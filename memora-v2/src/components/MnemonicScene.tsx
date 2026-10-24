@@ -1,9 +1,9 @@
 import type { MnemonicSceneKind } from '../domain/wordVisual';
-import computer from '../assets/mnemonic-computer-compota-v1.svg';
-import desk from '../assets/mnemonic-desk-disco-v1.svg';
-import pan from '../assets/mnemonic-pan-panda-v1.svg';
-import egg from '../assets/mnemonic-egg-ego-v1.svg';
-import meat from '../assets/mnemonic-meat-mitin-v1.svg';
+import computer from '../assets/mnemonic-computer-compota-v1.svg?no-inline';
+import desk from '../assets/mnemonic-desk-disco-v1.svg?no-inline';
+import pan from '../assets/mnemonic-pan-panda-v1.svg?no-inline';
+import egg from '../assets/mnemonic-egg-ego-v1.svg?no-inline';
+import meat from '../assets/mnemonic-meat-mitin-v1.svg?no-inline';
 
 const scenes: Record<MnemonicSceneKind, string> = { 'computer-compota': computer, 'desk-disco': desk, 'pan-panda': pan, 'egg-ego': egg, 'meat-mitin': meat };
 
