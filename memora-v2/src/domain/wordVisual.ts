@@ -1,5 +1,16 @@
 import type { AtomicWord } from './unit';
 
+export type MnemonicSceneKind = 'computer-compota' | 'desk-disco';
+/** Only depict the already authored story, never replace another author's cue. */
+export function mnemonicSceneKind(word: AtomicWord): MnemonicSceneKind | undefined {
+  if (word.associationMode !== 'acoustic_bridge' || word.imageUrl) return undefined;
+  if (word.en === 'COMPUTER' && word.es === 'ordenador' && word.bridge === 'COMPOTA'
+    && word.scene === 'La COMPOTA brota de un ORDENADOR y pega sus teclas.') return 'computer-compota';
+  if (word.en === 'DESK' && word.es === 'escritorio' && word.bridge === 'DISCO'
+    && word.scene === 'Un DISCO despliega patas y se convierte en ESCRITORIO.') return 'desk-disco';
+  return undefined;
+}
+
 export type CognateSceneKind = 'hotel' | 'information' | 'radio' | 'music';
 export function cognateSceneKind(word: AtomicWord): CognateSceneKind | undefined {
   if (word.associationMode !== 'cognate') return undefined;

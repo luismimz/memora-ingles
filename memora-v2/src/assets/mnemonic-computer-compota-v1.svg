@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 300" role="img" aria-labelledby="title desc">
+  <title id="title">La compota sale del ordenador y pega sus teclas</title>
+  <desc id="desc">De la pantalla brota un chorro de fruta triturada que cae sobre el teclado. No hay texto escrito.</desc>
+  <rect width="420" height="300" rx="28" fill="#f8f0dc"/>
+  <circle cx="318" cy="77" r="52" fill="#e4ead8"/>
+  <ellipse cx="211" cy="261" rx="157" ry="15" fill="#d9cbb1"/>
+  <path d="M56 251H371" stroke="#997250" stroke-width="9" stroke-linecap="round"/>
+  <path d="M194 171V215M159 219H231" stroke="#667566" stroke-width="15" stroke-linecap="round"/>
+  <rect x="92" y="49" width="206" height="137" rx="16" fill="#233f38"/>
+  <rect x="104" y="61" width="182" height="109" rx="7" fill="#80a799"/>
+  <path d="M118 145Q145 102 168 129T219 112T274 138V169H105V152Z" fill="#e4ead8"/>
+  <path d="M114 228L270 222L305 248H80Z" fill="#667566" stroke="#233f38" stroke-width="3"/>
+  <g stroke="#f8f0dc" stroke-width="4" stroke-linecap="round">
+    <path d="M115 232H256M107 239H276M139 231L136 242M161 230L160 242M184 230V242M208 229L210 242M231 228L236 242"/>
+  </g>
+  <path d="M196 110Q216 74 240 104Q260 133 246 161Q234 189 262 204Q287 219 273 236Q264 246 234 237L210 238Q190 234 200 223Q217 205 206 189Q184 163 194 140Z" fill="#cc9a51" stroke="#ac8058" stroke-width="4"/>
+  <path d="M213 111Q231 96 234 118M211 151Q203 171 220 186M235 209Q260 217 254 226" fill="none" stroke="#f1cb7d" stroke-width="9" stroke-linecap="round"/>
+  <path d="M222 234V247M246 236V252M270 232V243" stroke="#cc9a51" stroke-width="8" stroke-linecap="round"/>
+  <g transform="translate(337 184)">
+    <rect x="-26" y="-9" width="52" height="66" rx="10" fill="#e4ead8" stroke="#667566" stroke-width="3"/>
+    <path d="M-21 10Q0 3 21 11V46Q0 54-21 46Z" fill="#cc9a51"/>
+    <rect x="-28" y="-18" width="56" height="14" rx="5" fill="#356f65"/>
+    <path d="M-12 28Q-6 16 0 23Q7 15 14 26Q19 40 2 46Q-15 41-12 28Z" fill="#ac8058"/>
+    <path d="M0 23Q0 10 9 10" fill="none" stroke="#356f65" stroke-width="4"/>
+  </g>
+  <g fill="#cc9a51"><circle cx="273" cy="189" r="6"/><circle cx="182" cy="202" r="5"/><circle cx="280" cy="217" r="4"/></g>
+  <path d="M178 85L166 75M261 84L271 74" stroke="#cc9a51" stroke-width="5" stroke-linecap="round"/>
+</svg>

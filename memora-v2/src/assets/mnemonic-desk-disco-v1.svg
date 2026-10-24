@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 300" role="img" aria-labelledby="title desc">
+  <title id="title">Un disco despliega patas y se convierte en escritorio</title>
+  <desc id="desc">Un disco pequeño gira hacia un gran tablero circular con patas desplegadas, cuaderno y lámpara. No hay palabras escritas.</desc>
+  <rect width="420" height="300" rx="28" fill="#f8f0dc"/>
+  <circle cx="307" cy="77" r="55" fill="#e4ead8"/>
+  <ellipse cx="244" cy="257" rx="131" ry="15" fill="#d9cbb1"/>
+  <g transform="translate(69 75) rotate(-18)">
+    <ellipse rx="36" ry="27" fill="#80a799" stroke="#667566" stroke-width="4"/>
+    <ellipse rx="26" ry="19" fill="none" stroke="#f8f0dc" stroke-width="3"/>
+    <ellipse rx="8" ry="6" fill="#cc9a51"/>
+  </g>
+  <path d="M109 78Q150 74 166 109" fill="none" stroke="#cc9a51" stroke-width="5" stroke-linecap="round" stroke-dasharray="6 9"/>
+  <path d="M153 106L169 116L172 97" fill="none" stroke="#cc9a51" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M166 162L142 251M230 173L225 255M327 156L350 252" stroke="#997250" stroke-width="15" stroke-linecap="round"/>
+  <path d="M165 167L197 208M326 160L296 204" stroke="#ac8058" stroke-width="8" stroke-linecap="round"/>
+  <ellipse cx="246" cy="151" rx="112" ry="39" fill="#233f38"/>
+  <ellipse cx="246" cy="139" rx="112" ry="39" fill="#356f65"/>
+  <ellipse cx="246" cy="139" rx="93" ry="30" fill="none" stroke="#80a799" stroke-width="3"/>
+  <ellipse cx="246" cy="139" rx="21" ry="9" fill="#cc9a51"/>
+  <ellipse cx="246" cy="139" rx="5" ry="3" fill="#f8f0dc"/>
+  <path d="M163 133L193 121L221 135L193 148Z" fill="#f8f0dc" stroke="#cc9a51" stroke-width="3"/>
+  <path d="M177 134L194 128M183 138L201 132" stroke="#ac8058" stroke-width="2"/>
+  <path d="M293 126L306 81L287 67" fill="none" stroke="#997250" stroke-width="6" stroke-linecap="round"/>
+  <ellipse cx="293" cy="127" rx="18" ry="5" fill="#997250"/>
+  <path d="M272 52L291 61L283 86L259 74Z" fill="#cc9a51"/>
+  <path d="M266 80L249 112L280 110Z" fill="#fff8df" opacity=".8"/>
+  <path d="M119 177Q96 210 120 235M116 224L120 235L131 229M368 173Q392 206 370 232M368 220L370 232L358 228" fill="none" stroke="#cc9a51" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
