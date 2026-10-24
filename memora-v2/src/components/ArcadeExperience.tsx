@@ -17,6 +17,7 @@ import { bedMakingLesson } from '../domain/bedMakingPractice';
 import { computerPlayingLesson, computerPlayingSkill } from '../domain/computerPlayingPractice';
 import { dinnerCookingLesson, dinnerCookingSkill } from '../domain/dinnerCookingPractice';
 import { kitchenLocationSkill } from '../domain/kitchenLocationPractice';
+import { teethBrushingLesson, teethBrushingSkill } from '../domain/teethBrushingPractice';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
@@ -35,10 +36,12 @@ export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => {
     const legacyBed = bedMakingLesson(unit, 'ing');
     const legacyComputer = computerPlayingLesson(unit, 'ing');
     const legacyDinner = dinnerCookingLesson(unit, 'ing');
-    const legacyAnswers = legacyBed || legacyComputer || legacyDinner ? new Set(dialogue.turns.filter((turn) => turn.role === 'B').flatMap((turn) => [turn.en, ...turn.acceptedAnswers]).map(normalizeSentenceAnswer)) : null;
+    const legacyTeeth = teethBrushingLesson(unit, 'ing');
+    const legacyAnswers = legacyBed || legacyComputer || legacyDinner || legacyTeeth ? new Set(dialogue.turns.filter((turn) => turn.role === 'B').flatMap((turn) => [turn.en, ...turn.acceptedAnswers]).map(normalizeSentenceAnswer)) : null;
     return activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)
       && (!legacyComputer || activity.skill !== computerPlayingSkill)
       && (!legacyDinner || ![dinnerCookingSkill, kitchenLocationSkill].includes(activity.skill))
+      && (!legacyTeeth || activity.skill !== teethBrushingSkill)
       && (!legacyAnswers || activity.contentVersion === (unit.contentVersion ?? '1') && legacyAnswers.has(normalizeSentenceAnswer(activity.response))));
   });
 };

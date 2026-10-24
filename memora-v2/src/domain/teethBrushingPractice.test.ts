@@ -1,0 +1,30 @@
+import { expect, it } from 'vitest';
+import { reviewUnits } from '../preview/previewUnit';
+import { preparedTeethBrushingPractice, teethBrushingLesson } from './teethBrushingPractice';
+import { grammarChecksForExperience, validateGrammarLesson } from './grammarLesson';
+import { validateUnit } from './unit';
+import type { WordMemory } from './memory';
+const source = reviewUnits.find((unit) => unit.id === 'm1-bathroom-brush')!;
+const memories = source.words.map((word) => ({ key: word.en.toLowerCase(), correct: 1, word })) as WordMemory[];
+it('prepara MY TEETH, distingue español natural y conserva escritura única sin exigir el espejo', () => {
+  const before = JSON.stringify(source);
+  const result = preparedTeethBrushingPractice(source, 'ing', memories.slice(0, 2))!;
+  expect(result).not.toBeNull();
+  expect(() => validateGrammarLesson(result.lesson)).not.toThrow();
+  expect(() => validateUnit(result.unit)).not.toThrow();
+  expect(result.lesson.steps[3].en.map((part) => part.text).join('')).toBe('MY TEETH');
+  expect(result.lesson.steps[4].caption).toContain('español natural');
+  expect([2, 3, 1, 0].map((index) => result.lesson.checks[0].ordering![index].text).join(' ')).toBe('I AM BRUSHING MY TEETH');
+  expect(grammarChecksForExperience(result.lesson, [result.unit.sentence.en], [result.unit.sentence.en]).map((check) => check.id)).toEqual(['teeth-meaning-v1']);
+  expect(JSON.stringify(result.unit.sentence)).not.toContain('mirror');
+  expect(result.unit.communication?.dialogue?.partnerLanguage).toBe('es');
+  expect(JSON.stringify(source)).toBe(before);
+});
+it('no asume TEETH por BRUSH ni TOOTH singular, versión nueva o autoría ajena', () => {
+  expect(preparedTeethBrushingPractice(source, 'ing', memories.slice(0, 1))).toBeNull();
+  expect(preparedTeethBrushingPractice(source, 'ing', memories.map((memory) => ({ ...memory, word: { ...memory.word, es: 'otro sentido' } })))).toBeNull();
+  expect(preparedTeethBrushingPractice({ ...source, words: source.words.map((word) => ({ ...word, associationVersion: 8 })) }, 'ing', memories)).toBeNull();
+  expect(teethBrushingLesson({ ...source, id: 'other' }, 'ing')).toBeNull();
+  expect(teethBrushingLesson({ ...source, sentence: { ...source.sentence, en: 'A different authored sentence.' } }, 'ing')).toBeNull();
+  expect(teethBrushingLesson({ ...source, grammarContinuation: { status: 'needs_review', formId: 'ing', vocabulary: ['brush'], grammarSkills: [] } }, 'ing')).toBeNull();
+});
