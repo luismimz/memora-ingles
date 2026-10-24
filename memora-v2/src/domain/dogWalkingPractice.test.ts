@@ -1,0 +1,30 @@
+import { expect, it } from 'vitest';
+import { reviewUnits } from '../preview/previewUnit';
+import { dogWalkingLesson, preparedDogWalkingPractice } from './dogWalkingPractice';
+import { grammarChecksForExperience, validateGrammarLesson } from './grammarLesson';
+import { validateUnit } from './unit';
+import type { WordMemory } from './memory';
+const source = reviewUnits.find((unit) => unit.id === 'm1-outside-dog')!;
+const memories = source.words.map((word) => ({ key: word.en.toLowerCase(), correct: 1, word })) as WordMemory[];
+it('prepara MY DOG y el bloque WALK MY DOG antes de montar y escribir un aviso sin TREE', () => {
+  const before = JSON.stringify(source);
+  const result = preparedDogWalkingPractice(source, 'ing', memories.slice(0, 2))!;
+  expect(result).not.toBeNull();
+  expect(() => validateGrammarLesson(result.lesson)).not.toThrow();
+  expect(() => validateUnit(result.unit)).not.toThrow();
+  expect(result.lesson.steps[3].en.map((part) => part.text).join('')).toBe('MY DOG');
+  expect(result.lesson.steps[4].caption).toContain('«a» española');
+  expect([2, 3, 1, 0].map((index) => result.lesson.checks[0].ordering![index].text).join(' ')).toBe('I AM WALKING MY DOG');
+  expect(grammarChecksForExperience(result.lesson, [result.unit.sentence.en], [result.unit.sentence.en]).map((check) => check.id)).toEqual(['dog-meaning-v1']);
+  expect(JSON.stringify(result.unit.sentence)).not.toMatch(/tree|near|phone|desk/i);
+  expect(result.unit.communication?.dialogue?.partnerLanguage).toBe('es');
+  expect(JSON.stringify(source)).toBe(before);
+});
+it('no supone DOG por WALK, otro sentido/versión o autoría diferente', () => {
+  expect(preparedDogWalkingPractice(source, 'ing', memories.slice(0, 1))).toBeNull();
+  expect(preparedDogWalkingPractice(source, 'ing', memories.map((memory) => ({ ...memory, word: { ...memory.word, es: 'otro sentido' } })))).toBeNull();
+  expect(preparedDogWalkingPractice({ ...source, words: source.words.map((word) => ({ ...word, associationVersion: 15 })) }, 'ing', memories)).toBeNull();
+  expect(dogWalkingLesson({ ...source, id: 'other' }, 'ing')).toBeNull();
+  expect(dogWalkingLesson({ ...source, sentence: { ...source.sentence, en: 'Another authored message.' } }, 'ing')).toBeNull();
+  expect(dogWalkingLesson({ ...source, grammarContinuation: { status: 'needs_review', formId: 'ing', vocabulary: ['walk'], grammarSkills: [] } }, 'ing')).toBeNull();
+});

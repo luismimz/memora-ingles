@@ -20,6 +20,7 @@ import { dinnerCookingSkill } from '../domain/dinnerCookingPractice';
 import { kitchenLocationSkill } from '../domain/kitchenLocationPractice';
 import { teethBrushingSkill } from '../domain/teethBrushingPractice';
 import { mirrorLocationSkill } from '../domain/mirrorLocationPractice';
+import { dogWalkingSkill } from '../domain/dogWalkingPractice';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
 export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false }: {
@@ -30,7 +31,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // Resume the task that is actually shown, not the unfiltered lesson index.
   // A conversational exchange may take over one of the written checks.
   const generatedContinuous = Boolean(form && !form.lesson && lesson.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
-  const preparedMessage = [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill].includes(lesson.id);
+  const preparedMessage = [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill].includes(lesson.id);
   const stream = puzzle && (generatedContinuous || preparedMessage);
   const checks = grammarChecksForExperience(lesson, conversationAnswers, constructionAnswers).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain'));
   const teachingStage = checkpoint && checkpoint.stage <= lesson.steps.length ? checkpoint.stage : undefined;

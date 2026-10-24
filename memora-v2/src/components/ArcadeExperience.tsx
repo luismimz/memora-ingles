@@ -19,6 +19,7 @@ import { dinnerCookingLesson, dinnerCookingSkill } from '../domain/dinnerCooking
 import { kitchenLocationSkill } from '../domain/kitchenLocationPractice';
 import { teethBrushingLesson, teethBrushingSkill } from '../domain/teethBrushingPractice';
 import { mirrorLocationSkill } from '../domain/mirrorLocationPractice';
+import { dogWalkingLesson, dogWalkingSkill } from '../domain/dogWalkingPractice';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
@@ -38,11 +39,13 @@ export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => {
     const legacyComputer = computerPlayingLesson(unit, 'ing');
     const legacyDinner = dinnerCookingLesson(unit, 'ing');
     const legacyTeeth = teethBrushingLesson(unit, 'ing');
-    const legacyAnswers = legacyBed || legacyComputer || legacyDinner || legacyTeeth ? new Set(dialogue.turns.filter((turn) => turn.role === 'B').flatMap((turn) => [turn.en, ...turn.acceptedAnswers]).map(normalizeSentenceAnswer)) : null;
+    const legacyDog = dogWalkingLesson(unit, 'ing');
+    const legacyAnswers = legacyBed || legacyComputer || legacyDinner || legacyTeeth || legacyDog ? new Set(dialogue.turns.filter((turn) => turn.role === 'B').flatMap((turn) => [turn.en, ...turn.acceptedAnswers]).map(normalizeSentenceAnswer)) : null;
     return activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)
       && (!legacyComputer || activity.skill !== computerPlayingSkill)
       && (!legacyDinner || ![dinnerCookingSkill, kitchenLocationSkill].includes(activity.skill))
       && (!legacyTeeth || ![teethBrushingSkill, mirrorLocationSkill].includes(activity.skill))
+      && (!legacyDog || activity.skill !== dogWalkingSkill)
       && (!legacyAnswers || activity.contentVersion === (unit.contentVersion ?? '1') && legacyAnswers.has(normalizeSentenceAnswer(activity.response))));
   });
 };
