@@ -9,6 +9,7 @@ import { readGrammarAttempts, recordGrammarAttempt } from '../domain/grammarMemo
 import { recordWordRecall } from '../domain/memory';
 import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
 import { computerPlayingIdentity, computerPlayingSkill } from '../domain/computerPlayingPractice';
+import { deskLocationIdentity, deskLocationSkill } from '../domain/deskLocationPractice';
 import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
 import { eligibleMixedUnits } from './ArcadeExperience';
 import { playEnglish } from '../services/audio';
@@ -93,4 +94,35 @@ it('I AM demostrado no omite el bloque nuevo ni un checkpoint; el viejo signific
   await advance(); expect(visible()).toContain('MYCOMPUTER');
   await advance(); expect(visible()).toContain('notraducesiempre');
   expect(grammarArcadeRounds(user, [source]).some((round) => round.skill === computerPlayingSkill)).toBe(false);
+});
+it('una nueva práctica prepara AT MY DESK tras el aviso del ordenador y comunica ubicación sin escritura duplicada', async () => {
+  recordGrammarAttempt(user, { unitId: source.id, skill: computerPlayingSkill, check: 'turn-respond', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
+  await mount(); expect(checkpoint()?.stage).toBe(2);
+  expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Dile a Nora dónde estás jugando');
+  for (let i = 0; i < 4; i++) await advance();
+  expect(checkpoint()?.episodeId).toBe(deskLocationIdentity);
+  await act(async () => button('Está jugando en el suelo.').props.onClick());
+  expect(visible()).toContain('juegaenelsuelo');
+  const first = learner()[0];
+  act(() => tree.unmount()); await mount();
+  await act(async () => button('Está jugando en su escritorio.').props.onClick());
+  expect(learner()).toMatchObject([{ id: first.id, correct: false }, { correct: true, helped: true, parentAttemptId: first.id }]);
+  await advance();
+  for (const part of ['I','AM','PLAYING','AT MY DESK']) await act(async () => button(part).props.onClick());
+  expect(learner().filter((event) => event.modality === 'writing' && event.correct !== null)).toHaveLength(0);
+  await advance(); expect(visible()).toContain('¿Dóndeestásjugando?');
+  expect(vi.mocked(playEnglish).mock.calls.some(([message]) => /where|will|notebook/iu.test(message))).toBe(false);
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: "I'm playing at my desk" } }));
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  expect(visible()).toContain('Meacerco');
+  expect(learner().filter((event) => event.modality === 'writing' && event.correct !== null)).toHaveLength(1);
+  expect(grammarArcadeRounds(user,[source]).some((round) => round.skill === deskLocationSkill)).toBe(true);
+  expect(eligibleMixedUnits(user,[source])).toEqual([]);
+  await advance(); expect(finished).toHaveBeenCalledOnce();
+});
+it('demostrar el primer bloque no cambia un episodio de ordenador ya empezado', async () => {
+  recordGrammarAttempt(user, { unitId: source.id, skill: computerPlayingSkill, check: 'turn-respond', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
+  writeTrickCheckpoint(user, stop.id, source.contentVersion ?? '1', { stage: 4, checkIndex: 0, input: '', feedback: 'idle', helped: false, episodeId: computerPlayingIdentity });
+  await mount(); expect(checkpoint()?.episodeId).toBe(computerPlayingIdentity);
+  expect(visible()).toContain('ONMYCOMPUTER'); expect(visible()).not.toContain('ATMYDESK');
 });
