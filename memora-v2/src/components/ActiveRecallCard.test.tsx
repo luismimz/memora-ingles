@@ -8,6 +8,7 @@ import { playEnglish, type PlaybackResult } from '../services/audio';
 import { wordRecallHint } from '../domain/activeRecall';
 import { readWordMemories, recordWordRecall } from '../domain/memory';
 import type { AtomicWord } from '../domain/unit';
+import { SceneVisual } from './SceneVisual';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
 vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -56,10 +57,27 @@ it('historia y opciones son ayudas reales: se conservan al reanudar sin duplicar
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(1);
 });
 
+it('la pista recupera la escena solo después de pedir ayuda y la conserva al volver, sin regalar un acierto', async () => {
+  await mount();
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
+  await act(async () => { button('Recordar la historia').props.onClick(); });
+  expect(tree.root.findByType(SceneVisual).props).toMatchObject({ word, compact: true, hideAnswer: true });
+  expect(text(tree.toJSON())).toContain('Recupera la palabra con esta pista.');
+  expect(text(tree.toJSON())).not.toContain('Ahora sin la imagen');
+  expect(tree.root.findAllByProps({ className: 'scene-memory-link' })).toHaveLength(0);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType(SceneVisual).props.hideAnswer).toBe(true);
+  expect(readLearningActivities(user)).toHaveLength(1);
+  await submit(word.en);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
+});
+
 it('un audio bloqueado no afirma escucha ni bloquea la práctica, y queda registrado como solicitud de ayuda', async () => {
   await mount();
   await act(async () => { button('🔊 Escuchar la palabra').props.onClick(); });
   expect(text(tree.toJSON())).toContain('No se ha podido reproducir');
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
   const help = readLearningActivities(user)[0];
   expect(help).toMatchObject({ correct: null, helped: true });
   expect(help.response).toContain('Has pedido'); expect(help.response).not.toContain('Has escuchado');
@@ -87,6 +105,7 @@ it('una segunda pista para cognado sin puente no inventa una asociación ni pron
 it('primer error y reparación llevan al modelo: ráfagas/reload/continuación no inventan acierto', async () => {
   await mount();
   await submit('not-the-word');
+  expect(tree.root.findByType(SceneVisual).props.hideAnswer).toBe(true);
   const first = readLearningActivities(user).filter((row) => row.source === 'learner')[0];
   expect(first).toMatchObject({ correct: false, helped: false });
   const key = `memora-v2.recall.${user}.${previewUnit.id}.${previewUnit.contentVersion}.${word.id}`;

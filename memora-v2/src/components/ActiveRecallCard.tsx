@@ -116,8 +116,9 @@ export function ActiveRecallCard({ unit, word, choices, position, userId, inspec
   const continueRecall = () => { clear(); onFinish(state.independent); };
   return <GameCard vertical={vertical} stepKey={state.done ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.done ? continueRecall : undefined} advanceLabel="Continuar con otra palabra" className="active-memory-card"><div className="active-memory-content">
     <p className="eyebrow">RECUERDA A TU RITMO · {position + 1}/{unit.words.length}</p>
-    <p>Ahora sin la imagen y en otro orden.</p><h1><small>En inglés, ¿cómo se dice</small>«{word.es}»?</h1>
+    <p>{state.done ? 'Compara tu recuerdo con la palabra y su escena.' : state.level > 0 ? 'Recupera la palabra con esta pista.' : 'Ahora sin la imagen y en otro orden.'}</p><h1><small>En inglés, ¿cómo se dice</small>«{word.es}»?</h1>
     <div className="memory-feedback" role="status">{state.feedback}</div>
+    {!state.done && state.level > 0 ? <SceneVisual word={word} compact hideAnswer /> : null}
     {audioStatus ? <p className="memory-audio-status" role="status">{audioStatus}</p> : null}
     {state.done ? <><strong className="memory-answer" lang="en">{word.en}</strong><SceneVisual word={word} compact />{!vertical ? <button type="button" className="primary-action" onClick={continueRecall}>Continuar →</button> : null}</> : <>
       {state.choosing ? <div className="memory-options">{choices.map((choice) => <button type="button" key={choice.id} onClick={() => answer(choice.en, 'choice')}>{choice.en}</button>)}</div> : <form className="memory-write" onSubmit={(event) => { event.preventDefault(); answer(state.input, 'writing'); }}><label className="sr-only" htmlFor="word-recall">La palabra en inglés</label><input id="word-recall" lang="en" value={state.input} onChange={(event) => setState((current) => ({ ...current, input: event.target.value }))} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="Prueba a recordarla…" /><button type="submit" disabled={!state.input.trim()}>Comprobar</button></form>}
