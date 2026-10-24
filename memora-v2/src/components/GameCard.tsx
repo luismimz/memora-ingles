@@ -103,7 +103,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
     const atEnd = (node: HTMLElement) => node.scrollTop >= node.scrollHeight - node.clientHeight - 2;
     const canLeave = (target: EventTarget) => Boolean(onAdvance && revealFooter && !interactive(target) && !window.getSelection?.()?.toString());
     return <div className={`game-card-anchor card-vertical ${className}`}>
-      <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : ''}`} role="region" aria-label="Encuentro de aprendizaje. Desplázate hacia arriba para continuar cuando esté preparado." tabIndex={0}
+      <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : ''}`} role="region" aria-label="Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir." tabIndex={0}
         style={{ transform: `translate3d(0, ${dragX}px, 0)` }}
         onPointerDown={() => { touchStart.current = undefined; }}
         onTouchStart={(event) => { touchStart.current = event.touches.length === 1 && canLeave(event.target) && atEnd(event.currentTarget) ? event.touches[0].clientY : undefined; }}
@@ -131,8 +131,8 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
           if (!atEnd(event.currentTarget)) touchStart.current = undefined;
         }}>
         <article className="game-card-face card-vertical-page"><div className="game-card-body">{children}{back ? <details className="card-vertical-memory"><summary>Recordar la escena</summary>{back}</details> : null}</div></article>
-        {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={advanceLabel}><span aria-hidden="true">↑</span><span>{advanceLabel}<small>Desliza o toca para seguir</small></span></button></footer> : null}
       </div>
+      {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={advanceLabel}><span>{advanceLabel}</span><span aria-hidden="true">→</span></button></footer> : null}
     </div>;
   }
 

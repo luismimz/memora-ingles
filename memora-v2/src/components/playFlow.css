@@ -19,9 +19,9 @@
 .play-flow > .game-stage { flex: 1 1 auto; min-height: 0; padding: 0; align-items: stretch; }
 .play-flow .game-card-anchor.card-vertical { width: min(100%, 680px); height: 100%; margin: 0 auto; }
 .play-flow .game-card-anchor:not(.card-vertical) { height: 100%; margin: 0 auto; overflow-y: auto; overscroll-behavior-y: contain; }
-.play-flow .card-vertical-scroll { height: 100%; border-radius: 22px 22px 0 0; }
+.play-flow .card-vertical-scroll { height: auto; border-radius: 22px 22px 0 0; }
 .play-flow .card-vertical .game-card-body { padding: clamp(16px, 4vw, 28px); }
-.play-flow .card-vertical-next { min-height: 64px; padding-bottom: env(safe-area-inset-bottom); }
+.play-flow .card-vertical-next { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
 .play-flow .card-vertical-next button { min-height: 48px; padding: 12px 20px; }
 .play-header :focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
 .play-trail { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: clamp(6px, 2vw, 18px); width: min(100%, 680px); margin: 0 auto; padding: 2px 12px 8px; list-style: none; color: var(--muted); }

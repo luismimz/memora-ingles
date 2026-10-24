@@ -42,6 +42,16 @@ it('el control equivalente respeta movimiento reducido', () => {
   act(() => { tree.root.findByType('button').props.onClick(); vi.advanceTimersByTime(0); });
   expect(advance).toHaveBeenCalledOnce();
 });
+it('la acción está fuera del área de lectura y funciona sin buscar el final del texto', () => {
+  const advance = vi.fn(); mount(advance);
+  const control = tree.root.findByType('button');
+  expect(control.parent!.props.className).toBe('card-vertical-next');
+  expect(control.parent!.parent!.props.className).toContain('card-vertical');
+  expect(region().findAllByType('footer')).toHaveLength(0);
+  expect(viewport.scrollTop).toBe(0);
+  act(() => { control.props.onClick(); control.props.onClick(); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+});
 it('el toque que lee hasta abajo no pasa tarjeta; un nuevo gesto al final sí', () => {
   const advance = vi.fn(); mount(advance);
   act(() => { region().props.onTouchStart(event({ touches: [{ clientY: 400 }] })); viewport.scrollTop = 200; region().props.onTouchMove(event({ touches: [{ clientY: 100 }] })); region().props.onScroll(event()); region().props.onTouchEnd(); vi.advanceTimersByTime(230); });
