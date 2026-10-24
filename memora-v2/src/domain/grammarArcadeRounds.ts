@@ -3,7 +3,7 @@ import { readGrammarAttempts } from './grammarMemory';
 import { practicedWordMeaning, readSentenceMemories, readWordMemories } from './memory';
 import { grammarTricks } from './journeyTricks';
 import { missingGrammarWords } from './learningModes';
-import { lessonForForm, type LessonCheck } from './grammarLesson';
+import { lessonForForm, type GrammarLessonData, type LessonCheck } from './grammarLesson';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 import { searchKeysLesson } from './searchKeysPractice';
 import { bedMakingLesson } from './bedMakingPractice';
@@ -37,9 +37,11 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       const usedComputer = computer && preparedWord('computer') && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === computer.id && attempt.check === 'computer-meaning-v1' && attempt.correct);
       const desk = deskLocationLesson(unit, form.id);
       const usedDesk = desk && preparedWord('desk') && preparedDeskLocationPractice(unit, form.id, memories, attempts) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === desk.id && attempt.check === 'desk-meaning-v1' && attempt.correct);
-      const lesson = (usedDesk ? desk : null) ?? (usedComputer ? computer : null) ?? searchKeysLesson(unit, form.id) ?? bedMakingLesson(unit, form.id) ?? lessonForForm(form, base);
-      return lesson?.checks.filter((check) => check.kind !== 'write' && check.choices && check.choices.length >= 2 && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
-        .map((check, index) => ({ unit, form, skill: lesson.id, sentence: unit.sentence, slotIndex: index, slot: { en: check.answers[0], es: check.prompt, choices: check.choices!, note: check.hint }, conceptual: true, ...(check.situation ? { situation: check } : {}) })) ?? [];
+      const preparedLessons = [usedComputer ? computer : null, usedDesk ? desk : null].filter((lesson): lesson is GrammarLessonData => Boolean(lesson));
+      const fallback = searchKeysLesson(unit, form.id) ?? bedMakingLesson(unit, form.id) ?? lessonForForm(form, base);
+      const lessons = preparedLessons.length ? preparedLessons : fallback ? [fallback] : [];
+      return lessons.flatMap((lesson) => lesson.checks.filter((check) => check.kind !== 'write' && check.choices && check.choices.length >= 2 && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
+        .map((check, index) => ({ unit, form, skill: lesson.id, sentence: unit.sentence, slotIndex: index, slot: { en: check.answers[0], es: check.prompt, choices: check.choices!, note: check.hint }, conceptual: true, ...(check.situation ? { situation: check } : {}) })));
     });
     const form = getPlayableGrammar(unit)[0];
     if (!form) return checks;

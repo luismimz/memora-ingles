@@ -5,7 +5,7 @@ import { normalizeSentenceAnswer } from './sentenceAnswer';
 export function distinctGrammarMessages(rounds: GrammarArcadeRound[]): GrammarArcadeRound[] {
   const seen = new Set<string>();
   return rounds.filter((round) => {
-    const key = normalizeSentenceAnswer(round.sentence.en).replace(/^i['’]m\b/, 'i am');
+    const key = normalizeSentenceAnswer(round.situation?.situation?.message ?? round.sentence.en).replace(/^i['’]m\b/, 'i am');
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

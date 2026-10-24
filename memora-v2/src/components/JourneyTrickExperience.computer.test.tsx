@@ -10,6 +10,7 @@ import { recordWordRecall } from '../domain/memory';
 import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
 import { computerPlayingIdentity, computerPlayingSkill } from '../domain/computerPlayingPractice';
 import { deskLocationIdentity, deskLocationSkill } from '../domain/deskLocationPractice';
+import { distinctGrammarMessages } from '../domain/arcadeSession';
 import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
 import { eligibleMixedUnits } from './ArcadeExperience';
 import { playEnglish } from '../services/audio';
@@ -125,4 +126,16 @@ it('demostrar el primer bloque no cambia un episodio de ordenador ya empezado', 
   writeTrickCheckpoint(user, stop.id, source.contentVersion ?? '1', { stage: 4, checkIndex: 0, input: '', feedback: 'idle', helped: false, episodeId: computerPlayingIdentity });
   await mount(); expect(checkpoint()?.episodeId).toBe(computerPlayingIdentity);
   expect(visible()).toContain('ONMYCOMPUTER'); expect(visible()).not.toContain('ATMYDESK');
+});
+it('Arcade conserva los dos mensajes preparados: conocer el lugar no borra la práctica del aparato', () => {
+  const record = (skill: string, check: string, kind: 'write' | 'explain' = 'explain') => recordGrammarAttempt(user, { unitId: source.id, skill, check, kind, correct: true, helped: false, at: new Date().toISOString() });
+  record(computerPlayingSkill, 'turn-respond', 'write');
+  record(computerPlayingSkill, 'computer-meaning-v1');
+  expect(distinctGrammarMessages(grammarArcadeRounds(user,[source])).filter((round) => round.situation).map((round) => round.skill)).toEqual([computerPlayingSkill]);
+  record(deskLocationSkill, 'desk-meaning-v1');
+  const rounds = grammarArcadeRounds(user,[source]);
+  const messages = distinctGrammarMessages([...rounds, ...rounds]).filter((round) => round.situation);
+  expect(messages.map((round) => round.skill)).toEqual([computerPlayingSkill, deskLocationSkill]);
+  expect(messages.map((round) => round.situation!.situation!.message)).toEqual(['I am playing on my computer', 'I am playing at my desk']);
+  expect(messages).toHaveLength(2);
 });
