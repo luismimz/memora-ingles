@@ -1,0 +1,58 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { reviewUnits } from '../preview/previewUnit';
+import { preparedDogWalkingPractice } from '../domain/dogWalkingPractice';
+import type { WordMemory } from '../domain/memory';
+import { ConversationPractice } from './ConversationChat';
+import { EvolutionView } from './EvolutionView';
+import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
+import { projectConversations } from '../domain/conversationHistory';
+import { playEnglish, playSpanish } from '../services/audio';
+vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
+const source = reviewUnits.find((unit) => unit.id === 'm1-outside-dog')!;
+const memories = source.words.map((word) => ({ key: word.en.toLowerCase(), correct: 1, word })) as WordMemory[];
+const unit = preparedDogWalkingPractice(source, 'ing', memories)!.unit;
+const user = 'history-language-isolated';
+let tree: ReactTestRenderer;
+const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
+async function history() { await act(async () => { tree = create(<EvolutionView userId={user} units={[]} pilot={null} syncStatus="saved" onBack={() => {}} onPractice={() => {}} onProfile={() => {}} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); }
+beforeEach(() => {
+  vi.useFakeTimers(); vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
+  const values = new Map<string, string>();
+  vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) });
+  vi.stubGlobal('window', { matchMedia: () => ({ matches: true }), dispatchEvent: vi.fn() });
+});
+afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+it('el diálogo español conserva su idioma al releer y no reproduce la reacción con voz inglesa', async () => {
+  await act(async () => { tree = create(<ConversationPractice unit={unit} userId={user} reviewMode={false} onContinue={() => {}} />); });
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I am walking my dog' } }));
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  const records = readLearningActivities(user);
+  expect(records.filter((record) => record.activityId.startsWith('partner-')).map((record) => record.responseLanguage)).toEqual(['es', 'es']);
+  expect(records.find((record) => record.source === 'learner')).toMatchObject({ responseLanguage: 'en', promptLanguage: 'es', correct: true });
+  const messages = projectConversations(records)[0].messages;
+  expect(messages.filter((message) => message.who === 'partner')).toHaveLength(2);
+  act(() => tree.unmount()); await history();
+  vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
+  const listens = tree.root.findAllByType('button').filter((node) => node.props['aria-label']?.startsWith('Escuchar en'));
+  expect(listens).toHaveLength(3);
+  for (const listen of listens) await act(async () => listen.props.onClick());
+  expect(vi.mocked(playSpanish).mock.calls.map(([phrase]) => phrase)).toEqual(records.filter((record) => record.activityId.startsWith('partner-')).map((record) => record.response));
+  expect(vi.mocked(playEnglish).mock.calls.map(([phrase]) => phrase)).toEqual(['I am walking my dog']);
+  expect(tree.root.findAllByType('p').filter((node) => node.props.lang === 'es').map(text)).toContain('¿Qué estás haciendo?');
+  expect(readLearningActivities(user)).toEqual(records);
+});
+it('el historial conserva inglés explícito y no adivina el audio de mensajes antiguos', async () => {
+  const common = { unitId: source.id, unitTitle: source.title, contentVersion: '1', skill: 'history-language', phase: 'dialogue' as const, source: 'authored' as const, modality: 'choice' as const, prompt: '', expected: '', correct: null, helped: true, speaker: 'Nora' };
+  recordLearningActivity(user, { ...common, activityId: 'partner-english', response: 'Hello!', responseLanguage: 'en' });
+  recordLearningActivity(user, { ...common, activityId: 'partner-legacy', response: 'Mensaje antiguo sin idioma.' });
+  const before = readLearningActivities(user);
+  await history();
+  expect(text(tree.toJSON())).toContain('Este mensaje no tiene idioma de audio registrado.');
+  const listens = tree.root.findAllByType('button').filter((node) => node.props['aria-label']?.startsWith('Escuchar en'));
+  expect(listens).toHaveLength(1);
+  await act(async () => listens[0].props.onClick());
+  expect(playEnglish).toHaveBeenCalledWith('Hello!');
+  expect(playSpanish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+});

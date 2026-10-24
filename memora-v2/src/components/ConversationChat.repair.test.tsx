@@ -62,6 +62,7 @@ it('pista y envío inmediato conservan ayuda en journal y gramática; abrir el m
   const hint = button('Pista escrita').props.onClick;
   await act(async () => { hint(); submit({ preventDefault() {} }); });
   expect(attempts()).toMatchObject([{ correct: true, helped: true }]);
+  expect(attempts()[0]).toMatchObject({ promptLanguage: 'en', responseLanguage: 'en' });
   expect(readGrammarAttempts(user)).toMatchObject([{ correct: true, helped: true }]);
 });
 

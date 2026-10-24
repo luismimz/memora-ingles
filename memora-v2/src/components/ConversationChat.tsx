@@ -46,7 +46,10 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     : { id, who: 'partner', text: pair.en, translation: pair.es };
   const turns = useMemo(() => conversationTurns(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))), [unit, userId]);
   const partner = dialogue.partner ?? (unit.id === 'm1-entry-keys' ? 'Emma' : 'Alguien de casa');
-  const recordLearningActivity = (owner: string, value: Parameters<typeof persistLearningActivity>[1]) => persistLearningActivity(owner, { ...value, skill: skillId ?? value.skill, conversationId: `person:${partner.normalize('NFKC').trim().toLocaleLowerCase('es')}`, speaker: value.source === 'learner' ? 'Tú' : value.activityId.startsWith('partner-') ? partner : 'Memora' });
+  const recordLearningActivity = (owner: string, value: Parameters<typeof persistLearningActivity>[1]) => persistLearningActivity(owner, { ...value,
+    responseLanguage: value.activityId.startsWith('partner-') ? dialogue.partnerLanguage ?? 'en' : value.source === 'learner' && value.modality === 'writing' ? 'en' : undefined,
+    promptLanguage: value.source === 'learner' ? dialogue.partnerLanguage ?? 'en' : undefined,
+    skill: skillId ?? value.skill, conversationId: `person:${partner.normalize('NFKC').trim().toLocaleLowerCase('es')}`, speaker: value.source === 'learner' ? 'Tú' : value.activityId.startsWith('partner-') ? partner : 'Memora' });
   const [restored] = useState(() => reviewMode ? { checkpoint: null } : readChatCheckpoint(userId, checkpointUnitId, unit.contentVersion ?? '1', turns, !(dialogue.roleSwap && dialogue.questionSkillId)));
   const checkpoint = restored.checkpoint;
   const [round, setRound] = useState(checkpoint?.round ?? 0);

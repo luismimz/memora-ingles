@@ -8,6 +8,8 @@ export interface LearningActivity {
   prompt: string; response: string; expected: string; correct: boolean | null; helped: boolean;
   feedback?: string; parentAttemptId?: string; at: string;
   conversationId?: string; speaker?: string;
+  /** Language of the actual displayed text, not its translation or the target lesson. */
+  responseLanguage?: 'en' | 'es'; promptLanguage?: 'en' | 'es';
   /** Exact taught association for a neutral model consultation; never a mastery flag. */
   wordSnapshot?: Pick<AtomicWord, 'en' | 'es' | 'bridge' | 'scene' | 'associationId' | 'associationVersion'>;
 }

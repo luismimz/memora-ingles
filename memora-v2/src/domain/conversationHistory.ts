@@ -7,6 +7,7 @@ export interface HistoryBubble {
   modality: LearningActivity['modality']; phase: LearningActivity['phase'];
   attempts: string[]; at: string; unitTitle: string;
   parentAttemptId?: string;
+  language?: 'en' | 'es';
 }
 export interface HistoryConversation { id: string; title: string; practice: boolean; messages: HistoryBubble[]; lastAt: string }
 /** Projection only. All raw events, including repeated answers, remain immutable. */
@@ -40,11 +41,11 @@ export function projectConversations(records: LearningActivity[], knownPartners:
     const thread = threads.get(id)!; thread.lastAt = record.at;
     const isPartner = record.source === 'authored' && record.activityId.startsWith('partner-');
     // Older attempts carry their actual incoming prompt, even without a partner event.
-    if (!practice && record.source === 'learner' && record.prompt.trim()) append(thread, { id: `prompt:${record.id}`, who: 'partner', speaker: partner ?? 'Personaje', text: record.prompt, correct: null, helped: true, modality: 'choice', phase: record.phase, attempts: [record.id], at: record.at, unitTitle: record.unitTitle }, `partner:${normalizeSentenceAnswer(record.prompt)}`);
+    if (!practice && record.source === 'learner' && record.prompt.trim()) append(thread, { id: `prompt:${record.id}`, who: 'partner', speaker: partner ?? 'Personaje', text: record.prompt, language: record.promptLanguage, correct: null, helped: true, modality: 'choice', phase: record.phase, attempts: [record.id], at: record.at, unitTitle: record.unitTitle }, `partner:${normalizeSentenceAnswer(record.prompt)}:${record.promptLanguage ?? ''}`);
     const who = record.source === 'learner' ? 'learner' : isPartner ? 'partner' : 'coach';
     const textIdentity = who === 'partner' ? normalizeSentenceAnswer(record.response) : record.response.normalize('NFKC').trim().toLocaleLowerCase('en').replace(/\s+/gu, ' ');
-    const signature = `${who}:${textIdentity}:${who === 'partner' ? '' : `${normalizeSentenceAnswer(record.prompt)}:${record.phase}:${record.skill}:${record.correct}:${record.helped}:${record.modality}`}`;
-    append(thread, { id: record.id, who, speaker: record.speaker ?? (who === 'learner' ? 'Tú' : who === 'partner' ? partner ?? 'Personaje' : 'Memora'), text: record.response, feedback: record.feedback, expected: record.expected, correct: record.correct, helped: record.helped, modality: record.modality, phase: record.phase, attempts: [record.id], at: record.at, unitTitle: record.unitTitle, parentAttemptId: record.parentAttemptId }, signature);
+    const signature = `${who}:${textIdentity}:${who === 'partner' ? record.responseLanguage ?? '' : `${normalizeSentenceAnswer(record.prompt)}:${record.phase}:${record.skill}:${record.correct}:${record.helped}:${record.modality}:${record.responseLanguage ?? ''}:${record.promptLanguage ?? ''}`}`;
+    append(thread, { id: record.id, who, speaker: record.speaker ?? (who === 'learner' ? 'Tú' : who === 'partner' ? partner ?? 'Personaje' : 'Memora'), text: record.response, language: record.responseLanguage ?? (who === 'coach' ? 'es' : who === 'learner' && record.modality === 'writing' ? 'en' : undefined), feedback: record.feedback, expected: record.expected, correct: record.correct, helped: record.helped, modality: record.modality, phase: record.phase, attempts: [record.id], at: record.at, unitTitle: record.unitTitle, parentAttemptId: record.parentAttemptId }, signature);
   }
   return [...threads.values()].sort((a, b) => Number(a.practice) - Number(b.practice) || b.lastAt.localeCompare(a.lastAt));
 }
