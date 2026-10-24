@@ -20,6 +20,7 @@ import { kitchenLocationSkill } from '../domain/kitchenLocationPractice';
 import { teethBrushingLesson, teethBrushingSkill } from '../domain/teethBrushingPractice';
 import { mirrorLocationSkill } from '../domain/mirrorLocationPractice';
 import { dogWalkingLesson, dogWalkingSkill } from '../domain/dogWalkingPractice';
+import { treeLocationSkill } from '../domain/treeLocationPractice';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
@@ -45,7 +46,7 @@ export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => {
       && (!legacyComputer || activity.skill !== computerPlayingSkill)
       && (!legacyDinner || ![dinnerCookingSkill, kitchenLocationSkill].includes(activity.skill))
       && (!legacyTeeth || ![teethBrushingSkill, mirrorLocationSkill].includes(activity.skill))
-      && (!legacyDog || activity.skill !== dogWalkingSkill)
+      && (!legacyDog || ![dogWalkingSkill, treeLocationSkill].includes(activity.skill))
       && (!legacyAnswers || activity.contentVersion === (unit.contentVersion ?? '1') && legacyAnswers.has(normalizeSentenceAnswer(activity.response))));
   });
 };

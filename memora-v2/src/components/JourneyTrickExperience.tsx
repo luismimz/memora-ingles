@@ -29,6 +29,7 @@ import { kitchenLocationIdentity, kitchenLocationSkill, preparedKitchenLocationP
 import { teethBrushingIdentity, teethBrushingSkill, preparedTeethBrushingPractice } from '../domain/teethBrushingPractice';
 import { mirrorLocationIdentity, mirrorLocationSkill, preparedMirrorLocationPractice } from '../domain/mirrorLocationPractice';
 import { dogWalkingIdentity, dogWalkingSkill, preparedDogWalkingPractice } from '../domain/dogWalkingPractice';
+import { treeLocationIdentity, treeLocationSkill, preparedTreeLocationPractice } from '../domain/treeLocationPractice';
 
 export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
@@ -41,6 +42,8 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const [checkpoint] = useState(() => inspection ? null : readTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1'));
   const [authoredPractice] = useState(() => {
     const memories = readWordMemories(userId);
+    const tree = !checkpoint || checkpoint.episodeId === treeLocationIdentity ? preparedTreeLocationPractice(unit, routeTrick.formId, memories, readGrammarAttempts(userId)) : null;
+    if (tree) return { ...tree, identity: treeLocationIdentity, modelOrder: [3, 4, 2, 1, 0] };
     const dog = !checkpoint || checkpoint.episodeId === dogWalkingIdentity ? preparedDogWalkingPractice(unit, routeTrick.formId, memories) : null;
     if (dog) return { ...dog, identity: dogWalkingIdentity, modelOrder: [2, 3, 1, 0] };
     const mirror = !checkpoint || checkpoint.episodeId === mirrorLocationIdentity ? preparedMirrorLocationPractice(unit, routeTrick.formId, memories, readGrammarAttempts(userId)) : null;
@@ -66,7 +69,7 @@ export function JourneyTrickExperience({ unit, stop, userId, inspection, onFinis
   const sceneWord = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase()) ?? unit.words[0];
   const practicedPattern = !inspection && form && !form.lesson && (form.visualContract === 'present-continuous' || form.id === 'ing')
     && readGrammarAttempts(userId).some((attempt) => attempt.skill.startsWith('present-continuous:') && attempt.skill !== trick.skill && attempt.kind === 'write' && attempt.correct && !attempt.helped);
-  const reuseSubject = Boolean(authoredPractice && !inspection && readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped));
+  const reuseSubject = Boolean(authoredPractice && !inspection && readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill, treeLocationSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped));
   // An old in-flight coach keeps its identified task/draft, even if an author
   // adds an episode later. Fresh entries opt in only with actual preparation.
   const [shortPractice] = useState(() => authoredPractice?.unit ?? preparedActionPractice(unit, trick.formId, readWordMemories(userId)));

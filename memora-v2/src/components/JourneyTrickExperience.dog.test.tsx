@@ -5,11 +5,13 @@ import { JourneyTrickExperience } from './JourneyTrickExperience';
 import { GrammarOrder } from './GrammarOrder';
 import { grammarTricks, trickStop } from '../domain/journeyTricks';
 import { readLearningActivities } from '../domain/learningActivity';
-import { readGrammarAttempts } from '../domain/grammarMemory';
+import { readGrammarAttempts, recordGrammarAttempt } from '../domain/grammarMemory';
 import { recordWordRecall } from '../domain/memory';
 import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
 import { dogWalkingIdentity, dogWalkingSkill } from '../domain/dogWalkingPractice';
 import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
+import { distinctGrammarMessages } from '../domain/arcadeSession';
+import { treeLocationIdentity, treeLocationSkill } from '../domain/treeLocationPractice';
 import { eligibleMixedUnits } from './ArcadeExperience';
 import { playEnglish } from '../services/audio';
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
@@ -86,4 +88,63 @@ it('el modelo finito de cuatro piezas conserva ayuda en el aviso del paseo', asy
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I am walking my dog' } }));
   await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
   expect(readGrammarAttempts(user).filter((attempt) => attempt.kind === 'write')).toMatchObject([{ skill: dogWalkingSkill, correct: true, helped: true }]);
+});
+
+function prepareTree() {
+  recordGrammarAttempt(user, { unitId: source.id, skill: dogWalkingSkill, check: 'turn-respond', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
+  recordGrammarAttempt(user, { unitId: source.id, skill: dogWalkingSkill, check: 'dog-meaning-v1', kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
+}
+it('Nora encuentra el paseo cerca del árbol tras comprender y montar cinco piezas', async () => {
+  prepareTree(); await mount();
+  expect(checkpoint()?.stage).toBe(2);
+  expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Dile a Nora dónde alcanzaros con el agua');
+  for (let index = 0; index < 4; index++) await advance();
+  expect(checkpoint()?.episodeId).toBe(treeLocationIdentity);
+  await act(async () => button('Pasea a su perro lejos del árbol.').props.onClick());
+  expect(visible()).toContain('lejosdelárbol');
+  const error = learner()[0];
+  act(() => tree.unmount()); await mount();
+  await act(async () => button('Pasea a su perro cerca del árbol.').props.onClick());
+  expect(learner()).toMatchObject([{ id: error.id, correct: false }, { correct: true, parentAttemptId: error.id, helped: true }]);
+  await advance();
+  for (const part of ['I', 'AM']) await act(async () => button(part).props.onClick());
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([3, 4]);
+  for (const part of ['WALKING', 'MY DOG', 'NEAR THE TREE']) await act(async () => button(part).props.onClick());
+  expect(checkpoint()?.continuation?.filledSlots).toBe(5);
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.skill === treeLocationSkill && attempt.kind === 'write')).toHaveLength(0);
+  await advance();
+  expect(visible()).toContain('¿Dóndeestáspaseandoatuperro?');
+  expect(vi.mocked(playEnglish).mock.calls.some(([phrase]) => phrase === 'Where are you walking your dog?')).toBe(false);
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: "I'm walking my dog near the tree" } }));
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  expect(visible()).toContain('Meacercoalárbolconelagua');
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.skill === treeLocationSkill && attempt.kind === 'write')).toHaveLength(1);
+  expect(eligibleMixedUnits(user, [source])).toEqual([]);
+  const rounds = grammarArcadeRounds(user, [source]);
+  const messages = distinctGrammarMessages(rounds).map((round) => round.situation?.situation?.message ?? round.sentence.en);
+  expect(messages).toContain('I am walking my dog');
+  expect(messages).toContain('I am walking my dog near the tree');
+  expect(rounds.filter((round) => !round.conceptual).every((round) => !round.slot.choices.some((choice) => /phone|desk/.test(choice)))).toBe(true);
+});
+it('un paseo pendiente prevalece sobre la ubicación ahora preparada', async () => {
+  prepareTree();
+  writeTrickCheckpoint(user, stop.id, source.contentVersion ?? '1', { stage: 3, checkIndex: 0, checkId: 'dog-meaning-v1', input: '', feedback: 'idle', helped: false, episodeId: dogWalkingIdentity });
+  await mount();
+  expect(checkpoint()?.episodeId).toBe(dogWalkingIdentity);
+  expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Avisa de que ya estás paseando a tu perro');
+});
+it('el rescate de ubicación usa cinco piezas y conserva la ayuda hasta escribir', async () => {
+  prepareTree(); await mount(); for (let index = 0; index < 4; index++) await advance();
+  await act(async () => button('Pasea a su perro cerca del árbol.').props.onClick()); await advance();
+  await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('I walking am my dog near the tree'));
+  await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('my dog I am walking near the tree'));
+  act(() => tree.unmount()); await mount();
+  await act(async () => button('Colocar con ayuda').props.onClick());
+  expect(checkpoint()?.continuation).toMatchObject({ order: [3, 4, 2, 1, 0], filledSlots: 5, modelUsed: true });
+  expect(learner().filter((event) => event.phase === 'construction')).toMatchObject([{ correct: false }, { correct: false }]);
+  await advance();
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I am walking my dog near the tree' } }));
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.skill === treeLocationSkill && attempt.kind === 'write')).toMatchObject([{ correct: true, helped: true }]);
 });
