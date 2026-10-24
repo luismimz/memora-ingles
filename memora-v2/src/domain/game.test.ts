@@ -2,6 +2,17 @@ import { describe, expect, it } from 'vitest';
 import { gameReducer, initialGame, type GameState } from './game';
 
 describe('flujo de la unidad', () => {
+  it('el modelo de reconocimiento solo cierra una tarea nueva pendiente, sin sumar ni restar evidencia', () => {
+    const legacy: GameState = { ...initialGame, phase: 'recall' };
+    expect(gameReducer(legacy, { type: 'recognitionModel' })).toBe(legacy);
+    const pending: GameState = { ...legacy, recognitionStyle: 'scene-delivery-v1', correct: 1, combo: 1 };
+    const model = gameReducer(pending, { type: 'recognitionModel' });
+    expect(model).toMatchObject({ recallAnswered: true, recallOutcome: 'modeled', correct: 1, combo: 1 });
+    expect(gameReducer(model, { type: 'recognitionModel' })).toBe(model);
+    expect(gameReducer(model, { type: 'answered', correct: true })).toBe(model);
+    const failed = gameReducer(pending, { type: 'answered', correct: false, choice: 'other' });
+    expect(gameReducer(failed, { type: 'recognitionModel' })).toBe(failed);
+  });
   it('reanuda lectura de preparación sin aciertos y rechaza duplicados o saltos de pasos', () => {
     const state: GameState = { ...initialGame, phase: 'build', filledSlots: 1 };
     const action = { type: 'prepareSlot' as const, sentenceIndex: 0, slotIndex: 1, step: 1, stepCount: 3 };

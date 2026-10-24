@@ -8,6 +8,7 @@ import { readLearningActivities } from './domain/learningActivity';
 import { initializeJournal } from './domain/progressJournal';
 import type { AtomicUnit } from './domain/unit';
 import { recalledWordIndex } from './domain/activeRecall';
+import { readWordMemories } from './domain/memory';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -183,4 +184,27 @@ it('sin dos significados distintos no inventa una escena ni un distractor extern
   await mount(single); await swipe();
   expect(sceneButtons()).toHaveLength(0);
   expect(tree.root.findByProps({ className: 'recall-choices' }).findAllByType('button')).toHaveLength(1);
+});
+
+it('consultar la conexión antes de responder no inventa fallo, acierto ni memoria y se reanuda sin duplicarse', async () => {
+  await mount();
+  for (const _word of unit.words) await swipe();
+  const before = readWordMemories(user);
+  const model = button('No me sale: ver la conexión');
+  await act(async () => { model.props.onClick(); model.props.onClick(); });
+  const records = readLearningActivities(user);
+  expect(records.filter((row) => row.source === 'learner')).toHaveLength(0);
+  expect(records.filter((row) => row.activityId === `word-scene-model-v1:${unit.words[0].en}`)).toHaveLength(1);
+  expect(records.find((row) => row.activityId.startsWith('word-scene-model-v1:'))).toMatchObject({ source: 'authored', correct: null, helped: true, expected: '' });
+  expect(readWordMemories(user)).toEqual(before);
+  expect(checkpoint()).toMatchObject({ recallAnswered: true, recallOutcome: 'modeled', correct: 0 });
+  act(() => tree.unmount()); await mount();
+  expect(text(tree.toJSON())).toContain('No hace falta adivinar');
+  expect(sceneButtons().every((node) => node.props.disabled)).toBe(true);
+  await act(async () => { vi.advanceTimersByTime(20000); });
+  expect(checkpoint()?.recallIndex).toBe(0);
+  await swipe();
+  expect(checkpoint()).toMatchObject({ recallIndex: 1, recallAnswered: false, correct: 0 });
+  expect(readLearningActivities(user)).toEqual(records);
+  expect(readWordMemories(user)).toEqual(before);
 });

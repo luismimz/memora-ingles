@@ -187,7 +187,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
     return saved.preparationStep !== undefined && saved.preparationStep > preparedSteps ? { ...saved, preparationStep: 0 } : saved;
   });
   const [expandedGrammarIndex, setExpandedGrammarIndex] = useState<number | null>(null);
-  const [recallFeedback, setRecallFeedback] = useState<'idle' | 'correct' | 'wrong' | 'missed'>(() => state.phase === 'recall' && state.recallAnswered ? state.recallOutcome ?? 'missed' : 'idle');
+  const [recallFeedback, setRecallFeedback] = useState<'idle' | 'correct' | 'wrong' | 'missed'>(() => state.phase === 'recall' && state.recallAnswered ? state.recallOutcome === 'modeled' ? 'missed' : state.recallOutcome ?? 'missed' : 'idle');
   const recallStartedAt = useRef(0);
   const [sessionSeed] = useState(() => Math.floor(Math.random() * 0x7fffffff));
   const sentences = useMemo(() => {
@@ -309,6 +309,14 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
     if (!sceneRecognition && (correct || !vertical)) transitionTimer.current = window.setTimeout(advanceRecall, correct ? 1100 : 5000);
   }, [advanceRecall, recallWord, reviewMode, state.phase, state.recallAnswered, unit.id, userId, vertical, sceneRecognition, sceneChoices]);
 
+  function consultRecognitionModel() {
+    if (!sceneRecognition || locked.current || state.phase !== 'recall' || state.recallAnswered) return;
+    locked.current = true;
+    if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `word-scene-model-v1:${recallWord.en}`, skill: recallWord.en, phase: 'arcade', source: 'authored', modality: 'choice', prompt: recallWord.en, response: `${recallWord.en} → ${recallWord.es}`, expected: '', correct: null, helped: true, feedback: 'Conexión consultada antes de responder. No es un intento correcto ni incorrecto ni recuerdo independiente.' });
+    dispatch({ type: 'recognitionModel' });
+    setRecallFeedback('missed');
+  }
+
   function jumpToStep(value: string) {
     usedReviewJump.current = true;
     const [phase, indexText] = value.split('-');
@@ -381,7 +389,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
         {state.phase === 'recall' && unit.activeRecall ? <ActiveRecallCard vertical={vertical} key={`active-recall-${state.recallIndex}`} unit={unit} word={recallWord} choices={choices} position={state.recallIndex} userId={userId} inspection={reviewMode} onFinish={(independent) => { dispatch({ type: 'answered', correct: independent }); dispatch({ type: 'nextRecall', wordCount: unit.words.length }); }} /> : null}
 
         {state.phase === 'recall' && sceneRecognition ? <GameCard vertical stepKey={state.recallAnswered ? 'scene-result' : 'scene-choice'} onAdvance={state.recallAnswered ? advanceRecall : undefined} advanceLabel={state.recallIndex === unit.words.length - 1 ? 'Ver la tanda practicada' : 'Continuar con otra palabra'} key={`word-scene-${state.recallIndex}`}>
-          <div className="recall-content"><p className="eyebrow">CONECTA · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} /></div>
+          <div className="recall-content"><p className="eyebrow">CONECTA · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} modeled={state.recallOutcome === 'modeled'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} onModel={consultRecognitionModel} /></div>
         </GameCard> : null}
 
         {state.phase === 'recall' && !unit.activeRecall && !sceneRecognition ? <GameCard vertical={vertical} onAdvance={vertical && state.recallAnswered && recallFeedback !== 'correct' ? advanceRecall : undefined} advanceLabel="Continuar con otra palabra" key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>

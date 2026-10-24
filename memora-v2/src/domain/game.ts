@@ -7,7 +7,7 @@ export interface GameState {
   recallIndex: number;
   recallAnswered: boolean;
   /** Restores the visible feedback, not a new attempt or memory score. */
-  recallOutcome?: 'correct' | 'wrong';
+  recallOutcome?: 'correct' | 'wrong' | 'modeled';
   /** Opt-in for fresh vocabulary sessions; absent means keep the legacy task. */
   recognitionStyle?: 'scene-delivery-v1';
   recallChoice?: string;
@@ -29,6 +29,7 @@ export interface GameState {
 export type GameAction =
   | { type: 'connected'; isLast?: boolean; nextWordIndex?: number; wordCount?: number }
   | { type: 'answered'; correct: boolean; choice?: string }
+  | { type: 'recognitionModel' }
   | { type: 'nextRecall'; wordCount?: number }
   | { type: 'continue'; grammarCount?: number; sentenceCount?: number; slotCount?: number; conversation?: boolean; wordCount?: number; grammarOnly?: boolean }
   | { type: 'reviewJump'; phase: Phase; index?: number }
@@ -55,6 +56,9 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       const combo = action.correct ? state.combo + 1 : 0;
       return { ...state, recallAnswered: true, recallOutcome: action.correct ? 'correct' : 'wrong', recallChoice: action.choice, correct: state.correct + Number(action.correct), combo, maxCombo: Math.max(state.maxCombo, combo) };
     }
+    case 'recognitionModel':
+      if (state.phase !== 'recall' || state.recallAnswered || state.recognitionStyle !== 'scene-delivery-v1') return state;
+      return { ...state, recallAnswered: true, recallOutcome: 'modeled', recallChoice: undefined };
     case 'nextRecall':
       if (state.phase !== 'recall' || !state.recallAnswered) return state;
       return state.recallIndex >= (action.wordCount ?? 3) - 1

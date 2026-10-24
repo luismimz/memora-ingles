@@ -13,6 +13,15 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('el desenlace con modelo requiere su identidad nueva y rechaza estilos o elecciones corruptos', () => {
+    const state = { ...initialGame, phase: 'recall' as const, recognitionStyle: 'scene-delivery-v1' as const, recallAnswered: true, recallOutcome: 'modeled' as const };
+    writeGameCheckpoint('learner', 'model', '1', state);
+    expect(readGameCheckpoint('learner', 'model', '1')).toEqual(state);
+    for (const corrupt of [{ ...state, recognitionStyle: undefined }, { ...state, recognitionStyle: 'unknown' }, { ...state, recallChoice: 2 }]) {
+      data.set('memora-v2.checkpoint.learner.invalid-model', JSON.stringify({ version: '1', state: corrupt }));
+      expect(readGameCheckpoint('learner', 'invalid-model', '1')).toBeNull();
+    }
+  });
   it('conserva reparación y consulta del modelo sin aceptar contadores inválidos', () => {
     const state = { ...initialGame, phase: 'build' as const, buildRepair: { failures: 2, choice: 'wrong', previousAttemptId: 'prior' }, buildModelUsed: true };
     writeGameCheckpoint('learner', 'repair', '1', state);
