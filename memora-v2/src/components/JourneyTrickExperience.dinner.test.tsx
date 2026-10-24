@@ -12,6 +12,8 @@ import { dinnerCookingIdentity, dinnerCookingSkill } from '../domain/dinnerCooki
 import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
 import { eligibleMixedUnits } from './ArcadeExperience';
 import { playEnglish } from '../services/audio';
+import { kitchenLocationIdentity, kitchenLocationSkill } from '../domain/kitchenLocationPractice';
+import { distinctGrammarMessages } from '../domain/arcadeSession';
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
 const source = reviewUnits.find((unit) => unit.id === 'm1-test-kitchen')!;
@@ -91,4 +93,47 @@ it('dos errores de montaje ofrecen modelo finito de cuatro piezas y conservan ay
 it('el significado corto anterior no acredita DINNER ni sus rondas nuevas', () => {
   recordGrammarAttempt(user, { unitId: source.id, skill: 'present-continuous:cook', check: 'meaning-now-v1', kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
   expect(grammarArcadeRounds(user, [source]).some((round) => round.skill === dinnerCookingSkill)).toBe(false);
+});
+
+it('una práctica posterior prepara ubicación y Nora lleva el paño al lugar comunicado, no repite la cena', async () => {
+  recordGrammarAttempt(user, { unitId: source.id, skill: dinnerCookingSkill, check: 'turn-respond', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
+  recordGrammarAttempt(user, { unitId: source.id, skill: dinnerCookingSkill, check: 'dinner-meaning-v1', kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
+  await mount();
+  expect(checkpoint()?.stage).toBe(2);
+  expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Dile a Nora dónde estás cocinando');
+  for (let index = 0; index < 4; index++) await advance();
+  expect(checkpoint()?.episodeId).toBe(kitchenLocationIdentity);
+  await act(async () => button('Está cocinando en el jardín.').props.onClick());
+  expect(visible()).toContain('estaestáeneljardín');
+  const first = learner()[0];
+  act(() => tree.unmount()); await mount();
+  await act(async () => button('Está cocinando en la cocina.').props.onClick());
+  expect(learner()).toMatchObject([{ id: first.id, correct: false }, { correct: true, parentAttemptId: first.id, helped: true }]);
+  await advance();
+  for (const part of ['I', 'AM', 'COOKING', 'IN THE KITCHEN']) await act(async () => button(part).props.onClick());
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.skill === kitchenLocationSkill && attempt.kind === 'write')).toHaveLength(0);
+  await advance();
+  expect(visible()).toContain('¿Dóndeestáscocinando?');
+  expect(vi.mocked(playEnglish).mock.calls.some(([phrase]) => phrase === 'Where are you cooking?')).toBe(false);
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: "I'm cooking in the kitchen" } }));
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  expect(visible()).toContain('Teacercoelpañoalacocina');
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.skill === kitchenLocationSkill && attempt.kind === 'write')).toHaveLength(1);
+  expect(eligibleMixedUnits(user, [source])).toEqual([]);
+  const rounds = grammarArcadeRounds(user, [source]);
+  expect(rounds.some((round) => round.skill === dinnerCookingSkill)).toBe(true);
+  expect(rounds.some((round) => round.skill === kitchenLocationSkill)).toBe(true);
+  const messages = distinctGrammarMessages(rounds).map((round) => round.situation?.situation?.message ?? round.sentence.en);
+  expect(messages).toContain('I am cooking dinner');
+  expect(messages).toContain('I am cooking in the kitchen');
+  expect(rounds.filter((round) => !round.conceptual).every((round) => !round.slot.choices.some((choice) => /soap|desk/.test(choice)))).toBe(true);
+});
+
+it('el checkpoint de cena prevalece aunque ahora exista evidencia para la ubicación', async () => {
+  recordGrammarAttempt(user, { unitId: source.id, skill: dinnerCookingSkill, check: 'turn-respond', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
+  writeTrickCheckpoint(user, stop.id, source.contentVersion ?? '1', { stage: 3, checkIndex: 0, checkId: 'dinner-meaning-v1', input: '', feedback: 'idle', helped: false, episodeId: dinnerCookingIdentity });
+  await mount();
+  expect(checkpoint()?.episodeId).toBe(dinnerCookingIdentity);
+  expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Avisa para que Nora no encargue otra cena');
+  expect(visible()).not.toContain('¿Dóndeestáscocinando?');
 });

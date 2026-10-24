@@ -1,0 +1,32 @@
+import { expect, it } from 'vitest';
+import { reviewUnits } from '../preview/previewUnit';
+import { kitchenLocationLesson, preparedKitchenLocationPractice } from './kitchenLocationPractice';
+import { dinnerCookingSkill } from './dinnerCookingPractice';
+import { grammarChecksForExperience, validateGrammarLesson } from './grammarLesson';
+import { validateUnit } from './unit';
+import type { WordMemory } from './memory';
+import type { GrammarAttempt } from './grammarMemory';
+const source = reviewUnits.find((unit) => unit.id === 'm1-test-kitchen')!;
+const memories = source.words.map((word) => ({ key: word.en.toLowerCase(), correct: 1, word })) as WordMemory[];
+const prior = { unitId: source.id, skill: dinnerCookingSkill, kind: 'write', correct: true, helped: false } as GrammarAttempt;
+it('enseña THE y después IN THE KITCHEN, usa ubicación y conserva una sola escritura', () => {
+  const before = JSON.stringify(source);
+  const prepared = preparedKitchenLocationPractice(source, 'ing', memories, [prior])!;
+  expect(() => validateGrammarLesson(prepared.lesson)).not.toThrow();
+  expect(() => validateUnit(prepared.unit)).not.toThrow();
+  expect(prepared.lesson.steps[3].en.map((part) => part.text).join('')).toBe('THE KITCHEN');
+  expect(prepared.lesson.steps[4].caption).toContain('no traduce cualquier');
+  expect([2, 3, 1, 0].map((index) => prepared.lesson.checks[0].ordering![index].text).join(' ')).toBe('I AM COOKING IN THE KITCHEN');
+  expect(grammarChecksForExperience(prepared.lesson, [prepared.unit.sentence.en], [prepared.unit.sentence.en]).map((check) => check.id)).toEqual(['kitchen-meaning-v1']);
+  expect(prepared.unit.communication?.dialogue?.partnerLanguage).toBe('es');
+  expect(prepared.unit.practiceSentences).toEqual([]);
+  expect(JSON.stringify(source)).toBe(before);
+});
+it('no sustituye autoría ni toma la cena con ayuda o de otra unidad como ubicación preparada', () => {
+  expect(preparedKitchenLocationPractice(source, 'ing', memories, [])).toBeNull();
+  expect(preparedKitchenLocationPractice(source, 'ing', memories, [{ ...prior, helped: true }])).toBeNull();
+  expect(preparedKitchenLocationPractice(source, 'ing', memories, [{ ...prior, unitId: 'other' }])).toBeNull();
+  expect(preparedKitchenLocationPractice(source, 'ing', memories.slice(0, 2), [prior])).toBeNull();
+  expect(preparedKitchenLocationPractice({ ...source, words: source.words.map((word) => ({ ...word, associationVersion: 20 })) }, 'ing', memories, [prior])).toBeNull();
+  expect(kitchenLocationLesson({ ...source, id: 'other' }, 'ing')).toBeNull();
+});
