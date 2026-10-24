@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 300" role="img" aria-labelledby="radio-title radio-description">
+  <title id="radio-title">Un aparato de radio sobre una mesa</title>
+  <desc id="radio-description">Radio portátil con antena, altavoz, dos mandos y una escala de emisoras, sin texto que revele la palabra inglesa.</desc>
+  <rect width="420" height="300" rx="28" fill="#f8f0dc"/>
+  <circle cx="327" cy="74" r="48" fill="#e4ead8"/>
+  <ellipse cx="210" cy="255" rx="154" ry="15" fill="#d9cbb1"/>
+  <path d="M61 251H361" stroke="#997250" stroke-width="9" stroke-linecap="round"/>
+  <path d="M277 103L329 37" stroke="#667566" stroke-width="7" stroke-linecap="round"/>
+  <circle cx="330" cy="36" r="5" fill="#cc9a51"/>
+  <path d="M143 105V87Q143 68 163 68H247Q267 68 267 87V105" fill="none" stroke="#997250" stroke-width="13"/>
+  <rect x="72" y="100" width="276" height="146" rx="25" fill="#ac8058"/>
+  <rect x="84" y="112" width="252" height="122" rx="17" fill="#356f65"/>
+  <circle cx="151" cy="174" r="46" fill="#233f38"/>
+  <circle cx="151" cy="174" r="34" fill="none" stroke="#699484" stroke-width="4"/>
+  <circle cx="151" cy="174" r="18" fill="#cc9a51"/>
+  <path d="M116 155H186M111 166H191M111 182H191M116 193H186" stroke="#84a190" stroke-width="3" opacity=".65"/>
+  <rect x="219" y="133" width="93" height="34" rx="8" fill="#f8f0dc"/>
+  <path d="M230 144V156M245 140V156M260 144V156M275 140V156M290 144V156M302 140V156" stroke="#997250" stroke-width="2"/>
+  <path d="M274 135V164" stroke="#356f65" stroke-width="4"/>
+  <circle cx="239" cy="198" r="17" fill="#cc9a51"/>
+  <circle cx="291" cy="198" r="17" fill="#cc9a51"/>
+  <path d="M239 188V199M291 188V199" stroke="#fff8df" stroke-width="4" stroke-linecap="round"/>
+  <path d="M50 145Q33 174 50 204M364 145Q381 174 364 204" fill="none" stroke="#cc9a51" stroke-width="5" stroke-linecap="round"/>
+  <path d="M31 134Q9 174 31 215M384 134Q406 174 384 215" fill="none" stroke="#cc9a51" stroke-width="3" stroke-linecap="round"/>
+</svg>

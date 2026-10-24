@@ -1,5 +1,10 @@
+import type { CognateSceneKind } from '../domain/wordVisual';
+import radioScene from '../assets/cognate-radio-v1.svg';
+import musicScene from '../assets/cognate-music-v1.svg';
+
 /** Direct-meaning scenes: no invented sound bridge and no written answer in Arcade. */
-export function CognateScene({ kind }: { kind: 'hotel' | 'information' }) {
+export function CognateScene({ kind }: { kind: CognateSceneKind }) {
+  if (kind === 'radio' || kind === 'music') return <img className="cognate-scene" data-cognate-scene={kind} src={kind === 'radio' ? radioScene : musicScene} alt="" aria-hidden="true" draggable={false} loading="eager" />;
   return <svg className="cognate-scene" data-cognate-scene={kind} viewBox="0 0 400 250" aria-hidden="true" focusable="false">
     <ellipse cx="201" cy="224" rx="151" ry="12" fill="#a77c5a" opacity=".15" />
     {kind === 'hotel' ? <>

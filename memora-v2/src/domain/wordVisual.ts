@@ -1,8 +1,14 @@
 import type { AtomicWord } from './unit';
 
-export function cognateSceneKind(word: AtomicWord): 'hotel' | 'information' | undefined {
+export type CognateSceneKind = 'hotel' | 'information' | 'radio' | 'music';
+export function cognateSceneKind(word: AtomicWord): CognateSceneKind | undefined {
   if (word.associationMode !== 'cognate') return undefined;
   const key = word.en.trim().toLocaleLowerCase('en');
+  const meaning = word.es.trim().normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('es');
+  if (!word.imageUrl && !word.bridge?.trim() && word.cognateEvidence?.sameMeaning === true) {
+    if (key === 'radio' && ['radio', 'aparato de radio'].includes(meaning)) return 'radio';
+    if (key === 'music' && meaning === 'musica') return 'music';
+  }
   return key === 'hotel' || key === 'information' ? key : undefined;
 }
 

@@ -4,9 +4,39 @@ import { vocabularyPreviewPacks } from '../preview/vocabularyPacks';
 import { SceneVisual } from './SceneVisual';
 import { CognateAssociationCard } from './CognateAssociationCard';
 import { cognateSceneKind } from '../domain/wordVisual';
+import radioScene from '../assets/cognate-radio-v1.svg';
+import musicScene from '../assets/cognate-music-v1.svg';
 
 const words = vocabularyPreviewPacks.flatMap((pack) => pack.words).filter((word) => word.associationMode === 'cognate');
 describe('cognados visuales, no fichas solo informativas', () => {
+  it.each(['RADIO', 'MUSIC'])('%s tiene una escena de significado propia sin cambiar aprobación, palabra o ayudas', (en) => {
+    const word = words.find((item) => item.en === en)!;
+    expect(word).toBeDefined();
+    const before = JSON.stringify(word);
+    const html = renderToStaticMarkup(<CognateAssociationCard word={word} index={0} total={3} audioState={{ status: 'blocked', source: null }} onConnect={() => {}} />);
+    expect(html).toContain(`data-cognate-scene="${en.toLowerCase()}"`);
+    const expectedImage = renderToStaticMarkup(<img src={en === 'RADIO' ? radioScene : musicScene} />);
+    expect(html).toContain(expectedImage.match(/src="[^"]+"/)![0]);
+    expect(html).toContain('round-audio');
+    expect(html).toContain('Toca 🔊 para escuchar.');
+    expect(html).not.toContain('PUENTE SONORO');
+    const hidden = renderToStaticMarkup(<SceneVisual word={word} hideAnswer />);
+    expect(hidden).toContain(`data-cognate-scene="${en.toLowerCase()}"`);
+    expect(hidden).not.toContain('scene-memory-link');
+    expect(hidden).not.toContain('<text');
+    expect(hidden).toContain('aria-label="Recuerda la imagen aprendida"');
+    expect(JSON.stringify(word)).toBe(before);
+  });
+  it('las nuevas escenas no pisan medios propios ni otro sentido o una asociación acústica', () => {
+    const radio = words.find((item) => item.en === 'RADIO')!;
+    const music = words.find((item) => item.en === 'MUSIC')!;
+    expect(cognateSceneKind({ ...radio, imageUrl: 'own-radio-image' })).toBeUndefined();
+    expect(cognateSceneKind({ ...radio, es: 'radio de un círculo' })).toBeUndefined();
+    expect(cognateSceneKind({ ...radio, cognateEvidence: undefined })).toBeUndefined();
+    expect(cognateSceneKind({ ...music, es: 'instrumento' })).toBeUndefined();
+    expect(cognateSceneKind({ ...music, associationMode: 'acoustic_bridge', bridge: 'otra' })).toBeUndefined();
+    expect(cognateSceneKind({ ...music, bridge: 'asociación propia' })).toBeUndefined();
+  });
   it.each(['HOTEL', 'INFORMATION'])('%s conserva una escena tanto al aprender como en Arcade', (en) => {
     const word = words.find((item) => item.en === en)!;
     const html = renderToStaticMarkup(<CognateAssociationCard word={word} index={0} total={3} onConnect={() => {}} />);

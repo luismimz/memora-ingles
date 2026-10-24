@@ -1,0 +1,34 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 420 300" role="img" aria-labelledby="music-title music-description">
+  <title id="music-title">Dos personas hacen música</title>
+  <desc id="music-description">Una persona toca un teclado y otra un instrumento de cuerda. Notas musicales flotan entre ambas. No aparece una radio ni una palabra inglesa escrita.</desc>
+  <rect width="420" height="300" rx="28" fill="#f8f0dc"/>
+  <circle cx="211" cy="120" r="90" fill="#e4ead8"/>
+  <ellipse cx="210" cy="259" rx="175" ry="16" fill="#d9cbb1"/>
+  <path d="M42 256H379" stroke="#997250" stroke-width="8" stroke-linecap="round"/>
+  <circle cx="107" cy="101" r="24" fill="#cc9a51"/>
+  <path d="M88 91Q107 71 126 91" fill="none" stroke="#383c36" stroke-width="9" stroke-linecap="round"/>
+  <path d="M103 129L93 189M101 147L148 174M101 147L72 177M93 188L77 246M93 188L122 244" fill="none" stroke="#997250" stroke-width="12" stroke-linecap="round"/>
+  <rect x="47" y="172" width="129" height="29" rx="7" fill="#356f65"/>
+  <path d="M57 182H165" stroke="#fff8df" stroke-width="15"/>
+  <path d="M69 175V190M84 175V190M106 175V190M121 175V190M143 175V190" stroke="#383c36" stroke-width="6"/>
+  <path d="M60 202L54 248M160 202L165 248" stroke="#997250" stroke-width="6"/>
+  <circle cx="306" cy="94" r="24" fill="#cc9a51"/>
+  <path d="M284 85Q304 61 326 88L319 100" fill="none" stroke="#383c36" stroke-width="9" stroke-linecap="round"/>
+  <path d="M303 122L310 191M305 143L273 164M310 190L286 247M310 190L337 246" fill="none" stroke="#997250" stroke-width="12" stroke-linecap="round"/>
+  <path d="M283 154Q260 139 249 157Q226 170 244 191Q252 212 273 201Q298 203 295 179Z" fill="#356f65"/>
+  <circle cx="267" cy="178" r="10" fill="#233f38"/>
+  <path d="M278 167L331 123" stroke="#ac8058" stroke-width="14" stroke-linecap="round"/>
+  <path d="M272 175L335 122" stroke="#fff8df" stroke-width="2"/>
+  <path d="M305 144L279 180" stroke="#997250" stroke-width="8" stroke-linecap="round"/>
+  <g fill="#356f65">
+    <ellipse cx="179" cy="111" rx="10" ry="7" transform="rotate(-20 179 111)"/>
+    <path d="M186 110V75L212 68V102H207V76L191 80V110Z"/>
+    <ellipse cx="205" cy="103" rx="10" ry="7" transform="rotate(-20 205 103)"/>
+  </g>
+  <g fill="#cc9a51">
+    <ellipse cx="240" cy="65" rx="9" ry="6" transform="rotate(-20 240 65)"/>
+    <path d="M247 64V35Q264 36 262 52Q254 44 252 45V64Z"/>
+    <ellipse cx="210" cy="184" rx="8" ry="6" transform="rotate(-20 210 184)"/>
+    <path d="M215 184V160L229 167V173L220 168V184Z"/>
+  </g>
+</svg>
