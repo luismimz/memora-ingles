@@ -19,6 +19,11 @@
 .play-flow .card-vertical-next { min-height: 64px; padding-bottom: env(safe-area-inset-bottom); }
 .play-flow .card-vertical-next button { min-height: 48px; padding: 12px 20px; }
 .play-header :focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
+.play-trail { flex: 0 0 auto; display: flex; align-items: center; justify-content: center; gap: clamp(6px, 2vw, 18px); width: min(100%, 680px); margin: 0 auto; padding: 2px 12px 8px; list-style: none; color: var(--muted); }
+.play-trail li { display: flex; gap: 4px; align-items: center; min-width: 0; font-size: clamp(.65rem, 2.6vw, .78rem); line-height: 1.3; }
+.play-trail li > span { display: grid; place-items: center; width: 18px; height: 18px; flex: 0 0 18px; border: 1px solid var(--line); border-radius: 50%; font-size: .65rem; }
+.play-trail li[aria-current="step"] { color: var(--ink); font-weight: 800; }
+.play-trail li[aria-current="step"] > span { background: var(--accent-ink); color: var(--surface-strong); }
 .play-flow .association-word-top { display: flex; align-items: center; gap: 12px; width: 100%; }
 .play-flow .association-word-top .word-heading { flex: 1; min-width: 0; }
 .play-flow .association-word-top .round-audio { flex-shrink: 0; }

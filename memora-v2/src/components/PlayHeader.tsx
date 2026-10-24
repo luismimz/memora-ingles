@@ -3,9 +3,11 @@ import { syncLabels, type SyncStatus } from '../services/progressSync';
 import './playFlow.css';
 
 /** A shared play surface, not a new learning flow or progress store. */
-export function PlayHeader({ title, onExit, appearance, onToggleAppearance, syncStatus, inspection = false, progress, position }: {
+export function PlayHeader({ title, onExit, appearance, onToggleAppearance, syncStatus, inspection = false, progress, position, trail }: {
   title: string; onExit: () => void; appearance: Appearance; onToggleAppearance: () => void;
   syncStatus?: SyncStatus; inspection?: boolean; progress?: number; position?: string;
+  /** Location only, never inferred completion, prerequisites or a navigation control. */
+  trail?: { steps: string[]; current: number };
 }) {
   const saved = inspection ? 'Vista de revisión · no guarda progreso' : syncStatus ? syncLabels[syncStatus] : 'Progreso en este dispositivo';
   const warning = !inspection && (syncStatus === 'offline' || syncStatus === 'error' || syncStatus === 'storage-full');
@@ -24,6 +26,9 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
         </div>
       </details>
     </header>
+    {trail && trail.current >= 0 && trail.current < trail.steps.length ? <ol className="play-trail" aria-label="Pasos de esta práctica: posición, no dominio">
+      {trail.steps.map((step, index) => <li key={step} aria-current={index === trail.current ? 'step' : undefined}><span aria-hidden="true">{index + 1}</span>{step}</li>)}
+    </ol> : null}
     {warning ? <p className="play-save-warning" role={syncStatus === 'storage-full' ? 'alert' : 'status'}>{saved}</p> : null}
   </>;
 }

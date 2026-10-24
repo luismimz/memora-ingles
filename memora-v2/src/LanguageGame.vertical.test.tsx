@@ -154,7 +154,7 @@ it.each([true, false])('entrega nueva acierto=%s espera, reanuda elección y reg
   await act(async () => { choice.props.onClick(); choice.props.onClick(); });
   const attempts = readLearningActivities(user).filter((row) => row.source === 'learner');
   expect(attempts).toHaveLength(1);
-  expect(attempts[0]).toMatchObject({ activityId: `word-scene-v1:${unit.words[0].en}`, prompt: unit.words[0].en, response, correct, helped: true, modality: 'choice' });
+  expect(attempts[0]).toMatchObject({ activityId: `word-scene-v1:${unit.words[0].en}`, prompt: unit.words[0].en, response: unit.words.find((word) => word.en === response)!.es, expected: unit.words[0].es, correct, helped: true, modality: 'choice' });
   await act(async () => { vi.advanceTimersByTime(20000); });
   expect(checkpoint()).toMatchObject({ recallIndex: 0, recallAnswered: true, recallChoice: response });
   act(() => tree.unmount()); await mount();

@@ -298,7 +298,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       const at = new Date();
       recordAttempt(userId, { unitId: unit.id, wordId: recallWord.id, word: recallWord.en, correct, at: at.toISOString(), direction: 'recognition', error: correct ? undefined : 'meaning' });
       recordWordRecall(userId, recallWord, !correct ? 'missed' : performance.now() - recallStartedAt.current > 5000 ? 'hesitant' : 'quick', at, 'recognition', correct ? undefined : 'meaning', true);
-      recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: sceneRecognition ? `word-scene-v1:${recallWord.en}` : `word-${recallWord.en}`, skill: recallWord.en, phase: 'arcade', source: 'learner', modality: 'choice', prompt: sceneRecognition ? recallWord.en : recallWord.es, response: chosen ?? '', expected: recallWord.en, correct, helped: true, feedback: correct ? 'Reconocida entre opciones; aún no demuestra recuerdo sin pistas.' : recallWord.scene });
+      recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: sceneRecognition ? `word-scene-v1:${recallWord.en}` : `word-${recallWord.en}`, skill: recallWord.en, phase: 'arcade', source: 'learner', modality: 'choice', prompt: sceneRecognition ? recallWord.en : recallWord.es, response: sceneRecognition ? sceneChoices.find((item) => item.en === chosen)?.es ?? '' : chosen ?? '', expected: sceneRecognition ? recallWord.es : recallWord.en, correct, helped: true, feedback: correct ? 'Reconocida entre opciones; aún no demuestra recuerdo sin pistas.' : recallWord.scene });
     }
     dispatch({ type: 'answered', correct, choice: chosen ?? undefined });
     setRecallFeedback(correct ? 'correct' : 'wrong');
@@ -369,7 +369,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
 
   return (
     <main className={`game-screen${!reviewMode ? ' play-flow' : ''}`}>
-      {!reviewMode ? <PlayHeader title={intention} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} progress={progress} position={positionLabel} /> : <>
+      {!reviewMode ? <PlayHeader title={intention} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} progress={progress} position={positionLabel} trail={vertical ? { steps: ['Imagina', unit.activeRecall ? 'Recuerda' : 'Conecta', 'Tu tanda'], current: state.phase === 'associate' ? 0 : state.phase === 'recall' ? 1 : state.phase === 'reward' ? 2 : -1 } : undefined} /> : <>
       <header className="game-topbar"><button type="button" className="activity-back" onClick={onExit}>← Recorrido</button><span>MEMORA <small>· {reviewMode ? 'REVISIÓN' : preview ? 'VISTA PREVIA' : positionLabel}</small></span><div className="game-topbar-actions"><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`} title={`Modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button><span>{progress}%</span></div></header>
       <div className="game-progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progress}%` }} /></div>
       <p className="game-save-status" role="status">{reviewMode ? 'Vista de revisión · no guarda progreso' : syncStatus ? syncLabels[syncStatus] : 'Progreso en este dispositivo'}</p>

@@ -58,6 +58,14 @@ describe('posición de Home después de parar', () => {
     expect(html).toContain('Recuerda lo que aprendiste');
     expect(html).toContain('Continuar jugando');
   });
+  it('al volver al inicio nombra la nueva acción guardada sin llamarla recuerdo sin pistas', () => {
+    writeGameCheckpoint('learner', 'pack-10:vocabulary', '1', { ...initialGame, phase: 'recall', recognitionStyle: 'scene-delivery-v1' });
+    const html = home();
+    expect(html).toContain('JUSTO DONDE LO DEJASTE');
+    expect(html).toContain('Lleva la palabra a su escena');
+    expect(html).not.toContain('Recuerda lo que aprendiste');
+    expect(readLearningActivities('learner')).toHaveLength(0);
+  });
   it('marca el truco independiente completado aunque su fuente no sea una misión de palabras', async () => {
     const source = { ...previewUnit, id: 'grammar-only', kind: 'grammar-lesson' as const, grammar: [], grammarLesson: { ...lessonForForm(previewUnit.grammar[0], 'jugar')!, id: 'independent-home' }, grammarPrerequisites: { vocabulary: ['play'] } };
     const input = [...units.map((unit, index) => index ? unit : { ...unit, words: [{ en: 'PLAY', es: 'jugar' }] }), { ...source, grammarTricks: grammarTricks(source) }];

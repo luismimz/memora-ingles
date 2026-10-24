@@ -68,7 +68,7 @@ export function JourneyHome(props: Props) {
   const conversationUnit = [...completed].reverse().find((unit) => unit.hasDialogue && activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)));
   const avatar = readAvatar(userId);
   const currentIndex = featured ? stories.findIndex((unit) => unit.id === featured.id) + 1 : 0;
-  const missionLabel = featured?.routeTrick ? 'Un truco breve con palabras que ya has practicado' : resume ? gameCheckpoint ? activityLabels[gameCheckpoint.phase] : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
+  const missionLabel = featured?.routeTrick ? 'Un truco breve con palabras que ya has practicado' : resume ? gameCheckpoint ? gameCheckpoint.phase === 'recall' && gameCheckpoint.recognitionStyle === 'scene-delivery-v1' ? 'Lleva la palabra a su escena' : activityLabels[gameCheckpoint.phase] : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
     : featured && completedIds.has(featured.id) ? 'Vuelve a practicar' : featuredPresentation?.pack ? 'Conecta y recuerda estas palabras' : 'Descubre esta historia';
 
   return <main className="journey-screen home-v2" id="inicio">

@@ -35,3 +35,17 @@ it('la revisión permanece explícita y no afirma que se guarda progreso', () =>
   expect(tree.root.findAllByProps({ className: 'play-save-warning' })).toHaveLength(0);
   tree.unmount();
 });
+
+it('el hilo indica solo posición, sin botones, checks de dominio ni estado de aprendizaje nuevo', () => {
+  const steps = ['Descubre', 'Monta', 'Conversa', 'Tu práctica'];
+  let tree: ReturnType<typeof create>;
+  act(() => { tree = create(<PlayHeader title="Monta tu mensaje" onExit={() => {}} appearance="light" onToggleAppearance={() => {}} trail={{ steps, current: 1 }} />); });
+  const trail = tree!.root.findByType('ol');
+  expect(trail.props['aria-label']).toContain('posición, no dominio');
+  expect(trail.findAllByType('button')).toHaveLength(0);
+  expect(trail.findAllByType('li')).toHaveLength(4);
+  expect(trail.findByProps({ 'aria-current': 'step' }).children[1]).toBe('Monta');
+  act(() => tree!.update(<PlayHeader title="Responde al personaje" onExit={() => {}} appearance="light" onToggleAppearance={() => {}} trail={{ steps, current: 2 }} />));
+  expect(tree!.root.findByProps({ 'aria-current': 'step' }).children[1]).toBe('Conversa');
+  act(() => tree!.unmount());
+});
