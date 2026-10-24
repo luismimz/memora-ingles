@@ -38,6 +38,7 @@ beforeEach(() => {
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 it('enseña el bloque, distingue el aparato, retoma piezas y avisa una sola vez sin apagar el ordenador', async () => {
   await mount();
+  expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Avisa para que no apaguen tu ordenador');
   for (let i = 0; i < 6; i++) { expect(tree.root.findAllByType('input')).toHaveLength(0); await advance(); }
   expect(learner()).toHaveLength(0);
   await act(async () => button('Está jugando con una consola.').props.onClick());
@@ -88,6 +89,7 @@ it('la reparación del puzle termina en modelo de cuatro bloques sin fabricar ac
 it('I AM demostrado no omite el bloque nuevo ni un checkpoint; el viejo significado no acredita el nuevo', async () => {
   recordGrammarAttempt(user, { unitId: source.id, skill: 'present-continuous:play', check: 'turn-respond', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
   await mount(); expect(checkpoint()?.stage).toBe(2);
+  expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Avisa para que no apaguen tu ordenador');
   await advance(); expect(visible()).toContain('MYCOMPUTER');
   await advance(); expect(visible()).toContain('notraducesiempre');
   expect(grammarArcadeRounds(user, [source]).some((round) => round.skill === computerPlayingSkill)).toBe(false);
