@@ -2,16 +2,16 @@ import { useState } from 'react';
 import { readGameCheckpoint, readMirrorCheckpoint } from '../domain/gameCheckpoint';
 import { isReviewDue, readUnitProgress } from '../domain/journey';
 import { readLearningActivities } from '../domain/learningActivity';
-import { loadLearningProfile, readAvatar } from '../domain/learningProfile';
+import { loadLearningProfile } from '../domain/learningProfile';
 import { isKnownForDirection, readWordMemories } from '../domain/memory';
 import { catalogueStats } from '../domain/catalogueStats';
 import { completedVocabularyStop, journeyPresentation } from '../domain/journeyMap';
 import { JourneyMap } from './JourneyMap';
-import { JourneyScene } from './JourneyScene';
 import type { UnitSummary } from '../services/directus';
 import type { Appearance } from '../useAppearance';
 import type { LearningMode } from '../domain/game';
 import './homeV2.css';
+import './homeGuided.css';
 import { buildJourneyRoute, completedTrick, missingTrickWords } from '../domain/journeyTricks';
 import { readTrickCheckpoint } from '../domain/trickCheckpoint';
 
@@ -33,7 +33,7 @@ const activityLabels: Record<string, string> = {
 };
 const mirrorStageLabels = ['Descubre la pieza escondida', 'Compara las piezas', 'Cambia la acción', 'Prueba la frase', 'Conversa con Emma', 'Recuerda sin modelo'];
 
-/** Home as a hub: the mission remains primary, while optional practice never hijacks Continue. */
+/** One way forward. Maps, practice modes and evidence are secondary, not competing starts. */
 export function JourneyHome(props: Props) {
   const { units, userId, resumeUnitId, error, onOpen, onConverse, onArcade, onManageContent,
     onFusionDemo, onGrammarReview, onEvolution, onMirror, onTryPreview, onExit, onProfile,
@@ -66,49 +66,47 @@ export function JourneyHome(props: Props) {
   const retainedWords = uniqueWords.filter((memory) => isKnownForDirection(memory, 'recall') || isKnownForDirection(memory, 'production'));
   const conversations = new Set(activities.filter((item) => item.source === 'learner' && (item.phase === 'dialogue' || item.phase === 'transfer')).map((item) => item.unitId)).size;
   const conversationUnit = [...completed].reverse().find((unit) => unit.hasDialogue && activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)));
-  const avatar = readAvatar(userId);
+  const trickCheckpoint = resume?.routeTrick ? readTrickCheckpoint(userId, resume.id, resume.contentVersion ?? '1') : null;
   const currentIndex = featured ? stories.findIndex((unit) => unit.id === featured.id) + 1 : 0;
-  const missionLabel = featured?.routeTrick ? 'Un truco breve con palabras que ya has practicado' : resume ? gameCheckpoint ? gameCheckpoint.phase === 'recall' && gameCheckpoint.recognitionStyle === 'scene-delivery-v1' ? 'Lleva la palabra a su escena' : activityLabels[gameCheckpoint.phase] : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
+  const missionLabel = featured?.routeTrick ? trickCheckpoint?.continuation?.phase === 'build' ? 'Monta tu mensaje' : trickCheckpoint?.continuation?.phase === 'conversation' ? 'Responde al personaje' : 'Descubre cómo decirlo' : resume ? gameCheckpoint ? gameCheckpoint.phase === 'recall' && gameCheckpoint.recognitionStyle === 'scene-delivery-v1' ? 'Lleva la palabra a su escena' : activityLabels[gameCheckpoint.phase] ?? 'Retoma esta práctica' : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
     : featured && completedIds.has(featured.id) ? 'Vuelve a practicar' : featuredPresentation?.pack ? 'Conecta y recuerda estas palabras' : 'Descubre esta historia';
 
-  return <main className="journey-screen home-v2" id="inicio">
-    <div className={`home-play-hub ${stories.length ? 'has-map' : ''}`}>
-    <header className="journey-header home-header">
+  return <main className="journey-screen home-v2 home-guided" id="inicio">
+    <header className="home-guided-header">
       <a className="journey-brand" href="#inicio" aria-label="Memora, ir al inicio"><span className="brand-mark">M</span><span>MEMORA</span></a>
-      <nav className="home-nav" aria-label="Navegación principal">
-        <a href="#inicio" aria-current="page">Inicio</a>
-        <button type="button" onClick={onGrammar}>Gramática</button>
-        <button type="button" onClick={onArcade} disabled={!onArcade}>Arcade</button>
+      <span className="home-header-caption">Un paso cada vez.</span>
+      <details className="home-navigation"><summary>Menú <span aria-hidden="true">☰</span></summary><nav aria-label="Navegación principal">
+        <button type="button" onClick={onProfile}>Perfil y ajustes</button>
         <button type="button" onClick={onEvolution} disabled={!onEvolution}>Mi evolución</button>
-      </nav>
-      <button type="button" className="home-profile" onClick={onProfile} aria-label="Abrir perfil y progreso">{avatar ? <img src={avatar} alt="" /> : <span aria-hidden="true">◉</span>}<span>{completed.length}/{stories.length} paradas</span></button>
-      <button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button>
-      <button type="button" className="journey-exit" onClick={onExit}>Salir</button>
+        <button type="button" onClick={onToggleAppearance}>Activar modo {appearance === 'light' ? 'oscuro' : 'claro'}</button>
+        <button type="button" onClick={onExit}>Salir</button>
+      </nav></details>
     </header>
-
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
-    <div className="home-hub-content">
-      <div className="home-intro"><div><h1>Tu aventura</h1><p className="home-catalogue" aria-label="Contenido disponible"><strong>{catalogue.words}</strong> {catalogue.words === 1 ? 'palabra en el catálogo' : 'palabras en el catálogo'}{catalogue.expressions > 0 ? <> · <strong>{catalogue.expressions}</strong> {catalogue.expressions === 1 ? 'expresión' : 'expresiones'}</> : null}</p></div><span>{completed.length} de {stories.length} paradas completadas</span></div>
-    </div>
-    </div>
-
-    <div className="home-body">
-      {featured ? <section className="home-adventure" aria-labelledby="home-adventure-title">
-        <div className="home-adventure-art">{featuredPresentation?.pack ? <JourneyScene scene={featuredPresentation.scene} /> : <img src="/house-adventure.svg" alt="Ilustración de la Casa Viva: una puerta iluminada, un kiwi travieso y unas llaves escondidas" />}<span>{featuredPresentation?.place}</span></div>
-        <div className="home-adventure-copy"><p className="eyebrow">{resume ? 'JUSTO DONDE LO DEJASTE' : `PARADA ${currentIndex} DE ${stories.length}`}</p><h2 id="home-adventure-title">{featuredPresentation?.title}</h2><p className="home-adventure-story">{featuredPresentation?.subtitle}</p>{featuredPresentation?.pack ? <p className="home-current-words" lang="en">{featuredPresentation.terms}</p> : null}<p className="home-current-step"><span aria-hidden="true">✦</span> {missionLabel}</p><button type="button" className="primary-action" onClick={() => onOpen(featured)}>{completedIds.has(featured.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">→</span></button><p className="home-flow-hint">Una acción cada vez: desliza para avanzar y toca las piezas para jugar. Puedes salir y volver.</p><div className="home-adventure-progress"><div role="progressbar" aria-label="Misiones completadas del mundo" aria-valuemin={0} aria-valuemax={stories.length} aria-valuenow={completed.length}><span style={{ width: `${stories.length ? completed.length / stories.length * 100 : 0}%` }} /></div><small>{completed.length}/{stories.length} misiones de este recorrido</small></div></div>
-      </section> : <section className="journey-empty"><h2>La aventura está preparándose.</h2><p>Aún no hay una misión publicada.</p>{onTryPreview ? <button type="button" className="primary-action" onClick={onTryPreview}>Probar la experiencia →</button> : null}</section>}
-
-      {stories.length ? <details className="home-map-panel" onToggle={(event) => setShowMap(event.currentTarget.open)}><summary>Ver mi recorrido · elegir otra parada</summary>{showMap ? <JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} onLockedOpen={onOpen} /> : null}</details> : null}
-      <details className="home-practice-panel"><summary>Practicar algo concreto</summary><section className="home-modes" aria-label="Elige cómo aprender"><div className="home-mode-grid">
-        <button type="button" className="home-mode home-mode-words" onClick={onWords}><span aria-hidden="true">◈</span><strong>Aprender palabras</strong><small>Historias absurdas que se quedan contigo.</small><b aria-hidden="true">↗</b></button>
-        <button type="button" className="home-mode home-mode-arcade" onClick={onArcade} disabled={!onArcade}><span aria-hidden="true">✦</span><strong>Arcade</strong><small>Recuerda las palabras con sus asociaciones.</small><b aria-hidden="true">↗</b></button>
-        <button type="button" className="home-mode home-mode-chat" onClick={onGrammar} disabled={!onGrammar}><span aria-hidden="true">◌</span><strong>Gramática fácil</strong><small>Trucos y frases con tus palabras aprendidas.</small><b aria-hidden="true">↗</b></button>
-      </div>{conversationUnit ? <button type="button" className="home-text-button" onClick={() => onConverse(conversationUnit)}>Volver a mi conversación conocida →</button> : null}</section></details>
-
-      <section className="home-progress" aria-label="Tu progreso real"><div><strong>{uniqueWords.length}</strong><span>palabras practicadas</span><small>{retainedWords.length} recuperadas después sin pistas</small></div><div><strong>{conversations}</strong><span>{conversations === 1 ? 'escena conversada' : 'escenas conversadas'}</span></div><div><strong>{dueCount}</strong><span>{dueCount === 1 ? 'repaso pendiente' : 'repasos pendientes'}</span></div><button type="button" onClick={onEvolution} disabled={!onEvolution}>Ver Mi evolución <span aria-hidden="true">→</span></button></section>
-
-      <section className="home-library" id="palabras" aria-labelledby="home-words-title"><div className="home-section-heading"><p className="eyebrow">TUS PALABRAS</p><h2 id="home-words-title">Cada palabra guarda una historia.</h2><p>Vuelve a una misión para descubrir nuevas asociaciones o recordar las que ya conoces.</p></div>{uniqueWords.length ? <div className="home-word-list">{(showAllWords ? uniqueWords : uniqueWords.slice(0, 8)).map((memory) => <span key={memory.key}><strong lang="en">{memory.word.en}</strong><small>{memory.word.es}</small></span>)}</div> : <p className="home-empty-copy">Todavía no hay palabras recordadas. Empieza una historia y pronto aparecerán aquí.</p>}{uniqueWords.length > 8 ? <button type="button" className="home-text-button" onClick={() => setShowAllWords((value) => !value)}>{showAllWords ? 'Mostrar menos' : `Ver todas las ${uniqueWords.length} palabras`}</button> : null}{(next ?? featured) ? <button type="button" className="home-text-button" onClick={onWords}>{next ? 'Descubrir palabras en la siguiente misión →' : 'Volver a una historia →'}</button> : null}</section>
-
+    <div className="home-guided-body">
+      <div className="home-welcome"><p className="eyebrow">TU ESPACIO DE INGLÉS</p><p>No tienes que elegir un modo. Aquí está tu siguiente paso.</p></div>
+      {featured ? <section className="home-adventure home-now" aria-labelledby="home-adventure-title">
+        <div className="home-now-context"><span className="home-location-dot" aria-hidden="true" /><span>{resume ? 'Actividad en curso' : completedIds.has(featured.id) ? 'Práctica conocida' : 'Tu siguiente parada'}</span><small>{`PARADA ${currentIndex} DE ${stories.length}`}</small></div>
+        <div className="home-now-main"><div className="home-now-copy"><p className="eyebrow">{resume ? 'JUSTO DONDE LO DEJASTE' : 'AHORA TE TOCA'}</p><h1 id="home-adventure-title">{missionLabel}</h1><p className="home-now-place">{featuredPresentation?.title}</p><p className="home-now-description">{featuredPresentation?.subtitle}</p>
+          <button type="button" className="primary-action home-continue" onClick={() => onOpen(featured)}>{completedIds.has(featured.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">→</span></button>
+          <p className="home-now-reassurance">{resume ? 'Tu actividad y tus ayudas siguen donde las dejaste.' : 'Te enseñamos antes de pedirte una respuesta.'}</p>
+        </div><div className="home-now-illustration" aria-hidden="true"><img src="/house-adventure.svg" alt="" /><span>{featuredPresentation?.place}</span></div></div>
+        <div className="home-now-footer"><span>{resume ? 'Tu actividad está guardada' : 'Continuar te lleva al siguiente paso'}</span><span>Sin prisa · puedes salir cuando quieras</span></div>
+      </section> : <section className="journey-empty"><h1>La aventura está preparándose.</h1><p>Aún no hay una misión publicada.</p>{onTryPreview ? <button type="button" className="primary-action" onClick={onTryPreview}>Probar la experiencia →</button> : null}</section>}
+      <section className="home-footprint" aria-labelledby="home-footprint-title"><div><p className="eyebrow">LO QUE HAS PRACTICADO</p><h2 id="home-footprint-title">{uniqueWords.length ? `${uniqueWords.length} ${uniqueWords.length === 1 ? 'palabra' : 'palabras'} con práctica registrada` : 'Tu primera historia empieza aquí.'}</h2>{uniqueWords.length ? <div className="home-recent-words">{uniqueWords.slice(-3).map((memory) => <span key={memory.key}><strong lang="en">{memory.word.en}</strong><small>{memory.word.es}</small></span>)}</div> : <p>Cuando practiques, aquí verás tus palabras y podrás volver a tus intentos.</p>}</div><span className="home-footprint-mark" aria-hidden="true">✦</span></section>
+      <div className="home-secondary" aria-label="Apoyos opcionales">
+        <details className="home-evidence-panel"><summary>Lo que he practicado <small>Palabras, conversaciones y repasos</small></summary><div className="home-evidence-content">
+          <p>{retainedWords.length} palabras con recuperaciones sin pistas registradas · {conversations} escenas conversadas · {dueCount} oportunidades de repaso. No equivale a dominio.</p>
+          {uniqueWords.length ? <div className="home-word-list">{(showAllWords ? uniqueWords : uniqueWords.slice(0, 8)).map((memory) => <span key={memory.key}><strong lang="en">{memory.word.en}</strong><small>{memory.word.es}</small></span>)}</div> : <p>Todavía no hay práctica de palabras registrada.</p>}
+          {uniqueWords.length > 8 ? <button type="button" className="home-text-button" onClick={() => setShowAllWords((value) => !value)}>{showAllWords ? 'Mostrar menos' : `Ver todas las ${uniqueWords.length} palabras`}</button> : null}
+          <button type="button" className="home-text-button" onClick={onEvolution} disabled={!onEvolution}>Ver Mi evolución →</button>
+        </div></details>
+        {stories.length ? <details className="home-map-panel" onToggle={(event) => setShowMap(event.currentTarget.open)}><summary>Ver mi recorrido <small>Ubicarme o elegir otra parada</small></summary>{showMap ? <><p>{completed.length} paradas completadas. El catálogo contiene {catalogue.words} palabras y {catalogue.expressions} expresiones; no son palabras aprendidas.</p><JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} onLockedOpen={onOpen} /></> : null}</details> : null}
+        <details className="home-practice-panel"><summary>Practicar por mi cuenta <small>Opcional · no hace falta para continuar</small></summary><nav className="home-practice-links" aria-label="Práctica libre">
+          <button type="button" onClick={onWords} disabled={!onWords}>Aprender palabras</button><button type="button" onClick={onGrammar} disabled={!onGrammar}>Gramática</button><button type="button" onClick={onArcade} disabled={!onArcade}>Arcade</button>
+          {conversationUnit ? <button type="button" onClick={() => onConverse(conversationUnit)}>Volver a una conversación conocida</button> : null}
+        </nav></details>
+      </div>
       {onManageContent || onFusionDemo || onGrammarReview || onMirror ? <details className="home-tools"><summary>Herramientas y pruebas</summary><div>{onManageContent ? <button type="button" onClick={onManageContent}>Gestionar contenido</button> : null}{onMirror ? <button type="button" onClick={onMirror}>Ficha Espejo</button> : null}{onGrammarReview ? <button type="button" onClick={onGrammarReview}>Revisar trucos</button> : null}{onFusionDemo ? <button type="button" onClick={onFusionDemo}>Laboratorio TURN</button> : null}</div></details> : null}
     </div>
   </main>;

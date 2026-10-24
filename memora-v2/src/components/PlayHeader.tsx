@@ -14,7 +14,7 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
   return <>
     <header className="play-header">
       <button type="button" className="activity-back" onClick={onExit}>← Recorrido</button>
-      <p className="play-intention">{title}</p>
+      <div className="play-header-context"><span className="play-location-label">{position ?? 'TU PRÁCTICA DE INGLÉS'}</span><p className="play-intention">{title}</p></div>
       <details className="play-options">
         <summary aria-label="Opciones y estado de guardado" title="Opciones y guardado">•••<span className={`play-save-dot${warning ? ' needs-attention' : ''}`} aria-hidden="true" /></summary>
         <div className="play-options-panel">

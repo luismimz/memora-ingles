@@ -3,18 +3,18 @@
 :root {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Avenir Next', system-ui, sans-serif;
   font-synthesis: none;
-  --page: #eae5dc;
-  --ink: #282622;
-  --muted: #66635d;
-  --accent: #8b6950;
-  --accent-ink: #76543b;
-  --surface: rgba(255, 253, 248, .58);
-  --surface-strong: rgba(255, 253, 249, .82);
-  --surface-soft: rgba(246, 239, 228, .82);
-  --line: rgba(255, 255, 255, .68);
-  --shadow: 0 30px 72px rgba(72, 54, 39, .13), 0 2px 10px rgba(72, 54, 39, .05);
-  --warm: #a85a37;
-  --warm-soft: #f8e6d7;
+  --page: #f5f7f3;
+  --ink: #183c37;
+  --muted: #526b65;
+  --accent: #147568;
+  --accent-ink: #096356;
+  --surface: #fafcf9;
+  --surface-strong: #ffffff;
+  --surface-soft: #eaf3ed;
+  --line: #d6e4dd;
+  --shadow: 0 18px 50px rgba(24, 60, 55, .08), 0 2px 6px rgba(24, 60, 55, .03);
+  --warm: #a84925;
+  --warm-soft: #fff0df;
   --grammar-aux: #245d8c;
   --grammar-aux-soft: #e5eff9;
   --grammar-verb: #275f54;
@@ -23,18 +23,18 @@
   background: var(--page);
 }
 :root[data-appearance='dark'] {
-  --page: #171714;
-  --ink: #f5f1ea;
-  --muted: #c1bbb0;
-  --accent: #d8b79a;
-  --accent-ink: #eed1b2;
-  --surface: rgba(37, 35, 32, .58);
-  --surface-strong: rgba(31, 30, 28, .8);
-  --surface-soft: rgba(84, 77, 69, .53);
-  --line: rgba(255, 245, 228, .19);
-  --shadow: 0 36px 90px rgba(0, 0, 0, .4), inset 0 1px rgba(255, 255, 255, .08);
-  --warm: #efaa7e;
-  --warm-soft: rgba(131, 77, 51, .35);
+  --page: #102723;
+  --ink: #edf8f1;
+  --muted: #b1cfc3;
+  --accent: #8bdfc7;
+  --accent-ink: #a1ead5;
+  --surface: #18322c;
+  --surface-strong: #1c3931;
+  --surface-soft: #25493e;
+  --line: #3b6254;
+  --shadow: 0 18px 50px rgba(0, 0, 0, .24);
+  --warm: #ffc18d;
+  --warm-soft: #513b27;
   --grammar-aux: #a6d4fa;
   --grammar-aux-soft: #263b4c;
   --grammar-verb: #a5d9c6;
@@ -172,8 +172,8 @@ button:focus-visible, .game-card-swipe:focus-visible { outline: 3px solid var(--
 @media (max-width: 500px) { .coach-content { min-height: 440px; gap: 16px; } .coach-caption { min-height: 86px; } }
 body { background: var(--page); }
 
-.game-screen { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: 20px 16px 28px; background: radial-gradient(ellipse at 50% 6%, rgba(255, 250, 240, .82), transparent 68%), linear-gradient(145deg, #e8e0d4, #f6f2eb 58%, #ded4c5); }
-:root[data-appearance='dark'] .game-screen { background: radial-gradient(ellipse at 50% 6%, rgba(113, 92, 71, .35), transparent 68%), linear-gradient(145deg, #191918, #292724 58%, #171614); }
+.game-screen { min-height: 100dvh; display: flex; flex-direction: column; align-items: center; padding: 20px 16px 28px; background: var(--page); }
+:root[data-appearance='dark'] .game-screen { background: var(--page); }
 .game-topbar { display: flex; align-items: center; justify-content: space-between; width: min(100%, 740px); color: var(--ink); font-size: .73rem; font-weight: 900; letter-spacing: .12em; }
 .game-topbar small { color: var(--muted); font-size: inherit; }
 .game-topbar-actions { display: flex; align-items: center; gap: 16px; }
@@ -233,8 +233,8 @@ body { background: var(--page); }
 .association-content, .recall-content, .reward-content, .lesson-content, .builder-content, .complete-content { display: flex; flex-direction: column; width: 100%; min-height: 100%; }
 .reward-content, .complete-content { align-items: center; justify-content: center; text-align: center; }
 .reward-content h1, .complete-content h1 { margin: 12px 0 25px; font-size: clamp(2.1rem, 7vw, 3.8rem); line-height: 1.03; letter-spacing: -.05em; font-weight: 950; }
-.primary-action { min-height: 55px; padding: 12px 22px; border: 1px solid rgba(255,255,255,.24); border-radius: 16px; background: linear-gradient(145deg, #443b34, #252320); color: #fffaf2; font-weight: 750; box-shadow: 0 12px 25px rgba(34,27,21,.18), inset 0 1px rgba(255,255,255,.19); }
-:root[data-appearance='dark'] .primary-action { background: linear-gradient(145deg, #f7ead8, #d9c2a6); color: #29241f; }
+.primary-action { min-height: 55px; padding: 12px 22px; border: 1px solid var(--accent-ink); border-radius: 16px; background: var(--accent-ink); color: var(--page); font-weight: 750; box-shadow: 0 4px 0 color-mix(in srgb, var(--accent-ink) 65%, black); }
+:root[data-appearance='dark'] .primary-action { background: var(--accent-ink); color: var(--page); }
 .primary-action:hover { filter: brightness(1.04); transform: translateY(-2px); }
 .association-content { position: relative; gap: 10px; }
 .association-audio-status { min-height: 1.3em; margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.3; }

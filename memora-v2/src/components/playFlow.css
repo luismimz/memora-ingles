@@ -2,6 +2,11 @@
 .play-header { flex: 0 0 auto; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; width: min(100%, 960px); padding: max(6px, env(safe-area-inset-top)) 12px 6px; color: var(--ink); }
 .play-header .activity-back { min-height: 44px; font: inherit; font-size: .8rem; padding: 8px 0; }
 .play-intention { margin: 0; font-size: .9rem; font-weight: 750; line-height: 1.25; text-align: center; text-wrap: balance; }
+.play-header-context { display: grid; gap: 4px; min-width: 0; text-align: center; }
+.play-location-label { color: var(--muted); font-size: .58rem; line-height: 1.3; font-weight: 650; letter-spacing: .08em; }
+.play-header { border-bottom: 1px solid var(--line); background: var(--page); }
+.play-trail { padding-top: 10px; }
+.play-trail li[aria-current='step'] { padding: 5px 9px; border-radius: 999px; background: var(--surface-soft); }
 .play-options { position: relative; }
 .play-options > summary { position: relative; list-style: none; min-width: 44px; min-height: 44px; display: grid; place-items: center; cursor: pointer; font-size: 1rem; letter-spacing: .05em; border-radius: 12px; }
 .play-options > summary::-webkit-details-marker { display: none; }
