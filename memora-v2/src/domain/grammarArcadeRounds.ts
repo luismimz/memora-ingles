@@ -9,6 +9,7 @@ import { searchKeysLesson } from './searchKeysPractice';
 import { bedMakingLesson } from './bedMakingPractice';
 import { computerPlayingLesson, computerPlayingSkill, preparedComputerPlayingPractice } from './computerPlayingPractice';
 import { deskLocationLesson, deskLocationSkill, preparedDeskLocationPractice } from './deskLocationPractice';
+import { dinnerCookingLesson, dinnerCookingSkill, preparedDinnerCookingPractice } from './dinnerCookingPractice';
 
 export interface GrammarArcadeRound { unit: AtomicUnit; form?: GrammarForm; skill: string; sentence: UnitSentence; slotIndex: number; slot: { en: string; es: string; choices: string[]; note?: string }; conceptual: boolean; situation?: LessonCheck }
 
@@ -37,7 +38,9 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       const usedComputer = computer && preparedWord('computer') && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === computer.id && attempt.check === 'computer-meaning-v1' && attempt.correct);
       const desk = deskLocationLesson(unit, form.id);
       const usedDesk = desk && preparedWord('desk') && preparedDeskLocationPractice(unit, form.id, memories, attempts) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === desk.id && attempt.check === 'desk-meaning-v1' && attempt.correct);
-      const preparedLessons = [usedComputer ? computer : null, usedDesk ? desk : null].filter((lesson): lesson is GrammarLessonData => Boolean(lesson));
+      const dinner = dinnerCookingLesson(unit, form.id);
+      const usedDinner = dinner && preparedDinnerCookingPractice(unit, form.id, memories) && attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === dinner.id && attempt.check === 'dinner-meaning-v1' && attempt.correct);
+      const preparedLessons = [usedComputer ? computer : null, usedDesk ? desk : null, usedDinner ? dinner : null].filter((lesson): lesson is GrammarLessonData => Boolean(lesson));
       const fallback = searchKeysLesson(unit, form.id) ?? bedMakingLesson(unit, form.id) ?? lessonForForm(form, base);
       const lessons = preparedLessons.length ? preparedLessons : fallback ? [fallback] : [];
       return lessons.flatMap((lesson) => lesson.checks.filter((check) => check.kind !== 'write' && check.choices && check.choices.length >= 2 && (inspection || attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === lesson.id && attempt.check === check.id && attempt.correct)))
@@ -50,7 +53,9 @@ export function grammarArcadeRounds(userId: string, units: AtomicUnit[], inspect
       ? preparedComputerPlayingPractice(unit, form.id, memories)?.unit : null;
     const deskReview = attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === deskLocationSkill && attempt.correct)
       ? preparedDeskLocationPractice(unit, form.id, memories, attempts)?.unit : null;
-    return [...checks, ...getUnitSentences(deskReview ?? computerReview ?? unit).filter((sentence) => inspection || !missingGrammarWords(unit, memories).length && sentences.some((memory) => memory.unitId === unit.id && normalizeSentenceAnswer(memory.sentenceEn) === normalizeSentenceAnswer(sentence.en)))
+    const dinnerReview = attempts.some((attempt) => attempt.unitId === unit.id && attempt.skill === dinnerCookingSkill && attempt.correct)
+      ? preparedDinnerCookingPractice(unit, form.id, memories)?.unit : null;
+    return [...checks, ...getUnitSentences(dinnerReview ?? deskReview ?? computerReview ?? unit).filter((sentence) => inspection || !missingGrammarWords(unit, memories).length && sentences.some((memory) => memory.unitId === unit.id && normalizeSentenceAnswer(memory.sentenceEn) === normalizeSentenceAnswer(sentence.en)))
       .flatMap((sentence) => sentence.slots.map((slot, slotIndex) => ({ unit, form, skill: form.lesson?.id ?? form.id, sentence, slotIndex, slot, conceptual: false })))];
   });
 }

@@ -1,0 +1,11 @@
+# Avisar qué estás preparando: COOKING DINNER
+
+Incremento del pendiente exacto sobre697a4fc. Fuente recibida m1-test-kitchen/ing/cook→cooking y frase fuente exacta, sin sustituir autoría/continuación/mirror. Exige COOK=cocinar y DINNER=cena practicados por sentido/versión. KITCHEN no se exige en este aviso corto ni aparece oculto en distractores.
+
+Seis pasos: I, I AM, COOKING, DINNER contextual (no hora fija universal), COOKING DINNER y mensaje completo/contracción. Entrega a escena original de preparación frente a cena servida; cuatro piezas reordenables → única escritura del aviso a Nora, que guarda el móvil y no encarga otra cena. Pregunta/reacción españolas hasta preparar su inglés. Namespace ing:prepared-dinner-v1 y skill dinner-cooking-prepared-v1, sin reiniciar IDs/completados históricos ni cambiar la partida corta en curso. I/AM abreviables solo con escritura previa sin ayuda; piezas nuevas siempre enseñadas.
+
+Reutiliza GameCard/GrammarCoach/GrammarOrder/ConversationPractice/audio/journal/SRS. Error→reload conserva primer intento y ayuda; dos errores→modelo finito de cuatro piezas, no acierto. Arcade exige significado nuevo propio; el diálogo mixto antiguo queda protegido aunque su respuesta corta coincida: este aviso no prepara SOAP, AT MY DESK ni la pregunta inglesa anterior. Repaso de frase usa slots preparados.
+
+Pruebas:6enfocadas/2archivos,506/96integración, build/TypeScript/diff correctos. Se corrigió fixture legacy sin identidad de check por fixture real stage3/meaning-now-v1; no cambio de producción para acomodar test inválido. Dos recursos propios SVG→PNG600×330 renderizados e inspeccionados: preparación/platos vacíos frente a cena servida. No app/móvil jugados ni audio escuchado/diversión/retención acreditados. Bundle596,46kB, aviso conservado. No nuevo léxico/catálogo/medios aprobados/Directus/cuentas/sources/piloto/Claude modificados.
+
+Ruta: Inicio→Gramática→Estoy cocinando, con COOK/DINNER preparados, partida nueva. Una actividad antigua conserva su tarea; no borrar progreso. Estado de push/versión servida/huellas/copias en checkpoint superior. Siguiente aplicación independiente: ubicación IN THE KITCHEN, solo tras palabra/sentido KITCHEN y aviso DINNER usado sin ayudas, preparando THE/IN antes de evaluar; no IN=EN universal.

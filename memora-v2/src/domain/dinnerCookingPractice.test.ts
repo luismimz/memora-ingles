@@ -1,0 +1,32 @@
+import { expect, it } from 'vitest';
+import { reviewUnits } from '../preview/previewUnit';
+import { dinnerCookingLesson, preparedDinnerCookingPractice } from './dinnerCookingPractice';
+import { grammarChecksForExperience, validateGrammarLesson } from './grammarLesson';
+import { validateUnit } from './unit';
+import type { WordMemory } from './memory';
+const source = reviewUnits.find((unit) => unit.id === 'm1-test-kitchen')!;
+const memories = source.words.map((word) => ({ key: word.en.toLowerCase(), correct: 1, word })) as WordMemory[];
+it('prepara DINNER por sentido y COOKING DINNER antes de montar y escribir un único aviso', () => {
+  const before = JSON.stringify(source);
+  const prepared = preparedDinnerCookingPractice(source, 'ing', memories)!;
+  expect(prepared).not.toBeNull();
+  expect(() => validateGrammarLesson(prepared.lesson)).not.toThrow();
+  expect(() => validateUnit(prepared.unit)).not.toThrow();
+  expect(prepared.lesson.steps[3].caption).toContain('no indica una hora fija');
+  expect([2, 3, 1, 0].map((index) => prepared.lesson.checks[0].ordering![index].text).join(' ')).toBe('I AM COOKING DINNER');
+  expect(grammarChecksForExperience(prepared.lesson, [prepared.unit.sentence.en], [prepared.unit.sentence.en]).map((check) => check.id)).toEqual(['dinner-meaning-v1']);
+  expect(prepared.unit.practiceSentences).toEqual([]);
+  expect(prepared.unit.communication?.dialogue?.partnerLanguage).toBe('es');
+  expect(JSON.stringify(prepared)).not.toContain('soap');
+  expect(JSON.stringify(source)).toBe(before);
+});
+it('COOK solo no prepara DINNER, ni cambia sentidos, versiones o autoría', () => {
+  expect(preparedDinnerCookingPractice(source, 'ing', memories.slice(0, 1))).toBeNull();
+  expect(preparedDinnerCookingPractice(source, 'ing', memories.slice(0, 2))).not.toBeNull();
+  expect(preparedDinnerCookingPractice(source, 'ing', memories.map((memory) => ({ ...memory, word: { ...memory.word, es: 'otro sentido' } })))).toBeNull();
+  expect(preparedDinnerCookingPractice({ ...source, words: source.words.map((word) => ({ ...word, associationVersion: 9 })) }, 'ing', memories)).toBeNull();
+  expect(dinnerCookingLesson({ ...source, id: 'another' }, 'ing')).toBeNull();
+  expect(dinnerCookingLesson({ ...source, sentence: { ...source.sentence, en: 'Another authored sentence.' } }, 'ing')).toBeNull();
+  expect(dinnerCookingLesson({ ...source, grammarLesson: { ...preparedDinnerCookingPractice(source, 'ing', memories)!.lesson, id: 'ing' } }, 'ing')).toBeNull();
+  expect(dinnerCookingLesson({ ...source, grammarContinuation: { status: 'needs_review', formId: 'ing', vocabulary: ['cook'], grammarSkills: [] } }, 'ing')).toBeNull();
+});
