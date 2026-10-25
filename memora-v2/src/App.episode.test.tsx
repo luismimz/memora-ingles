@@ -68,7 +68,8 @@ it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opciona
   await click('Mi evolución');
   await act(async () => { await import('./components/EvolutionView'); });
   expect(tree.root.findAllByProps({ className: 'journey-screen evolution-screen' })).toHaveLength(1);
-  await click('Inicio');
+  expect(tree.root.findAllByProps({ className: 'evolution-overview' })).toHaveLength(1);
+  await click('Ir a mi recorrido');
   expect(tree.root.findAllByProps({ className: 'journey-screen home-v2 home-guided' })).toHaveLength(1);
   expect(readLearningActivities('app-episode-isolated').filter((item) => item.source === 'learner')).toHaveLength(0);
 });

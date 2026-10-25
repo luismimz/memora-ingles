@@ -98,7 +98,8 @@ describe('ficha espejo completa', () => {
     reconstructed.forEach((value, key) => localStorage.setItem(key, value));
     const html = renderToStaticMarkup(<EvolutionView userId="learner" units={[unit]} pilot={null} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} onBack={() => {}} onPractice={() => {}} onProfile={() => {}} onExit={() => {}} />);
     expect(html).toContain('I working'); expect(html).toContain('Falta la pieza azul.'); expect(html).toContain('Mensaje del personaje'); expect(html).toContain('Vale, volveré después.'); expect(html).toContain('Nuevo intento');
-    expect(html).toContain('0 respuestas escritas admitidas sin ayuda registrada');
+    expect(html).toContain('<dt>Aciertos escritos sin ayuda registrada</dt><dd>0</dd>');
+    expect(html).toContain('<dt>Aciertos con ayuda u opciones</dt><dd>1</dd>');
   });
   it('la revisión visual del historial no expone ni modifica intentos de una cuenta', () => {
     recordLearningActivity('learner', { unitId: unit.id, unitTitle: unit.title, contentVersion: '1', activityId: 'private-attempt', skill: lesson.id, phase: 'grammar', source: 'learner', modality: 'writing', prompt: 'Estoy comiendo.', response: 'RESPUESTA PRIVADA', expected: 'I am eating', correct: false, helped: false });

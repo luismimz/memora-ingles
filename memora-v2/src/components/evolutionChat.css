@@ -23,3 +23,21 @@
 .history-library > details { flex: 1; }
 .history-library details details { margin-top: 12px; padding: 14px; border-radius: 14px; background: var(--surface-soft); }
 @media(max-width:720px) { .evolution-layout.history-chats { grid-template-columns: minmax(0,1fr); } .history-list { flex-direction: row; max-height: none; overflow-x: auto; } .history-list button { min-width: 180px; } .history-bubble { max-width: 98%; } .history-log { padding: 14px; } }
+.evolution-overview, .evolution-section { width: min(100%, 1140px); min-width: 0; margin-inline: auto; flex-shrink: 0; }
+.evolution-overview { display: grid; gap: 20px; padding: clamp(18px, 3vw, 30px); border: 1px solid var(--line); border-radius: 24px; background: var(--surface-strong); margin-bottom: 24px; }
+.evolution-overview h2 { margin: 6px 0 10px; font-size: clamp(1.2rem, 3vw, 1.65rem); overflow-wrap: anywhere; }
+.evolution-last p, .evolution-next p { margin: 0; line-height: 1.6; }
+.evolution-last time, .evolution-next small, .evolution-evidence-note { color: var(--muted); font-size: .85rem; line-height: 1.6; }
+.evolution-evidence { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 0; }
+.evolution-evidence > div { display: flex; flex-direction: column; justify-content: space-between; gap: 10px; padding: 16px; border-radius: 16px; background: var(--surface-soft); }
+.evolution-evidence dt { font-size: .85rem; line-height: 1.5; overflow-wrap: anywhere; }
+.evolution-evidence dd { margin: 0; font-size: 1.8rem; font-weight: 800; color: var(--accent-ink); }
+.evolution-evidence-note { margin: -8px 0 0; }
+.evolution-next { border-top: 1px solid var(--line); padding-top: 18px; }
+.evolution-next small { display: block; margin-top: 8px; }
+.evolution-next .primary-action { margin-top: 16px; }
+.evolution-section > summary { min-height: 48px; padding: 16px 0; font-weight: 750; cursor: pointer; }
+.evolution-section > summary small { display: block; font-size: .8rem; font-weight: 400; color: var(--muted); margin-top: 6px; }
+.evolution-section > summary:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
+.evolution-section .evolution-controls { margin-top: 12px; }
+@media(max-width:520px) { .evolution-evidence { grid-template-columns: minmax(0, 1fr); } .evolution-evidence > div { flex-direction: row; align-items: center; } .evolution-next .primary-action { width: 100%; } }
