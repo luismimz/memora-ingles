@@ -70,7 +70,19 @@ it('separa historial del turno sin reproducir audio ni registrar mensajes anteri
   expect(oldMessages.map((node: ReactElement<any>) => node.props.message.id)).toEqual(['prompt-0', 'chat-0', 'reply-0']);
   expect(oldMessages.every((node: ReactElement<any>) => node.type === TypedChatMessage && node.props.message.instant && !node.props.autoSpeak && !node.props.onReady)).toBe(true);
   expect(log.props.children.map((node: ReactElement<any>) => node.props.message.id)).toEqual(['prompt-1', 'chat-2']);
-  expect(log.props.children[0].props.autoSpeak).toBe(true);
+  expect(log.props.children[0].props.message.instant).toBe(true);
+  expect(log.props.children[0].props.autoSpeak).toBe(false);
+  expect(log.props.children[0].props.onReady).toBeUndefined();
+  expect(readLearningActivities(user)).toHaveLength(0);
+});
+it('un mensaje interrumpido sigue activo; no se da por leído al reabrir', () => {
+  storage.set(key, JSON.stringify({ ...saved, busy: true, savedMessages: [] }));
+  const nodes = render();
+  const log = nodes.find((node) => node.props.role === 'log')!;
+  const message = log.props.children[0];
+  expect(message.props.message.instant).not.toBe(true);
+  expect(message.props.autoSpeak).toBe(true);
+  expect(message.props.onReady).toBeTypeOf('function');
   expect(readLearningActivities(user)).toHaveLength(0);
 });
 it('un turno retirado no transfiere un acierto pendiente al turno que ocupa su índice', () => {

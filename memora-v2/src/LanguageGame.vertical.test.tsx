@@ -23,6 +23,7 @@ import { GrammarOrder } from './components/GrammarOrder';
 import { AnswerStudio } from './components/AnswerStudio';
 import { SentenceBuilderCard } from './components/SentenceBuilderCard';
 import { ConversationPractice } from './components/ConversationPractice';
+import { TypedChatMessage } from './components/TypedChatMessage';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -133,6 +134,27 @@ it('el cierre gramatical tras reanudar cuenta intentos de la sesión original, n
   await swipe(false);
   expect(readSessions(user)).toMatchObject([{ correct: 1, attempted: 1 }]);
   expect(readLearningActivities(user).filter((event) => event.phase === 'grammar')).toEqual(before);
+});
+it('la respuesta del personaje ya recibida reaparece completa y en silencio, sin retrasar el slide', async () => {
+  const dialogue = previewUnit.communication!.dialogue!;
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'conversation' });
+  localStorage.setItem(`memora-v2.chat-checkpoint.${user}.${previewUnit.id}`, JSON.stringify({ version: previewUnit.contentVersion ?? '1', round: 0, turnId: 'respond', messages: [
+    { id: 'prompt-0', who: 'partner', text: dialogue.turns[0].en },
+    { id: 'reply-0', who: 'partner', text: 'Okay, have fun!' },
+  ], activeMessage: 'reply-0', busy: true, input: '', helped: false, hintLevel: 0, awaitingNext: true, oral: false, revealedAnswer: false, savedMessages: ['prompt-0', 'reply-0'], serial: 2 }));
+  const before = readLearningActivities(user);
+  vi.mocked(playEnglish).mockClear();
+  await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  expect(tree.root.findAllByType(TypedChatMessage).every((message) => message.props.message.instant && !message.props.autoSpeak && !message.props.onReady)).toBe(true);
+  expect(text(tree.toJSON())).toContain('Okay, have fun!');
+  await act(async () => { vi.advanceTimersByTime(3000); });
+  expect(playEnglish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+  expect(tree.root.findByType(GameCard).props.onAdvance).toBeTypeOf('function');
+  await swipe(false);
+  expect(tree.root.findAllByType(ConversationPractice)).toHaveLength(0);
+  expect(text(tree.toJSON())).toContain('Has practicado la escena.');
+  expect(localStorage.getItem(`memora-v2.chat-checkpoint.${user}.${previewUnit.id}`)).toBeNull();
 });
 it('el coach principal reabre explicación, piezas y acierto sin volver al inicio ni duplicar intentos', async () => {
   const saved = () => readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1');
