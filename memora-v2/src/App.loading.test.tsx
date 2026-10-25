@@ -7,12 +7,12 @@ import { recordWordRecall } from './domain/memory';
 import { completeArcadeCadence, pendingAutomaticArcade } from './domain/arcadeCadence';
 import { recordLearningActivity } from './domain/learningActivity';
 
-const api = vi.hoisted(() => ({ unit: vi.fn(), library: vi.fn(), identity: vi.fn() }));
+const api = vi.hoisted(() => ({ unit: vi.fn(), library: vi.fn(), identity: vi.fn(), published: vi.fn() }));
 vi.mock('./services/audio', () => ({ stopSpeech: vi.fn(), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/progressSync', async (original) => ({ ...await original<typeof import('./services/progressSync')>(), startProgressSync: (_id: string, callback: (status: string) => void) => { callback('saved'); return { stop: vi.fn() }; } }));
 vi.mock('./services/directus', async (original) => ({
   ...await original<typeof import('./services/directus')>(), hasSession: () => true,
-  loadIdentity: api.identity, loadPublishedUnitSummaries: async () => [previewUnit],
+  loadIdentity: api.identity, loadPublishedUnitSummaries: api.published,
   loadUnit: api.unit, loadLearningLibrary: api.library,
   loadKeysPilot: async () => null, loadMirrorPilot: async () => null,
 }));
@@ -22,12 +22,13 @@ const text = (node: any): string => typeof node === 'string' ? node : Array.isAr
 const click = async (label: string) => { await act(async () => { tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick(); }); };
 async function mount() { const App = (await import('./App')).default; await act(async () => { tree = create(<App />); }); }
 beforeEach(() => {
-  vi.clearAllMocks(); api.unit.mockReset(); api.library.mockReset(); api.identity.mockReset(); values = new Map();
+  vi.clearAllMocks(); api.unit.mockReset(); api.library.mockReset(); api.identity.mockReset(); api.published.mockReset(); values = new Map();
   const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
   vi.stubGlobal('localStorage', storage);
   vi.stubGlobal('window', { localStorage: storage, location: { search: '' }, addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(), setTimeout, clearTimeout, setInterval, clearInterval, matchMedia: () => ({ matches: true }) });
   vi.stubGlobal('document', { documentElement: { dataset: {}, style: {} } });
   api.identity.mockResolvedValue({ id: 'loading-isolated', isAdmin: false });
+  api.published.mockResolvedValue([previewUnit]);
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
 const learningKeys = () => [...values.keys()].filter((key) => /learning|memory|resume|checkpoint/.test(key));
@@ -93,5 +94,21 @@ it('Arcade muestra su preparación, evita dobles lanzamientos y puede cancelarse
   await act(async () => finish(previewUnit));
   expect(tree.root.findAllByType('dialog')).toHaveLength(0);
   expect(pendingAutomaticArcade('loading-isolated')).toBe('associations');
+  expect([...values.entries()]).toEqual(before);
+});
+it.each([false, true])('permite reintentar el catálogo sin cerrar sesión, con detalles técnicos solo para admin=%s', async (admin) => {
+  api.identity.mockResolvedValue({ id: 'loading-isolated', isAdmin: admin });
+  api.published.mockRejectedValueOnce(new Error('technical-catalogue-error'));
+  values.set('memora-v2.resume.loading-isolated', 'saved-position');
+  await mount(); const before = [...values.entries()];
+  expect(text(tree.toJSON())).toContain('No pudimos abrir tu recorrido');
+  expect(tree.root.findByProps({ role: 'alert' })).toBeTruthy();
+  expect(tree.root.findAllByProps({ className: 'primary-action' })).toHaveLength(1);
+  expect(text(tree.toJSON()).includes('technical-catalogue-error')).toBe(admin);
+  expect(text(tree.toJSON()).includes('Detalles para administración')).toBe(admin);
+  await click('Volver a intentar');
+  expect(text(tree.toJSON())).toContain('Continuar jugando');
+  expect(api.identity).toHaveBeenCalledTimes(2);
+  expect(api.published).toHaveBeenCalledTimes(2);
   expect([...values.entries()]).toEqual(before);
 });
