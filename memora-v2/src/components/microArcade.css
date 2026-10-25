@@ -28,6 +28,10 @@
 .micro-clock { display: none; }
 .arcade-stream-tools { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; max-width: 100%; }
 .arcade-stream-screen .game-topbar { flex-wrap: wrap; gap: .5rem; }
+.arcade-stream-screen .game-topbar { flex: 0 0 auto; margin: 0 auto; padding: max(6px, env(safe-area-inset-top)) 12px 6px; border-bottom: 1px solid var(--line); }
+.arcade-stream-screen .micro-answer-result { margin: auto; }
+.arcade-result-status { color: var(--accent-ink); font-weight: 650; }
+.arcade-stream-card .arcade-reminder { padding: 0; }
 .arcade-stream-tools button { font-size: .7rem; min-height: 44px; padding: .5rem; }
 .arcade-stream-card::before { display: none; }
 .arcade-stream-foot { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: .7rem; }

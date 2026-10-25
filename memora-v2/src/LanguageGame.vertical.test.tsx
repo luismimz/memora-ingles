@@ -128,11 +128,15 @@ it('el resultado legacy sin desenlace muestra el modelo, no reinventa un acierto
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
 });
 
-it('aciertos avanzan una vez, cierre guarda una vez y su gesto enlaza el recorrido sin CTA duplicado', async () => {
+it('el acierto espera el gesto, cierre guarda una vez y el siguiente gesto enlaza sin CTA duplicado', async () => {
   writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...initialGame, phase: 'recall', recallIndex: unit.words.length - 1, recallAnswered: true, recallOutcome: 'correct', correct: 2 });
   await mount();
-  expect(text(tree.toJSON())).toContain('¡CLAC!');
+  expect(text(tree.toJSON())).toContain('Acertaste');
+  expect(text(tree.toJSON())).not.toContain('¿Cómo se dice');
   await act(async () => { vi.advanceTimersByTime(1100); });
+  expect(finished).not.toHaveBeenCalled();
+  expect(checkpoint()?.recallAnswered).toBe(true);
+  await swipe();
   expect(finished).toHaveBeenCalledOnce(); expect(next).not.toHaveBeenCalled();
   expect(tree.root.findAllByProps({ className: 'primary-action' })).toHaveLength(0);
   expect(readLearningActivities(user).filter((row) => row.activityId === 'vocabulary-completed')).toHaveLength(1);

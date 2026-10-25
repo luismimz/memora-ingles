@@ -14,7 +14,17 @@ vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
 const user = 'listening-isolated';
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
-const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).trim() === label)!;
+const button = (label: string) => tree.root.findAllByType('button').find((node) => (node.props['aria-label'] ?? text(node).trim()) === label)!;
+const region = () => tree.root.findByProps({ role: 'region' });
+async function swipe() {
+  const event = { target: { closest: () => null }, currentTarget: { scrollTop: 0, scrollHeight: 600, clientHeight: 600 } };
+  await act(async () => {
+    region().props.onTouchStart({ ...event, touches: [{ clientY: 400 }] });
+    region().props.onTouchMove({ ...event, touches: [{ clientY: 200 }] });
+    region().props.onTouchEnd();
+    vi.advanceTimersByTime(230);
+  });
+}
 async function mount(unit = previewUnit, initialRound = 1, onExit = () => {}) { await act(async () => { tree = create(<MicroArcade userId={user} units={[unit]} inspection={false} initialRound={initialRound} onExit={onExit} automatic />); }); }
 beforeEach(() => {
   vi.useFakeTimers(); vi.mocked(playEnglish).mockReset().mockResolvedValue({ status: 'played', source: 'browser' });
@@ -43,7 +53,7 @@ it('escucha sin revelar la palabra, exige reproducción completada y registra ca
   expect(memory.capabilities?.auditory).toMatchObject({ attempts: 1, correct: 1, independentCorrect: 0 });
   expect(memory.capabilities?.recall).toBeUndefined();
   expect(readAttempts(user).at(-1)?.direction).toBe('auditory');
-  expect(text(tree.toJSON())).toContain('Bien.');
+  expect(text(tree.toJSON())).toContain('Acertaste');
 });
 
 it('audio bloqueado permite texto sin fallo ni acierto auditivo ficticio', async () => {
@@ -103,15 +113,15 @@ it('tras acertar muestra palabra y significado con continuación junto al result
   expect(text(tree.toJSON())).toContain(target.es);
   expect(text(tree.toJSON())).not.toContain('Escucha y elige lo que significa.');
   expect(button('Seguir →')).toBeUndefined();
-  expect(button('Continuar →')).toBeUndefined();
-  expect(text(tree.toJSON())).toContain('Seguimos con el siguiente reto');
+  expect(button('Siguiente reto')).toBeDefined();
+  expect(text(tree.toJSON())).toContain('Desliza hacia arriba');
   const before = readLearningActivities(user);
   vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'blocked', source: 'kokoro' });
   await act(async () => button('🔊 Escuchar de nuevo').props.onClick());
   expect(text(tree.toJSON())).toContain('No se completó el audio');
-  expect(button('Continuar →').props.disabled).toBe(false);
+  expect(button('Siguiente reto').props.disabled).toBe(false);
   expect(readLearningActivities(user)).toEqual(before);
-  await act(async () => button('Continuar →').props.onClick());
+  await swipe();
   expect(tree.root.findAllByProps({ className: 'micro-content micro-answer-result' })).toHaveLength(0);
 });
 it('pausar la repetición del resultado no deja su altavoz bloqueado al reanudar', async () => {
@@ -129,7 +139,7 @@ it('pausar la repetición del resultado no deja su altavoz bloqueado al reanudar
   await act(async () => button('Reanudar').props.onClick());
   await act(async () => resolve({ status: 'played', source: 'kokoro' }));
   expect(button('🔊 Escuchar de nuevo').props.disabled).toBe(false);
-  expect(button('Continuar →').props.disabled).toBe(false);
+  expect(button('Siguiente reto').props.disabled).toBe(false);
   await act(async () => button('🔊 Escuchar de nuevo').props.onClick());
   expect(text(tree.toJSON())).not.toContain('No se completó el audio');
   expect(readLearningActivities(user)).toHaveLength(1);
@@ -143,7 +153,7 @@ it('no monta escucha sin dos significados y sonidos preparados distintos', async
   expect(button('🔊 Reproducir palabra inglesa')).toBeUndefined();
   expect(readLearningActivities(user)).toHaveLength(0);
 });
-it('enlaza elegir, escuchar y escribir sin pulsar Continuar, sin reloj y sale una sola vez', async () => {
+it('enlaza elegir, escuchar y escribir deslizando, sin saltar preguntas ni resultados por tiempo', async () => {
   const rounds = microRounds(user, [previewUnit]);
   const exit = vi.fn();
   await mount(previewUnit, 0, exit);
@@ -153,17 +163,21 @@ it('enlaza elegir, escuchar y escribir sin pulsar Continuar, sin reloj y sale un
   expect(primaryHeader.map((node) => text(node))).toEqual(['← Salir', 'Pausar']);
   await act(async () => { vi.advanceTimersByTime(60000); });
   expect(readLearningActivities(user)).toHaveLength(0);
+  await swipe();
+  expect(readLearningActivities(user)).toHaveLength(0);
+  expect(button(rounds[0].word.en)).toBeDefined();
   await act(async () => button(rounds[0].word.en).props.onClick());
-  expect(button('Continuar →')).toBeUndefined();
-  await act(async () => { vi.advanceTimersByTime(2200); });
+  await act(async () => { vi.advanceTimersByTime(60000); });
+  expect(text(tree.toJSON())).toContain('Acertaste');
+  await swipe();
   expect(button('🔊 Reproducir palabra inglesa')).toBeDefined();
   await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
   await act(async () => button(rounds[1].word.es).props.onClick());
-  await act(async () => { vi.advanceTimersByTime(2200); });
+  await swipe();
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: rounds[2].word.en } }));
   await act(async () => { vi.advanceTimersByTime(450); });
-  expect(button('Continuar →')).toBeUndefined();
-  await act(async () => { vi.advanceTimersByTime(2200); });
+  expect(button('Terminar el repaso')).toBeDefined();
+  await swipe();
   expect(exit).toHaveBeenCalledOnce();
   await act(async () => { vi.advanceTimersByTime(10000); });
   expect(exit).toHaveBeenCalledOnce();
@@ -179,8 +193,11 @@ it('el error espera ayuda sin saltar al siguiente reto y conserva el primer inte
   await act(async () => { vi.advanceTimersByTime(60000); });
   expect(readLearningActivities(user)).toEqual(before);
   expect(readLearningActivities(user)[0].correct).toBe(false);
-  expect(button('Seguir con ayuda →')).toBeDefined();
+  expect(button('Seguir con ayuda')).toBeDefined();
   expect(button('🔊 Reproducir palabra inglesa')).toBeUndefined();
+  await swipe();
+  expect(button('🔊 Reproducir palabra inglesa')).toBeDefined();
+  expect(readLearningActivities(user)).toEqual(before);
 });
 it('una palabra pendiente de preparación conserva la pausa incluso después de acertar', async () => {
   const unit = { ...previewUnit, words: [previewUnit.words[0]] };
@@ -192,7 +209,35 @@ it('una palabra pendiente de preparación conserva la pausa incluso después de 
   await act(async () => button(unit.words[0].en).props.onClick());
   await act(async () => { vi.advanceTimersByTime(60000); });
   expect(exit).not.toHaveBeenCalled();
-  expect(button('Continuar →')).toBeDefined();
-  await act(async () => button('Continuar →').props.onClick());
+  expect(button('Terminar el repaso')).toBeDefined();
+  await swipe();
   expect(exit).toHaveBeenCalledOnce();
+});
+it('pausar retira el avance por gesto sin borrar el acierto y reanudar recupera el mismo resultado', async () => {
+  const rounds = microRounds(user, [previewUnit]);
+  await mount(previewUnit, 0);
+  await act(async () => button(rounds[0].word.en).props.onClick());
+  const before = readLearningActivities(user);
+  await act(async () => button('Pausar').props.onClick());
+  expect(button('Siguiente reto')).toBeUndefined();
+  await swipe();
+  expect(text(tree.toJSON())).toContain('Acertaste');
+  await act(async () => button('Reanudar').props.onClick());
+  expect(button('Siguiente reto')).toBeDefined();
+  await swipe();
+  expect(button('🔊 Reproducir palabra inglesa')).toBeDefined();
+  expect(readLearningActivities(user)).toEqual(before);
+});
+it('deslizar con audio pendiente no responde, ni cambia la palabra, ni registra memoria', async () => {
+  let resolve!: (result: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  await mount();
+  await act(async () => { void button('🔊 Reproducir palabra inglesa').props.onClick(); });
+  await swipe();
+  expect(text(tree.toJSON())).toContain('Preparando el audio');
+  expect(readLearningActivities(user)).toHaveLength(0);
+  await act(async () => resolve({ status: 'unavailable', source: null }));
+  await swipe();
+  expect(button('No se oye · usar texto')).toBeDefined();
+  expect(readLearningActivities(user)).toHaveLength(0);
 });

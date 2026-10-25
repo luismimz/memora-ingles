@@ -18,7 +18,8 @@ afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); });
 describe('avance accesible sin gesto obligatorio', () => {
   it('muestra la acción concreta en vertical, sin sustituirla por navegación genérica', () => {
     const html = renderToStaticMarkup(<GameCard vertical advanceLabel="Ya la he imaginado" onAdvance={() => {}}>Escena</GameCard>);
-    expect(html).toContain('<span>Ya la he imaginado</span>');
+    expect(html).toContain('aria-label="Ya la he imaginado"');
+    expect(html).toContain('Desliza hacia arriba o toca aquí');
     expect(html).not.toContain('Desliza o toca');
     expect(html).not.toContain('Desliza para continuar');
     expect(renderToStaticMarkup(<GameCard vertical revealFooter={false} onAdvance={() => {}}>Enseñanza pendiente</GameCard>)).not.toContain('card-vertical-next');

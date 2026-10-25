@@ -303,7 +303,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   }, [unit.words.length]);
 
   useEffect(() => {
-    if (!sceneRecognition && !unit.activeRecall && state.phase === 'recall' && state.recallAnswered && transitionTimer.current === null && (!vertical || state.recallOutcome === 'correct')) {
+    if (!vertical && !sceneRecognition && !unit.activeRecall && state.phase === 'recall' && state.recallAnswered && transitionTimer.current === null) {
       // A reload during answer feedback must continue without recording the answer twice.
       transitionTimer.current = window.setTimeout(advanceRecall, 1100);
     }
@@ -326,7 +326,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       playSnap();
       void playEnglish(recallWord.en.toLowerCase(), recallWord.audioUrl);
     } else playMiss();
-    if (!sceneRecognition && (correct || !vertical)) transitionTimer.current = window.setTimeout(advanceRecall, correct ? 1100 : 5000);
+    if (!vertical && !sceneRecognition) transitionTimer.current = window.setTimeout(advanceRecall, correct ? 1100 : 5000);
   }, [advanceRecall, recallWord, reviewMode, state.phase, state.recallAnswered, unit.id, userId, vertical, sceneRecognition, sceneChoices]);
 
   function consultRecognitionModel() {
@@ -412,8 +412,8 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
           <div className="recall-content"><p className="eyebrow">CONECTA · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} modeled={state.recallOutcome === 'modeled'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} onModel={consultRecognitionModel} /></div>
         </GameCard> : null}
 
-        {state.phase === 'recall' && !unit.activeRecall && !sceneRecognition ? <GameCard vertical={vertical} onAdvance={vertical && state.recallAnswered && recallFeedback !== 'correct' ? advanceRecall : undefined} advanceLabel="Continuar con otra palabra" key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>
-          <div className="recall-content"><p className="eyebrow">RECUERDA · {state.recallIndex + 1}/{unit.words.length} <span key={state.combo} className={state.combo > 1 ? 'combo-hot' : ''}>COMBO x{Math.max(1, state.combo)}</span></p><SceneVisual hideAnswer={recallFeedback === 'idle'} word={recallWord} showMemoryLink={recallFeedback === 'wrong' || recallFeedback === 'missed'} /><h1>¿Cómo se dice <em>{recallWord.es}</em>?</h1><div className="recall-answer-slot" aria-live="polite">{recallFeedback === 'wrong' || recallFeedback === 'missed' ? <div className="recall-hint"><p>Vuelve a la escena:</p><strong>{recallWord.bridge ? `${recallWord.bridge} → ` : ''}{recallWord.en}</strong><small>{recallWord.es.toUpperCase()}</small><p className="recall-memory-scene"><MnemonicSceneText word={recallWord} /></p></div> : recallFeedback === 'correct' ? <p className="success-copy">¡CLAC! +10 XP</p> : <div className="recall-choices">{choices.map((choice) => <button type="button" disabled={recallFeedback !== 'idle'} onClick={() => answerRecall(choice.en)} key={choice.id}>{choice.en}</button>)}</div>}</div></div>
+        {state.phase === 'recall' && !unit.activeRecall && !sceneRecognition ? <GameCard vertical={vertical} stepKey={state.recallAnswered ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.recallAnswered ? advanceRecall : undefined} advanceLabel="Continuar con otra palabra" key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>
+          <div className="recall-content"><p className="eyebrow">RECUERDA · {state.recallIndex + 1}/{unit.words.length}</p><SceneVisual hideAnswer={recallFeedback === 'idle'} word={recallWord} showMemoryLink={recallFeedback === 'wrong' || recallFeedback === 'missed'} />{recallFeedback === 'correct' ? <><h1 lang="en">{recallWord.en}</h1><p lang="es">{recallWord.es}</p></> : <h1>¿Cómo se dice <em>{recallWord.es}</em>?</h1>}<div className="recall-answer-slot" aria-live="polite">{recallFeedback === 'wrong' || recallFeedback === 'missed' ? <div className="recall-hint"><p>Vuelve a la escena:</p><strong>{recallWord.bridge ? `${recallWord.bridge} → ` : ''}{recallWord.en}</strong><small>{recallWord.es.toUpperCase()}</small><p className="recall-memory-scene"><MnemonicSceneText word={recallWord} /></p></div> : recallFeedback === 'correct' ? <p className="success-copy">✓ Acertaste</p> : <div className="recall-choices">{choices.map((choice) => <button type="button" disabled={recallFeedback !== 'idle'} onClick={() => answerRecall(choice.en)} key={choice.id}>{choice.en}</button>)}</div>}</div></div>
         </GameCard> : null}
 
         {state.phase === 'reward' ? <GameCard vertical={vertical} key="reward" onAdvance={leaveReward} advanceLabel={learningMode === 'vocabulary' ? nextLabel : 'Usar las palabras'}>

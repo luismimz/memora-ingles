@@ -47,7 +47,8 @@ it('una etiqueta editorial con flecha conserva una sola flecha visual y un nombr
   act(() => tree.update(<GameCard vertical onAdvance={() => {}} advanceLabel="Usar mi frase →">Mensaje</GameCard>));
   const control = tree.root.findByType('button');
   expect(control.props['aria-label']).toBe('Usar mi frase');
-  expect(control.findAllByType('span').map((node) => node.children.join(''))).toEqual(['Usar mi frase', '→']);
+  expect(control.findAllByType('small')[0].children).toEqual(['Desliza hacia arriba o toca aquí']);
+  expect(control.findByProps({ 'aria-hidden': 'true' }).children).toEqual(['↑']);
 });
 it('la acción está fuera del área de lectura y funciona sin buscar el final del texto', () => {
   const advance = vi.fn(); mount(advance);

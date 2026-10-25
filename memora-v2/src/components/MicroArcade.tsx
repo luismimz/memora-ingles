@@ -1,5 +1,4 @@
 import { AnswerStudio } from './AnswerStudio';
-import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 import { useEffect, useRef, useState } from 'react';
 import { microRounds, type MicroRound } from '../domain/microArcade';
 import { commitMicroAttempt } from '../domain/microArcadeProgress';
@@ -25,7 +24,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     ? units.flatMap((unit) => unit.words.map((word) => ({ unit, word, phrase: { en: unit.sentence.en, es: unit.sentence.es, key: '' }, options: [] as string[], due: false })))
     : microRounds(userId, units));
   const [index, setIndex] = useState(initialRound);
-  const [calm, setCalm] = useState(() => readArcadeCalm(userId));
   const startRound = useRef(initialRound).current;
   const [revealed, setRevealed] = useState(false);
   const [usedHint, setUsedHint] = useState(inspection);
@@ -39,7 +37,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const writing = index % 3 === 2 && !showChoices;
   const answered = useRef(false);
   const [result, setResult] = useState<'correct' | 'rescue' | null>(null);
-  const [reviewing, setReviewing] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [choiceSeed] = useState(() => Math.floor(Math.random() * 100000));
   const previous = useRef<string>();
@@ -58,7 +55,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const listeningBase = [...meanings.values()].slice(0, 3);
   const listeningOffset = (choiceSeed + index * 7) % Math.max(1, listeningBase.length);
   const listeningOptions = [...listeningBase.slice(listeningOffset), ...listeningBase.slice(0, listeningOffset)];
-  const manualFeedback = calm || Boolean(round?.pendingModel) || result !== 'correct' || reviewing;
   const limit = arcadeSessionLength(candidates.length, automatic);
   const knownOptions = [...new Set(candidates.map((candidate) => candidate.word.en))];
   const baseOptions = round ? [...new Set([round.word.en, ...knownOptions.filter((value) => value !== round.word.en)])].slice(0, 3) : [];
@@ -69,7 +65,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const clock = useArcadeClock(index, revealed, Boolean(round), () => {}, () => {
     if (automatic && index - startRound + 1 >= limit) { onExit(); return; }
     if (onUse && (index + 1) % 4 === 0) onUse(); else another();
-  }, 2200, 0, 15, true, manualFeedback);
+  }, 0, 0, 15, true, true);
 
   function remember() {
     if (!round || revealed || answered.current || clock.paused) return;
@@ -84,7 +80,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
 
   async function listen(replayResult = false) {
     if (!round || clock.paused || (revealed || answered.current) && !replayResult) return;
-    if (replayResult) setReviewing(true);
     const request = ++audioRequest.current;
     setAudioStatus('loading');
     const result = await Promise.resolve(playEnglish(round.word.en, round.word.audioUrl, true, () => {
@@ -123,7 +118,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     setIndex((value) => value + 1);
     setInput(''); setShowChoices(false);
     setRevealed(false);
-    setReviewing(false);
     usedHintRef.current = inspection; setUsedHint(inspection);
     setFeedback('');
     previous.current = undefined;
@@ -136,10 +130,10 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     stopSpeech(); clock.togglePause();
   }
 
-  const reminder = round ? <div className="arcade-rescue"><ArcadeWordReminder word={round.word} paused={clock.paused} manual={manualFeedback} />
-    {result === 'rescue' && !clock.checkpoint ? <button type="button" className="primary-action" disabled={clock.paused} onClick={clock.advanceNow}>Seguir con ayuda →</button> : null}
-  </div> : undefined;
-  return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen micro-screen arcade-stream-screen">
+  const reminder = round ? <div className="arcade-rescue"><ArcadeWordReminder word={round.word} paused={clock.paused} manual vertical /></div> : undefined;
+  const canContinue = Boolean(round && result && !clock.checkpoint && !clock.paused);
+  const nextLabel = result === 'rescue' ? 'Seguir con ayuda' : automatic && index - startRound + 1 >= limit ? 'Terminar el repaso' : 'Siguiente reto';
+  return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen play-flow micro-screen arcade-stream-screen">
     <header className="game-topbar">
       <button type="button" className="activity-back" onClick={onExit}>← Salir</button><span>Repaso</span>
       <div className="arcade-stream-tools">
@@ -147,21 +141,20 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
         <details className="play-options" onKeyDown={optionsMenu.onKeyDown}>
           <summary ref={optionsMenu.trigger} aria-label="Opciones del repaso">•••</summary>
           <div className="play-options-panel">
-            {!round?.pendingModel ? <><button type="button" className="quiet-action" aria-label="Jugar sin cuenta atrás" aria-describedby="arcade-pace-hint" aria-pressed={calm} onClick={() => { stopSpeech(); const next = !calm; writeArcadeCalm(userId, next); setCalm(next); }}>{calm ? 'A mi ritmo ✓' : 'A mi ritmo'}</button>
-            <small id="arcade-pace-hint">Sin cuenta atrás ni avance automático.</small></> : null}
+            <small>Sin reloj. Responde y desliza hacia arriba para seguir.</small>
             {onGrammar ? <button type="button" className="quiet-action" onClick={onGrammar}>Gramática</button> : null}
             {onOnlyWords ? <button type="button" className="quiet-action" onClick={onOnlyWords}>Solo palabras</button> : onMix ? <button type="button" className="quiet-action" onClick={onMix}>Mixto</button> : null}
           </div>
         </details>
       </div>
     </header>
-    <section className="game-stage"><GameCard className={`arcade-stream-card ${result === 'correct' ? 'recall-correct' : 'recall-calm'}`} showBack={!clock.checkpoint && result === 'rescue'} back={result === 'rescue' ? reminder : undefined}>
+    <section className="game-stage"><GameCard vertical stepKey={`${index}:${result ?? 'question'}:${clock.checkpoint}`} onAdvance={canContinue ? clock.advanceNow : undefined} advanceLabel={nextLabel} className={`arcade-stream-card ${result === 'correct' ? 'recall-correct' : 'recall-calm'}`}>
     {clock.checkpoint ? <ArcadeCheckpoint onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : result === 'correct' ? <div className="micro-content micro-answer-result">
-      <p role="status">{feedback}</p><h1 lang="en">{round.word.en}</h1><p lang="es">{round.word.es}</p>
+      <p className="arcade-result-status" role="status"><span aria-hidden="true">✓</span> {usedHint ? 'Acertaste con ayuda' : 'Acertaste'}</p><h1 lang="en">{round.word.en}</h1><p lang="es">{round.word.es}</p>
       <button type="button" className="quiet-action" disabled={clock.paused || audioStatus === 'loading' || audioStatus === 'playing'} onClick={() => void listen(true)}>🔊 Escuchar de nuevo</button>
       {audioStatus === 'loading' || audioStatus === 'playing' ? <p role="status">{audioStatus === 'loading' ? 'Preparando sonido…' : 'Reproduciendo…'}</p> : ['blocked', 'unavailable', 'cancelled'].includes(audioStatus) ? <p role="status">No se completó el audio. Puedes continuar con la palabra escrita.</p> : null}
-      {manualFeedback ? <button type="button" className="primary-action" disabled={clock.paused} onClick={clock.advanceNow}>Continuar →</button> : <p>{clock.paused ? 'En pausa.' : 'Seguimos con el siguiente reto…'}</p>}
-    </div> : <div className="recall-content">
+      {clock.paused ? <p role="status">En pausa.</p> : null}
+    </div> : result === 'rescue' ? reminder : <div className="recall-content">
       <p className="eyebrow">{listening ? 'ESCUCHA Y CONECTA' : writing ? 'SIN OPCIONES' : 'RECUERDA'} · {automatic ? index - startRound + 1 : index % 15 + 1}/{automatic ? limit : 15}</p>
       {round?.pendingModel ? <p role="status">Primero la practicamos sin reloj · sin prisas</p> : null}
       {!writing && !listening ? <SceneVisual word={round.word} hideAnswer /> : null}{!writing ? <h1>{listening ? 'Escucha y elige lo que significa.' : <>¿Cómo se dice <em>{round.word.es}</em>?</>}</h1> : null}

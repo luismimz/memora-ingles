@@ -14,7 +14,7 @@ interface GameCardProps {
   showBack?: boolean;
   /** Opt in when the card has no primary button of its own. Gestures stay optional. */
   advanceControl?: boolean;
-  /** Native vertical scroll within a prepared episode, never an answer. */
+  /** Vertical feed: reading scrolls normally; a fresh upward gesture at the end continues only when ready. */
   vertical?: boolean;
   stepKey?: string;
 }
@@ -140,7 +140,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
         }}>
         <article className="game-card-face card-vertical-page"><div className="game-card-body">{children}{back ? <details className="card-vertical-memory"><summary>Recordar la escena</summary>{back}</details> : null}</div></article>
       </div>
-      {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel}><span>{verticalAdvanceLabel}</span><span aria-hidden="true">→</span></button></footer> : null}
+      {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel}><span>{verticalAdvanceLabel}<small>Desliza hacia arriba o toca aquí</small></span><span className="feed-next-arrow" aria-hidden="true">↑</span></button></footer> : null}
     </div>;
   }
 

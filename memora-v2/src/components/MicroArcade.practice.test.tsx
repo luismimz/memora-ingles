@@ -6,6 +6,7 @@ import { readWordMemories, recordWordRecall } from '../domain/memory';
 import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 import { recordActiveWordAttempt } from '../domain/activeRecall';
 import { AnswerStudio } from './AnswerStudio';
+import { GameCard } from './GameCard';
 const hooks = vi.hoisted(() => ({ index: 0, state: new Map<number, unknown>(), expire: () => {}, advance: () => {}, duration: 0, calm: false }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (initial: unknown) => { const id = hooks.index++; if (!hooks.state.has(id)) hooks.state.set(id, typeof initial === 'function' ? initial() : initial); return [hooks.state.get(id), (value: unknown) => hooks.state.set(id, typeof value === 'function' ? value(hooks.state.get(id)) : value)]; },
@@ -60,8 +61,10 @@ it('el error de escritura activa el recordatorio de la misma palabra e historia'
   render(); nodes.find((node) => node.type === 'input')!.props.onChange({ target: { value: 'wrong' } });
   render(); nodes.find((node) => node.type === 'form')!.props.onSubmit({ preventDefault() {} });
   render();
-  const card = nodes.find((node) => node.props.showBack === true)!;
-  expect(card.props.back.props.children[0].props.word).toEqual(previewUnit.words[2]);
+  const card = nodes.find((node) => node.type === GameCard)!;
+  expect(card.props.vertical).toBe(true);
+  expect(card.props.advanceLabel).toBe('Seguir con ayuda');
+  expect(nodes.some((node) => node.props.word === previewUnit.words[2])).toBe(true);
   expect(readLearningActivities('learner').at(-1)?.correct).toBe(false);
 });
 it('conserva el punto de parada número 15 después de un cambio de modo', () => {
@@ -78,15 +81,13 @@ it('la sorpresa con una sola palabra termina tras el feedback sin rellenar quinc
   expect(exited).toHaveBeenCalledOnce();
   expect(advanced).not.toHaveBeenCalled();
 });
-it('recupera sin reloj al entrar y permite cambiarlo sin tocar el aprendizaje', () => {
+it('el feed siempre espera el gesto sin borrar la preferencia ni tocar el aprendizaje', () => {
   writeArcadeCalm('learner', true);
   const memories = readWordMemories('learner');
   render();
-  const control = nodes.find((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')!;
-  expect(control.props['aria-pressed']).toBe(true);
   expect(hooks.calm).toBe(true);
-  control.props.onClick(); render();
-  expect(readArcadeCalm('learner')).toBe(false);
+  expect(nodes.some((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')).toBe(false);
+  expect(readArcadeCalm('learner')).toBe(true);
   expect(readWordMemories('learner')).toEqual(memories);
   expect(readLearningActivities('learner')).toEqual([]);
 });

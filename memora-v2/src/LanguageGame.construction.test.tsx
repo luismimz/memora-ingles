@@ -35,7 +35,7 @@ it('el cierre real conserva continuación y Eco opcional sin fabricar otro inten
   const sentences = getUnitSentences(previewUnit);
   writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'build', sentenceIndex: sentences.length - 1, filledSlots: sentences[sentences.length - 1].slots.length });
   await mount({ ...previewUnit, communication: undefined });
-  await act(async () => { button('Usar mi frase →').props.onClick(); vi.advanceTimersByTime(230); });
+  await swipe();
   const actions = tree.root.findByProps({ className: 'practice-closure-actions' }).findAllByType('button');
   expect(actions).toHaveLength(2);
   expect(text(actions[0])).toBe('Seguir →');
