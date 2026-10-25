@@ -22,6 +22,15 @@ function render(filledSlots = 1, sentence = deskPreparedUnit.sentence, overrides
 }
 const button = (text: string) => nodes.find((node) => node.type === 'button' && node.props.children === text)!;
 beforeEach(() => { hooks.states.clear(); vi.clearAllMocks(); });
+it('acerca el objetivo español a las opciones y presenta el modelo antes de explicarlo', () => {
+  const preparation = render();
+  expect(preparation.indexOf('class="coach-row" lang="es"')).toBeLessThan(preparation.indexOf('class="coach-caption"'));
+  render(1, deskPreparedUnit.sentence, { preparationStep: 3 });
+  const target = nodes.find((node) => node.props.className === 'builder-target')!;
+  expect(target.props.children[1].props.children).toBe(deskPreparedUnit.sentence.slots[1].es);
+  expect(nodes.find((node) => node.props.className === 'slot-options')).toBeTruthy();
+  expect(pick).not.toHaveBeenCalled(); expect(attempt).not.toHaveBeenCalled();
+});
 it('un checkpoint controlado vuelve al paso exacto sin evaluar ni repetir las piezas anteriores', () => {
   const change = vi.fn();
   const html = render(1, deskPreparedUnit.sentence, { preparationStep: 2, onPreparationChange: change });

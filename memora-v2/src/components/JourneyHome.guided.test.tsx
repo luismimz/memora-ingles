@@ -29,6 +29,17 @@ it('solo Continuar compite como acción principal; modos, mapa y evidencia sigue
   act(() => outsideDetails[0].props.onClick()); expect(open).toHaveBeenCalledWith(source);
   expect(readLearningActivities(user)).toEqual([]);
 });
+it('la entrada no duplica progreso ni decora el reto con otra tarjeta ilustrada', () => {
+  mount();
+  expect(tree.root.findAllByType('img')).toHaveLength(0);
+  expect(tree.root.findAllByProps({ className: 'home-progress' })).toHaveLength(1);
+  expect(tree.root.findAllByProps({ className: 'home-footprint' })).toHaveLength(0);
+  const explore = tree.root.findByProps({ className: 'home-explore' });
+  expect(explore.type).toBe('details'); expect(explore.props.open).toBeUndefined();
+  expect(explore.findAllByProps({ className: 'home-map-panel' })).toHaveLength(1);
+  expect(explore.findAllByProps({ className: 'home-practice-panel' })).toHaveLength(1);
+  expect(text(tree.toJSON())).not.toContain('No tienes que elegir un modo');
+});
 it('nombra la tarea pendiente real de un montaje guardado, no otra lista de modos', () => {
   recordWordRecall(user, source.words[0], 'quick');
   writeTrickCheckpoint(user, stop.id, source.contentVersion ?? '1', { stage: 3, checkIndex: 0, input: '', feedback: 'idle', helped: true, episodeId: 'ing:short-playing-v1', continuation: { phase: 'build', sentenceIndex: 0, filledSlots: 0, order: [2] } });

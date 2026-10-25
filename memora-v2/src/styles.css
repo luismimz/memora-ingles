@@ -3,16 +3,16 @@
 :root {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Avenir Next', system-ui, sans-serif;
   font-synthesis: none;
-  --page: #f5f7f3;
-  --ink: #183c37;
-  --muted: #526b65;
-  --accent: #147568;
-  --accent-ink: #096356;
-  --surface: #fafcf9;
+  --page: #f5f5f7;
+  --ink: #1d1d1f;
+  --muted: #63636b;
+  --accent: #0071e3;
+  --accent-ink: #0066cc;
+  --surface: #fafafa;
   --surface-strong: #ffffff;
-  --surface-soft: #eaf3ed;
-  --line: #d6e4dd;
-  --shadow: 0 18px 50px rgba(24, 60, 55, .08), 0 2px 6px rgba(24, 60, 55, .03);
+  --surface-soft: #eeeef2;
+  --line: #dcdce1;
+  --shadow: 0 12px 36px rgba(0, 0, 0, .06);
   --warm: #a84925;
   --warm-soft: #fff0df;
   --grammar-aux: #245d8c;
@@ -23,15 +23,15 @@
   background: var(--page);
 }
 :root[data-appearance='dark'] {
-  --page: #102723;
-  --ink: #edf8f1;
-  --muted: #b1cfc3;
-  --accent: #8bdfc7;
-  --accent-ink: #a1ead5;
-  --surface: #18322c;
-  --surface-strong: #1c3931;
-  --surface-soft: #25493e;
-  --line: #3b6254;
+  --page: #111113;
+  --ink: #f5f5f7;
+  --muted: #b0b0b8;
+  --accent: #90c6ff;
+  --accent-ink: #90c6ff;
+  --surface: #19191c;
+  --surface-strong: #202023;
+  --surface-soft: #2c2c30;
+  --line: #424247;
   --shadow: 0 18px 50px rgba(0, 0, 0, .24);
   --warm: #ffc18d;
   --warm-soft: #513b27;
@@ -231,9 +231,9 @@ body { background: var(--page); }
 .association-content, .recall-content, .reward-content, .lesson-content, .builder-content, .complete-content { display: flex; flex-direction: column; width: 100%; min-height: 100%; }
 .reward-content, .complete-content { align-items: center; justify-content: center; text-align: center; }
 .reward-content h1, .complete-content h1 { margin: 12px 0 25px; font-size: clamp(2.1rem, 7vw, 3.8rem); line-height: 1.03; letter-spacing: -.05em; font-weight: 950; }
-.primary-action { min-height: 55px; padding: 12px 22px; border: 1px solid var(--accent-ink); border-radius: 16px; background: var(--accent-ink); color: var(--page); font-weight: 750; box-shadow: 0 4px 0 color-mix(in srgb, var(--accent-ink) 65%, black); }
+.primary-action { min-height: 52px; padding: 12px 22px; border: 1px solid var(--accent-ink); border-radius: 14px; background: var(--accent-ink); color: var(--page); font-weight: 600; box-shadow: none; transition: filter .15s ease; }
 :root[data-appearance='dark'] .primary-action { background: var(--accent-ink); color: var(--page); }
-.primary-action:hover { filter: brightness(1.04); transform: translateY(-2px); }
+.primary-action:hover { filter: brightness(1.08); }
 .association-content { position: relative; gap: 10px; }
 .association-audio-status { min-height: 1.3em; margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.3; }
 .cognate-example { color: var(--muted); font-size: .85rem; line-height: 1.4; }
@@ -369,7 +369,7 @@ body { background: var(--page); }
 
 .builder-content { align-items: center; gap: 20px; text-align: center; }
 .builder-content .scene-visual { max-width: 180px; margin: -4px auto 0; }
-.builder-content h1 { margin: 0; font-size: clamp(1.65rem, 5vw, 2.6rem); font-weight: 950; line-height: 1.12; }
+.builder-content h1 { margin: 0; font-size: clamp(1.1rem, 3vw, 1.5rem); font-weight: 500; line-height: 1.4; color: var(--muted); }
 .builder-process { display: inline-flex; align-items: baseline; white-space: nowrap; }
 .builder-process .morph-root { color: var(--ink); }
 .builder-process .morph-intent { padding: .02em .04em; border-radius: .14em; }
@@ -383,6 +383,9 @@ body { background: var(--page); }
 .sentence-slot-en { color: var(--ink); font-size: .94rem; font-weight: 850; line-height: 1.2; }
 .slot-picker { display: grid; gap: 9px; width: 100%; }
 .slot-picker p { margin: 0; color: var(--muted); font-size: .85rem; }
+.builder-target { display: grid; gap: 8px; padding-top: 12px; }
+.builder-target small { color: var(--muted); font-size: .8rem; }
+.builder-target h2 { margin: 0; color: var(--ink); font-weight: 650; font-size: clamp(1.7rem, 4.5vw, 2.3rem); line-height: 1.25; }
 .slot-options { display: flex; gap: 9px; justify-content: center; }
 .slot-options button { flex: 1; min-height: 58px; padding: 8px; border: 1px solid var(--line); border-radius: 13px; background: var(--surface-soft); color: var(--ink); font-weight: 850; }
 .slot-options button.is-wrong { border-color: #e96052; animation: miss-shake .22s ease; }

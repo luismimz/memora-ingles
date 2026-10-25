@@ -13,24 +13,26 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
   const { trigger, onKeyDown } = useDisclosureDismissal();
   const saved = inspection ? 'Vista de revisión · no guarda progreso' : syncStatus ? syncLabels[syncStatus] : 'Progreso en este dispositivo';
   const warning = !inspection && (syncStatus === 'offline' || syncStatus === 'error' || syncStatus === 'storage-full');
+  const currentTrail = trail && trail.current >= 0 && trail.current < trail.steps.length ? trail : undefined;
   return <>
     <header className="play-header">
       <button type="button" className="activity-back" onClick={onExit}>← Recorrido</button>
-      <div className="play-header-context"><span className="play-location-label">{position ?? 'TU PRÁCTICA DE INGLÉS'}</span><p className="play-intention">{title}</p></div>
+      <div className="play-header-context">{position ? <span className="play-location-label">{position}</span> : null}<p className="play-intention">{title}</p></div>
       <details className="play-options" onKeyDown={onKeyDown}>
         <summary ref={trigger} aria-label="Opciones y estado de guardado" title="Opciones y guardado">•••<span className={`play-save-dot${warning ? ' needs-attention' : ''}`} aria-hidden="true" /></summary>
         <div className="play-options-panel">
           <p>{inspection ? 'Revisión' : position ?? 'MEMORA · EN JUEGO'}</p>
           <p role="status">{saved}</p>
           {progress !== undefined && Number.isFinite(progress) ? <small>Avance de esta tanda: {Math.max(0, Math.min(100, progress))} %. No mide dominio.</small> : null}
+          {currentTrail ? <ol className="play-route" aria-label="Pasos de esta práctica: posición, no dominio">
+            {currentTrail.steps.map((step, index) => <li key={step} aria-current={index === currentTrail.current ? 'step' : undefined}><span aria-hidden="true">{index + 1}</span>{step}</li>)}
+          </ol> : null}
           <button type="button" className="quiet-action" onClick={onToggleAppearance}>Activar modo {appearance === 'light' ? 'oscuro' : 'claro'}</button>
           <small>Puedes salir y retomar la actividad. Deslizar nunca responde por ti.</small>
         </div>
       </details>
     </header>
-    {trail && trail.current >= 0 && trail.current < trail.steps.length ? <ol className="play-trail" aria-label="Pasos de esta práctica: posición, no dominio">
-      {trail.steps.map((step, index) => <li key={step} aria-current={index === trail.current ? 'step' : undefined}><span aria-hidden="true">{index + 1}</span>{step}</li>)}
-    </ol> : null}
+    {currentTrail ? <p className="play-step-position"><span>Paso {currentTrail.current + 1} de {currentTrail.steps.length}</span><strong>{currentTrail.steps[currentTrail.current]}</strong></p> : null}
     {warning ? <p className="play-save-warning" role={syncStatus === 'storage-full' ? 'alert' : 'status'}>{saved}</p> : null}
   </>;
 }

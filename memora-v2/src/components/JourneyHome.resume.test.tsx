@@ -44,7 +44,7 @@ describe('posición de Home después de parar', () => {
   });
   it('mantiene la siguiente parada aunque aún no tenga checkpoint y deja el mapa como opción secundaria', async () => {
     const html = home();
-    expect(html).toContain('PARADA 11 DE 12');
+    expect(html).toContain('aria-label="Paso 11 de 12"');
     expect(html.indexOf('home-adventure')).toBeLessThan(html.indexOf('home-map-panel'));
     expect(html).not.toContain('Mapa de tu recorrido');
     const mounted = await openMap();
@@ -54,14 +54,14 @@ describe('posición de Home después de parar', () => {
   it('distingue una actividad en curso de una parada todavía sin empezar', () => {
     writeGameCheckpoint('learner', 'pack-10:vocabulary', '1', { ...initialGame, phase: 'recall', recallIndex: 1 });
     const html = home();
-    expect(html).toContain('JUSTO DONDE LO DEJASTE');
+    expect(html).toContain('Actividad en curso');
     expect(html).toContain('Recuerda lo que aprendiste');
     expect(html).toContain('Continuar jugando');
   });
   it('al volver al inicio nombra la nueva acción guardada sin llamarla recuerdo sin pistas', () => {
     writeGameCheckpoint('learner', 'pack-10:vocabulary', '1', { ...initialGame, phase: 'recall', recognitionStyle: 'scene-delivery-v1' });
     const html = home();
-    expect(html).toContain('JUSTO DONDE LO DEJASTE');
+    expect(html).toContain('Actividad en curso');
     expect(html).toContain('Lleva la palabra a su escena');
     expect(html).not.toContain('Recuerda lo que aprendiste');
     expect(readLearningActivities('learner')).toHaveLength(0);

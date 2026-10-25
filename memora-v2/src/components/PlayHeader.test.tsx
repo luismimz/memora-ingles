@@ -53,6 +53,8 @@ it('el hilo indica solo posición, sin botones, checks de dominio ni estado de a
   let tree: ReturnType<typeof create>;
   act(() => { tree = create(<PlayHeader title="Monta tu mensaje" onExit={() => {}} appearance="light" onToggleAppearance={() => {}} trail={{ steps, current: 1 }} />); });
   const trail = tree!.root.findByType('ol');
+  expect(trail.parent!.props.className).toBe('play-options-panel');
+  expect(tree!.root.findByProps({ className: 'play-step-position' }).findByType('strong').children).toEqual(['Monta']);
   expect(trail.props['aria-label']).toContain('posición, no dominio');
   expect(trail.findAllByType('button')).toHaveLength(0);
   expect(trail.findAllByType('li')).toHaveLength(4);

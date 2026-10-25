@@ -88,9 +88,9 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
       </div>
       {!completed && preparationStep ? <div className="slot-preparation">
         <p className="eyebrow">PREPARA ESTA PIEZA · {preparationIndex + 1}/{active.preparation!.length}</p>
-        <p className="coach-caption">{preparationStep.explanation}</p>
         <p className="coach-row" lang="es">{preparationStep.es}</p>
         <p className="coach-row" lang="en">{preparationStep.en}</p>
+        <p className="coach-caption">{preparationStep.explanation}</p>
         <button type="button" className="quiet-action" onClick={() => void playEnglish(preparationStep.en)}>🔊 Escuchar la pieza</button>
         {!vertical ? <button type="button" className="primary-action" onClick={advancePreparation}>{preparationAdvanceLabel}</button> : null}
       </div> : !completed && active && needsModel ? <div className="slot-preparation" role="status"><p>Vamos con ayuda. Para «{active.es}» coloca:</p><p className="coach-row" lang="en">{active.en}</p><p>Queda como modelo consultado, no como acierto.</p><button type="button" className="quiet-action" onClick={() => void playEnglish(active.en)}>🔊 Escuchar la pieza</button><button type="button" className="primary-action" onClick={onAcceptModel}>Colocar con ayuda</button></div> : !completed && active ? <div className="slot-picker" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
@@ -98,7 +98,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         const choice = event.dataTransfer.getData('text/plain');
         if (active.choices.includes(choice)) choose(choice);
       }}>
-        <p>Elige para «{active.es}»</p>
+        <div className="builder-target"><small>Coloca en inglés</small><h2 lang="es">{active.es}</h2></div>
         {active.note ? <p className="builder-note">{active.note}</p> : null}
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
         <div className="slot-options">{options?.map((choice) => <button type="button" key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>

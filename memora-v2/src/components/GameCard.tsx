@@ -159,7 +159,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
         role="group"
         aria-label="Tarjeta de aprendizaje"
       >
-        {dragX < -35 && onAdvance ? <span className="game-card-stamp">🔥 CONECTA</span> : null}
+        {dragX < -35 && onAdvance ? <span className="game-card-stamp">Continuar</span> : null}
         <div className={`game-card-flip ${isFlipped ? 'is-flipped' : ''}`}>
           <article className="game-card-face game-card-front" aria-hidden={isFlipped}>
             <div className="game-card-body">{children}</div>
