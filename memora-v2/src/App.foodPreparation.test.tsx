@@ -37,6 +37,10 @@ async function start(staleCook = false) {
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 it('el botón del paso previo abre el truco de cena con su ID estable sin fabricar intentos', async () => {
   await start(); expect(text(tree.toJSON())).toContain('Ya tienes las palabras.');
+  const body = tree.root.findByProps({ className: 'game-card-body' });
+  expect(body.children).toHaveLength(1);
+  expect((body.children[0] as any).props.className).toBe('preparation-content');
+  expect(tree.root.findByProps({ className: 'preparation-actions' }).findAllByType('button')).toHaveLength(2);
   const before = readLearningActivities(user); await click('Practicar el aviso de la cena');
   const episode = tree.root.findByType(JourneyTrickExperience);
   expect(episode.props.unit.id).toBe(kitchen.id);

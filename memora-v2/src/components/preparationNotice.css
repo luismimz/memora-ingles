@@ -1,0 +1,29 @@
+.preparation-content {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+  min-width: 0;
+  max-width: 34rem;
+  margin: auto;
+  padding-block: clamp(12px, 3dvh, 28px);
+}
+.preparation-content h1 {
+  margin: 0;
+  font-size: clamp(1.75rem, 5vw, 2.5rem);
+  line-height: 1.15;
+  letter-spacing: -.035em;
+  font-weight: 750;
+  text-wrap: balance;
+}
+.preparation-content p { margin: 0; color: var(--muted); font-size: 1rem; line-height: 1.5; }
+.preparation-actions { display: flex; flex-direction: column; gap: 8px; }
+.preparation-actions > button {
+  flex: 0 0 auto;
+  width: 100%;
+  height: auto;
+  min-height: 48px;
+  white-space: normal;
+  overflow-wrap: break-word;
+  text-align: center;
+}

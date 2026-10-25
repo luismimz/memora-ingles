@@ -166,6 +166,10 @@ it('retirar revisión del episodio conserva el checkpoint pero no evalúa contex
   act(() => tree.unmount());
   await mount({ ...unit, grammarContinuation: { ...unit.grammarContinuation!, status: 'needs_review' } });
   expect(text(tree.toJSON())).toContain('Esta escena necesita preparación');
+  const body = tree.root.findByProps({ className: 'game-card-body' });
+  expect(body.children).toHaveLength(1);
+  expect((body.children[0] as any).props.className).toBe('preparation-content');
+  expect(tree.root.findByProps({ className: 'preparation-actions' }).findAllByType('button')).toHaveLength(1);
   expect(tree.root.findAllByType(SentenceBuilderCard)).toHaveLength(0);
   expect(tree.root.findAllByType('input')).toHaveLength(0);
   expect(checkpoint()).toEqual(before);
