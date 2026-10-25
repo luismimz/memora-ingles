@@ -73,7 +73,9 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   }
 
   const advancePreparation = () => { stopSpeech(); setPreparation({ slot: filledSlots, step: preparationIndex + 1 }); onPreparationChange?.(preparationIndex + 1); };
-  return <GameCard key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? onNext : undefined : completed && sentenceReady ? onNext : undefined} advanceLabel={vertical ? preparationStep ? 'Usar la pieza preparada' : 'Continuar con mi frase' : ''} reserveFooter={!vertical} revealFooter={vertical ? Boolean(preparationStep || completed) : completed && sentenceReady}>
+  const preparationAdvanceLabel = preparationIndex === (active?.preparation?.length ?? 0) - 1 ? 'Usar estas piezas →' : 'Ver la siguiente pieza →';
+  const sentenceAdvanceLabel = index === total - 1 ? 'Usar mi frase →' : 'Siguiente frase →';
+  return <GameCard key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? onNext : undefined : completed && sentenceReady ? onNext : undefined} advanceLabel={vertical ? preparationStep ? preparationAdvanceLabel : sentenceAdvanceLabel : ''} reserveFooter={!vertical} revealFooter={vertical ? Boolean(preparationStep || completed) : completed && sentenceReady}>
     <div className="builder-content">
       <p className="eyebrow">CONSTRUYE · {index + 1}/{total}</p>
       <SceneVisual word={sceneWord} compact />
@@ -90,7 +92,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         <p className="coach-row" lang="es">{preparationStep.es}</p>
         <p className="coach-row" lang="en">{preparationStep.en}</p>
         <button type="button" className="quiet-action" onClick={() => void playEnglish(preparationStep.en)}>🔊 Escuchar la pieza</button>
-        {!vertical ? <button type="button" className="primary-action" onClick={advancePreparation}>{preparationIndex === active.preparation!.length - 1 ? 'Usar estas piezas →' : 'Ver la siguiente pieza →'}</button> : null}
+        {!vertical ? <button type="button" className="primary-action" onClick={advancePreparation}>{preparationAdvanceLabel}</button> : null}
       </div> : !completed && active && needsModel ? <div className="slot-preparation" role="status"><p>Vamos con ayuda. Para «{active.es}» coloca:</p><p className="coach-row" lang="en">{active.en}</p><p>Queda como modelo consultado, no como acierto.</p><button type="button" className="quiet-action" onClick={() => void playEnglish(active.en)}>🔊 Escuchar la pieza</button><button type="button" className="primary-action" onClick={onAcceptModel}>Colocar con ayuda</button></div> : !completed && active ? <div className="slot-picker" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
         event.preventDefault();
         const choice = event.dataTransfer.getData('text/plain');
@@ -100,7 +102,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         {active.note ? <p className="builder-note">{active.note}</p> : null}
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
         <div className="slot-options">{options?.map((choice) => <button type="button" key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>
-      </div> : <div className="builder-finish" aria-live="polite"><span>{sentenceReady ? 'Frase construida' : 'Puedes escucharla o seguir a tu ritmo.'}</span>{!vertical ? <button type="button" className="primary-action" onClick={() => { stopSpeech(); onNext(); }}>{index === total - 1 ? 'Usar mi frase →' : 'Siguiente frase →'}</button> : null}</div>}
+      </div> : <div className="builder-finish" aria-live="polite"><span>{sentenceReady ? 'Frase construida' : 'Puedes escucharla o seguir a tu ritmo.'}</span>{!vertical ? <button type="button" className="primary-action" onClick={() => { stopSpeech(); onNext(); }}>{sentenceAdvanceLabel}</button> : null}</div>}
     </div>
   </GameCard>;
 }

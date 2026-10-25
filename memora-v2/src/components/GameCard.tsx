@@ -19,6 +19,7 @@ interface GameCardProps {
 
 /** La misma superficie y física para asociaciones, recompensas y gramática. */
 export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', reserveFooter = false, revealFooter = true, className = '', showBack, advanceControl = false, vertical = false, stepKey = '' }: GameCardProps) {
+  const verticalAdvanceLabel = advanceLabel.replace(/\s*→\s*$/u, '');
   const [dragX, setDragX] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [exiting, setExiting] = useState(false);
@@ -132,7 +133,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
         }}>
         <article className="game-card-face card-vertical-page"><div className="game-card-body">{children}{back ? <details className="card-vertical-memory"><summary>Recordar la escena</summary>{back}</details> : null}</div></article>
       </div>
-      {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={advanceLabel}><span>{advanceLabel}</span><span aria-hidden="true">→</span></button></footer> : null}
+      {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel}><span>{verticalAdvanceLabel}</span><span aria-hidden="true">→</span></button></footer> : null}
     </div>;
   }
 

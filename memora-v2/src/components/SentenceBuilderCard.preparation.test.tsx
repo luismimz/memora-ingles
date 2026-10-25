@@ -51,6 +51,25 @@ it('escuchar y revelar la explicación no completan ni puntúan la frase', () =>
   render(); button('🔊 Escuchar la pieza').props.onClick();
   expect(pick).not.toHaveBeenCalled(); expect(attempt).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();
 });
+it('el constructor vertical anuncia la acción real de cada paso sin saltar preparación ni evaluar por navegar', () => {
+  const change = vi.fn();
+  for (const step of [0, 1, 2]) {
+    const html = render(1, deskPreparedUnit.sentence, { vertical: true, preparationStep: step, onPreparationChange: change });
+    expect(nodes[0].props.advanceLabel).toBe(step === 2 ? 'Usar estas piezas →' : 'Ver la siguiente pieza →');
+    expect(html).not.toContain('slot-options');
+    nodes[0].props.onAdvance();
+    expect(change).toHaveBeenLastCalledWith(step + 1);
+  }
+  expect(render(1, deskPreparedUnit.sentence, { vertical: true, preparationStep: 3 })).toContain('slot-options');
+  expect(nodes[0].props.onAdvance).toBeUndefined();
+  expect(pick).not.toHaveBeenCalled(); expect(attempt).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();
+  render(deskPreparedUnit.sentence.slots.length, deskPreparedUnit.sentence, { vertical: true });
+  expect(nodes[0].props.advanceLabel).toBe('Siguiente frase →');
+  render(deskPreparedUnit.sentence.slots.length, deskPreparedUnit.sentence, { vertical: true, index: 1 });
+  expect(nodes[0].props.advanceLabel).toBe('Usar mi frase →');
+  nodes[0].props.onAdvance(); expect(next).toHaveBeenCalledOnce();
+  expect(attempt).not.toHaveBeenCalled();
+});
 it('un montaje desde un slot pendiente vuelve a ofrecer su preparación, conservando los slots ya construidos', () => {
   const html = render(1);
   expect(html).toContain('PREPARA ESTA PIEZA');

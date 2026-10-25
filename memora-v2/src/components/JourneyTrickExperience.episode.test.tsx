@@ -121,7 +121,9 @@ it('enseñar → comprender → montar → conversar se recorre completo sin mon
   expect(tree.root.findByType('input').props.value).toBe("I'm playing");
   await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
   expect(text(tree.toJSON())).toContain('Te guardo el siguiente turno');
-  expect(button('Terminar la conversación →')).toBeUndefined();
+  const finishControls = tree.root.findAllByType('button').filter((node) => node.props['aria-label'] === 'Terminar la conversación');
+  expect(finishControls).toHaveLength(1);
+  expect(finishControls[0].parent!.props.className).toBe('card-vertical-next');
   expect(text(tree.toJSON())).toContain('Mensaje recibido. Puedes seguir cuando quieras.');
   await advance();
   expect(finished).toHaveBeenCalledOnce();

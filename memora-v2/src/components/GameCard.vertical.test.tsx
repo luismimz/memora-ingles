@@ -42,6 +42,13 @@ it('el control equivalente respeta movimiento reducido', () => {
   act(() => { tree.root.findByType('button').props.onClick(); vi.advanceTimersByTime(0); });
   expect(advance).toHaveBeenCalledOnce();
 });
+it('una etiqueta editorial con flecha conserva una sola flecha visual y un nombre accesible limpio', () => {
+  mount(vi.fn());
+  act(() => tree.update(<GameCard vertical onAdvance={() => {}} advanceLabel="Usar mi frase →">Mensaje</GameCard>));
+  const control = tree.root.findByType('button');
+  expect(control.props['aria-label']).toBe('Usar mi frase');
+  expect(control.findAllByType('span').map((node) => node.children.join(''))).toEqual(['Usar mi frase', '→']);
+});
 it('la acción está fuera del área de lectura y funciona sin buscar el final del texto', () => {
   const advance = vi.fn(); mount(advance);
   const control = tree.root.findByType('button');
