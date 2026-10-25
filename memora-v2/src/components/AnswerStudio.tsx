@@ -29,8 +29,8 @@ export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, a
     <div className="answer-studio-target" id={`${id}-target`} lang="es">{target}</div>
     <form onSubmit={(event) => { event.preventDefault(); cancel(); if (!disabled && !composing.current && value.trim()) onAnswer(value); }}>
       <label className="sr-only" htmlFor={id}>Escribe en inglés el mensaje de arriba</label>
-      <input id={id} aria-describedby={`${id}-target ${id}-status`} lang="en" value={value} onChange={(event) => { edited.current = true; onChange(event.target.value); }} onCompositionStart={() => { composing.current = true; cancel(); }} onCompositionEnd={() => { composing.current = false; schedule(); }} autoComplete="off" autoCapitalize="none" spellCheck={false} disabled={disabled} placeholder="Tu respuesta en inglés" />
+      <input id={id} aria-describedby={`${id}-target ${id}-status`} lang="en" value={value} onChange={(event) => { edited.current = true; onChange(event.target.value); }} onCompositionStart={() => { composing.current = true; cancel(); }} onCompositionEnd={() => { composing.current = false; schedule(); }} autoComplete="off" autoCapitalize="none" enterKeyHint="send" spellCheck={false} disabled={disabled} placeholder="Tu respuesta en inglés" />
     </form>
-    <p id={`${id}-status`} className="answer-studio-status">Se comprueba al completar.<span className="sr-only"> Puedes pulsar Enter para probar un intento.</span></p>
+    <p id={`${id}-status`} className="answer-studio-status">Se reconoce al acertar. <kbd aria-label="Enter">↵</kbd> para revisar tu intento.</p>
   </section>;
 }

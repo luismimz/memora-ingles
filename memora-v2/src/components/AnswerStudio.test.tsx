@@ -19,6 +19,17 @@ it('reconoce respuesta completa una vez, sin botón y sin evaluar borradores inc
   act(() => { vi.advanceTimersByTime(1); }); expect(answer).toHaveBeenCalledExactlyOnceWith('I am playing');
   act(() => { vi.advanceTimersByTime(2000); }); expect(answer).toHaveBeenCalledOnce();
 });
+it('ofrece revisión intencional con Enter sin convertir una pausa en un error', () => {
+  act(() => { tree = create(<Harness />); });
+  expect(tree.root.findByType('kbd').props['aria-label']).toBe('Enter');
+  expect(tree.root.findByType('input').props.enterKeyHint).toBe('send');
+  type('I playing'); act(() => { vi.advanceTimersByTime(2000); });
+  expect(answer).not.toHaveBeenCalled();
+  const preventDefault = vi.fn();
+  act(() => tree.root.findByType('form').props.onSubmit({ preventDefault }));
+  expect(preventDefault).toHaveBeenCalledOnce();
+  expect(answer).toHaveBeenCalledExactlyOnceWith('I playing');
+});
 it('cambiar el texto, de tarea o salir cancela el reconocimiento pendiente', () => {
   act(() => { tree = create(<Harness />); });
   type('I am playing'); type('I am play'); act(() => { vi.advanceTimersByTime(500); }); expect(answer).not.toHaveBeenCalled();
