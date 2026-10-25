@@ -85,6 +85,39 @@ it('un audio bloqueado no afirma escucha ni bloquea la práctica, y queda regist
   await submit(word.en);
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
 });
+it('el resultado permite repetir el audio fallido sin cambiar el acierto ni añadir intentos', async () => {
+  await mount(); await submit(word.en);
+  const before = readLearningActivities(user);
+  expect(before.filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: false }]);
+  expect(text(tree.toJSON())).toContain('Audio no disponible · toca 🔊');
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'played', source: 'kokoro' });
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar palabra' }).props.onClick());
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  expect(readLearningActivities(user)).toEqual(before);
+  const advance = tree.root.findByType(GameCard).props.onAdvance;
+  act(() => { advance(); advance(); });
+  expect(finish).toHaveBeenCalledExactlyOnceWith(true);
+});
+it('reabrir resultado conserva el altavoz sin reproducir ni acreditar otra escucha', async () => {
+  await mount(); await submit(word.en);
+  const before = readLearningActivities(user);
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await mount();
+  expect(tree.root.findByProps({ 'aria-label': 'Escuchar palabra' })).toBeTruthy();
+  expect(playEnglish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+});
+it('continuar invalida el replay pendiente y no muestra un error tardío sobre el resultado', async () => {
+  await mount(); await submit(word.en);
+  let resolve!: (result: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+  act(() => tree.root.findByProps({ 'aria-label': 'Escuchar palabra' }).props.onClick());
+  expect(tree.root.findByProps({ 'aria-label': 'Escuchar palabra' }).props['aria-busy']).toBe(true);
+  expect(text(tree.toJSON())).not.toContain('Preparando audio');
+  act(() => tree.root.findByType(GameCard).props.onAdvance());
+  await act(async () => resolve({ status: 'blocked', source: null }));
+  expect(finish).toHaveBeenCalledOnce();
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+});
 
 it('la respuesta tardía del audio no pisa un resultado ni crea evidencia al salir', async () => {
   let resolve!: (result: PlaybackResult) => void;

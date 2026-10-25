@@ -14,6 +14,7 @@
 .memory-help > p, .memory-audio-status { color: var(--muted); font-size: .9rem; line-height: 1.5; }
 .memory-help summary:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 .memory-answer { font-size: 2.6rem; color: var(--accent-ink); }
+.active-memory-content > .round-audio { align-self: center; flex-shrink: 0; }
 .active-memory-content button:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 .active-memory-content .scene-visual { max-height: 170px; }
 @media (max-width: 600px) { .active-memory-content { min-height: 480px; gap: .8rem; } .memory-options button { flex-basis: 100%; } }
