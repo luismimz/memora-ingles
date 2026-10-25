@@ -9,6 +9,7 @@ import { meaningFixture as deskMeaningLesson, orderedFixture as deskSequenceLess
 import { GrammarSituation } from './GrammarSituation';
 import { GrammarOrder } from './GrammarOrder';
 import { playSpanish } from '../services/audio';
+import { AnswerStudio } from './AnswerStudio';
 const hooks = vi.hoisted(() => ({ index: 0, state: new Map<number, unknown>(), refIndex: 0, refs: new Map<number, { current: unknown }>() }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (initial: unknown) => { const id = hooks.index++; if (!hooks.state.has(id)) hooks.state.set(id, initial); return [hooks.state.get(id), (value: unknown) => hooks.state.set(id, typeof value === 'function' ? value(hooks.state.get(id)) : value)]; },
@@ -28,7 +29,7 @@ function render(overrides: Partial<Parameters<typeof GrammarCoach>[0]> = {}) {
   hooks.index = 0; hooks.refIndex = 0;
   const tree = GrammarCoach({ lesson, form: previewUnit.grammar[0], userId: 'learner', unitId: previewUnit.id, reviewMode: false, requirePractice: true, schedulePractice: true, onReady: () => {}, onContinue: complete, ...overrides });
   nodes = [];
-  function visit(value: any) { if (Array.isArray(value)) value.forEach(visit); else if (value && typeof value === 'object' && value.props) { nodes.push(value); visit(value.props.children); } }
+  function visit(value: any) { if (Array.isArray(value)) value.forEach(visit); else if (value && typeof value === 'object' && value.props) { nodes.push(value); if (value.type === AnswerStudio) visit(AnswerStudio(value.props)); else visit(value.props.children); } }
   visit(tree);
   return renderToStaticMarkup(tree);
 }
@@ -161,7 +162,9 @@ it('el recorrido sin etiquetas editoriales anuncia la última pieza y respeta la
 it('reutiliza la estructura generada sin repetir la pregunta, pero exige escribir el nuevo mensaje', () => {
   const html = render({ startAtPractice: true, omitGeneratedExplanation: true });
   expect(html).not.toContain('¿Qué falta?');
-  expect(html).toContain(lesson.checks[1].prompt);
+  expect(html).toContain('Escribe en inglés');
+  expect(html).toContain('grammar-answer-target');
+  expect(html).not.toContain('>Comprobar</button>');
   expect(nodes.find((node) => node.type === 'input')).toBeTruthy();
   expect(button('Ver el truco otra vez')).toBeTruthy();
   expect(complete).not.toHaveBeenCalled();

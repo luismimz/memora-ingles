@@ -116,18 +116,12 @@ button:focus-visible, .game-card-swipe:focus-visible { outline: 3px solid var(--
 .chat-cursor { display: inline-block; height: 1em; border-right: 2px solid var(--accent); margin-left: 2px; }
 .chat-audio-hint { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 10px; padding: 9px 12px; border: 1px solid var(--accent); border-radius: 12px; background: var(--surface-soft); color: var(--accent-ink); font-weight: 750; }
 .chat-accepted { display: block; color: var(--grammar-verb); margin-top: 8px; font-size: .75rem; }
-.chat-composer label { display: block; font-size: .85rem; font-weight: 750; margin-bottom: 10px; }
-.chat-composer label small { display: block; font-weight: 500; color: var(--muted); margin-top: 4px; }
-.chat-composer > div { display: flex; gap: 8px; }
-.chat-composer input { flex: 1; min-width: 0; min-height: 52px; padding: 14px; border: 1px solid var(--accent); border-radius: 16px; background: var(--surface-strong); color: var(--ink); font: inherit; }
-.chat-composer button { border-radius: 16px; min-height: 52px; padding: 12px 16px; background: var(--ink); color: var(--page); border: 0; font-weight: 750; }
-.chat-composer button:disabled { opacity: .5; }
 .chat-tools { display: flex; justify-content: space-between; gap: 10px; font-size: .8rem; }
 .chat-tools button { min-height: 36px; padding: 6px; }
 .chat-oral { flex-shrink: 0; font-size: .85rem; text-align: center; }
 .chat-oral > button { min-height: 44px; padding: 10px; }
 @keyframes chat-typing { from { opacity: .45; } to { opacity: 1; } }
-@media(max-width:500px) { .chat-content { gap: 12px; } .chat-scene .keys-scene { width: 90px; height: 60px; } .chat-scene p { font-size: .78rem; } .chat-bubble { max-width: 96%; padding: 12px; } .chat-message-text { font-size: 1rem; } .chat-composer button { padding: 10px 12px; } }
+@media(max-width:500px) { .chat-content { gap: 12px; } .chat-scene .keys-scene { width: 90px; height: 60px; } .chat-scene p { font-size: .78rem; } .chat-bubble { max-width: 96%; padding: 12px; } .chat-message-text { font-size: 1rem; } }
 @media(prefers-reduced-motion:reduce) { .chat-typing { animation: none; } }
 .association-location { margin: 0 0 12px; color: var(--muted); font-size: .82rem; }
 .coach-options button, .coach-practice form button, .dialogue-cue, .dialogue-model { background: var(--surface-soft); border: 1px solid var(--accent); border-radius: 14px; padding: 14px; font-weight: 700; }

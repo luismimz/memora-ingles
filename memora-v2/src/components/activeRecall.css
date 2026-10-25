@@ -8,15 +8,12 @@
 .memory-feedback { min-height: 3em; line-height: 1.5; font-size: 1rem; }
 .memory-options, .memory-tools { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: center; }
 .memory-options button { flex: 1 1 140px; padding: 1rem; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); color: var(--ink); }
-.memory-write { display: flex; gap: .6rem; flex-wrap: wrap; }
-.memory-write input { min-width: 0; flex: 1 1 170px; padding: 1rem; border: 1px solid var(--accent); background: var(--surface-strong); color: var(--ink); border-radius: 16px; font-size: 1.15rem; }
-.memory-write button { padding: .9rem; border: 1px solid var(--accent-ink); border-radius: 16px; background: var(--accent-ink); color: var(--page); }
 .memory-tools button { min-height: 44px; padding: .6rem; border-radius: 12px; }
 .memory-help { margin-top: auto; border-top: 1px solid var(--line); padding-top: .5rem; }
 .memory-help summary { min-height: 48px; padding: .7rem; cursor: pointer; font-weight: 700; }
 .memory-help > p, .memory-audio-status { color: var(--muted); font-size: .9rem; line-height: 1.5; }
 .memory-help summary:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 .memory-answer { font-size: 2.6rem; color: var(--accent-ink); }
-.active-memory-content button:focus-visible, .memory-write input:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
+.active-memory-content button:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 .active-memory-content .scene-visual { max-height: 170px; }
 @media (max-width: 600px) { .active-memory-content { min-height: 480px; gap: .8rem; } .memory-options button { flex-basis: 100%; } }

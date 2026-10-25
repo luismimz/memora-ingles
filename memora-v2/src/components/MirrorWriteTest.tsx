@@ -1,3 +1,4 @@
+import { AnswerStudio } from './AnswerStudio';
 import { useRef, useState } from 'react';
 import { evaluateMirrorAnswer, mirrorHint, mirrorText, nextMirrorHint, type MirrorExample, type MirrorLessonData } from '../domain/mirrorLesson';
 import type { AtomicUnit } from '../domain/unit';
@@ -41,9 +42,8 @@ export function MirrorWriteTest({ unit, example, lesson, userId, inspection, act
   }
   return <div className="mirror-test">
     <p className="eyebrow">{recall ? 'RECORDAR · SIN MODELO' : 'PROBAR · SIN MODELO'}</p>
-    <h1>{recall ? 'Una última frase tuya.' : 'Ahora, sin mirar.'}</h1>
-    <p className="mirror-target" lang="es">{example.natural}</p>
-    {!correct ? <><form onSubmit={(event) => { event.preventDefault(); answer(); }}><label htmlFor="mirror-answer">Escribe en inglés</label><div><input id="mirror-answer" lang="en" value={input} onChange={(event) => { setInput(event.target.value); last.current = undefined; }} autoComplete="off" autoCapitalize="none" spellCheck={false} /><button type="submit" className="primary-action" disabled={!input.trim()}>Comprobar</button></div></form><button type="button" className="quiet-action" onClick={() => clue()}>Una pista{level ? ` · ${level}/3` : ''}</button></> : <><p className="mirror-correct" lang="en"><MirrorText text={input} lesson={lesson} /></p><button type="button" className="quiet-action" onClick={() => void playEnglish(example.contracted)}>🔊 Escuchar la frase</button></>}
+    {correct ? <h1>{example.natural}</h1> : null}
+    {!correct ? <><AnswerStudio id="mirror-answer" taskKey={`${unit.id}:${activityId}`} target={example.natural} value={input} onChange={(value) => { setInput(value); last.current = undefined; }} onAnswer={() => answer()} accepts={(value) => evaluateMirrorAnswer(example, value)} /><button type="button" className="quiet-action" onClick={() => clue()}>Una pista{level ? ` · ${level}/3` : ''}</button></> : <><p className="mirror-correct" lang="en"><MirrorText text={input} lesson={lesson} /></p><button type="button" className="quiet-action" onClick={() => void playEnglish(example.contracted)}>🔊 Escuchar la frase</button></>}
     <p className="mirror-feedback" role="status">{feedback || 'Sin reloj ni penalización. Puedes probar otra vez.'}</p>
     {correct ? <button type="button" className="primary-action" onClick={() => { if (!advanced.current) { advanced.current = true; onSuccess(); } }}>{nextLabel}</button> : null}
   </div>;

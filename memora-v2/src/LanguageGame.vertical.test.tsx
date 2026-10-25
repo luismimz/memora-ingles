@@ -10,6 +10,7 @@ import type { AtomicUnit } from './domain/unit';
 import { recalledWordIndex } from './domain/activeRecall';
 import { readWordMemories } from './domain/memory';
 import { readAttempts, readSessions } from './domain/learningProfile';
+import { WordAssembly } from './components/WordAssembly';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -23,7 +24,7 @@ const checkpoint = () => readGameCheckpoint(user, `${unit.id}:vocabulary`, unit.
 async function mount(value = unit) {
   await act(async () => { tree = create(<LanguageGame unit={value} userId={user} learningMode="vocabulary" onFinished={finished} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
 }
-async function swipe() {
+async function swipe(assemble = true) {
   const region = tree.root.findByProps({ role: 'region' });
   const target = { closest: () => null };
   await act(async () => {
@@ -33,6 +34,14 @@ async function swipe() {
     region.props.onScroll({ currentTarget: { scrollTop: 100, scrollHeight: 700, clientHeight: 600 } });
     vi.advanceTimersByTime(230);
   });
+  if (assemble && tree.root.findAllByType(WordAssembly).length) {
+    // Play the new guided rehearsal explicitly; gestures never solve its pieces.
+    while (tree.root.findAllByProps({ className: 'assembly-bank' }).length) {
+      const choices = tree.root.findByProps({ className: 'assembly-bank' }).findAllByType('button').filter((node) => !node.props.disabled).sort((a, b) => Number(a.props['aria-label'].split('pieza ')[1]) - Number(b.props['aria-label'].split('pieza ')[1]));
+      await act(async () => choices[0].props.onClick());
+    }
+    await swipe(false);
+  }
 }
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node) === label)!;
 beforeEach(() => {
@@ -45,6 +54,15 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar', async () => {
+  await mount(); await swipe(false);
+  expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
+  expect(checkpoint()).toMatchObject({ phase: 'associate', wordIndex: 0 });
+  const before = readLearningActivities(user);
+  await swipe(false);
+  expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
+  expect(readLearningActivities(user)).toEqual(before);
+});
 it('el mismo gesto recorre asociaciones y cognado, pero nunca responde una pregunta pendiente', async () => {
   await mount();
   for (let index = 0; index < unit.words.length; index++) {

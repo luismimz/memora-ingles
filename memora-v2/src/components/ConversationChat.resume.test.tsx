@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import raw from '../../content/keys-mission.json';
 import { validateUnit } from '../domain/unit';
 import { readLearningActivities } from '../domain/learningActivity';
+import { AnswerStudio } from './AnswerStudio';
 const hooks = vi.hoisted(() => ({ effects: [] as (() => unknown)[] }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (value: unknown) => [typeof value === 'function' ? value() : value, vi.fn()],
@@ -29,7 +30,7 @@ function render(inspection = false) {
   hooks.effects = [];
   const tree = ConversationPractice({ unit, userId: user, reviewMode: inspection, onContinue: vi.fn() });
   const nodes: ReactElement<any>[] = [];
-  const visit = (node: any) => { if (Array.isArray(node)) node.forEach(visit); else if (node?.props) { nodes.push(node); visit(node.props.children); } };
+  const visit = (node: any) => { if (Array.isArray(node)) node.forEach(visit); else if (node?.props) { nodes.push(node); if (node.type === AnswerStudio) visit(AnswerStudio(node.props)); else visit(node.props.children); } };
   visit(tree); return nodes;
 }
 beforeEach(() => {

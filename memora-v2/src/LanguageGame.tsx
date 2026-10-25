@@ -31,6 +31,7 @@ import type { Appearance } from './useAppearance';
 import { syncLabels, type SyncStatus } from './services/progressSync';
 import { PlayHeader } from './components/PlayHeader';
 import { WordSceneDelivery } from './components/WordSceneDelivery';
+import { WordAssembly } from './components/WordAssembly';
 
 function GrammarLesson({ form, baseSpanish, index, total, onReady, onContinue }: {
   form: GrammarForm;
@@ -133,15 +134,18 @@ function GrammarLesson({ form, baseSpanish, index, total, onReady, onContinue }:
 function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean }) {
   const { audioState, listen } = useAssociationAudio(word);
   const [reconstruct, setReconstruct] = useState(false);
+  const [assembling, setAssembling] = useState(false);
   const rejectionKey = `memora-v2.rejected-association.${userId}.${word.en.toLocaleLowerCase('en-US')}`;
   const [associationRejected, setAssociationRejected] = useState(() => localStorage.getItem(rejectionKey) === '1');
 
   function connect() {
     stopSpeech();
     if (word.reconstruction && !associationRejected) setReconstruct(true);
+    else if (vertical && !inspection) setAssembling(true);
     else onConnect();
   }
-  if (reconstruct) return <SceneReconstruction vertical={vertical} unit={unit} word={word} userId={userId} inspection={inspection} onContinue={onConnect} />;
+  if (assembling) return <WordAssembly vertical={vertical} word={word} onContinue={onConnect} />;
+  if (reconstruct) return <SceneReconstruction vertical={vertical} unit={unit} word={word} userId={userId} inspection={inspection} onContinue={() => { if (vertical && !inspection) setAssembling(true); else onConnect(); }} />;
   if (word.associationMode === 'cognate') return <CognateAssociationCard vertical={vertical} word={word} index={index} total={total} audioState={audioState} onListen={listen} onConnect={connect} />;
 
   return <GameCard vertical={vertical} onAdvance={connect} advanceControl={!word.reconstruction || associationRejected} advanceLabel="Ya la he imaginado" back={<div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>

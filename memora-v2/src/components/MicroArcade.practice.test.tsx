@@ -5,6 +5,7 @@ import { readLearningActivities } from '../domain/learningActivity';
 import { readWordMemories, recordWordRecall } from '../domain/memory';
 import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 import { recordActiveWordAttempt } from '../domain/activeRecall';
+import { AnswerStudio } from './AnswerStudio';
 const hooks = vi.hoisted(() => ({ index: 0, state: new Map<number, unknown>(), expire: () => {}, advance: () => {}, duration: 0, calm: false }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (initial: unknown) => { const id = hooks.index++; if (!hooks.state.has(id)) hooks.state.set(id, typeof initial === 'function' ? initial() : initial); return [hooks.state.get(id), (value: unknown) => hooks.state.set(id, typeof value === 'function' ? value(hooks.state.get(id)) : value)]; },
@@ -23,7 +24,7 @@ function render(initialRound = 2, automatic = false, units = [previewUnit]) {
   hooks.index = 0;
   const tree = MicroArcade({ userId: 'learner', units, inspection: false, onExit: exited, initialRound, onRoundAdvance: advanced, automatic });
   nodes = [];
-  function visit(value: any) { if (Array.isArray(value)) value.forEach(visit); else if (value?.props) { nodes.push(value); visit(value.props.children); } }
+  function visit(value: any) { if (Array.isArray(value)) value.forEach(visit); else if (value?.props) { nodes.push(value); if (value.type === AnswerStudio) visit(AnswerStudio(value.props)); else visit(value.props.children); } }
   visit(tree);
   return tree;
 }

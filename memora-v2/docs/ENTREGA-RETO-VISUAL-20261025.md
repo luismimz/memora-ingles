@@ -1,0 +1,17 @@
+# Un reto visible, piezas antes de escribir
+
+Petición humana: reconstruir la práctica desde la experiencia de un principiante. No reducirlo a foco, teclado o tests. Primer tramo implementado sobre componentes actuales, sin importar contenido ni tocar cuentas.
+
+## Interacción
+
+La escritura de GrammarCoach, ActiveRecallCard, ConversationChat, MirrorWriteTest y MicroArcade comparte AnswerStudio: consigna corta, mensaje/palabra exactos en español y campo inglés en el mismo bloque. Sin botón Comprobar/Enviar. Una respuesta aceptada se reconoce450ms después de completar el texto. No se penalizan borradores parciales ni se registra un error por parar de teclear. Enter sigue disponible para probar deliberadamente un intento; conserva corrección contextual y primer intento. No se afirma que todos los textos erróneos sean evaluados automáticamente. Composición IME, salir, cambio de tarea, pausa y texto cambiado cancelan reconocimiento pendiente. Restaurar un borrador no lo envía. Validadores, locks, ayudas, journal y SRS siguen siendo de cada componente; no hay otro evaluador ni scheduler.
+
+El reto de gramática muestra el español de una pareja efectivamente enseñada, no una traducción inventada. Los colores señalan las piezas, sin cajas en cada fragmento del objetivo. Cómo se arma queda en un apartado junto al campo; abrirlo marca ayuda. La escena reacciona al acierto. Preparación, puzzle y checks siguen siendo obligatorios; no se duplica la escritura de chat. La conversación conserva historial, contexto y recuperación; el log queda acotado visualmente para no desplazar el reto. No se ha rediseñado todavía todo el historial/escenas.
+
+En palabras verticales se añade WordAssembly después de escena/cognado y, si existe, reconstrucción causal: ver modelo → tocar piezas → palabra construida y audio → seguir con la tanda. Letras para palabras cortas, pares gráficos para largas y palabras para expresiones: NO son sílabas ni una guía fonética. Error de pieza da una pista inmediata sin crear un intento de memoria ni un fallo. No se puede resolver por scroll. El recuerdo posterior sigue separado y conserva la modalidad disponible de la unidad (escritura si tiene activeRecall; reconocimiento por escena en las demás). No se promete escritura en todo el catálogo ni cobertura nueva. La posición de palabra se conserva al salir; las piezas parciales de este ensayo se reinician, sin borrar intentos ni palabras anteriores.
+
+## Presentación y límites
+
+Tipografía y espacio más contenidos, un objetivo central, ayudas secundarias y controles de piezas visibles. Se reutilizan escenas/medios existentes, audio y colores semánticos. Retirados estilos sin consumidores de antiguos formularios chat/recuerdo; sin convertir limpieza en borrado de contenidos. DailyArcade legacy fuera del recorrido actual no se migra a ciegas.
+
+Verificación de flujo con datos aislados, timer/IME/borrador/cambio de tarea, juego de letras repetidas y bloqueo de avance por gesto; pruebas de recuperación conservadas y adaptadas a componentes extraídos. No QA visual física/móvil, partida, audio escuchado ni diversión acreditadas: las herramientas antes bloqueadas no se reintentan por otra vía. Esta entrega necesita valoración humana; no es reconstrucción global terminada ni promesa de adicción, fluidez o memoria perfecta.
