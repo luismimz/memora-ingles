@@ -356,7 +356,6 @@ body { background: var(--page); }
 .subject-list { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; width: min(100%, 550px); margin-top: 10px; }
 .subject-list button { min-width: 0; padding: 11px 7px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); color: var(--ink); font-size: .8rem; font-weight: 850; white-space: nowrap; }
 .subject-list button.is-active { border-color: var(--accent); background: var(--surface-soft); box-shadow: inset 0 0 0 1px var(--accent); }
-.listen-again { border: 0; padding: 8px 13px; background: transparent; color: var(--accent-ink); font-weight: 850; }
 
 .builder-content { align-items: center; gap: 20px; text-align: center; }
 .builder-content .scene-visual { max-width: 180px; margin: -4px auto 0; }

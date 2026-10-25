@@ -54,10 +54,11 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
   }
   useEffect(() => {
     // A different model cancels the previous voice, but sound never advances a lesson.
-    if (restoredAudio.current) { restoredAudio.current = false; return; }
-    if (step === 4 && prepared && check && outcome === 'pending') return;
+    const cancel = () => { request.current++; stopSpeech(); };
+    if (restoredAudio.current) { restoredAudio.current = false; return cancel; }
+    if (step === 4 && prepared && check && outcome === 'pending') return cancel;
     void listen();
-    return () => { request.current++; stopSpeech(); };
+    return cancel;
   }, [phrase, step, checkIndex, prepared, outcome]);
   useEffect(() => { if (ready && !readySent.current) { readySent.current = true; readyCallback.current(); } }, [ready]);
   function answer(value: string) {
@@ -91,7 +92,7 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
     setCheckIndex(next); setPrepared(nextSubject < 0); setOutcome('pending'); setFailures(0); answerLock.current = false;
   }
   const canAdvance = step < 4 || ready || !prepared || outcome !== 'pending';
-  const label = step < 3 ? 'Ver la siguiente pieza' : step === 3 || !prepared ? 'Probar con estas piezas' : ready ? index === total - 1 ? 'Montar el mensaje' : 'Siguiente forma' : 'Continuar';
+  const label = step < 3 ? 'Ver la siguiente pieza' : step === 3 && !checks.length ? 'Continuar' : step === 3 || !prepared ? 'Probar con estas piezas' : ready ? index === total - 1 ? 'Montar el mensaje' : 'Siguiente forma' : 'Continuar';
   return <GameCard vertical={vertical} stepKey={`${step}:${checkIndex}:${prepared}:${outcome}`} onAdvance={canAdvance ? advance : undefined} advanceControl advanceLabel={label} revealFooter={canAdvance} className="lesson-card">
     <div className="lesson-content">
       {step === 4 && prepared && check ? outcome !== 'pending' ? <><h1 role="status">{outcome === 'correct' ? '✓ Acertaste' : 'Vamos con el modelo'}</h1><p className="assembled-phrase" lang="en">{check.answer}</p>{outcome === 'model' ? <p>{check.hint}</p> : null}</> : <><h1>{check.prompt}</h1><div className="grammar-check"><div>{check.choices.map((choice) => <button type="button" key={choice} onClick={() => answer(choice)}>{choice}</button>)}</div>{failures > 0 ? <p role="status">{check.hint}</p> : null}</div></> : <>

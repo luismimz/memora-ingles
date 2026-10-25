@@ -5,7 +5,7 @@ import { GameCard } from './GameCard';
 import { GrammarMorphology } from './GrammarMorphology';
 import { previewUnit } from '../preview/previewUnit';
 import { makeGrammarChecks } from '../domain/grammarPractice';
-import { playEnglish, type PlaybackResult } from '../services/audio';
+import { playEnglish, stopSpeech, type PlaybackResult } from '../services/audio';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
 let tree: ReactTestRenderer;
@@ -78,4 +78,16 @@ it('un final de audio de la pantalla anterior no cambia el estado de la nueva', 
   await act(async () => resolve({ status: 'blocked', source: null }));
   expect(text(tree.toJSON())).not.toContain('Audio no disponible');
   expect(tree.root.findByType(GrammarMorphology).props.step).toBe(2);
+});
+it('replay tras restaurar se cancela al salir aunque no se haya iniciado audio automático', async () => {
+  let resolve!: (value: PlaybackResult) => void;
+  const position = { step: 4, subjectIndex: 0, checkIndex: 0, prepared: true, outcome: 'correct' as const, failures: 0 };
+  await act(async () => { tree = create(<GrammarFallbackLesson form={form} index={0} total={1} onReady={ready} onContinue={next} vertical initialPosition={position} />); });
+  expect(playEnglish).not.toHaveBeenCalled();
+  vi.mocked(playEnglish).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar el modelo' }).props.onClick());
+  vi.mocked(stopSpeech).mockClear(); act(() => tree.unmount());
+  expect(stopSpeech).toHaveBeenCalledOnce();
+  await act(async () => resolve({ status: 'blocked', source: null }));
+  expect(next).not.toHaveBeenCalled(); expect(ready).not.toHaveBeenCalled();
 });
