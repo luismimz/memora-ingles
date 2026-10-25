@@ -138,13 +138,16 @@ export default function App() {
       // conservan para sus herramientas específicas, pero no deben mezclarse
       // con las misiones publicadas.
       setUnits(loaded);
-      const [loadedPilot, loadedMirror] = await Promise.all([
+      // Optional history metadata/editorial tools must not hold the published
+      // learner route behind slow pilot requests. They retain the same gates.
+      void Promise.all([
         loadKeysPilot(controller.signal).catch(() => null),
         loadMirrorPilot(controller.signal).catch(() => null),
-      ]);
-      if (controller.signal.aborted) return;
-      setPilot(loadedPilot);
-      setMirrorPilot(loadedMirror);
+      ]).then(([loadedPilot, loadedMirror]) => {
+        if (controller.signal.aborted) return;
+        setPilot(loadedPilot);
+        setMirrorPilot(loadedMirror);
+      });
     }).catch((reason: unknown) => {
       if (controller.signal.aborted) return;
       if (reason instanceof DirectusError && reason.status === 403) {
