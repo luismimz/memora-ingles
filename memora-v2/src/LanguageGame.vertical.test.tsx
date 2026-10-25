@@ -220,6 +220,7 @@ it.each([true, false])('entrega nueva acierto=%s espera, reanuda elección y reg
   await mount();
   for (const _word of unit.words) await swipe();
   const before = sceneButtons().map((node) => node.props['data-drop-choice']);
+  expect(before).toHaveLength(2);
   const choice = sceneButtons().find((node) => (node.props['data-drop-choice'] === unit.words[0].en) === correct)!;
   const response = choice.props['data-drop-choice'];
   await act(async () => { choice.props.onClick(); choice.props.onClick(); });
@@ -229,10 +230,10 @@ it.each([true, false])('entrega nueva acierto=%s espera, reanuda elección y reg
   await act(async () => { vi.advanceTimersByTime(20000); });
   expect(checkpoint()).toMatchObject({ recallIndex: 0, recallAnswered: true, recallChoice: response });
   act(() => tree.unmount()); await mount();
-  expect(sceneButtons().map((node) => node.props['data-drop-choice'])).toEqual(before);
-  expect(sceneButtons().find((node) => node.props['aria-pressed'])?.props['data-drop-choice']).toBe(response);
-  expect(sceneButtons().every((node) => node.props.disabled)).toBe(true);
-  expect(text(tree.toJSON())).toContain(correct ? 'La palabra ha llegado a su escena.' : 'Mira la conexión:');
+  expect(sceneButtons()).toHaveLength(0);
+  expect(text(tree.toJSON())).not.toContain('¿A qué escena va?');
+  expect(text(tree.toJSON())).not.toContain('Lleva este mensaje');
+  expect(text(tree.toJSON())).toContain(correct ? '✓ Conectada' : 'Esta es la conexión');
   await act(async () => { vi.advanceTimersByTime(20000); });
   expect(checkpoint()?.recallIndex).toBe(0);
   await swipe();
@@ -269,8 +270,9 @@ it('consultar la conexión antes de responder no inventa fallo, acierto ni memor
   expect(readWordMemories(user)).toEqual(before);
   expect(checkpoint()).toMatchObject({ recallAnswered: true, recallOutcome: 'modeled', correct: 0 });
   act(() => tree.unmount()); await mount();
-  expect(text(tree.toJSON())).toContain('No hace falta adivinar');
-  expect(sceneButtons().every((node) => node.props.disabled)).toBe(true);
+  expect(text(tree.toJSON())).toContain('Conexión con modelo');
+  expect(text(tree.toJSON())).not.toContain('¿A qué escena va?');
+  expect(sceneButtons()).toHaveLength(0);
   await act(async () => { vi.advanceTimersByTime(20000); });
   expect(checkpoint()?.recallIndex).toBe(0);
   await swipe();

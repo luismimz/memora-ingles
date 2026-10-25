@@ -186,11 +186,11 @@ export function SceneDelivery({ message, options, selected, feedback, onAnswer, 
     if (choice && moved && !available.current.disabled && available.current.feedback !== 'correct') available.current.onAnswer(choice);
   }
   return <div ref={root} className="grammar-situation">
-    <p className="situation-instruction">{instruction}</p>
+    {!locked ? <p className="situation-instruction">{instruction}</p> : null}
     <div className={`situation-message situation-token${drag ? ' is-held' : ''}`} lang="en" role="group" aria-label={`Mensaje inglés: ${message}`} draggable={!locked}
       onDragStart={(event) => event.preventDefault()}
       onPointerDown={(event) => { if (locked || event.button !== 0 || event.isPrimary === false) return; event.preventDefault(); event.stopPropagation(); gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY }; event.currentTarget.setPointerCapture?.(event.pointerId); move(event); }}
-      onPointerMove={move} onPointerUp={release} onPointerCancel={cancel} onLostPointerCapture={cancel}>{message}<small lang="es">↘ Lleva este mensaje</small></div>
+      onPointerMove={move} onPointerUp={release} onPointerCancel={cancel} onLostPointerCapture={cancel}>{message}{!locked ? <small lang="es">↘ Lleva este mensaje</small> : null}</div>
     <button type="button" className="quiet-action" disabled={listenDisabled} onClick={onListen} aria-label="Escuchar el mensaje inglés">🔊 Escuchar</button>
     <div className="situation-options" role="group" aria-label="Elige la escena que comunica el mensaje">
       {scenes.map((item) => <button type="button" ref={(node) => { if (node) destinations.current.set(item.choice, node); else destinations.current.delete(item.choice); }} key={item.choice} data-drop-choice={item.choice} className={drag?.over === item.choice ? 'is-drop-target' : ''} aria-pressed={selected === item.choice} disabled={locked} onClick={() => onAnswer(item.choice)}>{item.visual}<span>{item.label}</span></button>)}

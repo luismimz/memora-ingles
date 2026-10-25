@@ -51,6 +51,7 @@ export function SceneReconstruction({ unit, word, userId, inspection, onContinue
   const [state, setState, clear] = usePracticeCheckpoint(`memora-v2.scene.${userId}.${unit.id}.${unit.contentVersion}.${word.id}`,
     { result: '', helped: false, done: false, parent: '', failures: 0 }, inspection, restoreRepairs(userId, `reconstruct:${word.en}`));
   const locked = useRef(false);
+  const continued = useRef(false);
   useEffect(() => { if (!state.done) locked.current = false; }, [state]);
   function choose(answer: string | null) {
     if (locked.current || state.done) return;
@@ -58,17 +59,17 @@ export function SceneReconstruction({ unit, word, userId, inspection, onContinue
     const correct = answer === puzzle.answer;
     const failures = Math.min(2, state.failures + Number(answer !== null && !correct));
     const attempt = !inspection ? recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `reconstruct:${word.en}`, skill: `scene:${word.en}`, phase: 'arcade', source: 'learner', modality: 'choice', prompt: puzzle.prompt, response: answer ?? '(pasó por ahora)', expected: puzzle.answer, correct: answer === null ? null : correct, helped: true, feedback: 'Reconstrucción de la escena, no dominio de la palabra inglesa.', parentAttemptId: state.parent || undefined }) : null;
-    setState({ result: correct ? '¡Esa es la escena! Ahora imagínala en movimiento.' : puzzle.cue, helped: !correct, done: correct || answer === null || failures >= 2, parent: attempt?.id ?? state.parent, failures });
+    setState({ result: correct ? 'Escena conectada.' : puzzle.cue, helped: !correct, done: correct || answer === null || failures >= 2, parent: attempt?.id ?? state.parent, failures });
     if (correct) playSnap();
   }
-  const continueScene = () => { clear(); onContinue(); };
-  return <GameCard vertical={vertical} stepKey={state.done ? 'scene-result' : 'scene-puzzle'} onAdvance={vertical && state.done ? continueScene : undefined} advanceLabel="Seguir la historia" className="active-memory-card"><div className="active-memory-content">
-    <p className="eyebrow">DALE VIDA AL RECUERDO</p>
-    <div className="memory-mystery" aria-hidden="true">{word.emojis[0]} <span>?</span></div>
-    <h1>{puzzle.prompt}</h1>
-    <p>No es un examen: reconstruye lo que acabas de imaginar.</p>
-    <div className="memory-feedback" role="status">{state.result}</div>
-    {state.done ? <><p><MnemonicSceneText word={word} /></p>{!vertical ? <button type="button" className="primary-action" onClick={continueScene}>Seguir la historia →</button> : null}</> : <><div className="memory-options">{puzzle.choices.map((choice) => <button type="button" key={choice} onClick={() => choose(choice)}>{choice}</button>)}</div><button type="button" className="quiet-action" onClick={() => choose(null)}>Recordar la escena y seguir</button></>}
+  const continueScene = () => { if (!state.done || continued.current) return; continued.current = true; clear(); onContinue(); };
+  return <GameCard vertical={vertical} stepKey={state.done ? 'scene-result' : 'scene-puzzle'} onAdvance={vertical && state.done ? continueScene : undefined} advanceLabel="Continuar" className="active-memory-card"><div className="active-memory-content">
+    {state.done ? <><h1 role="status">{state.helped ? 'Esta es la escena' : '✓ Esa es la escena'}</h1><SceneVisual word={word} compact /><p>{state.helped ? puzzle.cue : <MnemonicSceneText word={word} />}</p>{!vertical ? <button type="button" className="primary-action" onClick={continueScene}>Continuar →</button> : null}</> : <>
+      <div className="memory-mystery" aria-hidden="true">{word.emojis[0]} <span>?</span></div>
+      <h1>{puzzle.prompt}</h1>
+      <div className="memory-feedback" role="status">{state.result}</div>
+      <div className="memory-options">{puzzle.choices.map((choice) => <button type="button" key={choice} onClick={() => choose(choice)}>{choice}</button>)}</div><button type="button" className="quiet-action" onClick={() => choose(null)}>Recordar la escena y seguir</button>
+    </>}
   </div></GameCard>;
 }
 
@@ -121,7 +122,7 @@ export function ActiveRecallCard({ unit, word, choices, position, userId, inspec
   }
   const continueRecall = () => { clear(); onFinish(state.independent); };
   return <GameCard vertical={vertical} stepKey={state.done ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.done ? continueRecall : undefined} advanceLabel={position < unit.words.length - 1 ? 'Continuar con otra palabra' : 'Ver resultado de la tanda'} className="active-memory-card"><div className="active-memory-content">
-    <p className="eyebrow">RECUERDA A TU RITMO · {position + 1}/{unit.words.length}</p>
+    <p className="eyebrow">{state.done ? 'RESULTADO' : 'RECUERDA A TU RITMO'} · {position + 1}/{unit.words.length}</p>
     {state.done ? <h1>{word.es}</h1> : state.level > 0 ? <p>Recupera la palabra con esta pista.</p> : null}
     {state.feedback ? <div className="memory-feedback" role="status">{state.feedback}</div> : null}
     {!state.done && state.level > 0 ? <SceneVisual word={word} compact hideAnswer /> : null}

@@ -9,6 +9,7 @@ import { wordRecallHint } from '../domain/activeRecall';
 import { readWordMemories, recordWordRecall } from '../domain/memory';
 import type { AtomicWord } from '../domain/unit';
 import { SceneVisual } from './SceneVisual';
+import { GameCard } from './GameCard';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
 vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -220,4 +221,30 @@ it('la reconstrucción de escena también termina tras una reparación y no la c
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: false }, { correct: false }]);
   expect(tree.root.findAllByProps({ className: 'memory-options' })).toHaveLength(0);
   expect(text(tree.toJSON())).toContain('La playa entra en el salón.');
+  expect(text(tree.toJSON())).not.toContain('Reconstruye la escena');
+  expect(tree.root.findAllByProps({ className: 'memory-mystery' })).toHaveLength(0);
+  expect(text(tree.toJSON())).toContain('Esta es la escena');
+});
+it('confirmar una escena elimina la pregunta y el interrogante incluso al reabrir un resultado antiguo', async () => {
+  const puzzleWord: AtomicWord = { ...word, reconstruction: { prompt: '¿Qué desaparece en el fondo?', choices: ['El móvil', 'El reloj'], answer: 'El móvil', cue: 'El móvil se pierde en el bolsillo.' } };
+  const mountScene = async () => { await act(async () => { tree = create(<SceneReconstruction unit={previewUnit} word={puzzleWord} userId={user} inspection={false} onContinue={finish} vertical />); }); };
+  await mountScene();
+  expect(text(tree.toJSON())).toContain('¿Qué desaparece en el fondo?');
+  await act(async () => button('El móvil').props.onClick());
+  const before = readLearningActivities(user);
+  expect(before.filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
+  const key = `memora-v2.scene.${user}.${previewUnit.id}.${previewUnit.contentVersion}.${word.id}`;
+  const saved = JSON.parse(localStorage.getItem(key)!);
+  localStorage.setItem(key, JSON.stringify({ ...saved, result: '¡Esa es la escena! Ahora imagínala en movimiento.' }));
+  act(() => tree.unmount()); await mountScene();
+  expect(text(tree.toJSON())).toContain('✓ Esa es la escena');
+  expect(text(tree.toJSON())).not.toContain('¿Qué desaparece');
+  expect(text(tree.toJSON())).not.toContain('Ahora imagínala');
+  expect(tree.root.findAllByProps({ className: 'memory-mystery' })).toHaveLength(0);
+  expect(tree.root.findAllByProps({ className: 'memory-options' })).toHaveLength(0);
+  expect(readLearningActivities(user)).toEqual(before);
+  const advance = tree.root.findByType(GameCard).props.onAdvance;
+  await act(async () => { advance(); advance(); });
+  expect(finish).toHaveBeenCalledOnce();
+  expect(readLearningActivities(user)).toEqual(before);
 });
