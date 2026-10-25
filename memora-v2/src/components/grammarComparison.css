@@ -1,0 +1,16 @@
+.coach-comparison { width: min(100%, 620px); margin-inline: auto; padding: 18px 0; }
+.coach-content.coach-teaching { min-height: 0; gap: 14px; }
+.coach-teaching .coach-comparison { flex: none; min-height: 0; gap: 8px; padding-block: 12px; }
+.coach-comparison .coach-language { margin-bottom: 8px; font-weight: 600; }
+.coach-comparison .coach-row { font-size: clamp(1.8rem, 5vw, 2.8rem); font-weight: 650; line-height: 1.45; }
+.coach-comparison .coach-row .coach-piece { background: transparent; border-radius: 0; }
+.coach-comparison .comparison-changed { text-decoration: underline; text-underline-offset: .22em; text-decoration-thickness: 2px; }
+.comparison-cue { margin: 18px 0 0; font-size: .8rem; color: var(--muted); }
+.comparison-cue > span[lang] { color: var(--ink); font-weight: 600; }
+.coach-teaching .coach-caption { min-height: 0; font-size: .95rem; line-height: 1.5; max-width: 520px; }
+.coach-teaching .coach-teaching-step { margin: 0; color: var(--muted); font-size: .75rem; }
+.coach-teaching .coach-teaching-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 12px; }
+.coach-teaching-actions > .primary-action { width: 100%; }
+.coach-teaching-options { text-align: left; border-top: 1px solid var(--line); }
+.coach-teaching-options > summary { cursor: pointer; color: var(--muted); padding: 14px 0; font-size: .8rem; }
+.coach-teaching-options > div { display: flex; flex-wrap: wrap; gap: 12px; }

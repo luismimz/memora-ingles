@@ -59,9 +59,6 @@ button:focus-visible, .game-card-swipe:focus-visible { outline: 3px solid var(--
 .grammar-inline { white-space: pre-wrap; }
 .coach-direction { color: var(--muted); font-size: 1.2rem; }
 .coach-pause { align-self: center; min-height: 44px; }
-.coach-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; align-items: center; }
-.coach-actions > button { min-height: 44px; padding: 10px; }
-.coach-actions > .primary-action, .coach-actions > button:last-child { grid-column: 1 / -1; }
 .journey-trick .coach-subject { color: var(--grammar-verb); background: var(--grammar-verb-soft); }
 .journey-trick .coach-verb, .journey-trick .coach-change { color: var(--warm); background: var(--warm-soft); }
 .coach-practice { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; }

@@ -16,5 +16,4 @@
 .coach-action-card .coach-practice { gap: 12px; }
 .coach-action-card .coach-practice h2 { font-size: clamp(1.25rem, 4vw, 1.9rem); }
 .coach-action-card .coach-feedback { min-height: 1.5em; }
-.coach-action-card .coach-actions { gap: 6px; }
 @media (prefers-reduced-motion: reduce) { .grammar-action-scene.is-running .grammar-action-ball { animation: none; } }

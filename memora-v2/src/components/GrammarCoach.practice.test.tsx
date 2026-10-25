@@ -34,6 +34,30 @@ function render(overrides: Partial<Parameters<typeof GrammarCoach>[0]> = {}) {
   return renderToStaticMarkup(tree);
 }
 const button = (text: string) => nodes.find((node) => node.type === 'button' && (node.props.children === text || node.props.children?.props?.text === text))!;
+it('enseña con el modelo antes de la explicación y una sola continuación principal', () => {
+  hooks.state.clear(); hooks.refs.clear();
+  const html = render();
+  expect(html.indexOf('coach-comparison')).toBeLessThan(html.indexOf('class="coach-caption"'));
+  expect(html).toContain('Mira las piezas');
+  expect(html).not.toContain('DESPIERTA EL ESCRITORIO');
+  expect(html).not.toContain('Tu respuesta mueve la escena');
+  const actions = nodes.find((node) => node.props.className === 'coach-teaching-actions')!;
+  expect(actions.props.children.filter((node: any) => node?.type === 'button' && node.props.className === 'primary-action')).toHaveLength(1);
+  const options = nodes.find((node) => node.props.className === 'coach-teaching-options')!;
+  expect(options.type).toBe('details'); expect(options.props.open).toBeUndefined();
+  expect(html).toContain('Pausar'); expect(html).toContain('Ya lo entiendo · probarlo');
+});
+it('un objetivo explícito no se mezcla con una consigna larga y el legado conserva su prompt', () => {
+  hooks.state.clear(); hooks.refs.clear();
+  const authored = { ...generatedLesson, steps: [generatedLesson.steps[0]], checks: [{ ...generatedLesson.checks[2], prompt: 'Explica al personaje lo que haces ahora con tus palabras.', targetEs: 'Estoy jugando.' }] };
+  render({ lesson: authored, startAtPractice: true });
+  expect(nodes.find((node) => node.type === AnswerStudio)!.props.target).toBe('Estoy jugando.');
+  hooks.state.clear(); hooks.refs.clear();
+  const legacy = { ...authored, checks: [{ ...authored.checks[0], targetEs: undefined }] };
+  render({ lesson: legacy, startAtPractice: true });
+  expect(nodes.find((node) => node.type === AnswerStudio)!.props.target).toBe(legacy.checks[0].prompt);
+  expect(readLearningActivities('learner')).toHaveLength(0);
+});
 it('al terminar el coach horizontal ofrece construir frase con botón, sin exigir gesto ni duplicar avances durante enseñanza', () => {
   hooks.state.clear(); hooks.refs.clear();
   const initial = render();
@@ -138,10 +162,10 @@ it('revela primero la persona y nunca muestra una traducción inglesa sin sujeto
 });
 it('el recorrido vertical conserva la pregunta preparada y orienta hasta la práctica sin acreditar aprendizaje', () => {
   const props = { lesson: generatedLesson, puzzle: true };
-  expect(render(props)).toContain('Preparación · paso 1 de 3');
+  expect(render(props)).toContain('Mira las piezas · 1/3');
   expect(nodes[0].props.advanceLabel).toBe('¿Quién está jugando?');
   nodes[0].props.onAdvance();
-  expect(render(props)).toContain('Preparación · paso 2 de 3');
+  expect(render(props)).toContain('Mira las piezas · 2/3');
   expect(nodes[0].props.advanceLabel).toBe('Ver cómo encajan las piezas →');
   nodes[0].props.onAdvance(); render(props);
   expect(nodes[0].props.advanceLabel).toBe('Probarlo con mis palabras →');
@@ -155,7 +179,7 @@ it('el recorrido vertical conserva la pregunta preparada y orienta hasta la prá
 it('el recorrido sin etiquetas editoriales anuncia la última pieza y respeta la posición reanudada', () => {
   const steps = generatedLesson.steps.map(({ advanceLabel: _label, ...step }) => step);
   const props = { lesson: { ...generatedLesson, steps }, puzzle: true, startAtExample: true };
-  expect(render(props)).toContain('Preparación · paso 3 de 3');
+  expect(render(props)).toContain('UNA ACCIÓN NUEVA · 3/3');
   expect(nodes[0].props.advanceLabel).toBe('Practicar el mensaje');
   expect(readLearningActivities('learner')).toHaveLength(0);
 });

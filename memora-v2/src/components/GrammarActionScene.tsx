@@ -20,7 +20,7 @@ export function GrammarActionScene({ lesson, form, stage, feedback }: {
         : stage === 'teach' ? 'Mira cómo encajan las piezas. Después lo contarás tú.'
           : 'Cuenta qué estás haciendo para despertar el escritorio.';
   return <figure className={`grammar-action-scene${running ? ' is-running' : ''}${connected ? ' is-connected' : ''}`} aria-label="El escritorio responde a tu frase">
-    <figcaption><strong>DESPIERTA EL ESCRITORIO</strong><span role="status">{caption}</span></figcaption>
+    {stage !== 'teach' ? <figcaption><strong>DESPIERTA EL ESCRITORIO</strong><span role="status">{caption}</span></figcaption> : null}
     <svg viewBox="0 0 420 120" role="img" aria-label={running ? 'El tablero está jugando' : connected ? 'La conexión está preparada' : 'El tablero espera tu mensaje'}>
       <rect x="137" y="8" width="150" height="84" rx="14" fill="#ac8058" />
       <rect x="145" y="16" width="134" height="66" rx="7" fill={running ? '#356f65' : '#d6d7c1'} />
@@ -31,6 +31,6 @@ export function GrammarActionScene({ lesson, form, stage, feedback }: {
       <path d="M288 46H319M319 46V89H343" stroke={connected ? '#4d8f74' : '#bdbea6'} strokeWidth="6" fill="none" strokeLinecap="round" />
       <circle cx="352" cy="89" r="10" fill={connected ? '#cc9a51' : '#bdbea6'} />
     </svg>
-    <small>Tu respuesta mueve la escena; el repaso comprobará qué recuerdas después.</small>
+    {stage !== 'teach' ? <small>Tu respuesta mueve la escena; el repaso comprobará qué recuerdas después.</small> : null}
   </figure>;
 }

@@ -8,6 +8,8 @@ export interface LessonCheck {
   id: string;
   kind: 'choose' | 'explain' | 'write';
   prompt: string;
+  /** Exact authored Spanish message to produce; separate from the instruction. */
+  targetEs?: string;
   choices?: string[];
   answers: string[];
   hint: string;
@@ -37,6 +39,7 @@ export function validateGrammarLesson(value: GrammarLessonData): void {
     if (step.captionMarks && (!Array.isArray(step.captionMarks) || step.captionMarks.length > 12 || step.captionMarks.some((part) => !part.text?.trim() || !step.caption.includes(part.text) || !['subject', 'auxiliary', 'verb', 'change', 'context'].includes(part.role)))) throw new Error('El énfasis debe señalar piezas reales de la explicación.');
   }
   for (const check of value.checks) {
+    if (check.targetEs !== undefined && (check.kind !== 'write' || typeof check.targetEs !== 'string' || !check.targetEs.trim())) throw new Error('El objetivo escrito necesita un mensaje español explícito.');
     if (!check.id || !['choose', 'explain', 'write'].includes(check.kind) || !check.prompt?.trim() || !check.hint?.trim() || !check.success?.trim() || !Array.isArray(check.answers) || !check.answers.length || check.answers.some((answer) => !answer?.trim())) throw new Error('Cada reto necesita respuestas y una ayuda revisadas.');
     if (check.kind !== 'write' && !check.ordering && (!Array.isArray(check.choices) || check.choices.length < 2 || new Set(check.choices).size !== check.choices.length || check.answers.some((answer) => !check.choices!.includes(answer)))) throw new Error('Las opciones del truco deben incluir la respuesta y ser distintas.');
     if (check.ordering) {
@@ -97,7 +100,7 @@ export function lessonForForm(form: GrammarForm, baseSpanish?: string): GrammarL
           ] },
         } : {}),
         hint: `I AM ${form.english.toUpperCase()} cuenta una acción que está ocurriendo ahora.`, success: 'Has entendido el mensaje: la acción está ocurriendo ahora.' },
-      { id: 'use', kind: 'write', prompt: `Dilo en inglés: estoy ${form.spanish}.`, answers: [first.phrase, `I am ${form.english}`], hint: `Para «estoy ${form.spanish}», une I + AM y añade ${form.english.toUpperCase()}. También puedes escribir I'M.`, success: 'Ya has escrito una frase que puedes usar.' },
+      { id: 'use', kind: 'write', prompt: `Dilo en inglés: estoy ${form.spanish}.`, targetEs: `Estoy ${form.spanish}.`, answers: [first.phrase, `I am ${form.english}`], hint: `Para «estoy ${form.spanish}», une I + AM y añade ${form.english.toUpperCase()}. También puedes escribir I'M.`, success: 'Ya has escrito una frase que puedes usar.' },
     ],
   };
 }

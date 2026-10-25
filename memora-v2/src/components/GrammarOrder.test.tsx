@@ -11,6 +11,18 @@ function mount(puzzle = false, selected: number[] = [], locked = false) {
   return { change, answer, update: (selection: number[]) => act(() => tree.update(<GrammarOrder puzzle={puzzle} pieces={pieces} selected={selection} locked={locked} onChange={change} onAnswer={answer} />)) };
 }
 const bank = () => tree.root.findByProps({ 'aria-label': 'Piezas disponibles' }).findAllByType('button');
+it('coach puede comprobar al completar sin activar arrastre ni enviar un orden restaurado', () => {
+  const change = vi.fn(), answer = vi.fn();
+  const render = (selected: number[]) => <GrammarOrder autoCheck pieces={pieces} selected={selected} locked={false} onChange={change} onAnswer={answer} />;
+  act(() => { tree = create(render([1, 2, 0])); });
+  expect(answer).not.toHaveBeenCalled();
+  expect(tree.root.findAllByProps({ className: 'primary-action' })).toHaveLength(0);
+  act(() => tree.update(render([1, 2])));
+  act(() => bank()[0].props.onClick({ detail: 0 }));
+  expect(answer).toHaveBeenCalledExactlyOnceWith('I AM PLAYING');
+  act(() => bank()[0].props.onClick({ detail: 0 }));
+  expect(answer).toHaveBeenCalledOnce();
+});
 it('legacy mantiene envío explícito; una pieza parcial no responde', () => {
   const { change, answer } = mount();
   act(() => bank()[1].props.onClick({ detail: 0 }));

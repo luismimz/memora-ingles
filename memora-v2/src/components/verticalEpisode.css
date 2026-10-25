@@ -10,7 +10,6 @@
 .card-vertical-memory { color: var(--muted); margin-top: 1rem; }
 .card-vertical-memory summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .card-vertical-scroll:focus-visible, .card-vertical-next button:focus-visible { outline: 3px solid var(--accent); outline-offset: -4px; }
-.coach-stream .coach-actions { justify-content: center; }
 .coach-stream details { text-align: left; color: var(--muted); font-size: .85rem; }
 .coach-stream summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; justify-content: center; }
 .coach-stream .coach-content { min-height: 0; }

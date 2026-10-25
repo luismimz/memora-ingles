@@ -4,6 +4,16 @@ import { grammarExamples } from '../preview/grammarExamples';
 import { previewUnit } from '../preview/previewUnit';
 
 describe('trucos que se comprueban y se usan', () => {
+  it('separa mensaje español de consigna sin exigir migrar lecciones antiguas', () => {
+    const lesson = lessonForForm(previewUnit.grammar[0], 'jugar')!;
+    expect(lesson.checks[2].targetEs).toBe('Estoy jugando.');
+    const legacy = structuredClone(lesson); delete legacy.checks[2].targetEs;
+    expect(() => validateGrammarLesson(legacy)).not.toThrow();
+    const empty = structuredClone(lesson); empty.checks[2].targetEs = ' ';
+    expect(() => validateGrammarLesson(empty)).toThrow('objetivo escrito');
+    const mixed = structuredClone(lesson); mixed.checks[0].targetEs = 'Estoy jugando.';
+    expect(() => validateGrammarLesson(mixed)).toThrow('objetivo escrito');
+  });
   it.each([
     ['brush', 'brushing', 'cepillar', 'cepillando', 'brushing', 'brush-ready'],
     ['cook', 'cooking', 'cocinar', 'cocinando', 'cooking', 'cook-ready'],
