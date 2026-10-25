@@ -13,3 +13,7 @@ La superficie horizontal también protege resumen de ayuda, campos editables, pi
 La región vertical deja de capturar End, AvPág, flecha abajo y espacio para avanzar al final del texto. Son teclas de lectura/desplazamiento, coherentes con su nombre accesible. El teclado avanza por el botón explícito, activable de forma nativa; rueda/toque intencionales ya autorizados conservan sus guardas contra inercia y controles. Se retira el handler que contradecía esa instrucción, sin otro motor ni una capa de eventos alternativa. La prueba de End se actualiza al contrato nuevo: la región no captura teclas, el scroll no navega y el botón avanza una vez. Desplazamiento físico y lector de pantalla quedan pendientes de revisión real.
 
 En horizontal, las flechas con Alt, Control, Meta o Shift y las usadas mientras hay texto seleccionado tampoco se capturan para navegar por tarjetas. Se preservan atajos del navegador y selección; una pulsación simple sin selección ni control interactivo mantiene el gesto anterior. Prueba específica de modificadores y texto seleccionado.
+
+## Cierre del coach sin gesto obligatorio
+
+La auditoría del constructor confirma que ya ofrece su botón de continuación horizontal y se conserva. En cambio, el cierre horizontal de GrammarCoach solo anunciaba arrastrar/flecha. Ahora activa el control explícito existente Construir frase únicamente cuando ha terminado; enseñanza y retos conservan sus botones propios sin duplicarlos. Reutiliza onContinue y no salta preparación, checks ni guardado.

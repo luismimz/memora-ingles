@@ -33,6 +33,17 @@ function render(overrides: Partial<Parameters<typeof GrammarCoach>[0]> = {}) {
   return renderToStaticMarkup(tree);
 }
 const button = (text: string) => nodes.find((node) => node.type === 'button' && (node.props.children === text || node.props.children?.props?.text === text))!;
+it('al terminar el coach horizontal ofrece construir frase con botón, sin exigir gesto ni duplicar avances durante enseñanza', () => {
+  hooks.state.clear(); hooks.refs.clear();
+  const initial = render();
+  expect(initial).not.toContain('class="card-advance"');
+  hooks.state.set(0, lesson.steps.length); hooks.state.set(2, lesson.checks.length);
+  const finished = render();
+  expect(finished).toContain('class="card-advance"');
+  expect(finished).toContain('Construir frase');
+  expect(finished).not.toContain('o pulsa ←');
+  expect(complete).not.toHaveBeenCalled();
+});
 beforeEach(() => {
   hooks.state.clear(); hooks.refs.clear(); complete.mockClear();
   const values = new Map<string, string>();
