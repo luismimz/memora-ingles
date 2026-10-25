@@ -1,10 +1,11 @@
 import type { AssociationAudioState } from './useAssociationAudio';
 
-export function AssociationAudioStatus({ state }: { state?: AssociationAudioState }) {
+export function AssociationAudioStatus({ state, compact = false }: { state?: AssociationAudioState; compact?: boolean }) {
+  if (compact && (!state || state.status === 'ready')) return null;
   const voice = state?.source === 'browser' ? 'Voz del navegador' : state?.source === 'kokoro' ? 'Voz Kokoro' : 'Audio de la palabra';
-  const text = !state || state.status === 'blocked' ? 'Toca 🔊 para escuchar.'
+  const text = !state ? 'Toca 🔊 para escuchar.' : state.status === 'blocked' ? 'No se completó el audio. Toca 🔊 para repetir o sigue con el texto.'
     : state.status === 'preparing' ? 'Preparando audio… Puedes seguir.'
       : state.status === 'unavailable' ? 'Audio no disponible ahora. Puedes seguir.'
-        : state.status === 'playing' ? `${voice} · Escuchando…` : voice;
+        : state.status === 'playing' ? compact ? 'Reproduciendo…' : `${voice} · Reproduciendo…` : voice;
   return <p className="association-audio-status" role="status">{text}</p>;
 }

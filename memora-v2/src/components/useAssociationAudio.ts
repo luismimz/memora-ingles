@@ -26,12 +26,13 @@ export function useAssociationAudio(word: AtomicWord) {
       return true;
     };
     preparing();
-    const first = await playEnglish(word.en.toLowerCase(), word.audioUrl, true, started);
+    const safe = (playback: Promise<PlaybackResult>) => playback.catch(() => ({ status: 'unavailable' as const, source: null }));
+    const first = await safe(playEnglish(word.en.toLowerCase(), word.audioUrl, true, started));
     if (!accept(first) || wordOnly || word.associationMode === 'cognate') return;
     preparing();
-    if (!accept(await playSpanish(word.scene, true, started))) return;
+    if (!accept(await safe(playSpanish(word.scene, true, started)))) return;
     preparing();
-    accept(await playEnglish(word.en.toLowerCase(), word.audioUrl, true, started));
+    accept(await safe(playEnglish(word.en.toLowerCase(), word.audioUrl, true, started)));
   }, [word.en, word.audioUrl, word.scene, word.associationMode]);
 
   useEffect(() => {

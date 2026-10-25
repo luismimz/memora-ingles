@@ -30,6 +30,8 @@ describe('cognados con la presentación visual original', () => {
     expect(html).toContain('word-heading');
     expect(html).toContain('is-revealed');
     expect(html).not.toContain('audio-glass');
-    expect(html).toContain('Toca 🔊 para escuchar.');
+    expect(html).toContain('No se completó el audio. Toca 🔊 para repetir o sigue con el texto.');
+    expect(html.indexOf('role="status"')).toBeLessThan(html.indexOf('<details'));
+    expect(html.match(/role="status"/gu)).toHaveLength(1);
   });
 });

@@ -59,4 +59,12 @@ describe('audio acompañante de la asociación', () => {
     expect(speech.playEnglish).toHaveBeenCalledTimes(1);
     expect(speech.prefetchSpanish).not.toHaveBeenCalled(); expect(speech.playSpanish).not.toHaveBeenCalled();
   });
+  it('un rechazo del audio muestra indisponible, no encadena la historia y permite reintentar', async () => {
+    speech.playEnglish.mockRejectedValueOnce(new Error('offline'));
+    const hook = useAssociationAudio(previewUnit.words[0]); hooks.effects[0](); await flush();
+    expect(hooks.state).toEqual({ status: 'unavailable', source: null });
+    expect(speech.playSpanish).not.toHaveBeenCalled();
+    hook.listen(); await flush();
+    expect(hooks.state?.status).toBe('ready');
+  });
 });

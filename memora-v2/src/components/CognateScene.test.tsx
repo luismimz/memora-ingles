@@ -18,7 +18,7 @@ describe('cognados visuales, no fichas solo informativas', () => {
     const expectedImage = renderToStaticMarkup(<img src={en === 'RADIO' ? radioScene : musicScene} />);
     expect(html).toContain(expectedImage.match(/src="[^"]+"/)![0]);
     expect(html).toContain('round-audio');
-    expect(html).toContain('Toca 🔊 para escuchar.');
+    expect(html).toContain('No se completó el audio. Toca 🔊 para repetir o sigue con el texto.');
     expect(html).not.toContain('PUENTE SONORO');
     const hidden = renderToStaticMarkup(<SceneVisual word={word} hideAnswer />);
     expect(hidden).toContain(`data-cognate-scene="${en.toLowerCase()}"`);
