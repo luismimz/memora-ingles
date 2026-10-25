@@ -428,7 +428,6 @@ body { background: var(--page); }
 .gate-card .gate-error { color: #ffab9d; }
 .brand-mark { display: grid; place-items: center; width: 58px; height: 58px; border: 1px solid rgba(255,255,255,.65); border-radius: 18px; background: linear-gradient(145deg, #fdf7ea, #c9aa88); color: #34281e; font-size: 2rem; font-weight: 800; box-shadow: 0 12px 25px rgba(57,42,27,.17); }
 .quiet-action { border: 0; background: transparent; color: var(--accent-ink); font-weight: 800; }
-.loading-orb { font-size: 5rem; color: var(--accent); animation: spin 1.5s linear infinite; }
 .appearance-toggle { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 1.1rem; font-weight: 700; }
 .appearance-toggle:hover { background: var(--surface-soft); }
 
@@ -726,7 +725,6 @@ body { background: var(--page); }
 @keyframes miss-shake { 0%,100% { transform: translateX(0); } 25%,75% { transform: translateX(-7px); } 50% { transform: translateX(7px); } }
 @keyframes flip-reveal { 0% { opacity: 0; transform: rotateY(85deg); } 100% { opacity: 1; transform: rotateY(0); } }
 @keyframes burst { from { opacity: 0; transform: scale(.65); } to { opacity: 1; transform: scale(1); } }
-@keyframes spin { to { transform: rotate(360deg); } }
 @keyframes root-arc { 0%,20% { transform: translate(0,0); } 56% { transform: translate(calc(100% + 12px), 23px); } 100% { transform: translate(calc(100% + 12px), 0); } }
 @keyframes nut-arc { 0%,20% { transform: translate(0,0); } 56% { transform: translate(calc(-100% - 12px), -34px); } 100% { transform: translate(calc(-100% - 12px), 0); } }
 @keyframes suffix-snap { from { transform: translateX(25px); opacity: .3; } to { transform: translateX(0); opacity: 1; } }

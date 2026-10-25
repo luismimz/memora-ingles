@@ -1,0 +1,11 @@
+# Cargas con contexto y salida
+
+Al abrir una actividad, truco, tandas de palabras, recorrido de gramática o preparación de vocabulario, Memora indica qué está abriendo y ofrece Volver sin esperar. No promete un tiempo de carga ni afirma que esté casi listo. El mensaje de estado es accesible; se reutilizan las tarjetas y colores existentes, sin otra animación de espera. Se retiran los estilos y animación exclusivos del indicador antiguo después de comprobar sus referencias.
+
+Volver invalida la petición con lessonRequest y la preparación Arcade existentes, detiene audio y conserva datos de aprendizaje, posición y ayudas. Una respuesta o error tardío no abre contenido, no muestra errores obsoletos, no escribe la posición ni oculta una carga nueva. No afirma abortar una descarga que el servicio no permita cancelar. La entrada inicial y el acceso se distinguen de una actividad; no ofrecen volver a un recorrido aún no disponible ni cambian la sesión.
+
+Pruebas aisladas con App montada: cancelar éxito/error tardíos, iniciar otra actividad mientras llega la anterior, cancelar palabras/gramática y conservar posición, entrada inicial. Se mantienen pruebas de continuidad de App, preparación de alimentos, episodio y carga auxiliar. Resultado de integración/build y publicación en el checkpoint único, no en otra matriz. Sin inspección visual física, partida o velocidad móvil acreditadas.
+
+Recorrido de revisión: Inicio → Continuar jugando, o Practicar por mi cuenta → Aprender palabras/Gramática. Si hay espera, Volver sin esperar regresa sin completar contenido. En una red rápida la pantalla puede no permanecer visible; no se introduce retraso artificial.
+
+Arcade también comunica la preparación de una ronda sin desmontar la actividad de debajo. Cancelar preparación invalida el lanzamiento con arcadeRequest, sin consumir la ronda pendiente ni fabricar intentos. Una ronda automática pendiente podrá volver a ofrecerse al continuar: cancelar no equivale a completarla ni a desactivarla. Las pulsaciones repetidas no abren dos solicitudes. Una respuesta tardía tras cancelar no abre el diálogo. Se reutiliza el aviso flotante existente y no se convierte la espera en un minijuego ni en una falsa recompensa.

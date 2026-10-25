@@ -75,6 +75,8 @@ export default function App() {
   const [activeTrick, setActiveTrick] = useState<UnitSummary | null>(null);
   const [libraryNotice, setLibraryNotice] = useState<string | null>(null);
   const [preparingGrammar, setPreparingGrammar] = useState<UnitSummary | null>(null);
+  const [loadingActivity, setLoadingActivity] = useState<string | null>(null);
+  const [arcadeLoading, setArcadeLoading] = useState(false);
   const arcadeOpening = useRef(false);
   const arcadeRequest = useRef(0);
   const lessonRequest = useRef(0);
@@ -82,13 +84,16 @@ export default function App() {
   function cancelArcadeLaunch() {
     arcadeRequest.current++;
     arcadeOpening.current = false;
+    setArcadeLoading(false);
   }
   function leaveLesson() {
     lessonRequest.current++;
     cancelArcadeLaunch();
     stopSpeech(); setMicroSession(null); setUnit(null); setActiveTrick(null);
     setReviewMode(false); setExpansionTest(null); setPreparingGrammar(null); setLoading(false);
+    setLoadingActivity(null);
   }
+  function beginActivityLoad(label: string) { setLoadingActivity(label); setLoading(true); }
   useEffect(() => () => { lessonRequest.current++; cancelArcadeLaunch(); }, []);
 
   // A delayed clip belongs to the screen that requested it, not the next one.
@@ -126,6 +131,7 @@ export default function App() {
   useEffect(() => {
     if (preview || !authenticated) return undefined;
     const controller = new AbortController();
+    setLoadingActivity(null);
     setLoading(true);
     setError(null);
     void loadIdentity(controller.signal).then(async (user) => {
@@ -170,6 +176,7 @@ export default function App() {
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
+    setLoadingActivity(null);
     setLoading(true);
     try { await logIn(email, password); setAuthenticated(true); }
     catch (reason) { setError(reason instanceof Error ? reason.message : 'No se pudo iniciar sesión.'); setLoading(false); }
@@ -223,7 +230,7 @@ export default function App() {
     if (summary.routeTrick) {
       const missing = missingTrickWords(summary, readWordMemories(userId), userId);
       if (!preview && missing.length) { setUnitError(`Prepara primero estas palabras: ${missing.join(', ')}.`); return; }
-      setLoading(true); setUnit(null); setLibraryMode(null); setUnitError(null); setReviewMode(false); setConversationStart(false); setExpansionTest(null);
+      beginActivityLoad('Abriendo el truco…'); setUnit(null); setLibraryMode(null); setUnitError(null); setReviewMode(false); setConversationStart(false); setExpansionTest(null);
       try {
         const source = preview ? reviewUnits.find((candidate) => candidate.id === summary.routeTrick!.sourceId) : await loadUnit(summary.routeTrick.sourceId);
         if (request !== lessonRequest.current) return;
@@ -246,7 +253,7 @@ export default function App() {
     setReviewMode(false);
     if (preview) { rememberUnit(summary.id, mode); setUnit(reviewUnits.find((item) => item.id === summary.id) ?? previewUnit); return; }
     setUnit(null);
-    setLoading(true);
+    beginActivityLoad('Abriendo tu actividad…');
     try {
       const loaded = summary.id === pilot?.id ? pilot : summary.id === mirrorPilot?.id ? mirrorPilot : await loadUnit(summary.id);
       if (request !== lessonRequest.current) return;
@@ -347,6 +354,7 @@ export default function App() {
   async function openArcade(automatic = false, initialMode: AutomaticArcadeMode = 'associations', resumedUnit?: AtomicUnit, advanceIfEmpty = false) {
     if (arcadeOpening.current || microSession) return;
     arcadeOpening.current = true;
+    setArcadeLoading(true);
     const request = ++arcadeRequest.current;
     setUnitError(null);
     try {
@@ -373,14 +381,14 @@ export default function App() {
       setMicroSession({ units: candidates, inspection: preview || reviewMode, automatic, initialMode, resumeCurrent: Boolean(resumedUnit), requestId: request });
     } catch (reason) {
       if (request === arcadeRequest.current) setUnitError(reason instanceof Error ? reason.message : 'No se pudo preparar la ronda.');
-    } finally { if (request === arcadeRequest.current) arcadeOpening.current = false; }
+    } finally { if (request === arcadeRequest.current) { arcadeOpening.current = false; setArcadeLoading(false); } }
   }
 
   async function openLibrary(mode: 'vocabulary' | 'grammar') {
     const request = ++lessonRequest.current;
     cancelArcadeLaunch();
     setPreparingGrammar(null);
-    setUnitError(null); setLoading(true); setActiveTrick(null); setLibraryNotice(null);
+    setUnitError(null); beginActivityLoad(mode === 'vocabulary' ? 'Abriendo las tandas de palabras…' : 'Abriendo el recorrido de gramática…'); setActiveTrick(null); setLibraryNotice(null);
     try {
       const result = preview ? { units: mode === 'vocabulary' ? [...reviewUnits, ...(await import('./preview/vocabularyPacks')).vocabularyPreviewPacks, ...(await import('./preview/phrasalPacks')).phrasalPreviewPacks] : reviewUnits, failed: [] } : await loadLearningLibrary(units, mode);
       if (request !== lessonRequest.current) return;
@@ -428,7 +436,7 @@ export default function App() {
       setLibraryNotice(`Este truco necesita fichas de vocabulario que aún no están disponibles: ${missing.join(', ')}. Puedes seguir con las otras paradas; no se ha cambiado tu progreso.`);
       return;
     }
-    setLoading(true); setUnit(null); setActiveTrick(null); setLibraryNotice(null);
+    beginActivityLoad('Preparando las palabras del truco…'); setUnit(null); setActiveTrick(null); setLibraryNotice(null);
     try {
       const loaded = preview ? reviewUnits.find((item) => item.id === candidate.id) : await loadUnit(candidate.id);
       if (request !== lessonRequest.current) return;
@@ -506,7 +514,7 @@ export default function App() {
       // A resumed round overlays the already saved next stop; do not skip that stop.
       if (!microSession.resumeCurrent) advanceAfterUnit();
     }
-  }} /> : null;
+  }} /> : arcadeLoading ? <aside className="lesson-notice" aria-label="Preparación de Arcade"><p role="status">Preparando una ronda con tus palabras practicadas…</p><button type="button" onClick={cancelArcadeLaunch}>Cancelar preparación</button></aside> : null;
   const lessonNotice = unitError ? <aside className="lesson-notice" role="alert"><p>{unitError}</p><button type="button" onClick={() => setUnitError(null)}>Entendido</button></aside> : null;
   const offerArcade = unit && (preview || shouldOfferMicroArcade(userId, unit.id));
   if (unit) {
@@ -517,7 +525,7 @@ export default function App() {
     if (unit.mirror && learningMode !== 'vocabulary') return <><MirrorLessonExperience grammarOnly={learningMode === 'grammar'} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} inspection={inspectionMode} syncStatus={syncStatus} onFinished={rememberAfterCompletion} onExit={leaveLesson} onNext={continueAfterUnit} nextLabel={nextLabel} onEvolution={() => { leaveLesson(); setLibraryMode(null); if (!inspectionMode) setEvolutionOpen(true); }} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}{lessonNotice}</>;
 return <><LanguageGame learningMode={learningMode} key={`${unit.id}-${userId}-${inspectionMode}-${learningMode}`} unit={unit} userId={userId} preview={preview} reviewMode={inspectionMode} startInConversation={conversationStart} nextLabel={nextLabel} positionLabel={preparingGrammar ? 'PREPARA EL TRUCO' : routePosition >= 0 ? `PARADA ${routePosition + 1}` : undefined} syncStatus={syncStatus} onFinished={rememberAfterCompletion} onNext={continueAfterUnit} onComplete={expansionTest ? finishExpansionTest : undefined} onExit={leaveLesson} onEvolution={!inspectionMode ? () => { leaveLesson(); setLibraryMode(null); setEvolutionOpen(true); } : undefined} onPractice={offerArcade ? () => void openArcade() : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />{microOverlay}{lessonNotice}</>;
   }
-  if (loading) return <div className="gate-screen"><div className="gate-card"><div className="loading-orb">◌</div><h1>Preparando tu escena…</h1><p>Tu siguiente experiencia está casi lista.</p></div></div>;
+  if (loading) return <main className="gate-screen"><section className="gate-card" aria-labelledby="activity-loading-title"><p className="eyebrow">MEMORA</p><h1 id="activity-loading-title">{loadingActivity ?? (authenticated ? 'Abriendo tu recorrido…' : 'Comprobando el acceso…')}</h1><p role="status">{loadingActivity ? 'Estamos cargando el contenido. Puedes volver sin esperar; no se completará ninguna actividad por salir.' : 'Estamos comprobando el acceso y cargando el catálogo publicado.'}</p>{loadingActivity ? <button type="button" className="primary-action" onClick={leaveLesson}>Volver sin esperar</button> : null}</section></main>;
   if (authenticated && error && !profileOpen && !contentOpen) return <div className="gate-screen"><div className="gate-card"><p className="eyebrow">DIRECTUS</p><h1>No se pudo cargar la home</h1><p>{error}</p>{isAdmin ? <button type="button" className="primary-action" onClick={() => setProfileOpen(true)}>Mi perfil · Gestionar contenido →</button> : null}<button type="button" onClick={() => { setAuthenticated(false); setError(null); }}>Volver al acceso</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Ver la experiencia de prueba</button> : null}</div></div>;
   if (libraryMode === 'grammar' && !unit && (preview || authenticated)) return <GrammarJourney units={libraryUnits} userId={userId} inspection={preview} resumeId={readGrammarPosition(userId) || (resumeMode === 'grammar' ? lastOpenedUnitId : null)} notice={libraryNotice} onRetry={() => void openLibrary('grammar')} onOpen={openGrammarStop} onPrepare={(stop) => void prepareGrammarStop(stop)} onBack={() => setLibraryMode(null)} onArcade={() => { setLibraryMode(null); void openArcade(); }} onEvolution={!preview ? () => { setLibraryMode(null); setEvolutionOpen(true); } : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />;
   if (libraryMode && !unit && (preview || authenticated)) return <LearningLibrary mode={libraryMode} units={libraryUnits} userId={userId} inspection={preview} initialBrowse={libraryBrowse.current[`${userId}:${libraryMode}`]} onBrowseChange={(state) => { libraryBrowse.current[`${userId}:${libraryMode}`] = state; }} notice={libraryNotice} onRetry={() => void openLibrary(libraryMode)} onOpen={openLibraryUnit} onBack={() => setLibraryMode(null)} onWords={() => void openLibrary('vocabulary')} />;
