@@ -4,6 +4,7 @@ import raw from '../../content/keys-mission.json';
 import { validateUnit } from '../domain/unit';
 import { readLearningActivities } from '../domain/learningActivity';
 import { AnswerStudio } from './AnswerStudio';
+import { TypedChatMessage } from './TypedChatMessage';
 const hooks = vi.hoisted(() => ({ effects: [] as (() => unknown)[] }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (value: unknown) => [typeof value === 'function' ? value() : value, vi.fn()],
@@ -52,6 +53,24 @@ it('la inspección no restaura ni sobrescribe un borrador del alumno', () => {
   expect(nodes.find((node) => node.type === 'input')!.props.value).toBe('');
   hooks.effects[0]();
   expect(storage.get(key)).toBe(before);
+  expect(readLearningActivities(user)).toHaveLength(0);
+});
+it('separa historial del turno sin reproducir audio ni registrar mensajes anteriores', () => {
+  storage.set(key, JSON.stringify({ ...saved, messages: [
+    { id: 'prompt-0', who: 'partner', text: 'Old prompt' },
+    { id: 'chat-0', who: 'learner', text: 'Old answer', instant: true },
+    { id: 'reply-0', who: 'partner', text: 'Old reply' },
+    ...saved.messages,
+    { id: 'chat-2', who: 'coach', text: 'Current help', instant: true },
+  ] }));
+  const nodes = render();
+  const history = nodes.find((node) => node.props.className === 'chat-history')!;
+  const log = nodes.find((node) => node.props.role === 'log')!;
+  const oldMessages = history.props.children[1].props.children;
+  expect(oldMessages.map((node: ReactElement<any>) => node.props.message.id)).toEqual(['prompt-0', 'chat-0', 'reply-0']);
+  expect(oldMessages.every((node: ReactElement<any>) => node.type === TypedChatMessage && node.props.message.instant && !node.props.autoSpeak && !node.props.onReady)).toBe(true);
+  expect(log.props.children.map((node: ReactElement<any>) => node.props.message.id)).toEqual(['prompt-1', 'chat-2']);
+  expect(log.props.children[0].props.autoSpeak).toBe(true);
   expect(readLearningActivities(user)).toHaveLength(0);
 });
 it('un turno retirado no transfiere un acierto pendiente al turno que ocupa su índice', () => {
