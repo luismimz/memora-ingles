@@ -17,6 +17,8 @@ import { recordGrammarAttempt, readGrammarAttempts } from './domain/grammarMemor
 import { playEnglish, playSpanish } from './services/audio';
 import { GrammarFallbackLesson } from './components/GrammarFallbackLesson';
 import { makeGrammarChecks } from './domain/grammarPractice';
+import { GrammarCoach } from './components/GrammarCoach';
+import { GameCard } from './components/GameCard';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -68,6 +70,20 @@ it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar',
   await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(before);
+});
+it('la entrada normal al coach conocido usa slide y no resuelve el orden pendiente al deslizar', async () => {
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  const coach = tree.root.findByType(GrammarCoach);
+  expect(coach.props.puzzle).toBe(true); expect(coach.props.repairLimit).toBe(2);
+  expect(coach.findByType(GameCard).props.vertical).toBe(true);
+  for (let i = 0; i < coach.props.lesson.steps.length; i++) await swipe(false);
+  expect(readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1')?.phase).toBe('grammar');
+  expect(coach.findByType(GameCard).props.onAdvance).toBeUndefined();
+  const before = readLearningActivities(user);
+  await swipe(false);
+  expect(readLearningActivities(user)).toEqual(before);
+  expect(before.filter((row) => row.source === 'learner')).toHaveLength(0);
 });
 it('una forma sin coach entra en fallback vertical y enlaza al constructor sin cierre ni acierto inventado', async () => {
   // Missing base translation selects the existing compatibility branch; this fixture is never published.
