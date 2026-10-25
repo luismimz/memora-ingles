@@ -18,11 +18,12 @@ vi.mock('./services/directus', async (original) => ({
 }));
 let tree: ReactTestRenderer;
 let values: Map<string, string>;
+let focused: { label: string; options: unknown }[];
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => { tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick(); }); };
-async function mount() { const App = (await import('./App')).default; await act(async () => { tree = create(<App />); }); }
+async function mount() { const App = (await import('./App')).default; await act(async () => { tree = create(<App />, { createNodeMock: (node) => node.type === 'h1' ? { focus: (options: unknown) => focused.push({ label: text(tree.root.findByType('h1').props.children), options }) } : null }); }); }
 beforeEach(() => {
-  vi.clearAllMocks(); api.unit.mockReset(); api.library.mockReset(); api.identity.mockReset(); api.published.mockReset(); values = new Map();
+  vi.clearAllMocks(); api.unit.mockReset(); api.library.mockReset(); api.identity.mockReset(); api.published.mockReset(); values = new Map(); focused = [];
   const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
   vi.stubGlobal('localStorage', storage);
   vi.stubGlobal('window', { localStorage: storage, location: { search: '' }, addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(), setTimeout, clearTimeout, setInterval, clearInterval, matchMedia: () => ({ matches: true }) });
@@ -39,13 +40,17 @@ it.each(['resolved', 'rejected'] as const)('salir de una carga %s no abre la act
   await mount();
   await click('Continuar jugando');
   expect(text(tree.toJSON())).toContain('Abriendo tu actividad…');
+  expect(focused.at(-1)).toEqual({ label: 'Abriendo tu actividad…', options: { preventScroll: true } });
   expect(tree.root.findByProps({ role: 'status' })).toBeTruthy();
   expect(text(tree.toJSON())).not.toContain('casi lista');
   await click('Volver sin esperar');
   expect(text(tree.toJSON())).toContain('Continuar jugando');
+  expect(focused.at(-1)?.label).toBe('Descubre esta historia');
+  const focusCount = focused.length;
   await act(async () => { if (outcome === 'resolved') resolve(previewUnit); else reject(new Error('obsolete-error')); });
   expect(tree.root.findAllByType(LanguageGame)).toHaveLength(0);
   expect(text(tree.toJSON())).not.toContain('obsolete-error');
+  expect(focused).toHaveLength(focusCount);
   expect(learningKeys()).toEqual([]);
 });
 it('una carga cancelada no oculta la nueva espera ni sustituye la actividad elegida después', async () => {
@@ -102,6 +107,7 @@ it.each([false, true])('permite reintentar el catálogo sin cerrar sesión, con 
   values.set('memora-v2.resume.loading-isolated', 'saved-position');
   await mount(); const before = [...values.entries()];
   expect(text(tree.toJSON())).toContain('No pudimos abrir tu recorrido');
+  expect(focused.at(-1)?.label).toBe('No pudimos abrir tu recorrido');
   expect(tree.root.findByProps({ role: 'alert' })).toBeTruthy();
   expect(tree.root.findAllByProps({ className: 'primary-action' })).toHaveLength(1);
   expect(text(tree.toJSON()).includes('technical-catalogue-error')).toBe(admin);

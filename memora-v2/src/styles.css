@@ -427,6 +427,7 @@ body { background: var(--page); }
 .gate-card .eyebrow { color: var(--accent-ink); }
 .gate-card .gate-error { color: #ffab9d; }
 .gate-card summary { min-height: 44px; padding-block: 12px; cursor: pointer; }
+.screen-heading:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 6px; border-radius: 4px; }
 .brand-mark { display: grid; place-items: center; width: 58px; height: 58px; border: 1px solid rgba(255,255,255,.65); border-radius: 18px; background: linear-gradient(145deg, #fdf7ea, #c9aa88); color: #34281e; font-size: 2rem; font-weight: 800; box-shadow: 0 12px 25px rgba(57,42,27,.17); }
 .quiet-action { border: 0; background: transparent; color: var(--accent-ink); font-weight: 800; }
 .appearance-toggle { display: grid; place-items: center; flex: 0 0 36px; width: 36px; height: 36px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--ink); font-size: 1.1rem; font-weight: 700; }

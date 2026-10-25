@@ -1,3 +1,4 @@
+import { ScreenHeading } from './ScreenHeading';
 import { useEffect, useRef, useState, type ChangeEvent } from 'react';
 import { readAvatar, saveAvatar } from '../domain/learningProfile';
 import type { Appearance } from '../useAppearance';
@@ -54,7 +55,7 @@ export function ProfileView({ userId, appearance, onToggleAppearance, onBack, on
 
   return <main className="journey-screen profile-screen">
     <header className="journey-header"><button type="button" className="journey-brand journey-brand-button" onClick={onBack} aria-label="Ir al inicio"><span className="brand-mark">M</span><span>MEMORA</span></button><nav className="journey-menu" aria-label="Navegación principal"><button type="button" onClick={onBack}>Inicio</button>{onEvolution ? <button type="button" onClick={onEvolution}>Mi evolución</button> : null}<button type="button" aria-current="page">Perfil</button></nav></header>
-    <section className="profile-settings-heading"><p className="eyebrow">TU ESPACIO</p><h1>Perfil y ajustes</h1><p>{onEvolution ? 'Personaliza la aplicación. Tu práctica e historial están en Mi evolución.' : 'Personaliza la apariencia de la aplicación y vuelve al recorrido cuando quieras.'}</p></section>
+    <section className="profile-settings-heading"><p className="eyebrow">TU ESPACIO</p><ScreenHeading>Perfil y ajustes</ScreenHeading><p>{onEvolution ? 'Personaliza la aplicación. Tu práctica e historial están en Mi evolución.' : 'Personaliza la apariencia de la aplicación y vuelve al recorrido cuando quieras.'}</p></section>
     <div className="profile-settings-grid">
       <section className="profile-settings-card" aria-labelledby="profile-photo-title"><h2 id="profile-photo-title">Tu foto</h2><div className="profile-photo-row"><span className="profile-avatar" aria-label="Tu imagen de perfil">{avatar ? <img src={avatar} alt="" /> : 'M'}</span><div><label className="profile-upload">Cambiar foto<input type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadAvatar} /></label><p>JPG, PNG o WebP · hasta 500 KB.</p></div></div><small>Se guarda solo en este navegador, no en tu cuenta.</small>{avatarError ? <p className="profile-error" role="alert">{avatarError}</p> : null}{avatarStatus ? <p role="status">{avatarStatus}</p> : null}</section>
       <section className="profile-settings-card" aria-labelledby="profile-appearance-title"><h2 id="profile-appearance-title">Apariencia</h2><p>Estás usando el modo {appearance === 'light' ? 'claro' : 'oscuro'}.</p><button type="button" className="quiet-action" onClick={onToggleAppearance}>Cambiar a modo {appearance === 'light' ? 'oscuro' : 'claro'}</button></section>

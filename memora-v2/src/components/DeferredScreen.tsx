@@ -1,3 +1,4 @@
+import { ScreenHeading } from './ScreenHeading';
 import { Component, Suspense, type ReactNode } from 'react';
 
 type Props = { label: string; onBack: () => void; children: ReactNode };
@@ -5,7 +6,7 @@ type Props = { label: string; onBack: () => void; children: ReactNode };
 function ScreenNotice({ label, onBack, failed = false }: Omit<Props, 'children'> & { failed?: boolean }) {
   return <main className="gate-screen"><section className="gate-card">
     <p className="eyebrow">MEMORA</p>
-    <h1>{failed ? `No se pudo abrir ${label}` : `Abriendo ${label}…`}</h1>
+    <ScreenHeading focusKey={failed ? 'error' : 'loading'}>{failed ? `No se pudo abrir ${label}` : `Abriendo ${label}…`}</ScreenHeading>
     <p role={failed ? 'alert' : 'status'}>{failed ? 'La pantalla no está disponible. Puedes volver; si persiste, recarga la aplicación.' : 'Puedes volver sin esperar a que termine la carga.'}</p>
     <button type="button" className="primary-action" onClick={onBack}>Volver</button>
   </section></main>;

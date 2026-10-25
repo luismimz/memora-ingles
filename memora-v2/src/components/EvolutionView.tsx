@@ -1,3 +1,4 @@
+import { ScreenHeading } from './ScreenHeading';
 import { useEffect, useRef, useState } from 'react';
 import { readLearningActivities } from '../domain/learningActivity';
 import { projectConversations } from '../domain/conversationHistory';
@@ -34,7 +35,7 @@ export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode
   useEffect(() => () => stopSpeech(), []);
   return <main className="journey-screen evolution-screen">
     <header className="journey-header"><button type="button" className="journey-brand journey-brand-button" onClick={onBack}><span className="brand-mark">M</span><span>MEMORA</span></button><nav className="journey-menu" aria-label="Navegación principal"><button type="button" onClick={onBack}>Inicio</button><button type="button" aria-current="page">Mi evolución</button><button type="button" onClick={onProfile}>Perfil</button></nav><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button><button type="button" className="journey-exit" onClick={onExit}>Salir</button></header>
-    <section className="evolution-heading"><p className="eyebrow">MI EVOLUCIÓN</p><h1>Tu práctica, más clara.</h1><p role="status">{inspectionMode ? 'Vista de revisión · no lee ni modifica tu historial' : syncLabels[syncStatus]}</p></section>
+    <section className="evolution-heading"><p className="eyebrow">MI EVOLUCIÓN</p><ScreenHeading>Tu práctica, más clara.</ScreenHeading><p role="status">{inspectionMode ? 'Vista de revisión · no lee ni modifica tu historial' : syncLabels[syncStatus]}</p></section>
     <section className="evolution-overview" aria-label="Resumen de mi práctica">
       <div className="evolution-last"><p className="eyebrow">{latest ? 'ÚLTIMA PRÁCTICA REGISTRADA' : 'TU PUNTO DE PARTIDA'}</p><h2>{latest?.unitTitle ?? (memories.length || sentences.length ? 'Tus recuerdos anteriores siguen aquí.' : 'Tu primer paso empieza en el recorrido.')}</h2><p>{latest ? <time dateTime={latest.at}>{new Date(latest.at).toLocaleString('es-ES')}</time> : memories.length || sentences.length ? 'No hay respuestas detalladas para este resumen. Puedes consultar las palabras y frases guardadas abajo.' : 'Una actividad cada vez. Aquí verás lo que hayas practicado, sin tener que terminar una misión completa.'}</p></div>
       <dl className="evolution-evidence"><div><dt>Respuestas registradas</dt><dd>{responses.length}</dd></div><div><dt>Aciertos escritos sin ayuda registrada</dt><dd>{independent}</dd></div><div><dt>Aciertos con ayuda u opciones</dt><dd>{assisted}</dd></div></dl>
