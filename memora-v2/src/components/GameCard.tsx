@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import './verticalEpisode.css';
 
+const interactiveCardTarget = (target: EventTarget) => Boolean((target as HTMLElement).closest?.('button,input,textarea,select,a,summary,[contenteditable="true"],[draggable="true"],[role="button"]'));
+
 interface GameCardProps {
   children: ReactNode;
   back?: ReactNode;
@@ -39,6 +41,13 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   }, [vertical, stepKey]);
   useEffect(() => { touchStart.current = undefined; wheelGesture.current.allowed = false; }, [Boolean(onAdvance), revealFooter]);
 
+  useEffect(() => {
+    // Only repair a lost entry focus. Narration, feedback and stepKey changes
+    // must never pull focus away from a field, header control or open dialog.
+    if (typeof document === 'undefined' || !document.activeElement || document.activeElement !== document.body) return;
+    scrollport.current?.focus({ preventScroll: true });
+  }, []);
+
   useEffect(() => () => { if (timer.current !== null) window.clearTimeout(timer.current); }, []);
 
   function advance() {
@@ -62,7 +71,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   }
 
   function pointerDown(event: PointerEvent<HTMLDivElement>) {
-    if (isFlipped || exiting || !onAdvance || (event.target as HTMLElement).closest('button,input,textarea,select,a')) return;
+    if (isFlipped || exiting || !onAdvance || interactiveCardTarget(event.target)) return;
     startX.current = event.clientX;
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -88,7 +97,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   }
 
   function keyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if ((event.target as HTMLElement).closest('button,input,textarea,select,a')) return;
+    if (event.repeat || interactiveCardTarget(event.target)) return;
     if (event.key === 'ArrowLeft' && onAdvance && !exiting) {
       event.preventDefault();
       advance();
@@ -100,9 +109,8 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   }
 
   if (vertical) {
-    const interactive = (target: EventTarget) => Boolean((target as HTMLElement).closest?.('button,input,textarea,select,a,summary,[contenteditable="true"],[draggable="true"],[role="button"]'));
     const atEnd = (node: HTMLElement) => node.scrollTop >= node.scrollHeight - node.clientHeight - 2;
-    const canLeave = (target: EventTarget) => Boolean(onAdvance && revealFooter && !interactive(target) && !window.getSelection?.()?.toString());
+    const canLeave = (target: EventTarget) => Boolean(onAdvance && revealFooter && !interactiveCardTarget(target) && !window.getSelection?.()?.toString());
     return <div className={`game-card-anchor card-vertical ${className}`}>
       <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : ''}`} role="region" aria-label="Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir." tabIndex={0}
         style={{ transform: `translate3d(0, ${dragX}px, 0)` }}
@@ -140,6 +148,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   return (
     <div className={`game-card-anchor ${className}`}>
       <div
+        ref={scrollport}
         className={`game-card-swipe ${exiting ? 'is-exiting' : ''}`}
         style={{ transform: `translate3d(${dragX}px, 0, 0) rotate(${Math.max(-10, Math.min(10, dragX / 22))}deg)` }}
         onPointerDown={pointerDown}
@@ -147,7 +156,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
         onPointerUp={pointerUp}
         onPointerCancel={() => { startX.current = null; setDragX(0); }}
         onKeyDown={keyDown}
-        tabIndex={onAdvance ? 0 : undefined}
+        tabIndex={onAdvance ? 0 : -1}
         role="group"
         aria-label="Tarjeta de aprendizaje"
       >
