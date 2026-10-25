@@ -2,19 +2,37 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { playEnglish, playSpanish } from '../services/audio';
 import type { GrammarForm } from '../domain/unit';
 import { GrammarText } from './GrammarText';
+import { AssociationAudioStatus } from './AssociationAudioStatus';
+import type { AssociationAudioState } from './useAssociationAudio';
 
 export interface ChatMessage { id: string; who: 'partner' | 'learner' | 'coach'; text: string; language?: 'en' | 'es'; translation?: string; audioHint?: string; correct?: boolean; instant?: boolean }
 export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, renderText }: { message: ChatMessage; partner: string; form: GrammarForm; autoSpeak: boolean; onReady?: () => void; renderText?: (text: string, language: 'en' | 'es') => ReactNode }) {
   const [visible, setVisible] = useState(message.instant ? message.text.length : 0);
   const ready = useRef(onReady); ready.current = onReady;
   const speak = useRef(autoSpeak); speak.current = autoSpeak;
+  const [audio, setAudio] = useState<AssociationAudioState>();
+  const request = useRef(0);
+  useEffect(() => () => { request.current++; }, []);
+  async function listen(text: string, language: 'en' | 'es' = 'en') {
+    const token = ++request.current;
+    setAudio({ status: 'preparing', source: null });
+    const started = (source: AssociationAudioState['source']) => {
+      if (token === request.current) setAudio({ status: 'playing', source });
+    };
+    try {
+      const result = await (language === 'es' ? playSpanish(text, true, started) : playEnglish(text, undefined, true, started));
+      if (token !== request.current) return;
+      setAudio(result?.status === 'cancelled' ? undefined : { status: result?.status === 'played' ? 'ready' : result?.status === 'blocked' ? 'blocked' : 'unavailable', source: result?.source ?? null });
+    } catch { if (token === request.current) setAudio({ status: 'unavailable', source: null }); }
+  }
+  const audioLabel = audio?.status === 'preparing' ? 'Preparando…' : audio?.status === 'playing' ? 'Reproduciendo…' : 'Escuchar';
   useEffect(() => {
     let delay: ReturnType<typeof setTimeout>; let interval: ReturnType<typeof setInterval>;
     let active = true;
     const finish = () => {
       if (!active) return;
       setVisible(message.text.length);
-      if (message.who === 'partner' && speak.current) void (message.language === 'es' ? playSpanish : playEnglish)(message.text);
+      if (message.who === 'partner' && speak.current) void listen(message.text, message.language);
       ready.current?.();
     };
     if (message.instant) { setVisible(message.text.length); return; }
@@ -38,8 +56,9 @@ export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, r
       {revealed ? message.who === 'coach' ? message.text : renderText ? renderText(message.text, message.language ?? 'en') : <GrammarText text={message.text} form={form} language={message.language ?? 'en'} /> : <><span aria-hidden="true">{message.text.slice(0, visible)}</span><span className="sr-only">{message.text}</span><span className="chat-cursor" aria-hidden="true" /></>}
     </p>}
     {revealed && message.translation ? <p className="chat-translation" lang="es">{renderText ? renderText(message.translation, 'es') : <GrammarText text={message.translation} form={form} language="es" />}</p> : null}
-    {revealed && message.who === 'partner' ? <button type="button" className="chat-listen" aria-label={`Escuchar a ${partner}: ${message.text}`} onClick={() => void (message.language === 'es' ? playSpanish : playEnglish)(message.text)}>🔊 Escuchar</button> : null}
-    {message.audioHint ? <button type="button" className="chat-audio-hint" onClick={() => void playEnglish(message.audioHint!)}>🔊 Escuchar una ayuda</button> : null}
+    {revealed && message.who === 'partner' ? <button type="button" className="chat-listen" aria-busy={audio?.status === 'preparing'} aria-label={`Escuchar a ${partner}: ${message.text}`} onClick={() => void listen(message.text, message.language)}>🔊 {audioLabel}</button> : null}
+    {message.audioHint ? <button type="button" className="chat-audio-hint" aria-busy={audio?.status === 'preparing'} onClick={() => void listen(message.audioHint!)}>🔊 {audioLabel === 'Escuchar' ? 'Escuchar una ayuda' : audioLabel}</button> : null}
+    <AssociationAudioStatus state={audio} compact />
     {message.correct === true ? <small className="chat-accepted">✓ Respuesta admitida</small> : null}
   </article>;
 }
