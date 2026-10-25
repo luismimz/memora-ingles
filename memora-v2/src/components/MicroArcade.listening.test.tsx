@@ -114,7 +114,7 @@ it('tras acertar muestra palabra y significado con continuación junto al result
   expect(text(tree.toJSON())).not.toContain('Escucha y elige lo que significa.');
   expect(button('Seguir →')).toBeUndefined();
   expect(button('Siguiente reto')).toBeDefined();
-  expect(text(tree.toJSON())).toContain('Desliza hacia arriba');
+  expect(button('Siguiente reto').props.title).toContain('Desliza hacia arriba');
   const before = readLearningActivities(user);
   vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'blocked', source: 'kokoro' });
   await act(async () => button('🔊 Escuchar de nuevo').props.onClick());

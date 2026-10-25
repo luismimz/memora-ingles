@@ -12,14 +12,13 @@ export function CognateAssociationCard({ word, index, total, audioState, onListe
   word: AtomicWord; index: number; total: number; audioState?: AssociationAudioState; onListen?: () => void; onConnect: () => void; vertical?: boolean;
 }) {
   const visual = wordVisual(word);
-  return <GameCard vertical={vertical} onAdvance={onConnect} advanceControl advanceLabel="Ya la he conectado" back={<div className="hint-face"><SceneVisual word={visual} showMemoryLink /><p><strong lang="en">{word.en}</strong> → <strong>{word.es}</strong></p><p>Se parecen y comparten este significado.</p></div>}>
+  return <GameCard vertical={vertical} onAdvance={onConnect} advanceControl advanceLabel={vertical ? 'Armar la palabra' : 'Ya la he conectado'} back={vertical ? undefined : <div className="hint-face"><SceneVisual word={visual} showMemoryLink /><p><strong lang="en">{word.en}</strong> → <strong>{word.es}</strong></p><p>Se parecen y comparten este significado.</p></div>}>
     <div className="association-content cognate-association is-revealed">
       <p className="eyebrow">PALABRA {index + 1}/{total}</p>
-      <div className="association-word-top"><WordHeading en={word.en} es={word.es.toUpperCase()} /><button type="button" className="round-audio" onClick={onListen ?? (() => void playEnglish(word.en.toLowerCase(), word.audioUrl))} aria-label={`Escuchar ${word.en}`}>🔊</button></div>
+      <div className="association-word-top"><WordHeading en={word.en} es={word.es.toUpperCase()} /><button type="button" className="round-audio" aria-busy={audioState?.status === 'preparing'} title={audioState?.status === 'preparing' ? 'Preparando audio…' : audioState?.status === 'playing' ? 'Reproduciendo…' : 'Escuchar'} onClick={onListen ?? (() => void playEnglish(word.en.toLowerCase(), word.audioUrl))} aria-label={`Escuchar ${word.en}`}>🔊</button></div>
       <AssociationAudioStatus state={audioState} compact />
       <SceneVisual word={visual} showMemoryLink />
-      <p className="scene-copy">Mismo significado; escucha cómo suena en inglés.</p>
-      <details className="association-help"><summary>Sonido y ayuda para recordar</summary><p className="ipa">{word.ipa}</p>{audioState?.status === 'ready' ? <AssociationAudioStatus state={audioState} /> : null}</details>
+            <details className="association-help"><summary>Ayuda</summary><p>Se parece al español y comparte este significado.</p><p className="ipa">{word.ipa}</p>{audioState?.status === 'ready' ? <AssociationAudioStatus state={audioState} /> : null}</details>
       {word.usageExample ? <details className="cognate-example"><summary>Ver un ejemplo</summary><p lang="en">{word.usageExample.en}</p><p>{word.usageExample.es}</p><button type="button" className="quiet-action" onClick={() => void playEnglish(word.usageExample!.en)}>🔊 Escuchar el ejemplo</button></details> : null}
     </div>
   </GameCard>;

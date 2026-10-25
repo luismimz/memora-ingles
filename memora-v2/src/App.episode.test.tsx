@@ -75,7 +75,7 @@ it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opciona
   expect(readLearningActivities('app-episode-isolated').filter((item) => item.source === 'learner')).toHaveLength(0);
 });
 
-it('App real monta Inicio→episodio→salir/reanudar→chat→cierre sin sustituir hooks ni progreso', async () => {
+it('App real enlaza episodio→chat→siguiente disponible sin confirmación de cierre ni atasco de Arcade vacío', async () => {
   vi.useFakeTimers();
   const values = new Map<string, string>();
   const local = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
@@ -104,16 +104,17 @@ it('App real monta Inicio→episodio→salir/reanudar→chat→cierre sin sustit
   await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
   expect(text(tree.toJSON())).toContain('Te guardo el siguiente turno');
   await advance();
-  expect(text(tree.toJSON())).toContain('¡Tus palabras ya dicen algo nuevo!');
+  expect(text(tree.toJSON())).not.toContain('¡Tus palabras ya dicen algo nuevo!');
+  expect(text(tree.toJSON())).not.toContain('Continuando…');
   expect(tree.root.findAllByType('dialog')).toHaveLength(0);
   expect(pendingAutomaticArcade(user)).toBe('grammar');
   await act(async () => { vi.advanceTimersByTime(20000); });
-  expect(text(tree.toJSON())).toContain('¡Tus palabras ya dicen algo nuevo!');
+  expect(text(tree.toJSON())).not.toContain('¡Tus palabras ya dicen algo nuevo!');
   const activities = readLearningActivities(user);
   expect(activities.filter((event) => event.source === 'learner' && event.modality === 'writing' && event.correct !== null)).toMatchObject([{ correct: true, helped: false }]);
   expect(activities.filter((event) => event.phase === 'completion')).toHaveLength(1);
   expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toBeNull();
-  await click('← Recorrido');
+  if (tree.root.findAllByType('button').some((node) => text(node).trim() === '← Recorrido')) await click('← Recorrido');
   await click('Arcade');
   expect(tree.root.findAllByType('dialog')).toHaveLength(1);
   expect(tree.root.findByType(MicroArcade).props.onGrammar).toBeTypeOf('function');

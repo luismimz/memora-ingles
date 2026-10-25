@@ -21,8 +21,8 @@ const finished = vi.fn();
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const unit: AtomicUnit = { ...previewUnit, activeRecall: false, words: previewUnit.words.map((word, index) => ({ ...word, reconstruction: undefined, ...(index === 1 ? { associationMode: 'cognate' as const } : {}) })) };
 const checkpoint = () => readGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1');
-async function mount(value = unit) {
-  await act(async () => { tree = create(<LanguageGame unit={value} userId={user} learningMode="vocabulary" onFinished={finished} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+async function mount(value = unit, continuous = false) {
+  await act(async () => { tree = create(<LanguageGame continuous={continuous} unit={value} userId={user} learningMode="vocabulary" onFinished={finished} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
 }
 async function swipe(assemble = true) {
   const region = tree.root.findByProps({ role: 'region' });
@@ -62,6 +62,32 @@ it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar',
   await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(before);
+});
+it('la asociación centra palabra, escena e historia, sin barras, ubicación, leyendas ni escena duplicadas', async () => {
+  await mount();
+  expect(tree.root.findAllByProps({ className: 'association-word-top' })).toHaveLength(1);
+  expect(tree.root.findAllByProps({ className: 'scene-copy' })).toHaveLength(1);
+  for (const className of ['play-step-position', 'play-location-label', 'association-location', 'association-instruction', 'card-vertical-memory']) expect(tree.root.findAllByProps({ className })).toHaveLength(0);
+  expect(tree.root.findByType('footer').findAllByType('small')).toHaveLength(0);
+  expect(tree.root.findAllByType('summary').map(text)).toContain('Ayuda');
+  await swipe(false);
+  const assembly = tree.root.findByType(WordAssembly);
+  expect(assembly.findByType('details').props.open).toBeUndefined();
+  expect(assembly.findByProps({ className: 'assembly-model' }).parent!.type).toBe('details');
+  expect(assembly.findAllByProps({ 'aria-label': 'Recuerda la imagen aprendida' })).toHaveLength(1);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
+});
+it('el recorrido continuo enlaza tras guardar la tanda sin otra pantalla de listo ni segunda confirmación', async () => {
+  writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...initialGame, phase: 'recall', recallIndex: unit.words.length - 1, recallAnswered: true, recallOutcome: 'correct', correct: 2 });
+  await mount(unit, true);
+  expect(next).not.toHaveBeenCalled();
+  await swipe(false);
+  expect(finished).toHaveBeenCalledOnce();
+  expect(next).toHaveBeenCalledOnce();
+  expect(text(tree.toJSON())).not.toContain('Palabras listas para practicar.');
+  expect(readLearningActivities(user).filter((row) => row.activityId === 'vocabulary-completed')).toHaveLength(1);
+  await act(async () => { vi.advanceTimersByTime(60000); });
+  expect(finished).toHaveBeenCalledOnce(); expect(next).toHaveBeenCalledOnce();
 });
 it('el mismo gesto recorre asociaciones y cognado, pero nunca responde una pregunta pendiente', async () => {
   await mount();
@@ -144,15 +170,14 @@ it('el acierto espera el gesto, cierre guarda una vez y el siguiente gesto enlaz
   expect(next).toHaveBeenCalledOnce(); expect(finished).toHaveBeenCalledOnce();
 });
 
-it('el gesto de la asociación no salta su reconstrucción y el resultado conserva el mismo avance', async () => {
+it('la historia pasa directamente a armar sin añadir otra pregunta de reconstrucción', async () => {
   const value: AtomicUnit = { ...unit, words: [{ ...unit.words[0], reconstruction: { prompt: 'Reconstruye esta escena', choices: ['La playa', 'El bosque'], answer: 'La playa', cue: 'Imagina la playa' } }, ...unit.words.slice(1)] };
-  await mount(value); await swipe();
-  expect(text(tree.toJSON())).toContain('Reconstruye esta escena');
-  await swipe(); expect(checkpoint()?.wordIndex).toBe(0);
-  await act(async () => { button('La playa').props.onClick(); });
-  expect(text(tree.toJSON())).toContain('¡Esa es la escena!');
+  await mount(value); await swipe(false);
+  expect(text(tree.toJSON())).not.toContain('Reconstruye esta escena');
+  expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
+  await swipe(false); expect(checkpoint()?.wordIndex).toBe(0);
   await swipe(); expect(checkpoint()?.wordIndex).toBe(1);
-  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(1);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
 });
 
 it('el recuerdo sin ayudas no admite scroll como respuesta y conserva el intento al reanudar su resultado', async () => {

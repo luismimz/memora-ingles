@@ -6,7 +6,6 @@
 .play-header .activity-back { min-height: 44px; font: inherit; font-size: .8rem; padding: 8px 0; }
 .play-intention { margin: 0; font-size: .9rem; font-weight: 750; line-height: 1.25; text-align: center; text-wrap: balance; }
 .play-header-context { display: grid; gap: 4px; min-width: 0; text-align: center; }
-.play-location-label { color: var(--muted); font-size: .58rem; line-height: 1.3; font-weight: 650; letter-spacing: .08em; }
 .play-header { border-bottom: 1px solid var(--line); background: var(--page); }
 .play-options { position: relative; }
 .play-options > summary { position: relative; list-style: none; min-width: 44px; min-height: 44px; display: grid; place-items: center; cursor: pointer; font-size: 1rem; letter-spacing: .05em; border-radius: 12px; }
@@ -28,13 +27,14 @@
 .play-flow .association-word-top { display: flex; align-items: center; gap: 12px; width: 100%; }
 .play-flow .association-word-top .word-heading { flex: 1; min-width: 0; }
 .play-flow .association-word-top .round-audio { flex-shrink: 0; }
+.association-word-top .round-audio[aria-busy='true'] { position: relative; }
+.association-word-top .round-audio[aria-busy='true']::after { content: ''; position: absolute; inset: 3px; border: 2px solid transparent; border-top-color: var(--accent-ink); border-radius: 50%; animation: association-audio-wait 1s linear infinite; pointer-events: none; }
+@keyframes association-audio-wait { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .association-word-top .round-audio[aria-busy='true']::after { animation: none; } }
 .association-help { width: 100%; color: var(--muted); font-size: .82rem; text-align: left; }
 .association-help > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .association-help .bridge-row { margin: 10px 0; }
-.association-instruction { margin: 0; color: var(--muted); font-size: .85rem; line-height: 1.45; }
 @media (max-width: 500px) { .play-intention { font-size: .8rem; } .play-flow .card-vertical-scroll { border-radius: 0; box-shadow: none; } .play-flow .card-vertical .card-vertical-page { border-radius: 0; border-left: 0; border-right: 0; } }
-.play-step-position { display: flex; align-items: center; justify-content: center; gap: 12px; margin: 0; padding: 10px 12px; color: var(--muted); font-size: .75rem; }
-.play-step-position strong { color: var(--ink); font-weight: 600; }
 .play-route { list-style: none; display: grid; gap: 10px; margin: 0; padding: 0; color: var(--muted); }
 .play-route li { display: flex; gap: 10px; align-items: center; }
 .play-route li > span { font-variant-numeric: tabular-nums; }

@@ -17,7 +17,7 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
   return <>
     <header className="play-header">
       <button type="button" className="activity-back" onClick={onExit}>← Recorrido</button>
-      <div className="play-header-context">{position ? <span className="play-location-label">{position}</span> : null}<p className="play-intention">{title}</p></div>
+      <div className="play-header-context"><p className="play-intention">{title}</p></div>
       <details className="play-options" onKeyDown={onKeyDown}>
         <summary ref={trigger} aria-label="Opciones y estado de guardado" title="Opciones y guardado">•••<span className={`play-save-dot${warning ? ' needs-attention' : ''}`} aria-hidden="true" /></summary>
         <div className="play-options-panel">
@@ -32,7 +32,6 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
         </div>
       </details>
     </header>
-    {currentTrail ? <p className="play-step-position"><span>Paso {currentTrail.current + 1} de {currentTrail.steps.length}</span><strong>{currentTrail.steps[currentTrail.current]}</strong></p> : null}
     {warning ? <p className="play-save-warning" role={syncStatus === 'storage-full' ? 'alert' : 'status'}>{saved}</p> : null}
   </>;
 }

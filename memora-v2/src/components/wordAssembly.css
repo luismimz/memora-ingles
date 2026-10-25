@@ -3,7 +3,6 @@
 .word-assembly h2 { font-size: 1.1rem; margin: 0; font-weight: 650; }
 .word-assembly .scene-visual { max-height: 150px; }
 .assembly-model { display: flex; align-items: center; gap: 14px; margin: 0; }
-.assembly-model > span { color: var(--muted); font-size: .75rem; }
 .assembly-model strong { color: var(--accent-ink); font-size: 1.3rem; letter-spacing: .08em; }
 .assembly-line, .assembly-bank { display: flex; flex-wrap: wrap; justify-content: center; gap: 7px; width: 100%; }
 .assembly-line { min-height: 58px; padding: 10px 0; border-bottom: 1px solid var(--line); }
@@ -11,7 +10,9 @@
 .assembly-line > span:not(.is-filled):not(.sr-only) { color: var(--muted); border-style: dashed; }
 .assembly-line .is-filled { background: var(--surface-soft); color: var(--accent-ink); }
 .assembly-line.is-complete { border-bottom-color: var(--accent-ink); }
-.assembly-bank button { background: var(--surface-strong); color: var(--ink); box-shadow: 0 3px 0 var(--line); cursor: pointer; transition: transform .15s; }
-.assembly-bank button:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent-ink); }
+.assembly-bank button { background: var(--surface-strong); color: var(--ink); cursor: pointer; transition: border-color .15s; }
+.assembly-bank button:hover:not(:disabled) { border-color: var(--accent-ink); }
 .assembly-bank button:disabled { visibility: hidden; }
 .assembly-cue { min-height: 24px; font-size: .8rem; color: var(--muted); margin: 0; }
+.assembly-help { color: var(--muted); font-size: .85rem; }
+.assembly-help summary { min-height: 44px; display: grid; place-items: center; cursor: pointer; }

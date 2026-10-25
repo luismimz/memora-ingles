@@ -108,7 +108,8 @@ describe('continuidad real desde App', () => {
       const lesson = lessonForForm(form, source.words[0].es)!;
       recordGrammarAttempt('learner', { unitId: source.id, skill: lesson.id, check: 'meaning-now-v1', kind: 'explain', correct: true, helped: true, at: new Date().toISOString() });
       recordLearningActivity('learner', { unitId: source.id, unitTitle: source.title, contentVersion: source.contentVersion ?? '1', activityId: `trick-completed:${descriptor.formId}`, skill: descriptor.skill, phase: 'completion', source: 'learner', modality: 'writing', prompt: lesson.title, response: 'Synthetic completion fixture', expected: '', correct: null, helped: false });
-      props.onFinished(); await flush();
+      expect(props.continuous).toBe(true);
+      props.onFinished(); props.onNext(); await flush();
       const arcade = overlay();
       expect((arcade.props as any).initialMode).toBe('grammar');
       expect(completedTrick(stop, readLearningActivities('learner'))).toBe(true);
@@ -166,7 +167,7 @@ describe('continuidad real desde App', () => {
     props.onFinished();
     expect(storage.get('memora-v2.resume.learner')).toBe(`trick:pack-four:${descriptor.formId}`);
   });
-  it('abre Arcade por sorpresa tras cuatro misiones SIN pulsar continuar y luego sigue', async () => {
+  it('el avance automático del hijo abre Arcade tras guardar cuatro misiones y luego sigue', async () => {
     for (const word of current.words) recordWordRecall('learner', word, 'quick');
     for (let index = 1; index <= 4; index++) {
       hooks.states.set(2, { ...current, id: `pack-${index}` });
@@ -174,6 +175,8 @@ describe('continuidad real desde App', () => {
     }
     hooks.states.set(15, [{ ...current, id: 'pack-4' }, next]);
     expect(game().props.nextLabel).not.toBe('Ronda Arcade →');
+    expect(game().props.continuous).toBe(true);
+    game().props.onNext();
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();
     hooks.cursor = 0;
     hooks.refCursor = 0;
@@ -229,6 +232,7 @@ describe('continuidad real desde App', () => {
     const lesson = lessonForForm(first.grammar[0], 'jugar')!;
     recordGrammarAttempt('learner', { unitId: first.id, skill: lesson.id, check: 'meaning-now-v1', kind: 'explain', correct: true, helped: false, at: new Date().toISOString() });
     playing.onFinished();
+    playing.onNext();
     expect(storage.get('memora-v2.grammar-position.learner')).toBe(route[1].id);
     expect(storage.get('memora-v2.resume.learner')).toBe('home-10');
     await Promise.resolve(); await Promise.resolve(); await Promise.resolve();

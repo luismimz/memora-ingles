@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { getUnitSentences, type AtomicUnit } from '../domain/unit';
 import type { UnitSummary } from '../services/directus';
 import { lessonForForm } from '../domain/grammarLesson';
@@ -33,9 +33,9 @@ import { dogWalkingIdentity, dogWalkingSkill, preparedDogWalkingPractice } from 
 import { treeLocationIdentity, treeLocationSkill, preparedTreeLocationPractice } from '../domain/treeLocationPractice';
 import { meatCookingIdentity, meatCookingSkill, meatCookingLesson, preparedMeatCookingPractice, meatCookingPreparation, type MeatPreparationTarget } from '../domain/meatCookingPractice';
 
-export function JourneyTrickExperience({ unit, stop, preparationSources = [], onPrepare, userId, inspection, onFinished, onNext, onExit, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
+export function JourneyTrickExperience({ unit, stop, preparationSources = [], onPrepare, userId, inspection, onFinished, onNext, onExit, continuous = false, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
-  syncStatus: SyncStatus; appearance: Appearance; onToggleAppearance: () => void; nextLabel?: string;
+  syncStatus: SyncStatus; appearance: Appearance; onToggleAppearance: () => void; nextLabel?: string; continuous?: boolean;
   preparationSources?: readonly UnitSummary[];
   onPrepare?: (target: MeatPreparationTarget) => void;
 }) {
@@ -103,6 +103,12 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
   const advancedBuild = useRef<string>();
   const [finished, setFinished] = useState(false);
   const completed = useRef(false);
+  const continued = useRef(false);
+  useEffect(() => {
+    if (!finished || !continuous || inspection || continued.current) return;
+    continued.current = true;
+    onNext();
+  }, [finished, continuous, inspection, onNext]);
   const started = useRef(checkpoint?.episodeStartedAt ?? new Date().toISOString());
   function saveContinuation(value: TrickContinuationCheckpoint) {
     stopSpeech(); setContinuation(value);
@@ -203,7 +209,7 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
   return <main className={`game-screen journey-trick${!inspection ? ' play-flow' : ''}`}>
     <PlayHeader title={finished ? 'Objetivo practicado' : continuation?.phase === 'build' ? 'Monta tu mensaje' : continuation?.phase === 'conversation' ? 'Responde al personaje' : authoredPractice?.lesson.title ?? 'Descubre cómo decirlo'} onExit={() => { stopSpeech(); onExit(); }} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} inspection={inspection} trail={episode && !unavailable ? { steps: ['Descubre', 'Monta', 'Conversa', 'Tu práctica'], current: finished ? 3 : continuation?.phase === 'build' ? 1 : continuation?.phase === 'conversation' ? 2 : 0 } : undefined} />
     {!finished && lesson ? <h1 className="sr-only">{trick.title}</h1> : null}
-    <section className="game-stage">{!lesson || unavailable ? <GameCard><h1>Esta escena necesita preparación.</h1><p>Tu progreso se conserva. Puedes seguir con las palabras.</p><button type="button" onClick={onNext}>Continuar con las palabras →</button></GameCard> : finished ? <GameCard vertical={stream || episode} stepKey="completed" onAdvance={stream || episode ? onNext : undefined} advanceLabel={nextLabel} className="complete-card"><div className="complete-content"><div className="reward-burst" aria-hidden="true">✦</div><p className="eyebrow">UNA PIEZA MÁS</p><h1>¡Tus palabras ya dicen algo nuevo!</h1><p>{trick.title}</p><p>Una práctica, no una promesa de dominio. Tus intentos quedan en Mi evolución.</p><PracticeClosure nextLabel={nextLabel} onContinue={stream || episode ? undefined : onNext} onExit={onExit} /></div></GameCard>
+    <section className="game-stage">{!lesson || unavailable ? <GameCard><h1>Esta escena necesita preparación.</h1><p>Tu progreso se conserva. Puedes seguir con las palabras.</p><button type="button" onClick={onNext}>Continuar con las palabras →</button></GameCard> : finished && continuous && !inspection ? <GameCard vertical onAdvance={onNext} advanceLabel={nextLabel}><p role="status">Continuando…</p></GameCard> : finished ? <GameCard vertical={stream || episode} stepKey="completed" onAdvance={stream || episode ? onNext : undefined} advanceLabel={nextLabel} className="complete-card"><div className="complete-content"><div className="reward-burst" aria-hidden="true">✦</div><p className="eyebrow">UNA PIEZA MÁS</p><h1>¡Tus palabras ya dicen algo nuevo!</h1><p>{trick.title}</p><p>Una práctica, no una promesa de dominio. Tus intentos quedan en Mi evolución.</p><PracticeClosure nextLabel={nextLabel} onContinue={stream || episode ? undefined : onNext} onExit={onExit} /></div></GameCard>
       : continuation?.phase === 'conversation' ? <ConversationPractice vertical unit={episodeUnit} userId={userId} reviewMode={inspection} checkpointScope={`trick:${episodeIdentity}`} skillId={trick.skill} initialHelped={Boolean(continuation.modelUsed)} onContinue={finish} />
       : continuation?.phase === 'build' && puzzlePieces ? <GameCard vertical stepKey={`message:${continuation.filledSlots}:${continuation.failures ?? 0}`} className="coach-card coach-stream coach-situation-card" onAdvance={continuation.filledSlots === sentence.slots.length ? nextBuild : undefined} advanceLabel="Usar mi mensaje en la conversación"><div className="coach-content"><p className="eyebrow">{continuation.filledSlots === sentence.slots.length ? continuation.modelUsed ? 'MENSAJE CON MODELO' : '✓ MENSAJE ARMADO' : 'MONTA EL MENSAJE'}</p><h2>{sentence.es}</h2>{continuation.filledSlots === sentence.slots.length ? <p className="coach-row" lang="en">{sentence.en}</p> : (continuation.failures ?? 0) >= 2 ? <div className="grammar-repair-model" role="status"><p>Vamos con ayuda. Este es el mensaje:</p><p className="coach-row" lang="en">{sentence.en}</p><button type="button" className="primary-action" onClick={() => placeWholeMessage(true)}>Colocar con ayuda</button></div> : <GrammarOrder puzzle pieces={puzzlePieces} selected={continuation.order ?? []} locked={continuation.filledSlots === sentence.slots.length} onChange={(order) => { if (continuation.filledSlots !== 0 || guard.current.placed || guard.current.key !== slotKey) return; wholeOrder.current = order; saveContinuation({ ...continuation, order, modelUsed: modelAid.current }); }} onAnswer={answerWholeMessage} />}{continuation.filledSlots === 0 && (continuation.failures ?? 0) < 2 ? <details className="coach-tools"><summary>Necesito una pista</summary><button type="button" className="quiet-action" onClick={listenToConstructionModel}>Escuchar modelo</button></details> : null}<p className="coach-feedback" role="status">{continuation.filledSlots === sentence.slots.length ? continuation.modelUsed ? 'Mensaje con modelo. Tu intento queda pendiente; ahora puedes usarlo.' : 'Mensaje montado. Ahora avisa al personaje sin piezas.' : lastError ? contextualCorrection(lastError, sentence.en, puzzleCheck!.hint) : 'Toca o mueve las piezas; puedes cambiar su posición.'}</p></div></GameCard>
       : continuation?.phase === 'build' && form ? <SentenceBuilderCard vertical key={`build-${continuation.sentenceIndex}`} sentence={sentence} vocabulary={unit.words} sceneWord={sceneWord} processForm={form} index={continuation.sentenceIndex} total={sentences.length} filledSlots={continuation.filledSlots} choiceSeed={continuation.sentenceIndex} needsModel={(continuation.failures ?? 0) >= 2} lastIncorrectChoice={lastError} onAcceptModel={() => placeSlot(true)} onAttempt={constructionAttempt} onPick={() => placeSlot()} onNext={nextBuild} />

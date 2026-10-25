@@ -9,10 +9,25 @@ it('construye con letras repetidas, ayuda sin castigar y no permite saltar antes
   act(() => { tree = create(<WordAssembly word={{ ...previewUnit.words[0], en: 'SEE', es: 'ver' }} onContinue={next} />); });
   const piece = (id: number) => tree.root.findByProps({ 'aria-label': `Colocar ${id === 1 ? 'S' : 'E'}, pieza ${id}` });
   expect(tree.root.findAllByProps({ className: 'card-advance' })).toHaveLength(0);
+  const help = tree.root.findByType('details');
+  expect(help.props.open).toBeUndefined();
+  expect(help.findByType('strong').children).toEqual(['SEE']);
+  expect(tree.root.findAllByProps({ className: 'assembly-model' })).toHaveLength(1);
   act(() => piece(2).props.onClick()); expect(tree.root.findByProps({ role: 'status' }).children).toEqual(['Busca «S»']);
   act(() => piece(1).props.onClick()); act(() => piece(3).props.onClick()); act(() => piece(2).props.onClick());
   expect(tree.root.findByProps({ className: 'assembly-line is-complete' })).toBeTruthy();
   expect(tree.root.findAllByProps({ className: 'card-advance' })).toHaveLength(1);
+  expect(next).not.toHaveBeenCalled();
+  act(() => tree.unmount());
+});
+it('consultar el modelo es opcional y el resultado distingue su uso sin evaluar memoria', () => {
+  const next = vi.fn(); let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<WordAssembly word={{ ...previewUnit.words[0], en: 'GO', es: 'ir' }} onContinue={next} />); });
+  act(() => tree.root.findByType('details').props.onToggle({ currentTarget: { open: true } }));
+  act(() => tree.root.findByProps({ 'aria-label': 'Colocar G, pieza 1' }).props.onClick());
+  act(() => tree.root.findByProps({ 'aria-label': 'Colocar O, pieza 2' }).props.onClick());
+  expect(tree.root.findByType('h2').children).toEqual(['Armada con modelo']);
+  expect(tree.root.findAllByType('details')).toHaveLength(0);
   expect(next).not.toHaveBeenCalled();
   act(() => tree.unmount());
 });

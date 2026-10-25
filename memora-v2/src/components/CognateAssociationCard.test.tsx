@@ -11,7 +11,7 @@ describe('cognados con la presentación visual original', () => {
     const html = renderToStaticMarkup(<CognateAssociationCard word={adult} index={0} total={3} onConnect={() => undefined} />);
     expect(html).toContain('scene-visual');
     expect(html).toContain('🧑');
-    expect(html).toContain('Mismo significado; escucha cómo suena en inglés.');
+    expect(html).toContain('Se parece al español y comparte este significado.');
     expect(html).toContain('round-audio');
     expect(html).toContain('PALABRA 1/3');
     expect(html).not.toContain('PUENTE SONORO');
@@ -30,7 +30,7 @@ describe('cognados con la presentación visual original', () => {
     expect(html).toContain('word-heading');
     expect(html).toContain('is-revealed');
     expect(html).not.toContain('audio-glass');
-    expect(html).toContain('No se completó el audio. Toca 🔊 para repetir o sigue con el texto.');
+    expect(html).toContain('Audio no disponible · toca 🔊');
     expect(html.indexOf('role="status"')).toBeLessThan(html.indexOf('<details'));
     expect(html.match(/role="status"/gu)).toHaveLength(1);
   });
