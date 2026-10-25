@@ -7,6 +7,9 @@ export interface LearningActivity {
   source: 'learner' | 'authored'; modality: 'choice' | 'writing' | 'oral';
   prompt: string; response: string; expected: string; correct: boolean | null; helped: boolean;
   feedback?: string; parentAttemptId?: string; at: string;
+  /** Wall-clock delay since the displayed prompt/previous response, including interruptions.
+   * Absent for legacy/unobserved timing; never a cognitive speed or fluency score. */
+  responseDelayMs?: number;
   conversationId?: string; speaker?: string;
   /** Language of the actual displayed text, not its translation or the target lesson. */
   responseLanguage?: 'en' | 'es'; promptLanguage?: 'en' | 'es';

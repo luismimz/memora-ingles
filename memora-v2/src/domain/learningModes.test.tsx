@@ -91,6 +91,22 @@ describe('modos conectados con el progreso real', () => {
     expect(memories[0].attempts).toBe(2);
     expect(JSON.parse(restored.get('memora-v2.learning.learner')!)).toHaveLength(2);
   });
+  it('no inventa rapidez y conserva demora, independencia y compatibilidad del journal por separado', () => {
+    const word = unit.words[0];
+    for (const [index, delay] of [1200, 8000, undefined, -1, Number.NaN].entries()) {
+      const user = `timing-${index}`;
+      initializeJournal(user);
+      const attempt = recordActiveWordAttempt(user, unit, word, word.en, 'writing', false, undefined, delay);
+      expect(attempt).toMatchObject({ correct: true, helped: false });
+      expect(attempt.responseDelayMs).toBe(index < 2 ? delay : undefined);
+      const events = readJournal(user)!.events;
+      expect(events.find((event) => event.kind === 'word')!.args[1]).toBe(index === 0 ? 'quick' : 'hesitant');
+      expect(validateProgressBatch({ course: 'es-en', events })).toHaveLength(events.length);
+      const restored = restoreProgress(user, [...events, ...events]);
+      expect(JSON.parse(restored.get(`memora-v2.learning.${user}`)!)).toEqual(JSON.parse(JSON.stringify([attempt])));
+      expect(readWordMemories(user)[0].capabilities?.recall?.independentCorrect).toBe(1);
+    }
+  });
   it('al consultar un modelo conserva pendiente neutral e intervalo previo, sin inventar intento o acierto', () => {
     recordWordRecall('learner', unit.words[0], 'quick', new Date(), 'recall', undefined, false);
     const before = readWordMemories('learner');

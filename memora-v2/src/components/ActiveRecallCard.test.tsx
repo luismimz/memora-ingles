@@ -140,12 +140,44 @@ it('consultar el modelo voluntariamente es neutral para la memoria previa, no ot
   recordWordRecall(user, word, 'quick', new Date(), 'recall', undefined, false);
   const before = readWordMemories(user);
   await mount();
+  expect(tree.root.findByType('details').findAllByType('button').map(text)).not.toContain('Ver palabra y pasar');
+  expect(tree.root.findAllByType('button').filter((node) => text(node) === 'Ver palabra y pasar')).toHaveLength(1);
   await act(async () => { button('Ver palabra y pasar').props.onClick(); });
   expect(readWordMemories(user)).toEqual(before);
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: null, helped: true }]);
   act(() => tree.unmount()); await mount();
   expect(readWordMemories(user)).toEqual(before);
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(1);
+});
+
+it('conserva la demora observada al reanudar y mide el reintento desde el error, no desde la primera pregunta', async () => {
+  const now = vi.spyOn(Date, 'now').mockReturnValue(1_000_000);
+  try {
+    await mount();
+    now.mockReturnValue(1_120_000); act(() => tree.unmount()); await mount();
+    now.mockReturnValue(1_125_000); await submit('not-the-word');
+    now.mockReturnValue(1_127_500); await submit(word.en);
+    const attempts = readLearningActivities(user).filter((row) => row.source === 'learner');
+    expect(attempts).toMatchObject([{ correct: false, helped: false, responseDelayMs: 125_000 }, { correct: true, helped: true, responseDelayMs: 2500, parentAttemptId: attempts[0].id }]);
+    expect(attempts).toHaveLength(2);
+    const count = readLearningActivities(user).length;
+    act(() => tree.unmount()); await mount();
+    expect(readLearningActivities(user)).toHaveLength(count);
+  } finally { now.mockRestore(); }
+});
+
+it('un checkpoint antiguo conserva borrador y ayuda sin inventar una demora que no observó', async () => {
+  await mount(); await act(async () => { button('Recordar la historia').props.onClick(); });
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: word.en } }));
+  const key = `memora-v2.recall.${user}.${previewUnit.id}.${previewUnit.contentVersion}.${word.id}`;
+  const saved = JSON.parse(localStorage.getItem(key)!); delete saved.attemptStartedAt;
+  localStorage.setItem(key, JSON.stringify(saved));
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType('input').props.value).toBe(word.en);
+  await submit(word.en);
+  const attempt = readLearningActivities(user).find((row) => row.source === 'learner')!;
+  expect(attempt).toMatchObject({ correct: true, helped: true });
+  expect(attempt.responseDelayMs).toBeUndefined();
 });
 
 it('pedir ayuda y enviar rápidamente nunca se etiqueta como recuerdo independiente', async () => {

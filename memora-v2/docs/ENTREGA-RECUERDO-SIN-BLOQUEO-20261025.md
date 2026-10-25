@@ -1,0 +1,11 @@
+# Recuerdo sin bloqueo y demora observada
+
+ActiveRecallCard ofrece «Ver palabra y pasar» fuera del menú de ayuda. Es una consulta neutral: no suma un fallo/acierto ni modifica la memoria previa. Se elimina el botón duplicado dentro de las ayudas. Al terminar la última palabra, la acción anuncia el resultado de la tanda, no otra palabra inexistente.
+
+Se corrige la asignación automática de quick a cualquier acierto. El checkpoint registra inicio observado por intento; la actividad añade responseDelayMs opcional. Conserva demora al recargar, reinicia el origen tras cada respuesta y nunca inventa tiempo anterior para checkpoints antiguos. Reloj invertido/dato inválido queda desconocido. Es demora de reloj incluyendo interrupciones, no tiempo cognitivo ni una prueba de fluidez. No hay cuenta atrás, premio por velocidad ni castigo al alumno.
+
+Se reutiliza la frontera de cinco segundos del reconocimiento existente: solo demora conocida hasta cinco segundos permite quick; acierto tardío o sin medición usa hesitant, sin cambiar corrección ni independencia. Pasar sigue sin escribir al SRS. No se cambia el scheduler ni se reescriben intentos históricos. Los datos adicionales viajan por el journal/restauración existentes y son aceptados por su validador actual, sin cambios de backend.
+
+Verificación: 578 pruebas/112 archivos, TypeScript/Vite y diff correctos. Nuevos casos cubren salida visible única y neutral, modelo reanudado hasta cierre, demora tras recarga/error, checkpoint antiguo con borrador/ayuda, tiempo desconocido/negativo y replay/validación sin duplicados. Fallos iniciales fueron aserciones de tests (undefined omitido por JSON, selector details demasiado amplio, espacios del contador y evento neutral de cierre); corregidos sin modificar el comportamiento para satisfacerlos. Aviso de bundle inicial>500kB sigue vigente.
+
+Prueba humana: en una tanda ya preparada con recuerdo escrito activo, llegar a «Recuerda», consultar la palabra sin desplegar ayudas, volver a entrar y continuar hasta el resultado. No se habilitan unidades o modos editoriales nuevos. Inspección visual física/móvil, audio escuchado y diversión/retención pendientes; no reintentar controles previamente bloqueados. La demora guardada no se presenta como puntuación de rapidez.

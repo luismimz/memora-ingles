@@ -57,6 +57,27 @@ it('el mismo gesto recorre asociaciones y cognado, pero nunca responde una pregu
   expect(checkpoint()).toMatchObject({ phase: 'recall', recallIndex: 0, recallAnswered: false });
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
 });
+it('el recuerdo escrito ofrece salida visible, reanuda su modelo y termina la tanda sin fabricar acierto', async () => {
+  const active = { ...unit, activeRecall: true };
+  writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...initialGame, phase: 'recall', recallIndex: unit.words.length - 1 });
+  await mount(active);
+  const skip = button('Ver palabra y pasar');
+  expect(skip).toBeTruthy();
+  expect(tree.root.findByProps({ className: 'memory-help' }).findAllByType('button')).not.toContain(skip);
+  await act(async () => { vi.advanceTimersByTime(15_000); skip.props.onClick(); });
+  const attempts = readLearningActivities(user).filter((row) => row.source === 'learner');
+  expect(attempts).toMatchObject([{ correct: null, helped: true, responseDelayMs: 15_000 }]);
+  expect(readWordMemories(user)).toHaveLength(0);
+  expect(tree.root.findByProps({ 'aria-label': 'Ver resultado de la tanda' })).toBeTruthy();
+  act(() => tree.unmount()); await mount(active);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toEqual(attempts);
+  await act(async () => { tree.root.findByProps({ 'aria-label': 'Ver resultado de la tanda' }).props.onClick(); vi.advanceTimersByTime(230); });
+  expect(text(tree.toJSON())).toMatch(new RegExp(`0\\s*/\\s*${unit.words.length}`));
+  expect(text(tree.toJSON())).toContain('RECORDADAS SIN PISTAS');
+  expect(readWordMemories(user)).toHaveLength(0);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner' && row.phase !== 'completion')).toEqual(attempts);
+  expect(readLearningActivities(user).filter((row) => row.phase === 'completion')).toMatchObject([{ correct: null }]);
+});
 
 it('el error permanece al leer y recargar; continuar no borra el fallo ni crea otro intento', async () => {
   writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...initialGame, phase: 'recall' });
