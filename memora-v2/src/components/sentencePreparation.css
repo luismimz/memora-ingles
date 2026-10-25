@@ -3,3 +3,6 @@
 .slot-preparation .coach-row { min-height: 0; font-size: clamp(1.4rem, 5vw, 2.2rem); }
 .slot-preparation button { min-height: 44px; white-space: normal; }
 .slot-feedback { width: 100%; margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: var(--surface); overflow-wrap: anywhere; line-height: 1.45; }
+.builder-finish { gap: 12px; padding-top: 12px; text-align: center; }
+.builder-finish p { margin: 0; font-size: .95rem; font-weight: 600; line-height: 1.5; }
+.builder-finish small { color: var(--muted); font-weight: 450; line-height: 1.45; }

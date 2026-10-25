@@ -183,6 +183,13 @@ it('PLAY publicado enlaza un episodio corto sin habilitar COMPUTER/DESK u otra c
   expect(tree.root.findByType(GrammarOrder).props.selected).toEqual(partial?.continuation?.order);
   for (const piece of ['AM', 'PLAYING']) await act(async () => button(piece).props.onClick());
   expect(learner().filter((event) => event.phase === 'construction')).toMatchObject([{ correct: true, helped: true }]);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(text(tree.toJSON())).toContain('✓ MENSAJE ARMADO');
+  const beforeReload = learner();
+  act(() => tree.unmount()); await mount(previewUnit);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(text(tree.toJSON())).toContain('✓ MENSAJE ARMADO');
+  expect(learner()).toEqual(beforeReload);
   await advance();
   expect(tree.root.findByType(ConversationPractice).props.checkpointScope).toBe('trick:ing:short-playing-v1');
   expect(tree.root.findByType(ConversationPractice).props.unit.id).toBe(previewUnit.id);
@@ -227,6 +234,8 @@ it('consultar audio antes de montar conserva ayuda aunque se coloquen fichas inm
   await act(async () => { listen(); order.props.onChange(selection); order.props.onAnswer('I AM PLAYING'); });
   expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')?.continuation).toMatchObject({ filledSlots: 3, modelUsed: true });
   expect(readLearningActivities(user).find((event) => event.activityId.startsWith('trick-build-audio:'))).toMatchObject({ correct: null, source: 'authored', helped: true });
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(text(tree.toJSON())).toContain('MENSAJE CON MODELO');
   await advance();
   expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
 });
