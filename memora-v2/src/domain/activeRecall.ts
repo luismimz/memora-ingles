@@ -1,11 +1,24 @@
 import type { AtomicUnit, AtomicWord } from './unit';
-import { recordLearningActivity } from './learningActivity';
+import { recordLearningActivity, type LearningActivity } from './learningActivity';
 import { recordWordRecall } from './memory';
 import { recordAttempt } from './learningProfile';
 
 export const recalledWordIndex = (unit: AtomicUnit, index: number) => unit.activeRecall ? unit.words.length - 1 - index : index;
 export const matchesWord = (word: AtomicWord, response: string) =>
   response.normalize('NFKC').trim().toLocaleLowerCase('en').replace(/[.!?]+$/u, '') === word.en.toLocaleLowerCase('en');
+
+/** Observed responses since this unit/mode's last closure, not word coverage or mastery.
+ * Uses the existing immutable journal; neutral consultations never enter the denominator. */
+export function summarizeActiveRecall(activities: LearningActivity[], unit: AtomicUnit, mode: string) {
+  const rows = activities.filter((row) => row.unitId === unit.id && row.contentVersion === (unit.contentVersion ?? '1'));
+  const closed = rows.reduce((last, row, index) => row.phase === 'completion' && row.activityId === `${mode}-completed` ? index : last, -1);
+  const attempts = rows.slice(closed + 1).filter((row) => row.source === 'learner' && unit.words.some((word) => row.activityId === `active-recall:${word.en}`));
+  return { attempted: attempts.filter((row) => row.correct !== null).length,
+    correct: attempts.filter((row) => row.correct === true).length,
+    independent: attempts.filter((row) => row.correct === true && !row.helped && row.modality === 'writing').length,
+    assisted: attempts.filter((row) => row.correct === true && row.helped).length,
+    models: attempts.filter((row) => row.correct === null).length };
+}
 
 export function wordRecallHint(word: AtomicWord, level: number): string {
   if (level <= 1) return word.scene;

@@ -72,8 +72,9 @@ it('el recuerdo escrito ofrece salida visible, reanuda su modelo y termina la ta
   act(() => tree.unmount()); await mount(active);
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toEqual(attempts);
   await act(async () => { tree.root.findByProps({ 'aria-label': 'Ver resultado de la tanda' }).props.onClick(); vi.advanceTimersByTime(230); });
-  expect(text(tree.toJSON())).toMatch(new RegExp(`0\\s*/\\s*${unit.words.length}`));
-  expect(text(tree.toJSON())).toContain('RECORDADAS SIN PISTAS');
+  expect(text(tree.toJSON())).toMatch(/Respuestas registradas:\s*0/);
+  expect(text(tree.toJSON())).toMatch(/modelos consultados:\s*1/);
+  expect(readSessions(user)).toMatchObject([{ correct: 0, attempted: 0 }]);
   expect(readWordMemories(user)).toHaveLength(0);
   expect(readLearningActivities(user).filter((row) => row.source === 'learner' && row.phase !== 'completion')).toEqual(attempts);
   expect(readLearningActivities(user).filter((row) => row.phase === 'completion')).toMatchObject([{ correct: null }]);

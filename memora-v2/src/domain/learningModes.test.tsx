@@ -4,7 +4,7 @@ import keys from '../../content/keys-mission.json';
 import mirror from '../../content/mirror-now.json';
 import { validateUnit } from './unit';
 import { completeLearningMode, missingGrammarWords } from './learningModes';
-import { recalledWordIndex, recordActiveWordAttempt } from './activeRecall';
+import { recalledWordIndex, recordActiveWordAttempt, summarizeActiveRecall } from './activeRecall';
 import { readWordMemories, recordWordRecall } from './memory';
 import { readUnitProgress } from './journey';
 import { readLearningActivities, recordLearningActivity } from './learningActivity';
@@ -114,6 +114,17 @@ describe('modos conectados con el progreso real', () => {
     expect(attempt.correct).toBeNull();
     expect(readWordMemories('learner')).toEqual(before);
     expect(readLearningActivities('learner')).toMatchObject([{ correct: null, helped: true }]);
+  });
+  it('el resumen separa intentos, apoyos y modelos, excluye cierres anteriores y otras versiones', () => {
+    const word = unit.words[0];
+    recordActiveWordAttempt('learner', unit, word, word.en, 'writing', false);
+    completeLearningMode('learner', unit, 'vocabulary', { correct: 1, attempted: 1, completedAt: new Date().toISOString(), nextReviewAt: new Date().toISOString() });
+    recordActiveWordAttempt('learner', unit, word, 'wrong', 'writing', false);
+    recordActiveWordAttempt('learner', unit, word, word.en, 'writing', true);
+    recordActiveWordAttempt('learner', unit, unit.words[1], '', 'skip', true);
+    recordActiveWordAttempt('learner', { ...unit, contentVersion: 'other' }, word, word.en, 'writing', false);
+    expect(summarizeActiveRecall(readLearningActivities('learner'), unit, 'vocabulary')).toEqual({ attempted: 2, correct: 1, independent: 0, assisted: 1, models: 1 });
+    expect(summarizeActiveRecall([], unit, 'vocabulary')).toEqual({ attempted: 0, correct: 0, independent: 0, assisted: 0, models: 0 });
   });
   it('la primera recuperación no contiene la escena, el puente ni la respuesta', () => {
     const html = renderToStaticMarkup(<ActiveRecallCard unit={unit} word={unit.words[0]} choices={unit.words.slice(0, 3)} position={0} userId="preview" inspection onFinish={() => {}} />);
