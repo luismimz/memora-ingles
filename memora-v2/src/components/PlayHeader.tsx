@@ -1,6 +1,7 @@
 import type { Appearance } from '../useAppearance';
 import { syncLabels, type SyncStatus } from '../services/progressSync';
 import './playFlow.css';
+import { useDisclosureDismissal } from './useDisclosureDismissal';
 
 /** A shared play surface, not a new learning flow or progress store. */
 export function PlayHeader({ title, onExit, appearance, onToggleAppearance, syncStatus, inspection = false, progress, position, trail }: {
@@ -9,14 +10,15 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
   /** Location only, never inferred completion, prerequisites or a navigation control. */
   trail?: { steps: string[]; current: number };
 }) {
+  const { trigger, onKeyDown } = useDisclosureDismissal();
   const saved = inspection ? 'Vista de revisión · no guarda progreso' : syncStatus ? syncLabels[syncStatus] : 'Progreso en este dispositivo';
   const warning = !inspection && (syncStatus === 'offline' || syncStatus === 'error' || syncStatus === 'storage-full');
   return <>
     <header className="play-header">
       <button type="button" className="activity-back" onClick={onExit}>← Recorrido</button>
       <div className="play-header-context"><span className="play-location-label">{position ?? 'TU PRÁCTICA DE INGLÉS'}</span><p className="play-intention">{title}</p></div>
-      <details className="play-options">
-        <summary aria-label="Opciones y estado de guardado" title="Opciones y guardado">•••<span className={`play-save-dot${warning ? ' needs-attention' : ''}`} aria-hidden="true" /></summary>
+      <details className="play-options" onKeyDown={onKeyDown}>
+        <summary ref={trigger} aria-label="Opciones y estado de guardado" title="Opciones y guardado">•••<span className={`play-save-dot${warning ? ' needs-attention' : ''}`} aria-hidden="true" /></summary>
         <div className="play-options-panel">
           <p>{inspection ? 'Revisión' : position ?? 'MEMORA · EN JUEGO'}</p>
           <p role="status">{saved}</p>

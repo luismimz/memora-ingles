@@ -3,6 +3,18 @@ import { act, create } from 'react-test-renderer';
 import { PlayHeader } from './PlayHeader';
 import { syncLabels } from '../services/progressSync';
 
+it('Escape cierra opciones, devuelve foco y no sale de la actividad ni cambia su apariencia', () => {
+  const focus = vi.fn(), exit = vi.fn(), theme = vi.fn(); let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<PlayHeader title="Monta tu mensaje" onExit={exit} appearance="light" onToggleAppearance={theme} syncStatus="offline" />, { createNodeMock: (node) => node.type === 'summary' ? { focus } : null }); });
+  const currentTarget = { open: true };
+  act(() => tree.root.findByType('details').props.onKeyDown({ key: 'Escape', currentTarget, preventDefault: vi.fn(), stopPropagation: vi.fn() }));
+  expect(currentTarget.open).toBe(false);
+  expect(focus).toHaveBeenCalledExactlyOnceWith({ preventScroll: true });
+  expect(exit).not.toHaveBeenCalled(); expect(theme).not.toHaveBeenCalled();
+  expect(tree.root.findByProps({ className: 'play-save-warning' }).children).toEqual([syncLabels.offline]);
+  act(() => tree.unmount());
+});
+
 it('la instrucción y salida son primarias; apariencia, porcentaje y estado quedan en opciones', () => {
   const exit = vi.fn(); const theme = vi.fn();
   let tree: ReturnType<typeof create>;

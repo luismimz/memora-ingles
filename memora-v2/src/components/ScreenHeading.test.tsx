@@ -22,5 +22,7 @@ it('respeta el destino de retorno que ya gestiona la biblioteca', () => {
   const focus = vi.fn(); let tree!: ReturnType<typeof create>;
   act(() => { tree = create(<ScreenHeading autoFocus={false}>Elige una tanda</ScreenHeading>, { createNodeMock: () => ({ focus }) }); });
   expect(focus).not.toHaveBeenCalled();
+  act(() => tree.update(<ScreenHeading autoFocus>Elige una tanda actualizada</ScreenHeading>));
+  expect(focus).not.toHaveBeenCalled();
   act(() => tree.unmount());
 });
