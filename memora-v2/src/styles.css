@@ -550,7 +550,7 @@ body { background: var(--page); }
 .journey-review-units { display: flex; gap: 8px; flex-wrap: wrap; }
 .journey-review-units button { padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-soft); color: var(--ink); font: inherit; font-size: .78rem; font-weight: 750; }
 .journey-profile-button { display: grid; place-items: center; width: 38px; height: 38px; padding: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 50%; background: var(--surface-strong); color: var(--ink); font-weight: 800; box-shadow: var(--shadow); }
-.journey-profile-button img, .profile-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.journey-profile-button img { width: 100%; height: 100%; object-fit: cover; }
 .journey-exit { padding: 9px 14px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--ink); font-size: .8rem; }
 .journey-hero-grid { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(270px, 1fr); gap: 20px; align-items: stretch; margin: 70px 0 32px; }
 .journey-intro { min-width: 0; margin: 0; padding: clamp(25px, 4vw, 40px); border: 1px solid var(--line); border-radius: 34px; background: var(--surface-strong); box-shadow: var(--shadow); backdrop-filter: blur(36px) saturate(115%); -webkit-backdrop-filter: blur(36px) saturate(115%); }
@@ -620,33 +620,6 @@ body { background: var(--page); }
   .journey-node-number { flex-basis: 40px; height: 40px; }
 }
 
-.profile-screen { display: flex; flex-direction: column; gap: 25px; }
-.profile-hero, .profile-metrics, .profile-week, .profile-review { border: 1px solid var(--line); background: var(--surface-strong); box-shadow: var(--shadow); backdrop-filter: blur(36px) saturate(115%); -webkit-backdrop-filter: blur(36px) saturate(115%); }
-.profile-hero { display: flex; align-items: center; gap: 36px; margin-top: 48px; padding: clamp(24px, 4vw, 42px); border-radius: 34px; }
-.profile-hero h1 { max-width: 600px; margin: 9px 0 12px; font-size: clamp(2.2rem, 5vw, 4rem); line-height: 1.02; letter-spacing: -.05em; }
-.profile-hero p:not(.eyebrow) { max-width: 530px; margin: 0 0 10px; color: var(--muted); line-height: 1.5; }
-.profile-hero small { color: var(--muted); }
-.profile-avatar-wrap { display: grid; justify-items: center; gap: 12px; flex: 0 0 146px; }
-.profile-avatar { display: grid; place-items: center; width: 130px; height: 130px; overflow: hidden; border: 3px solid rgba(255,255,255,.66); border-radius: 32px; background: linear-gradient(145deg, #fdf7ea, #c9aa88); color: #34281e; font-size: 4rem; font-weight: 800; box-shadow: 0 20px 36px rgba(53,37,23,.17); }
-.profile-upload { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface-soft); color: var(--ink); font-size: .76rem; font-weight: 750; cursor: pointer; }
-.profile-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
-.profile-error { color: #a83c32 !important; font-weight: 750; }
-.profile-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; padding: 12px; border-radius: 26px; }
-.profile-metrics > div { display: grid; gap: 6px; justify-items: center; padding: 18px 7px; text-align: center; }
-.profile-metrics > div:not(:last-child) { border-right: 1px solid var(--line); }
-.profile-metrics strong { color: var(--ink); font-size: clamp(1.8rem, 4vw, 2.8rem); line-height: 1; letter-spacing: -.05em; font-variant-numeric: tabular-nums; animation: burst .5s ease both; }
-.profile-metrics span { color: var(--muted); font-size: .8rem; font-weight: 700; }
-.profile-detail { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-.profile-week, .profile-review { min-height: 215px; padding: 27px; border-radius: 28px; }
-.profile-days { display: flex; justify-content: space-between; gap: 8px; margin: 25px 0 17px; }
-.profile-days > div { display: grid; justify-items: center; gap: 9px; flex: 1; }
-.profile-days span { width: clamp(25px, 3vw, 36px); height: clamp(25px, 3vw, 36px); border: 1px solid var(--line); border-radius: 50%; background: var(--surface-soft); }
-.profile-days span.is-active { background: linear-gradient(140deg, #ba9672, #78614f); box-shadow: 0 0 0 4px rgba(193,157,121,.19); animation: burst .5s ease both; }
-.profile-days small, .profile-week > p:last-child { color: var(--muted); font-size: .76rem; }
-.profile-review h2 { margin: 17px 0 9px; font-size: 1.5rem; line-height: 1.15; letter-spacing: -.03em; }
-.profile-review > p:not(.eyebrow) { color: var(--muted); line-height: 1.45; }
-.profile-review .profile-focus { margin-top: 18px; color: var(--ink) !important; font-size: .9rem; }
-.profile-footnote { max-width: 790px; margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
 
 .content-manager-screen { max-width: 920px; min-height: 100dvh; margin: auto; padding: 28px 24px 80px; color: var(--ink); }
 .content-manager-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 44px; color: var(--muted); font-size: .77rem; font-weight: 800; letter-spacing: .12em; }
@@ -711,8 +684,7 @@ body { background: var(--page); }
 .journey-arcade-callout { display: flex; align-items: center; justify-content: space-between; gap: 20px; margin: 20px 0; padding: 25px 30px; border: 1px solid var(--line); border-radius: 28px; background: var(--surface-strong); box-shadow: var(--shadow); backdrop-filter: blur(25px); }
 .journey-arcade-callout h2 { margin: 7px 0 5px; font-size: clamp(1.4rem, 3vw, 2rem); letter-spacing: -.04em; }
 .journey-arcade-callout p:last-child { margin: 0; color: var(--muted); }
-.journey-arcade-callout button, .profile-arcade-button { flex-shrink: 0; border: 0; border-radius: 15px; padding: 14px 18px; background: var(--ink); color: var(--page); font-weight: 800; cursor: pointer; }
-.profile-arcade-button { margin-top: 12px; }
+.journey-arcade-callout button { flex-shrink: 0; border: 0; border-radius: 15px; padding: 14px 18px; background: var(--ink); color: var(--page); font-weight: 800; cursor: pointer; }
 .arcade-exit { border: 1px solid var(--line); border-radius: 999px; padding: 8px 15px; background: var(--surface-soft); color: var(--ink); font-size: .75rem; font-weight: 800; }
 .arcade-content { display: flex; flex: 1; flex-direction: column; align-items: center; justify-content: center; gap: clamp(22px, 3.2dvh, 30px); width: 100%; text-align: center; }
 .arcade-content .eyebrow { align-self: stretch; display: flex; justify-content: space-between; }
@@ -767,13 +739,6 @@ body { background: var(--page); }
 @media (max-width: 640px) {
   .journey-screen { padding: 18px 16px; }
   .journey-hero-grid { gap: 14px; margin: 46px 0 26px; }
-  .profile-hero { align-items: flex-start; flex-direction: column; gap: 18px; margin-top: 20px; }
-  .profile-avatar-wrap { display: flex; align-items: center; flex-basis: auto; }
-  .profile-avatar { width: 74px; height: 74px; border-radius: 22px; font-size: 2.5rem; }
-  .profile-metrics { grid-template-columns: repeat(2, 1fr); }
-  .profile-metrics > div:nth-child(2) { border-right: 0; }
-  .profile-metrics > div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
-  .profile-detail { grid-template-columns: 1fr; }
   .journey-featured { flex-wrap: wrap; gap: 14px; padding: 19px; }
   .journey-featured .primary-action { width: 100%; }
   .journey-path { margin-top: 38px; }

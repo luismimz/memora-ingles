@@ -65,6 +65,7 @@ it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opciona
   await click('Perfil y ajustes');
   await act(async () => { await import('./components/ProfileView'); });
   expect(tree.root.findAllByProps({ className: 'journey-screen profile-screen' })).toHaveLength(1);
+  expect(tree.root.findAllByType('summary').some((node) => text(node) === 'Administración de contenido')).toBe(false);
   await click('Mi evolución');
   await act(async () => { await import('./components/EvolutionView'); });
   expect(tree.root.findAllByProps({ className: 'journey-screen evolution-screen' })).toHaveLength(1);
