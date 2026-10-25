@@ -13,6 +13,8 @@ import { GrammarText } from './GrammarText';
 import { playEnglish, playSpanish, playSnap, stopSpeech } from '../services/audio';
 import { MirrorText } from './MirrorPieces';
 import { mirrorHint, nextMirrorHint } from '../domain/mirrorLesson';
+import { useSpeechPlayback } from './useSpeechPlayback';
+import { AssociationAudioStatus } from './AssociationAudioStatus';
 
 type ChatCheckpoint = {
   version: string; round: number; messages: ChatMessage[]; activeMessage: string; busy: boolean;
@@ -107,11 +109,13 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
 
   useEffect(() => () => { clearTimeout(timer.current); stopSpeech(); }, []);
   useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [messages, activeMessage]);
+  const modelAudio = useSpeechPlayback();
   const id = () => `chat-${serial.current++}`;
   function following() {
     if (advancedTurn.current === round) return;
     advancedTurn.current = round;
     stopSpeech();
+    modelAudio.reset();
     clearTimeout(timer.current);
     setAwaitingNext(false);
     const next = followingConversationTurn(round, turns.length);
@@ -145,6 +149,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     timer.current = setTimeout(following, 1800);
   }
   function reply() {
+    modelAudio.reset();
     setBusy(true); setOral(false); setInput('');
     const incoming = `reply-${round}`;
     setActiveMessage(incoming);
@@ -152,6 +157,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   }
   function answer() {
     if (busy || failureCount.current >= 2 || sending.current || !input.trim() || submitted.current === input) return;
+    modelAudio.reset();
     submitted.current = input;
     const ok = acceptedConversationAnswer(unit, turn, input);
     sending.current = ok;
@@ -174,7 +180,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
       timer.current = setTimeout(() => { submitted.current = null; }, 350);
       return;
     }
-    playSnap(); reply();
+    stopSpeech(); playSnap(); reply();
   }
   function oralReply() {
     if (busy || sending.current) return;
@@ -216,7 +222,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     helpedRef.current = true;
     setHelped(true);
     if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-audio-hint-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'authored', modality: 'choice', prompt: displayedPrompt, response: 'Modelo inglés solicitado como ayuda; no acredita escucha.', expected: '', correct: null, helped: true, parentAttemptId: previousAttempt.current });
-    void playEnglish(turn.expected.en);
+    void modelAudio.listen(turn.expected.en);
   }
   const followingLabel = followingConversationTurn(round, turns.length) === null ? 'Terminar la conversación →' : 'Seguir conversando →';
   // Keep this turn in view; earlier exchanges remain available without replaying them.
@@ -238,7 +244,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
         {messages.slice(turnStart).map((message) => messageView(message))}
       </div>
       {awaitingNext ? vertical ? <p className="chat-flow-ready" role="status">Mensaje recibido. Puedes seguir cuando quieras.</p> : <button type="button" className="primary-action" onClick={following}>{followingLabel}</button> : needsModel ? <div className="chat-rescue"><p>Tu intento queda guardado. No necesitas repetirlo más ahora.</p><button type="button" className="primary-action" disabled={busy} onClick={showAnswerAndPass}>Ver el modelo y seguir →</button></div> : oral ? <div className="chat-oral"><EchoPractice phrase={turn.expected.en} /><p>Escúchate y compárate. Tu voz no recibe una nota automática.</p><button type="button" onClick={oralReply}>Seguir sin evaluación oral →</button><button type="button" className="quiet-action" onClick={() => setOral(false)}>Prefiero escribir</button></div> : <AnswerStudio id="dialogue-answer" taskKey={`${unit.id}:${unit.contentVersion}:${turn.id}`} target={unit.mirror ? <MirrorText text={turn.expected.es} lesson={unit.mirror} language="es" /> : <GrammarText text={turn.expected.es} form={form} language="es" />} value={input} onChange={(value) => { setInput(value); submitted.current = null; }} onAnswer={() => answer()} accepts={(value) => acceptedConversationAnswer(unit, turn, value)} disabled={busy} />}
-      {!awaitingNext && !needsModel ? <details className="chat-help"><summary>¿Necesitas ayuda u otra forma de responder?</summary><div className="chat-tools"><button type="button" className="quiet-action" disabled={busy} onClick={hint}>Pista escrita</button><button type="button" className="quiet-action" disabled={busy} onClick={listenToModel}>🔊 Escuchar modelo</button><button type="button" className="quiet-action" disabled={busy} onClick={() => setOral((value) => !value)}>{oral ? 'Escribir' : 'Prefiero hablar'}</button><button type="button" className="quiet-action" disabled={busy} onClick={showAnswerAndPass}>Ver respuesta y pasar</button></div></details> : null}
+      {!awaitingNext && !needsModel ? <details className="chat-help"><summary>¿Necesitas ayuda u otra forma de responder?</summary><div className="chat-tools"><button type="button" className="quiet-action" disabled={busy} onClick={hint}>Pista escrita</button><div><button type="button" className="quiet-action" disabled={busy} aria-label="Escuchar modelo" aria-busy={modelAudio.audio?.status === 'preparing'} onClick={listenToModel}>🔊 {modelAudio.label === 'Escuchar' ? 'Escuchar modelo' : modelAudio.label}</button><AssociationAudioStatus state={modelAudio.audio} compact /></div><button type="button" className="quiet-action" disabled={busy} onClick={() => setOral((value) => !value)}>{oral ? 'Escribir' : 'Prefiero hablar'}</button><button type="button" className="quiet-action" disabled={busy} onClick={showAnswerAndPass}>Ver respuesta y pasar</button></div></details> : null}
       {turnStart > 0 ? <details className="chat-history"><summary>Ver conversación anterior</summary><div>{messages.slice(0, turnStart).map((message) => messageView(message, true))}</div></details> : null}
     </div>
   </GameCard>;

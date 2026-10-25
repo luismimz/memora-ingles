@@ -1,31 +1,15 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
-import { playEnglish, playSpanish } from '../services/audio';
 import type { GrammarForm } from '../domain/unit';
 import { GrammarText } from './GrammarText';
 import { AssociationAudioStatus } from './AssociationAudioStatus';
-import type { AssociationAudioState } from './useAssociationAudio';
+import { useSpeechPlayback } from './useSpeechPlayback';
 
 export interface ChatMessage { id: string; who: 'partner' | 'learner' | 'coach'; text: string; language?: 'en' | 'es'; translation?: string; audioHint?: string; correct?: boolean; instant?: boolean }
 export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, renderText }: { message: ChatMessage; partner: string; form: GrammarForm; autoSpeak: boolean; onReady?: () => void; renderText?: (text: string, language: 'en' | 'es') => ReactNode }) {
   const [visible, setVisible] = useState(message.instant ? message.text.length : 0);
   const ready = useRef(onReady); ready.current = onReady;
   const speak = useRef(autoSpeak); speak.current = autoSpeak;
-  const [audio, setAudio] = useState<AssociationAudioState>();
-  const request = useRef(0);
-  useEffect(() => () => { request.current++; }, []);
-  async function listen(text: string, language: 'en' | 'es' = 'en') {
-    const token = ++request.current;
-    setAudio({ status: 'preparing', source: null });
-    const started = (source: AssociationAudioState['source']) => {
-      if (token === request.current) setAudio({ status: 'playing', source });
-    };
-    try {
-      const result = await (language === 'es' ? playSpanish(text, true, started) : playEnglish(text, undefined, true, started));
-      if (token !== request.current) return;
-      setAudio(result?.status === 'cancelled' ? undefined : { status: result?.status === 'played' ? 'ready' : result?.status === 'blocked' ? 'blocked' : 'unavailable', source: result?.source ?? null });
-    } catch { if (token === request.current) setAudio({ status: 'unavailable', source: null }); }
-  }
-  const audioLabel = audio?.status === 'preparing' ? 'Preparando…' : audio?.status === 'playing' ? 'Reproduciendo…' : 'Escuchar';
+  const { audio, listen, label: audioLabel } = useSpeechPlayback();
   useEffect(() => {
     let delay: ReturnType<typeof setTimeout>; let interval: ReturnType<typeof setInterval>;
     let active = true;

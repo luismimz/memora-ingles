@@ -6,7 +6,7 @@ import { conversationTurns } from '../domain/conversation';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { ConversationPractice } from './ConversationChat';
-import { playEnglish } from '../services/audio';
+import { playEnglish, stopSpeech, type PlaybackResult } from '../services/audio';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
 let tree: ReactTestRenderer;
@@ -69,7 +69,7 @@ it('pista y envío inmediato conservan ayuda en journal y gramática; abrir el m
 
 it('solicitar un audio bloqueado no dice escuchado ni fabrica una respuesta, y permite seguir escribiendo', async () => {
   await mount();
-  await act(async () => button('🔊 Escuchar modelo').props.onClick());
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar modelo' }).props.onClick());
   const request = readLearningActivities(user).find((event) => event.activityId === 'chat-audio-hint-respond')!;
   expect(request).toMatchObject({ correct: null, helped: true, expected: '' });
   expect(request.response).toContain('solicitado');
@@ -78,6 +78,48 @@ it('solicitar un audio bloqueado no dice escuchado ni fabrica una respuesta, y p
   expect(tree.root.findByType('input').props.disabled).toBe(false);
   await type(conversationTurns(unit)[0].expected.en); await submit();
   expect(attempts()).toMatchObject([{ correct: true, helped: true }]);
+});
+it('el modelo de ayuda informa de preparación/fallo sin bloquear el borrador ni duplicar ayuda', async () => {
+  await mount(true);
+  await type('I am');
+  let resolve!: (result: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  act(() => tree.root.findByProps({ 'aria-label': 'Escuchar modelo' }).props.onClick());
+  const model = () => tree.root.findByProps({ 'aria-label': 'Escuchar modelo' });
+  expect(model().props['aria-busy']).toBe(true);
+  expect(tree.root.findByType('input').props.disabled).toBe(false);
+  expect(tree.root.findByType('input').props.value).toBe('I am');
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'chat-audio-hint-respond')).toHaveLength(1);
+  expect(attempts()).toHaveLength(0);
+  await act(async () => resolve({ status: 'blocked', source: null }));
+  expect(model().props['aria-busy']).toBe(false);
+  const tools = tree.root.findByProps({ className: 'chat-tools' });
+  expect(text(tools)).toContain('Audio no disponible');
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'chat-audio-hint-respond')).toHaveLength(1);
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'played', source: 'kokoro' });
+  await act(async () => model().props.onClick());
+  expect(text(tools)).not.toContain('Audio no disponible');
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'chat-audio-hint-respond')).toHaveLength(2);
+  expect(attempts()).toHaveLength(0);
+  await type(conversationTurns(unit)[0].expected.en); await submit();
+  expect(attempts()).toMatchObject([{ correct: true, helped: true }]);
+});
+it('al responder y cambiar de turno se corta la ayuda y se ignora su fallo tardío', async () => {
+  await mount();
+  let resolve!: (result: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  act(() => tree.root.findByProps({ 'aria-label': 'Escuchar modelo' }).props.onClick());
+  vi.mocked(stopSpeech).mockClear();
+  await type(conversationTurns(unit)[0].expected.en); await submit();
+  expect(stopSpeech).toHaveBeenCalled();
+  act(() => button('Seguir conversando →').props.onClick());
+  const before = readLearningActivities(user);
+  await act(async () => resolve({ status: 'unavailable', source: null }));
+  const model = tree.root.findByProps({ 'aria-label': 'Escuchar modelo' });
+  expect(model.props['aria-busy']).toBe(false);
+  expect(text(tree.root.findByProps({ className: 'chat-tools' }))).not.toContain('Audio no disponible');
+  expect(readLearningActivities(user)).toEqual(before);
+  expect(JSON.parse(localStorage.getItem(key)!)).toMatchObject({ round: 1, helped: false });
 });
 it('la respuesta del personaje no corta el modelo con otra voz automática al pasar con ayuda', async () => {
   await mount(true);
