@@ -26,6 +26,16 @@ beforeEach(async () => {
 afterEach(() => { audio.stopSpeech(); vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('Kokoro y reproducción sin falsos éxitos', () => {
+  it('un reto que espera el final no confunde play resuelto con audio terminado', async () => {
+    const finished = vi.fn();
+    const promise = audio.playEnglish('habit', undefined, true).then((result) => { finished(result); return result; });
+    await vi.advanceTimersByTimeAsync(0);
+    expect(instances[0].play).toHaveBeenCalledOnce();
+    expect(finished).not.toHaveBeenCalled();
+    audio.stopSpeech();
+    expect(await promise).toEqual({ status: 'cancelled', source: 'kokoro' });
+    expect(vi.getTimerCount()).toBe(0);
+  });
   it('espera a Kokoro más de 300 ms y no lo sustituye por la voz del navegador', async () => {
     deps.apiRequest.mockImplementation(() => new Promise((resolve) => setTimeout(() => resolve({ available: true, file: 'slow-file' }), 700)));
     const started = vi.fn();

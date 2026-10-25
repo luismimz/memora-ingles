@@ -8,7 +8,7 @@ import { readLearningActivities } from '../domain/learningActivity';
 import { readAttempts } from '../domain/learningProfile';
 import { playEnglish, type PlaybackResult } from '../services/audio';
 
-vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'played', source: 'browser' })), playSpanish: vi.fn(), playSnap: vi.fn(), stopSpeech: vi.fn() }));
+vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'played', source: 'browser' })), playSpanish: vi.fn(), playSnap: vi.fn(), stopSpeech: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
 const user = 'listening-isolated';
 let tree: ReactTestRenderer;
@@ -34,7 +34,7 @@ it('escucha sin revelar la palabra, exige reproducción completada y registra ca
   await act(async () => button(target.es).props.onClick());
   expect(readLearningActivities(user)).toHaveLength(0);
   await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
-  expect(playEnglish).toHaveBeenCalledWith(target.en, target.audioUrl);
+  expect(playEnglish).toHaveBeenCalledWith(target.en, target.audioUrl, true, expect.any(Function));
   expect(button(target.es).props.disabled).toBe(false);
   await act(async () => button(target.es).props.onClick());
   expect(readLearningActivities(user)).toMatchObject([{ correct: true, helped: true, modality: 'choice', response: target.es, expected: target.es }]);
@@ -53,7 +53,7 @@ it('audio bloqueado permite texto sin fallo ni acierto auditivo ficticio', async
   expect(text(tree.toJSON())).toContain('No se completó el audio');
   expect(button(target.es).props.disabled).toBe(true);
   expect(readLearningActivities(user)).toHaveLength(0);
-  await act(async () => button('Practicar con texto').props.onClick());
+  await act(async () => button('No se oye · usar texto').props.onClick());
   await act(async () => button(target.en).props.onClick());
   expect(readAttempts(user).at(-1)?.direction).toBe('recognition');
   expect(readWordMemories(user).find((item) => item.key === target.en.toLowerCase())?.capabilities?.auditory).toBeUndefined();
@@ -65,10 +65,72 @@ it('audio tardío tras cambiar a texto no habilita otro modo ni escribe aprendiz
   vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
   await mount();
   await act(async () => { void button('🔊 Reproducir palabra inglesa').props.onClick(); });
-  await act(async () => button('Practicar con texto').props.onClick());
+  await act(async () => button('No se oye · usar texto').props.onClick());
   await act(async () => resolve({ status: 'played', source: 'browser' }));
   expect(text(tree.toJSON())).not.toContain('ESCUCHA Y CONECTA');
   expect(readLearningActivities(user)).toHaveLength(0);
+});
+it('arrancar no habilita respuestas; pausar invalida la escucha y su final tardío', async () => {
+  let resolve!: (result: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockImplementationOnce((_text, _file, wait, started) => {
+    expect(wait).toBe(true); started?.('kokoro');
+    return new Promise((done) => { resolve = done; });
+  });
+  const target = microRounds(user, [previewUnit])[1].word;
+  await mount();
+  await act(async () => { void button('🔊 Reproducir palabra inglesa').props.onClick(); });
+  expect(text(tree.toJSON())).toContain('Escucha la palabra…');
+  expect(button(target.es).props.disabled).toBe(true);
+  await act(async () => button(target.es).props.onClick());
+  expect(readLearningActivities(user)).toHaveLength(0);
+  await act(async () => button('Pausar').props.onClick());
+  await act(async () => resolve({ status: 'played', source: 'kokoro' }));
+  await act(async () => button('Seguir').props.onClick());
+  expect(button(target.es).props.disabled).toBe(true);
+  expect(text(tree.toJSON())).not.toContain('Reproducción finalizada');
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  expect(button(target.es).props.disabled).toBe(false);
+  expect(readLearningActivities(user)).toHaveLength(0);
+});
+it('tras acertar muestra palabra y significado con continuación junto al resultado, no otro reto bloqueado', async () => {
+  const target = microRounds(user, [previewUnit])[1].word;
+  await mount();
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  await act(async () => button(target.es).props.onClick());
+  expect(tree.root.findAllByProps({ 'aria-label': 'Significados preparados' })).toHaveLength(0);
+  expect(text(tree.root.findByType('h1'))).toBe(target.en);
+  expect(text(tree.toJSON())).toContain(target.es);
+  expect(text(tree.toJSON())).not.toContain('Escucha y elige lo que significa.');
+  expect(button('Seguir →')).toBeUndefined();
+  expect(button('Continuar →').props.className).toBe('primary-action');
+  const before = readLearningActivities(user);
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'blocked', source: 'kokoro' });
+  await act(async () => button('🔊 Escuchar de nuevo').props.onClick());
+  expect(text(tree.toJSON())).toContain('No se completó el audio');
+  expect(button('Continuar →').props.disabled).toBe(false);
+  expect(readLearningActivities(user)).toEqual(before);
+  await act(async () => button('Continuar →').props.onClick());
+  expect(tree.root.findAllByProps({ className: 'micro-content micro-answer-result' })).toHaveLength(0);
+});
+it('pausar la repetición del resultado no deja su altavoz bloqueado al reanudar', async () => {
+  const target = microRounds(user, [previewUnit])[1].word;
+  await mount();
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  await act(async () => button(target.es).props.onClick());
+  let resolve!: (result: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockImplementationOnce((_text, _file, _wait, started) => {
+    started?.('kokoro'); return new Promise((done) => { resolve = done; });
+  });
+  await act(async () => { void button('🔊 Escuchar de nuevo').props.onClick(); });
+  expect(button('🔊 Escuchar de nuevo').props.disabled).toBe(true);
+  await act(async () => button('Pausar').props.onClick());
+  await act(async () => button('Seguir').props.onClick());
+  await act(async () => resolve({ status: 'played', source: 'kokoro' }));
+  expect(button('🔊 Escuchar de nuevo').props.disabled).toBe(false);
+  expect(button('Continuar →').props.disabled).toBe(false);
+  await act(async () => button('🔊 Escuchar de nuevo').props.onClick());
+  expect(text(tree.toJSON())).not.toContain('No se completó el audio');
+  expect(readLearningActivities(user)).toHaveLength(1);
 });
 
 it('no monta escucha sin dos significados y sonidos preparados distintos', async () => {
