@@ -54,6 +54,19 @@ describe('audio acompañante de la asociación', () => {
     expect(speech.stopSpeech).toHaveBeenCalledTimes(1);
     expect(speech.playSpanish).not.toHaveBeenCalled();
   });
+  it('cambiar al montaje sin desmontar la asociación invalida la narración pendiente', async () => {
+    let resolveAuto!: (result: PlaybackResult) => void;
+    speech.playEnglish.mockImplementationOnce(() => new Promise((resolve) => { resolveAuto = resolve; }));
+    const hook = useAssociationAudio(previewUnit.words[0]); hooks.effects[0]();
+    hook.cancel(); resolveAuto(played); await flush();
+    expect(speech.stopSpeech).toHaveBeenCalledOnce();
+    expect(speech.playSpanish).not.toHaveBeenCalled();
+    expect(speech.playEnglish).toHaveBeenCalledTimes(1);
+    // Replay remains available if the association itself is still shown.
+    hook.listen(); await flush();
+    expect(hooks.state?.status).toBe('ready');
+    expect(speech.playSpanish).not.toHaveBeenCalled();
+  });
   it('en los cognados solo pronuncia la palabra, sin preparar o narrar una historia artificial', async () => {
     useAssociationAudio({ ...previewUnit.words[0], associationMode: 'cognate' }); hooks.effects[0](); await flush();
     expect(speech.playEnglish).toHaveBeenCalledTimes(1);

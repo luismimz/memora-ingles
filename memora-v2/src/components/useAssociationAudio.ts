@@ -41,5 +41,7 @@ export function useAssociationAudio(word: AtomicWord) {
     return () => { generation.current++; stopSpeech(); };
   }, [run, word.associationMode, word.scene]);
 
-  return { audioState, listen: () => { void run(true); } };
+  // AssociationCard stays mounted while its word assembly replaces the scene.
+  // Invalidate pending narration at that boundary, not only on unmount.
+  return { audioState, listen: () => { void run(true); }, cancel: () => { generation.current++; stopSpeech(); } };
 }

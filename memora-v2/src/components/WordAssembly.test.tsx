@@ -2,7 +2,9 @@ import { act, create } from 'react-test-renderer';
 import { expect, it, vi } from 'vitest';
 import { WordAssembly } from './WordAssembly';
 import { previewUnit } from '../preview/previewUnit';
-vi.mock('../services/audio', () => ({ playEnglish: vi.fn(), playSnap: vi.fn(), stopSpeech: vi.fn() }));
+import { playEnglish, stopSpeech, type PlaybackResult } from '../services/audio';
+import { GameCard } from './GameCard';
+vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'played', source: 'kokoro' })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
 vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
 it('construye con letras repetidas, ayuda sin castigar y no permite saltar antes de armar', () => {
   const next = vi.fn(); let tree!: ReturnType<typeof create>;
@@ -16,8 +18,40 @@ it('construye con letras repetidas, ayuda sin castigar y no permite saltar antes
   act(() => piece(2).props.onClick()); expect(tree.root.findByProps({ role: 'status' }).children).toEqual(['Busca «S»']);
   act(() => piece(1).props.onClick()); act(() => piece(3).props.onClick()); act(() => piece(2).props.onClick());
   expect(tree.root.findByProps({ className: 'assembly-line is-complete' })).toBeTruthy();
+  expect(tree.root.findByType('h2').children).toEqual(['Armada con ayuda']);
   expect(tree.root.findAllByProps({ className: 'card-advance' })).toHaveLength(1);
   expect(next).not.toHaveBeenCalled();
+  act(() => tree.unmount());
+});
+it('el audio fallido no bloquea el resultado, permite repetir y continuar una sola vez', async () => {
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'unavailable', source: null });
+  const next = vi.fn(); let tree!: ReturnType<typeof create>;
+  await act(async () => { tree = create(<WordAssembly vertical word={{ ...previewUnit.words[0], en: 'GO', es: 'ir' }} onContinue={next} />); });
+  for (const [text, id] of [['G', 1], ['O', 2]]) await act(async () => tree.root.findByProps({ 'aria-label': `Colocar ${text}, pieza ${id}` }).props.onClick());
+  expect(tree.root.findByType('h2').children).toEqual(['✓ Palabra armada']);
+  expect(tree.root.findByProps({ className: 'association-audio-status' }).children).toEqual(['Audio no disponible · toca 🔊']);
+  expect(tree.root.findByType(GameCard).props.advanceLabel).toBe('Continuar');
+  expect(next).not.toHaveBeenCalled();
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar palabra' }).props.onClick());
+  expect(tree.root.findAllByProps({ className: 'association-audio-status' })).toHaveLength(0);
+  const advance = tree.root.findByType(GameCard).props.onAdvance;
+  act(() => { advance(); advance(); });
+  expect(next).toHaveBeenCalledOnce();
+  expect(stopSpeech).toHaveBeenCalled();
+  act(() => tree.unmount());
+});
+it('no muestra un éxito auditivo antes del final ni aplica una respuesta tardía tras continuar', async () => {
+  let resolve!: (value: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+  const next = vi.fn(); let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<WordAssembly vertical word={{ ...previewUnit.words[0], en: 'I', es: 'yo' }} onContinue={next} />); });
+  act(() => tree.root.findByProps({ 'aria-label': 'Colocar I, pieza 1' }).props.onClick());
+  expect(tree.root.findByProps({ 'aria-label': 'Escuchar palabra' }).props['aria-busy']).toBe(true);
+  expect(tree.root.findAllByProps({ className: 'association-audio-status' })).toHaveLength(0);
+  act(() => tree.root.findByType(GameCard).props.onAdvance());
+  await act(async () => resolve({ status: 'blocked', source: null }));
+  expect(next).toHaveBeenCalledOnce();
+  expect(tree.root.findAllByProps({ className: 'association-audio-status' })).toHaveLength(0);
   act(() => tree.unmount());
 });
 it('consultar el modelo es opcional y el resultado distingue su uso sin evaluar memoria', () => {

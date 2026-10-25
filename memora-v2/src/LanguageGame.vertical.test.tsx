@@ -11,6 +11,9 @@ import { recalledWordIndex } from './domain/activeRecall';
 import { readWordMemories } from './domain/memory';
 import { readAttempts, readSessions } from './domain/learningProfile';
 import { WordAssembly } from './components/WordAssembly';
+import { getPlayableGrammar } from './domain/unit';
+import { lessonForForm } from './domain/grammarLesson';
+import { recordGrammarAttempt, readGrammarAttempts } from './domain/grammarMemory';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -62,6 +65,25 @@ it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar',
   await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(before);
+});
+it('reutilizar una estructura mantiene slide y deja repetir la explicación sin fabricar aciertos', async () => {
+  const reviewUnit: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
+  const form = getPlayableGrammar(reviewUnit)[0];
+  const base = reviewUnit.words.find((word) => word.en.toLowerCase() === form.englishBase?.toLowerCase())?.es.toLowerCase();
+  const lesson = lessonForForm(form, base)!;
+  expect(lesson).toBeTruthy();
+  recordGrammarAttempt(user, { unitId: 'earlier-unit', skill: lesson.id, check: 'isolated', kind: 'choose', correct: true, helped: false, at: new Date().toISOString() });
+  writeGameCheckpoint(user, reviewUnit.id, reviewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await act(async () => { tree = create(<LanguageGame unit={reviewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  expect(text(tree.toJSON())).toContain('Una estructura conocida');
+  expect(button('Volver a ver el truco')).toBeTruthy();
+  expect(button('Usarlo ahora →')).toBeUndefined();
+  expect(tree.root.findByType('footer').findByType('button').props['aria-label']).toBe('Montar el mensaje');
+  const before = readGrammarAttempts(user);
+  await swipe(false);
+  expect(readGameCheckpoint(user, reviewUnit.id, reviewUnit.contentVersion ?? '1')?.phase).toBe('build');
+  expect(readGrammarAttempts(user)).toEqual(before);
+  expect(readLearningActivities(user).filter((event) => event.correct === true)).toHaveLength(0);
 });
 it('la asociación centra palabra, escena e historia, sin barras, ubicación, leyendas ni escena duplicadas', async () => {
   await mount();
