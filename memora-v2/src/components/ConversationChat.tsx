@@ -38,7 +38,7 @@ function readChatCheckpoint(userId: string, unitId: string, version: string, tur
   } catch { return { checkpoint: null }; }
 }
 
-/** Incoming message → learner's answer → reply. The chat never swipes away. */
+/** Incoming message → learner's answer → reply. A feed gesture only advances a ready reply. */
 export function ConversationPractice({ unit, userId, reviewMode, checkpointScope = 'story', skillId, initialHelped = false, vertical = false, onContinue }: { unit: AtomicUnit; userId: string; reviewMode: boolean; checkpointScope?: string; skillId?: string; initialHelped?: boolean; vertical?: boolean; onContinue: () => void }) {
   const checkpointUnitId = checkpointScope === 'story' ? unit.id : `${unit.id}:${checkpointScope}`;
   const dialogue = unit.communication!.dialogue!;
@@ -138,7 +138,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     }
     if (messageId.startsWith('prompt-')) { setBusy(false); return; }
     setAwaitingNext(true);
-    if (dialogue.continueMode === 'manual' || revealedAnswer) return;
+    if (vertical || dialogue.continueMode === 'manual' || revealedAnswer) return;
     clearTimeout(timer.current);
     timer.current = setTimeout(following, 1800);
   }

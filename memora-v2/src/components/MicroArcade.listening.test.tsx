@@ -241,3 +241,24 @@ it('deslizar con audio pendiente no responde, ni cambia la palabra, ni registra 
   expect(button('No se oye · usar texto')).toBeDefined();
   expect(readLearningActivities(user)).toHaveLength(0);
 });
+it('el cierre de quince rondas conserva el pie vertical y no fabrica intentos al volver', async () => {
+  const exit = vi.fn();
+  await mount(previewUnit, 15, exit);
+  expect(text(tree.toJSON())).toContain('Repaso terminado');
+  const control = button('Volver al recorrido');
+  expect(control.parent!.props.className).toBe('card-vertical-next');
+  expect(tree.root.findAllByProps({ className: 'primary-action' })).toHaveLength(0);
+  await swipe();
+  expect(exit).toHaveBeenCalledOnce();
+  expect(readLearningActivities(user)).toHaveLength(0);
+});
+it('otra tanda en el cierre es optativa y no responde ni atraviesa el reto siguiente', async () => {
+  const exit = vi.fn();
+  await mount(previewUnit, 15, exit);
+  await act(async () => button('Jugar otra vez').props.onClick());
+  expect(text(tree.toJSON())).not.toContain('Repaso terminado');
+  expect(button('Volver al recorrido')).toBeUndefined();
+  await swipe();
+  expect(exit).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toHaveLength(0);
+});

@@ -15,7 +15,7 @@ const key = `memora-v2.chat-checkpoint.${user}.${unit.id}`;
 const next = vi.fn();
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).trim() === label)!;
-async function mount() { await act(async () => { tree = create(<ConversationPractice unit={unit} userId={user} reviewMode={false} onContinue={next} />); }); }
+async function mount(vertical = false, value = unit) { await act(async () => { tree = create(<ConversationPractice vertical={vertical} unit={value} userId={user} reviewMode={false} onContinue={next} />); }); }
 async function type(value: string) { await act(async () => tree.root.findByType('input').props.onChange({ target: { value } })); }
 async function submit() { await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} })); }
 const attempts = () => readLearningActivities(user).filter((event) => event.activityId.startsWith('turn-'));
@@ -23,7 +23,7 @@ beforeEach(() => {
   vi.useFakeTimers(); next.mockClear();
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) });
-  vi.stubGlobal('window', { matchMedia: () => ({ matches: true }), dispatchEvent: vi.fn() });
+  vi.stubGlobal('window', { setTimeout, clearTimeout, matchMedia: () => ({ matches: true }), dispatchEvent: vi.fn(), getSelection: () => null });
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
@@ -77,4 +77,31 @@ it('solicitar un audio bloqueado no dice escuchado ni fabrica una respuesta, y p
   expect(tree.root.findByType('input').props.disabled).toBe(false);
   await type(conversationTurns(unit)[0].expected.en); await submit();
   expect(attempts()).toMatchObject([{ correct: true, helped: true }]);
+});
+it('la presentación vertical espera el gesto tras cada respuesta, incluso en diálogo de cadencia automática', async () => {
+  const automatic = structuredClone(unit);
+  delete automatic.communication!.dialogue!.continueMode;
+  await mount(true, automatic);
+  const swipe = async () => {
+    const region = tree.root.findByProps({ role: 'region' });
+    const event = { target: { closest: () => null }, currentTarget: { scrollTop: 0, scrollHeight: 600, clientHeight: 600 } };
+    await act(async () => {
+      region.props.onTouchStart({ ...event, touches: [{ clientY: 400 }] });
+      region.props.onTouchMove({ ...event, touches: [{ clientY: 200 }] });
+      region.props.onTouchEnd(); vi.advanceTimersByTime(230);
+    });
+  };
+  for (const [index, turn] of conversationTurns(unit).entries()) {
+    await swipe();
+    expect(attempts()).toHaveLength(index);
+    await type(turn.expected.en); await submit();
+    await act(async () => { vi.advanceTimersByTime(60000); });
+    expect(next).not.toHaveBeenCalled();
+    expect(JSON.parse(localStorage.getItem(key)!)).toMatchObject({ round: index, awaitingNext: true });
+    const before = readLearningActivities(user);
+    await swipe();
+    expect(attempts()).toHaveLength(index + 1);
+    expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toEqual(before.filter((event) => event.source === 'learner'));
+  }
+  expect(next).toHaveBeenCalledOnce();
 });
