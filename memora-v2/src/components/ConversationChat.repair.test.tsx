@@ -162,6 +162,26 @@ it('el modelo mostrado permite repetir su audio fallido sin volver a pasar ni al
   expect(playEnglish).not.toHaveBeenCalled();
   expect(readLearningActivities(user)).toEqual(before);
 });
+it('la práctica oral muestra qué decir y conserva el borrador y la ayuda al volver a escribir', async () => {
+  await mount(true); await type('I am');
+  const before = readLearningActivities(user);
+  act(() => button('Prefiero hablar').props.onClick());
+  const expected = conversationTurns(unit)[0].expected;
+  const oral = tree.root.findByProps({ className: 'chat-oral' });
+  expect(text(oral).replace(/\s/gu, '')).toContain(expected.en.replace(/\s/gu, ''));
+  expect(text(oral).replace(/\s/gu, '')).toContain(expected.es.replace(/\s/gu, ''));
+  expect(attempts()).toHaveLength(0);
+  const legacy = JSON.parse(localStorage.getItem(key)!);
+  legacy.helped = false; localStorage.setItem(key, JSON.stringify(legacy));
+  act(() => tree.unmount()); await mount(true);
+  expect(tree.root.findAllByProps({ className: 'chat-oral' })).toHaveLength(1);
+  act(() => button('Prefiero escribir').props.onClick());
+  expect(tree.root.findByType('input').props.value).toBe('I am');
+  expect(JSON.parse(localStorage.getItem(key)!)).toMatchObject({ oral: false, helped: true, input: 'I am' });
+  expect(readLearningActivities(user)).toEqual(before);
+  await type(expected.en); await submit();
+  expect(attempts()).toMatchObject([{ correct: true, helped: true }]);
+});
 it('la presentación vertical espera el gesto tras cada respuesta, incluso en diálogo de cadencia automática', async () => {
   const automatic = structuredClone(unit);
   delete automatic.communication!.dialogue!.continueMode;

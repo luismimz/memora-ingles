@@ -62,7 +62,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   const [activeMessage, setActiveMessage] = useState(checkpoint?.activeMessage ?? 'prompt-0');
   const [busy, setBusy] = useState(checkpoint?.busy ?? true);
   const [input, setInput] = useState(checkpoint?.input ?? '');
-  const [helped, setHelped] = useState(checkpoint?.helped ?? initialHelped);
+  const [helped, setHelped] = useState(checkpoint?.oral ? true : checkpoint?.helped ?? initialHelped);
   const [hintLevel, setHintLevel] = useState(checkpoint?.hintLevel ?? 0);
   const [awaitingNext, setAwaitingNext] = useState(checkpoint?.awaitingNext ?? false);
   const [oral, setOral] = useState(checkpoint?.oral ?? false);
@@ -189,6 +189,12 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     setMessages((current) => [...current, { id: id(), who: 'coach', text: 'Ensayo oral sin evaluación. No se registra como un acierto.', instant: true }]);
     reply();
   }
+  function chooseOral(value: boolean) {
+    stopSpeech(); modelAudio.reset();
+    // The oral rehearsal exposes the model, even if the learner later writes.
+    if (value) { helpedRef.current = true; setHelped(true); }
+    setOral(value);
+  }
   function hint() {
     if (busy || sending.current) return;
     helpedRef.current = true;
@@ -236,6 +242,13 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     const modelPlayback = !historical && revealedAnswer && message.who === 'coach' && message.audioHint === turn.expected.en ? modelAudio : undefined;
     return <TypedChatMessage key={message.id} message={historical ? { ...message, instant: true } : message} partner={partner} form={form} renderText={unit.mirror ? (text, language) => <MirrorText text={text} lesson={unit.mirror!} language={language} /> : undefined} autoSpeak={active && !revealedAnswer} onReady={active ? () => messageReady(message.id) : undefined} audioPlayback={modelPlayback} />;
   };
+  const oralPractice = <div className="chat-oral">
+    <p lang="es">{unit.mirror ? <MirrorText text={turn.expected.es} lesson={unit.mirror} language="es" /> : <GrammarText text={turn.expected.es} form={form} language="es" />}</p>
+    <p className="coach-row" lang="en">{unit.mirror ? <MirrorText text={turn.expected.en} lesson={unit.mirror} language="en" /> : <GrammarText text={turn.expected.en} form={form} language="en" />}</p>
+    <EchoPractice phrase={turn.expected.en} />
+    <button type="button" onClick={oralReply}>Seguir sin evaluación oral →</button>
+    <button type="button" className="quiet-action" onClick={() => chooseOral(false)}>Prefiero escribir</button>
+  </div>;
   return <GameCard vertical={vertical} stepKey={`chat:${round}:${awaitingNext ? 'reply' : 'answer'}`} onAdvance={vertical && awaitingNext ? following : undefined} advanceLabel={followingLabel} className={`conversation-card chat-card ${turns.length === 1 ? 'chat-single-turn' : ''}`}>
     <div className="conversation-content chat-content">
       <header className="chat-header"><span className="chat-avatar" aria-hidden="true">{partner[0]}</span><div><strong>{partner}</strong><small>{turn.id === 'ask' ? 'Ahora preguntas tú' : turn.id === 'transfer' ? 'Otra situación' : 'Una conversación en casa'}</small></div><span>{round + 1}/{turns.length}</span></header>
@@ -244,8 +257,8 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
       <div className="chat-log" ref={log} role="log" aria-label={`Conversación con ${partner}`} aria-live="polite" aria-relevant="additions">
         {messages.slice(turnStart).map((message) => messageView(message))}
       </div>
-      {awaitingNext ? vertical ? <p className="chat-flow-ready" role="status">Mensaje recibido. Puedes seguir cuando quieras.</p> : <button type="button" className="primary-action" onClick={following}>{followingLabel}</button> : needsModel ? <div className="chat-rescue"><p>Tu intento queda guardado. No necesitas repetirlo más ahora.</p><button type="button" className="primary-action" disabled={busy} onClick={showAnswerAndPass}>Ver el modelo y seguir →</button></div> : oral ? <div className="chat-oral"><EchoPractice phrase={turn.expected.en} /><p>Escúchate y compárate. Tu voz no recibe una nota automática.</p><button type="button" onClick={oralReply}>Seguir sin evaluación oral →</button><button type="button" className="quiet-action" onClick={() => setOral(false)}>Prefiero escribir</button></div> : <AnswerStudio id="dialogue-answer" taskKey={`${unit.id}:${unit.contentVersion}:${turn.id}`} target={unit.mirror ? <MirrorText text={turn.expected.es} lesson={unit.mirror} language="es" /> : <GrammarText text={turn.expected.es} form={form} language="es" />} value={input} onChange={(value) => { setInput(value); submitted.current = null; }} onAnswer={() => answer()} accepts={(value) => acceptedConversationAnswer(unit, turn, value)} disabled={busy} />}
-      {!awaitingNext && !needsModel ? <details className="chat-help"><summary>¿Necesitas ayuda u otra forma de responder?</summary><div className="chat-tools"><button type="button" className="quiet-action" disabled={busy} onClick={hint}>Pista escrita</button><div><button type="button" className="quiet-action" disabled={busy} aria-label="Escuchar modelo" aria-busy={modelAudio.audio?.status === 'preparing'} onClick={listenToModel}>🔊 {modelAudio.label === 'Escuchar' ? 'Escuchar modelo' : modelAudio.label}</button><AssociationAudioStatus state={modelAudio.audio} compact /></div><button type="button" className="quiet-action" disabled={busy} onClick={() => setOral((value) => !value)}>{oral ? 'Escribir' : 'Prefiero hablar'}</button><button type="button" className="quiet-action" disabled={busy} onClick={showAnswerAndPass}>Ver respuesta y pasar</button></div></details> : null}
+      {awaitingNext ? vertical ? <p className="chat-flow-ready" role="status">Mensaje recibido. Puedes seguir cuando quieras.</p> : <button type="button" className="primary-action" onClick={following}>{followingLabel}</button> : needsModel ? <div className="chat-rescue"><p>Tu intento queda guardado. No necesitas repetirlo más ahora.</p><button type="button" className="primary-action" disabled={busy} onClick={showAnswerAndPass}>Ver el modelo y seguir →</button></div> : oral ? oralPractice : <AnswerStudio id="dialogue-answer" taskKey={`${unit.id}:${unit.contentVersion}:${turn.id}`} target={unit.mirror ? <MirrorText text={turn.expected.es} lesson={unit.mirror} language="es" /> : <GrammarText text={turn.expected.es} form={form} language="es" />} value={input} onChange={(value) => { setInput(value); submitted.current = null; }} onAnswer={() => answer()} accepts={(value) => acceptedConversationAnswer(unit, turn, value)} disabled={busy} />}
+      {!awaitingNext && !needsModel ? <details className="chat-help"><summary>¿Necesitas ayuda u otra forma de responder?</summary><div className="chat-tools"><button type="button" className="quiet-action" disabled={busy} onClick={hint}>Pista escrita</button><div><button type="button" className="quiet-action" disabled={busy} aria-label="Escuchar modelo" aria-busy={modelAudio.audio?.status === 'preparing'} onClick={listenToModel}>🔊 {modelAudio.label === 'Escuchar' ? 'Escuchar modelo' : modelAudio.label}</button><AssociationAudioStatus state={modelAudio.audio} compact /></div><button type="button" className="quiet-action" disabled={busy} onClick={() => chooseOral(!oral)}>{oral ? 'Escribir' : 'Prefiero hablar'}</button><button type="button" className="quiet-action" disabled={busy} onClick={showAnswerAndPass}>Ver respuesta y pasar</button></div></details> : null}
       {turnStart > 0 ? <details className="chat-history"><summary>Ver conversación anterior</summary><div>{messages.slice(0, turnStart).map((message) => messageView(message, true))}</div></details> : null}
     </div>
   </GameCard>;
