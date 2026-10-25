@@ -6,7 +6,7 @@ import { useAssociationAudio } from './components/useAssociationAudio';
 import { AssociationAudioStatus } from './components/AssociationAudioStatus';
 import { EchoPractice } from './components/EchoPractice';
 import { PracticeClosure } from './components/PracticeClosure';
-import { GrammarMorphology } from './components/GrammarMorphology';
+import { GrammarFallbackLesson } from './components/GrammarFallbackLesson';
 import { GrammarCoach } from './components/GrammarCoach';
 import { ConversationPractice } from './components/ConversationPractice';
 import { ActiveRecallCard, SceneReconstruction } from './components/ActiveRecallCard';
@@ -19,117 +19,18 @@ import { constructionFeedback } from './domain/sentenceConstruction';
 import { BridgeSoundNote } from './components/BridgeSoundNote';
 import { gameReducer, initialGame, type LearningMode, type WordAssemblyPosition } from './domain/game';
 import { clearGameCheckpoint, readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
-import { grammarCaption, makeGrammarChecks } from './domain/grammarPractice';
 import { recordAttempt } from './domain/learningProfile';
 import { completeLearningMode } from './domain/learningModes';
 import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
 import { readGrammarAttempts } from './domain/grammarMemory';
 import { recordChunkExposure, recordSentenceExposure, recordWordRecall } from './domain/memory';
-import { getExpandedEnglishSubject, getPlayableGrammar, getSpanishSubjectLabel, getUnitSentences, makeRecallChoices, nextReviewAt, type AtomicUnit, type AtomicWord, type GrammarForm } from './domain/unit';
-import { playEnglish, playMiss, playSnap, playSpanish, prefetchSpeech, stopSpeech } from './services/audio';
+import { getPlayableGrammar, getUnitSentences, makeRecallChoices, nextReviewAt, type AtomicUnit, type AtomicWord } from './domain/unit';
+import { playEnglish, playMiss, playSnap, prefetchSpeech, stopSpeech } from './services/audio';
 import type { Appearance } from './useAppearance';
 import { syncLabels, type SyncStatus } from './services/progressSync';
 import { PlayHeader } from './components/PlayHeader';
 import { WordSceneDelivery } from './components/WordSceneDelivery';
 import { WordAssembly } from './components/WordAssembly';
-
-function GrammarLesson({ form, baseSpanish, index, total, onReady, onContinue }: {
-  form: GrammarForm;
-  baseSpanish?: string;
-  index: number;
-  total: number;
-  onReady: () => void;
-  onContinue: () => void;
-}) {
-  const expandedPhrase = (subject: GrammarForm['subjects'][number]) => subject.phrase.replace(subject.en, getExpandedEnglishSubject(subject));
-  const [step, setStep] = useState(0);
-  const [subjectIndex, setSubjectIndex] = useState(0);
-  const [joined, setJoined] = useState(false);
-  const checks = useMemo(() => makeGrammarChecks(form), [form]);
-  const [checkIndex, setCheckIndex] = useState(0);
-  const [checkFeedback, setCheckFeedback] = useState<'idle' | 'help' | 'correct'>('idle');
-  const ready = step >= 4 && checkIndex >= checks.length;
-  const timers = useRef<number[]>([]);
-  const subjectTimer = useRef<number | null>(null);
-  const onReadyRef = useRef(onReady);
-  onReadyRef.current = onReady;
-  useEffect(() => {
-    let active = true;
-    const narrate = async (currentStep: number, english?: string) => {
-      const started = performance.now();
-      await playSpanish(grammarCaption(form, currentStep, baseSpanish), true);
-      if (!active) return;
-      if (english) await playEnglish(english, undefined, true);
-      if (!active) return;
-      // A silent or unavailable voice still leaves enough time to see each piece.
-      const remaining = Math.max(0, 1200 - (performance.now() - started));
-      if (remaining) await new Promise<void>((resolve) => timers.current.push(window.setTimeout(resolve, remaining)));
-    };
-    void (async () => {
-      await narrate(0, form.englishBase);
-      if (!active) return;
-      setStep(1); playSnap();
-      await narrate(1, form.english);
-      if (!active) return;
-      setStep(2);
-      await narrate(2, expandedPhrase(form.subjects[0]));
-      if (!active) return;
-      setJoined(true); setStep(3); playSnap();
-      await narrate(3, form.subjects[0].phrase);
-      if (active) setStep(4);
-    })();
-    return () => { active = false; stopSpeech(); timers.current.forEach(window.clearTimeout); if (subjectTimer.current !== null) window.clearTimeout(subjectTimer.current); };
-  }, [form, baseSpanish]);
-  useEffect(() => { if (ready) onReadyRef.current(); }, [ready]);
-  function answerCheck(answer: string) {
-    const check = checks[checkIndex];
-    if (!check || checkFeedback === 'correct') return;
-    if (answer !== check.answer) { setCheckFeedback('help'); playMiss(); void playSpanish(check.hint); return; }
-    setCheckFeedback('correct');
-    playSnap();
-    void playEnglish(check.answer);
-    timers.current.push(window.setTimeout(() => { setCheckIndex((index) => index + 1); setCheckFeedback('idle'); }, 1600));
-  }
-
-  function chooseSubject(next: number) {
-    if (step < 4) return;
-    if (subjectTimer.current !== null) window.clearTimeout(subjectTimer.current);
-    setSubjectIndex(next);
-    const subject = form.subjects[next];
-    if (getExpandedEnglishSubject(subject) === subject.en) {
-      void playEnglish(form.subjects[next].phrase);
-      playSnap();
-      return;
-    }
-    setJoined(false);
-    const expanded = expandedPhrase(subject);
-    void playEnglish(expanded);
-    subjectTimer.current = window.setTimeout(() => {
-      setJoined(true);
-      playSnap();
-      void playEnglish(subject.phrase);
-    }, 1600);
-  }
-
-  return (
-    <GameCard onAdvance={ready && joined ? onContinue : undefined} advanceControl advanceLabel={index === total - 1 ? 'Construir frase' : 'Siguiente forma'} reserveFooter revealFooter={ready} className="lesson-card">
-      <div className="lesson-content">
-        <p className="eyebrow">FORMA {index + 1}/{total}</p>
-        <h2 className="sr-only">Del español al inglés</h2>
-        <div className="grammar-trick" aria-live="polite"><strong>{step < 4 ? 'EL TRUCO' : ready ? 'YA LO PUEDES USAR' : 'TU TURNO'}</strong><span>{ready ? 'Cambia de persona y escucha cómo suena.' : grammarCaption(form, step, baseSpanish)}</span></div>
-        <GrammarMorphology form={form} baseSpanish={baseSpanish} step={step} joined={joined} subjectIndex={subjectIndex} />
-        {step >= 4 && checks[checkIndex] ? <div className="grammar-check" aria-live="polite"><small>{checkIndex + 1}/{checks.length}</small><p>{checks[checkIndex].prompt}</p><div>{checks[checkIndex].choices.map((choice) => <button type="button" key={choice} disabled={checkFeedback === 'correct'} onClick={() => answerCheck(choice)}>{choice}</button>)}</div><span>{checkFeedback === 'help' ? checks[checkIndex].hint : checkFeedback === 'correct' ? '¡Lo tienes! Ya puedes usar esta pieza.' : ''}</span></div> : null}
-        <div className={`subject-area ${!ready ? 'is-pending' : ''}`} aria-hidden={!ready}>
-          {form.subjects.length > 1 ? <div className="subject-list" aria-label="Cambia quién realiza la acción">
-            {form.subjects.map((subject, person) => <button type="button" disabled={!ready} key={`${subject.en}-${subject.es}`} onClick={() => chooseSubject(person)} className={person === subjectIndex ? 'is-active' : ''}>{getSpanishSubjectLabel(subject.es, form.spanish)}</button>)}
-          </div> : null}
-          <button type="button" disabled={!ready} className="listen-again" onClick={() => void playEnglish(form.subjects[subjectIndex].phrase)}>🔊 Escuchar</button>
-          {ready ? <button type="button" className="listen-again" onClick={() => void playSpanish(form.memoryTrick?.explanation || grammarCaption(form, 1, baseSpanish))}>🔊 Repetir el truco</button> : null}
-        </div>
-      </div>
-    </GameCard>
-  );
-}
 
 function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false, assemblyPosition, onAssemblyProgress }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean; assemblyPosition?: WordAssemblyPosition; onAssemblyProgress?: (position: WordAssemblyPosition) => void }) {
   const [reconstruct, setReconstruct] = useState(false);
@@ -427,7 +328,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
           <div className="reward-content"><SceneVisual word={unit.words[0]} compact />{state.correct >= Math.min(2, unit.words.length) ? <div className="reward-burst" aria-hidden="true">✨</div> : null}<p className="eyebrow">{recallSummary ? 'RECUERDO PRACTICADO' : `${state.correct}/${unit.words.length} RECONOCIDAS`}</p>{recallSummary ? <p className="reward-note">Respuestas registradas: {recallSummary.attempted}. Aciertos sin pistas: {recallSummary.independent}; con ayuda: {recallSummary.assisted}; modelos consultados: {recallSummary.models}. No mide dominio.</p> : null}<h1>{learningMode === 'vocabulary' ? 'Palabras listas para practicar.' : 'Ahora, úsalas con Emma.'}</h1><p className="reward-note">Con ayuda o sin ella, has practicado. El repaso volverá a las que lo necesiten.</p>{!vertical ? <><button type="button" className="primary-action" onClick={leaveReward}>{learningMode === 'vocabulary' ? nextLabel : 'Usar las palabras →'}</button>{onPractice ? <button type="button" className="arcade-invitation" onClick={onPractice}>✦ Jugar con mis asociaciones</button> : null}{learningMode === 'vocabulary' ? <button type="button" className="quiet-action" onClick={onExit}>Terminar por ahora</button> : null}</> : <p className="reward-note">Puedes continuar o salir por «Recorrido». Lo realizado queda guardado.</p>}</div>
         </GameCard> : null}
 
-        {state.phase === 'grammar' ? canFastReview && expandedGrammarIndex !== state.grammarIndex ? <GameCard key={`grammar-revisit-${state.grammarIndex}`} vertical={!reviewMode} onAdvance={!reviewMode ? () => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); } : undefined} advanceLabel="Montar el mensaje" className="grammar-review-card"><div className="reward-content"><h1>Una estructura conocida</h1><p><strong lang="es">{currentForm.spanish}</strong> → <strong lang="en">{currentForm.english}</strong></p>{reviewMode ? <button type="button" className="primary-action" onClick={() => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); }}>Usarlo ahora →</button> : null}<button type="button" className="quiet-action" onClick={() => setExpandedGrammarIndex(state.grammarIndex)}>Volver a ver el truco</button></div></GameCard> : currentLesson ? <GrammarCoach key={currentForm.id} lesson={currentLesson} form={currentForm} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} conversationAnswers={learningMode === 'adventure' ? conversationPracticeAnswers(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : []} reviewMode={reviewMode} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : <GrammarLesson key={currentForm.id} form={currentForm} baseSpanish={baseSpanish} index={state.grammarIndex} total={grammarForms.length} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : null}
+        {state.phase === 'grammar' ? canFastReview && expandedGrammarIndex !== state.grammarIndex ? <GameCard key={`grammar-revisit-${state.grammarIndex}`} vertical={!reviewMode} onAdvance={!reviewMode ? () => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); } : undefined} advanceLabel="Montar el mensaje" className="grammar-review-card"><div className="reward-content"><h1>Una estructura conocida</h1><p><strong lang="es">{currentForm.spanish}</strong> → <strong lang="en">{currentForm.english}</strong></p>{reviewMode ? <button type="button" className="primary-action" onClick={() => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); }}>Usarlo ahora →</button> : null}<button type="button" className="quiet-action" onClick={() => setExpandedGrammarIndex(state.grammarIndex)}>Volver a ver el truco</button></div></GameCard> : currentLesson ? <GrammarCoach key={currentForm.id} lesson={currentLesson} form={currentForm} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} conversationAnswers={learningMode === 'adventure' ? conversationPracticeAnswers(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : []} reviewMode={reviewMode} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : <GrammarFallbackLesson vertical={!reviewMode} key={currentForm.id} form={currentForm} baseSpanish={baseSpanish} index={state.grammarIndex} total={grammarForms.length} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : null}
 
         {state.phase === 'build' ? <SentenceBuilderCard key={`build-${state.sentenceIndex}`} vertical={!reviewMode} sentence={sentence} vocabulary={unit.words} sceneWord={unit.words[0]} processForm={unit.grammar.find((form) => form.id === 'ing') ?? unit.grammar[0]} index={state.sentenceIndex} total={sentences.length} filledSlots={state.filledSlots} choiceSeed={sessionSeed + state.sentenceIndex} needsModel={(state.buildRepair?.failures ?? 0) >= 2} lastIncorrectChoice={state.buildRepair?.choice} onAcceptModel={() => placeConstruction(true)}
           preparationStep={state.preparationStep ?? 0} onPreparationChange={(step) => dispatch({ type: 'prepareSlot', sentenceIndex: state.sentenceIndex, slotIndex: state.filledSlots, step, stepCount: sentence.slots[state.filledSlots]?.preparation?.length ?? 0 })}

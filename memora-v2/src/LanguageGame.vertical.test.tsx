@@ -15,6 +15,8 @@ import { getPlayableGrammar } from './domain/unit';
 import { lessonForForm } from './domain/grammarLesson';
 import { recordGrammarAttempt, readGrammarAttempts } from './domain/grammarMemory';
 import { playEnglish, playSpanish } from './services/audio';
+import { GrammarFallbackLesson } from './components/GrammarFallbackLesson';
+import { makeGrammarChecks } from './domain/grammarPractice';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -66,6 +68,25 @@ it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar',
   await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(before);
+});
+it('una forma sin coach entra en fallback vertical y enlaza al constructor sin cierre ni acierto inventado', async () => {
+  // Missing base translation selects the existing compatibility branch; this fixture is never published.
+  const value: AtomicUnit = { ...previewUnit, grammar: [previewUnit.grammar[0]], words: previewUnit.words.filter((word) => word.en.toLowerCase() !== previewUnit.grammar[0].englishBase) };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  expect(tree.root.findByType(GrammarFallbackLesson).props.vertical).toBe(true);
+  for (let i = 0; i < 4; i++) await swipe(false);
+  const checks = makeGrammarChecks(value.grammar[0]);
+  await swipe(false); // Cannot answer an unresolved question with a gesture.
+  expect(text(tree.toJSON())).toContain(checks[0].prompt);
+  await act(async () => button(checks[0].answer).props.onClick());
+  expect(text(tree.toJSON())).toContain('✓ Acertaste');
+  await swipe(false); await swipe(false); // Teach the new person before testing.
+  await act(async () => button(checks[1].answer).props.onClick());
+  await swipe(false);
+  expect(tree.root.findAllByType(GrammarFallbackLesson)).toHaveLength(0);
+  expect(readGameCheckpoint(user, value.id, value.contentVersion ?? '1')?.phase).toBe('build');
+  expect(readLearningActivities(user).filter((row) => row.correct === true)).toHaveLength(0);
 });
 it('salir y volver conserva montaje parcial y modelo usado sin repetir historia ni fabricar intento', async () => {
   await mount(); await swipe(false);
