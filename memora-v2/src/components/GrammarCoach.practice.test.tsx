@@ -124,6 +124,29 @@ it('revela primero la persona y nunca muestra una traducción inglesa sin sujeto
   expect(revealed).toContain('YO'); expect(revealed).toContain('am');
   expect(revealed).toContain('coach-language">INGLÉS');
 });
+it('el recorrido vertical conserva la pregunta preparada y orienta hasta la práctica sin acreditar aprendizaje', () => {
+  const props = { lesson: generatedLesson, puzzle: true };
+  expect(render(props)).toContain('Preparación · paso 1 de 3');
+  expect(nodes[0].props.advanceLabel).toBe('¿Quién está jugando?');
+  nodes[0].props.onAdvance();
+  expect(render(props)).toContain('Preparación · paso 2 de 3');
+  expect(nodes[0].props.advanceLabel).toBe('Ver cómo encajan las piezas →');
+  nodes[0].props.onAdvance(); render(props);
+  expect(nodes[0].props.advanceLabel).toBe('Probarlo con mis palabras →');
+  nodes[0].props.onAdvance();
+  expect(render(props)).toContain('Práctica · reto 1 de 3');
+  expect(nodes.find((node) => node.type === GrammarOrder)).toBeTruthy();
+  expect(nodes[0].props.onAdvance).toBeUndefined();
+  expect(readLearningActivities('learner')).toHaveLength(0);
+  expect(complete).not.toHaveBeenCalled();
+});
+it('el recorrido sin etiquetas editoriales anuncia la última pieza y respeta la posición reanudada', () => {
+  const steps = generatedLesson.steps.map(({ advanceLabel: _label, ...step }) => step);
+  const props = { lesson: { ...generatedLesson, steps }, puzzle: true, startAtExample: true };
+  expect(render(props)).toContain('Preparación · paso 3 de 3');
+  expect(nodes[0].props.advanceLabel).toBe('Practicar el mensaje');
+  expect(readLearningActivities('learner')).toHaveLength(0);
+});
 it('reutiliza la estructura generada sin repetir la pregunta, pero exige escribir el nuevo mensaje', () => {
   const html = render({ startAtPractice: true, omitGeneratedExplanation: true });
   expect(html).not.toContain('¿Qué falta?');
