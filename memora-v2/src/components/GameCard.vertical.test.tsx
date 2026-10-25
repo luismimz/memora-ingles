@@ -98,3 +98,20 @@ it('cancelar toque corta intención anterior', () => {
   act(() => { region().props.onTouchStart(event({ touches: [{ clientY: 300 }] })); region().props.onTouchCancel(); region().props.onTouchMove(event({ touches: [{ clientY: 100 }] })); vi.advanceTimersByTime(230); });
   expect(advance).not.toHaveBeenCalled();
 });
+it('reserva la zona inferior sin fingir una acción mientras la pregunta está pendiente', () => {
+  mount(undefined);
+  expect(tree.root.findByProps({ className: 'card-vertical-rest' }).props['aria-hidden']).toBe('true');
+  expect(tree.root.findAllByType('button')).toHaveLength(0);
+  act(() => tree.update(<GameCard vertical onAdvance={() => {}}>Resultado</GameCard>));
+  expect(tree.root.findAllByProps({ className: 'card-vertical-rest' })).toHaveLength(0);
+  expect(tree.root.findAllByType('button')).toHaveLength(1);
+});
+it('la salida vertical es corta, no expulsa el contenido una pantalla entera', () => {
+  const advance = vi.fn(); mount(advance);
+  act(() => tree.root.findByType('button').props.onClick());
+  expect(region().props.style.transform).toBe('translate3d(0, -32px, 0)');
+  expect(advance).not.toHaveBeenCalled();
+  act(() => { vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+  expect(region().props.style.transform).toBe('translate3d(0, 0px, 0)');
+});

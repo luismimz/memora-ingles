@@ -1,9 +1,11 @@
 .game-card-anchor.card-vertical::before { display: none; }
 .game-card-anchor.card-vertical { display: flex; flex-direction: column; height: max(360px, calc(100svh - 150px)); min-height: 0; }
-.card-vertical-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; touch-action: pan-y; scrollbar-width: thin; border-radius: 28px; background: var(--surface-strong); box-shadow: var(--shadow); transition: transform .23s ease; }
+.card-vertical-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; touch-action: pan-y; scrollbar-width: thin; border-radius: 28px; background: var(--surface-strong); box-shadow: var(--shadow); transition: transform .23s cubic-bezier(.22,.68,0,1), opacity .23s ease; }
+.card-vertical-scroll.is-exiting { opacity: 0; }
 .game-card-anchor.card-vertical .card-vertical-page { position: relative; min-height: 100%; height: auto; border-radius: 28px; box-shadow: none; }
 .card-vertical .game-card-body { padding: clamp(18px, 4vw, 30px); flex-direction: column; }
-.card-vertical-next { flex: 0 0 auto; display: grid; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--page); }
+.card-vertical-next, .card-vertical-rest { flex: 0 0 auto; min-height: calc(72px + max(12px, env(safe-area-inset-bottom))); background: var(--surface-strong); }
+.card-vertical-next { display: grid; align-items: center; padding: 12px 16px max(12px, env(safe-area-inset-bottom)); border-top: 1px solid var(--line); }
 .card-vertical-next button { display: flex; justify-content: space-between; gap: 16px; align-items: center; width: 100%; min-height: 48px; padding: 14px 20px; border: 0; border-radius: 14px; background: var(--accent-ink); color: var(--page); font: inherit; font-weight: 750; cursor: pointer; }
 .card-vertical-next button > span:first-child { min-width: 0; overflow-wrap: anywhere; text-align: left; }
 .feed-next-arrow { flex-shrink: 0; font-size: 1.6rem; line-height: 1; }
@@ -18,4 +20,4 @@
 .card-vertical.chat-card .chat-content { flex: none; width: 100%; }
 .chat-flow-ready { color: var(--muted); font-size: .88rem; text-align: center; }
 @media (max-width: 500px) { .card-vertical-scroll { border-radius: 20px; } .card-vertical .card-vertical-page { border-radius: 20px; } }
-@media (prefers-reduced-motion: reduce) { .card-vertical-scroll { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .card-vertical-scroll { transition: none; } .card-vertical-scroll.is-exiting { opacity: 1; } }

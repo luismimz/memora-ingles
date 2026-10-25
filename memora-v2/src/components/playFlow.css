@@ -1,12 +1,13 @@
-.game-screen.play-flow { height: 100dvh; min-height: 0; padding: 0; overflow: hidden; }
+.game-screen.play-flow { height: 100dvh; min-height: 0; padding: 0; overflow: hidden; background: var(--surface-strong); }
+:root[data-appearance='dark'] .game-screen.play-flow { background: var(--surface-strong); }
 .play-flow .game-card-anchor::before { display: none; }
-.play-flow .game-card-face { box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.play-flow .game-card-face { border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .play-flow :is(.quiet-action, .slot-options button, .coach-options button, .card-vertical-next button) { font-weight: 600; }
 .play-header { flex: 0 0 auto; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; width: min(100%, 960px); padding: max(6px, env(safe-area-inset-top)) 12px 6px; color: var(--ink); }
 .play-header .activity-back { min-height: 44px; font: inherit; font-size: .8rem; padding: 8px 0; }
 .play-intention { margin: 0; font-size: .9rem; font-weight: 750; line-height: 1.25; text-align: center; text-wrap: balance; }
 .play-header-context { display: grid; gap: 4px; min-width: 0; text-align: center; }
-.play-header { border-bottom: 1px solid var(--line); background: var(--page); }
+.play-header { border-bottom: 1px solid var(--line); background: var(--surface-strong); }
 .play-options { position: relative; }
 .play-options > summary { position: relative; list-style: none; min-width: 44px; min-height: 44px; display: grid; place-items: center; cursor: pointer; font-size: 1rem; letter-spacing: .05em; border-radius: 12px; }
 .play-options > summary::-webkit-details-marker { display: none; }
@@ -21,7 +22,9 @@
 .play-flow .game-card-anchor:not(.card-vertical) { height: 100%; margin: 0 auto; overflow-y: auto; overscroll-behavior-y: contain; }
 .play-flow .card-vertical-scroll { height: auto; border-radius: 22px 22px 0 0; }
 .play-flow .card-vertical .game-card-body { padding: clamp(16px, 4vw, 28px); }
+.play-flow .card-vertical.chat-card .card-vertical-page { height: auto; min-height: 100%; }
 .play-flow .card-vertical-next { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
+.play-flow .card-vertical-next { border-top: 0; }
 .play-flow .card-vertical-next button { min-height: 48px; padding: 12px 20px; }
 .play-header :focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
 .play-flow .association-word-top { display: flex; align-items: center; gap: 12px; width: 100%; }

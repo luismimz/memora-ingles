@@ -56,7 +56,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
     if (vertical) { touchStart.current = undefined; wheelGesture.current.allowed = false; }
     const origin = stepKey;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    setDragX(reduced ? 0 : -800);
+    setDragX(reduced ? 0 : vertical ? -32 : -800);
     setExiting(true);
     timer.current = window.setTimeout(() => {
       // A step can change inside this same card (not always unmount it).
@@ -140,7 +140,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
         }}>
         <article className="game-card-face card-vertical-page"><div className="game-card-body">{children}{back ? <details className="card-vertical-memory"><summary>Recordar la escena</summary>{back}</details> : null}</div></article>
       </div>
-      {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel} title="Desliza hacia arriba o toca para seguir"><span>{verticalAdvanceLabel}</span><span className="feed-next-arrow" aria-hidden="true">↑</span></button></footer> : null}
+      {onAdvance && revealFooter ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel} title="Desliza hacia arriba o toca para seguir"><span>{verticalAdvanceLabel}</span><span className="feed-next-arrow" aria-hidden="true">↑</span></button></footer> : <div className="card-vertical-rest" aria-hidden="true" />}
     </div>;
   }
 

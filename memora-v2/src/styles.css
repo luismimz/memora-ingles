@@ -3,42 +3,46 @@
 :root {
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Avenir Next', system-ui, sans-serif;
   font-synthesis: none;
-  --page: #f5f5f7;
-  --ink: #1d1d1f;
-  --muted: #63636b;
-  --accent: #0071e3;
-  --accent-ink: #0066cc;
-  --surface: #fafafa;
+  --page: #f3f5f8;
+  --ink: #202938;
+  --muted: #586477;
+  --accent: #335fc7;
+  --accent-ink: #315bbd;
+  --surface: #f8f9fc;
   --surface-strong: #ffffff;
-  --surface-soft: #eeeef2;
-  --line: #dcdce1;
+  --surface-soft: #edf1f7;
+  --line: #d7dee9;
   --shadow: 0 12px 36px rgba(0, 0, 0, .06);
-  --warm: #a84925;
-  --warm-soft: #fff0df;
-  --grammar-aux: #245d8c;
-  --grammar-aux-soft: #e5eff9;
-  --grammar-verb: #275f54;
-  --grammar-verb-soft: #e6f0eb;
+  --warm: #995126;
+  --warm-soft: #f8ecdf;
+  --grammar-subject: #316653;
+  --grammar-subject-soft: #e8f1ec;
+  --grammar-aux: #315e9a;
+  --grammar-aux-soft: #e9effa;
+  --grammar-verb: #995126;
+  --grammar-verb-soft: #f8ecdf;
   color: var(--ink);
   background: var(--page);
 }
 :root[data-appearance='dark'] {
-  --page: #111113;
-  --ink: #f5f5f7;
-  --muted: #b0b0b8;
-  --accent: #90c6ff;
-  --accent-ink: #90c6ff;
-  --surface: #19191c;
-  --surface-strong: #202023;
-  --surface-soft: #2c2c30;
-  --line: #424247;
+  --page: #131923;
+  --ink: #edf2fa;
+  --muted: #afbdd0;
+  --accent: #a3bcff;
+  --accent-ink: #a3bcff;
+  --surface: #192230;
+  --surface-strong: #1c2635;
+  --surface-soft: #29364a;
+  --line: #43536b;
   --shadow: 0 18px 50px rgba(0, 0, 0, .24);
-  --warm: #ffc18d;
-  --warm-soft: #513b27;
-  --grammar-aux: #a6d4fa;
-  --grammar-aux-soft: #263b4c;
-  --grammar-verb: #a5d9c6;
-  --grammar-verb-soft: #293f35;
+  --warm: #edbf96;
+  --warm-soft: #46372e;
+  --grammar-subject: #a6d5bd;
+  --grammar-subject-soft: #263e36;
+  --grammar-aux: #b0cbf7;
+  --grammar-aux-soft: #293b57;
+  --grammar-verb: #edbf96;
+  --grammar-verb-soft: #46372e;
 }
 * { box-sizing: border-box; }
 html, body, #root { min-width: 320px; min-height: 100%; margin: 0; }
@@ -51,7 +55,8 @@ button:focus-visible, .game-card-swipe:focus-visible { outline: 3px solid var(--
 .coach-row { font-size: clamp(1.8rem, 5vw, 3.1rem); font-weight: 850; line-height: 1.45; margin: 0; overflow-wrap: break-word; white-space: pre-wrap; text-wrap: balance; }
 .coach-piece { box-decoration-break: clone; -webkit-box-decoration-break: clone; }
 .coach-change { color: var(--warm); background: var(--warm-soft); border-radius: 6px; }
-.coach-auxiliary, .coach-subject { color: var(--grammar-aux); background: var(--grammar-aux-soft); border-radius: 6px; }
+.coach-auxiliary { color: var(--grammar-aux); background: var(--grammar-aux-soft); border-radius: 6px; }
+.coach-subject { color: var(--grammar-subject); background: var(--grammar-subject-soft); border-radius: 6px; }
 .coach-verb { color: var(--grammar-verb); background: var(--grammar-verb-soft); border-radius: 6px; }
 .coach-context { color: inherit; }
 .coach-caption .coach-piece:not(.coach-context) { font-weight: 750; }
@@ -59,8 +64,6 @@ button:focus-visible, .game-card-swipe:focus-visible { outline: 3px solid var(--
 .grammar-inline { white-space: pre-wrap; }
 .coach-direction { color: var(--muted); font-size: 1.2rem; }
 .coach-pause { align-self: center; min-height: 44px; }
-.journey-trick .coach-subject { color: var(--grammar-verb); background: var(--grammar-verb-soft); }
-.journey-trick .coach-verb, .journey-trick .coach-change { color: var(--warm); background: var(--warm-soft); }
 .coach-practice { flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 24px; }
 .coach-practice h2 { font-size: clamp(1.6rem, 4vw, 2.5rem); line-height: 1.25; margin: 0; }
 .coach-options { display: grid; gap: 12px; }
@@ -327,8 +330,8 @@ body { background: var(--page); }
 .spanish-subject.is-reduced .spanish-subject-pieces .subject-being { opacity: 0; transform: translateX(-.5em); }
 .spanish-subject-result { position: absolute; opacity: 0; transform: translateX(.5em) scale(.92); color: var(--accent-ink); transition: opacity .12s ease, transform .12s ease; }
 .spanish-subject.is-reduced .spanish-subject-result { opacity: 1; transform: translateX(0) scale(1); transition: opacity .3s ease .2s, transform .4s cubic-bezier(.2,.8,.2,1) .2s; }
-.subject-person { color: var(--accent-ink); }
-.subject-being { color: var(--accent-ink); }
+.subject-person { color: var(--grammar-subject); }
+.subject-being { color: var(--grammar-aux); }
 .morph-root { color: var(--ink); }
 .morph-intent { color: var(--warm); border-radius: 12px; background: var(--warm-soft); padding: .03em .08em; }
 .morph-piece { transition: opacity .25s ease, transform .35s ease; }

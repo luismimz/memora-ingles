@@ -11,10 +11,10 @@ it('mantiene fondo del navegador, esquema y preferencia sincronizados al cambiar
   function Harness() { const theme = useAppearance(); return <button onClick={theme.toggleAppearance}>{theme.appearance}</button>; }
   let tree!: ReturnType<typeof create>;
   act(() => { tree = create(<Harness />); });
-  expect(setAttribute).toHaveBeenLastCalledWith('content', '#f5f5f7');
+  expect(setAttribute).toHaveBeenLastCalledWith('content', '#f3f5f8');
   act(() => tree.root.findByType('button').props.onClick());
   expect(element.dataset.appearance).toBe('dark'); expect(element.style.colorScheme).toBe('dark');
-  expect(setAttribute).toHaveBeenLastCalledWith('content', '#111113');
+  expect(setAttribute).toHaveBeenLastCalledWith('content', '#131923');
   expect(values.get('memora-v2.appearance')).toBe('dark');
   act(() => tree.unmount());
 });

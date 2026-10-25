@@ -15,4 +15,11 @@ it.each(['light', 'dark'])('la paleta %s mantiene contraste de texto, acción y 
     expect(contrast(tokens['--accent-ink'], tokens[surface])).toBeGreaterThanOrEqual(4.5);
   }
   expect(contrast(tokens['--page'], tokens['--accent-ink'])).toBeGreaterThanOrEqual(4.5);
+  for (const role of ['subject', 'aux', 'verb']) expect(contrast(tokens[`--grammar-${role}`], tokens[`--grammar-${role}-soft`])).toBeGreaterThanOrEqual(4.5);
+});
+it('persona y auxiliar conservan su color entre coach y morfología, sin otro tema de aventura', () => {
+  expect(css).toMatch(/\.coach-subject\s*\{[^}]*var\(--grammar-subject\)/);
+  expect(css).toMatch(/\.subject-person\s*\{[^}]*var\(--grammar-subject\)/);
+  expect(css).toMatch(/\.subject-being\s*\{[^}]*var\(--grammar-aux\)/);
+  expect(css).not.toContain('.journey-trick .coach-subject');
 });
