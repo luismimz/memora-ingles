@@ -223,7 +223,12 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   const promptIndex = messages.findIndex((message) => message.id === `prompt-${round}`);
   const previousReplyIndex = messages.findIndex((message) => message.id === `reply-${round - 1}`);
   const turnStart = promptIndex >= 0 ? promptIndex : previousReplyIndex >= 0 ? previousReplyIndex + 1 : 0;
-  const messageView = (message: ChatMessage, historical = false) => <TypedChatMessage key={message.id} message={historical ? { ...message, instant: true } : message} partner={partner} form={form} renderText={unit.mirror ? (text, language) => <MirrorText text={text} lesson={unit.mirror!} language={language} /> : undefined} autoSpeak={!historical && !message.instant && message.id === activeMessage} onReady={!historical && !message.instant && message.id === activeMessage ? () => messageReady(message.id) : undefined} />;
+  const messageView = (message: ChatMessage, historical = false) => {
+    const active = !historical && !message.instant && message.id === activeMessage;
+    // The model already owns the voice when passing with help. Keep the reply
+    // readable and ready, without cancelling that pronunciation model.
+    return <TypedChatMessage key={message.id} message={historical ? { ...message, instant: true } : message} partner={partner} form={form} renderText={unit.mirror ? (text, language) => <MirrorText text={text} lesson={unit.mirror!} language={language} /> : undefined} autoSpeak={active && !revealedAnswer} onReady={active ? () => messageReady(message.id) : undefined} />;
+  };
   return <GameCard vertical={vertical} stepKey={`chat:${round}:${awaitingNext ? 'reply' : 'answer'}`} onAdvance={vertical && awaitingNext ? following : undefined} advanceLabel={followingLabel} className={`conversation-card chat-card ${turns.length === 1 ? 'chat-single-turn' : ''}`}>
     <div className="conversation-content chat-content">
       <header className="chat-header"><span className="chat-avatar" aria-hidden="true">{partner[0]}</span><div><strong>{partner}</strong><small>{turn.id === 'ask' ? 'Ahora preguntas tú' : turn.id === 'transfer' ? 'Otra situación' : 'Una conversación en casa'}</small></div><span>{round + 1}/{turns.length}</span></header>

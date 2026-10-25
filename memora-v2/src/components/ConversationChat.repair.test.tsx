@@ -6,6 +6,7 @@ import { conversationTurns } from '../domain/conversation';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { ConversationPractice } from './ConversationChat';
+import { playEnglish } from '../services/audio';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
 let tree: ReactTestRenderer;
@@ -77,6 +78,25 @@ it('solicitar un audio bloqueado no dice escuchado ni fabrica una respuesta, y p
   expect(tree.root.findByType('input').props.disabled).toBe(false);
   await type(conversationTurns(unit)[0].expected.en); await submit();
   expect(attempts()).toMatchObject([{ correct: true, helped: true }]);
+});
+it('la respuesta del personaje no corta el modelo con otra voz automática al pasar con ayuda', async () => {
+  await mount(true);
+  vi.mocked(playEnglish).mockClear();
+  await act(async () => button('Ver respuesta y pasar').props.onClick());
+  expect(playEnglish).toHaveBeenCalledTimes(1);
+  expect(vi.mocked(playEnglish).mock.calls[0][0]).toBe(conversationTurns(unit)[0].expected.en);
+  expect(text(tree.toJSON())).toContain('Así se dice:');
+  expect(tree.root.findAllByType('button').some((node) => node.props['aria-label']?.startsWith('Escuchar a '))).toBe(true);
+  await act(async () => { vi.advanceTimersByTime(3000); });
+  expect(playEnglish).toHaveBeenCalledTimes(1);
+  expect(JSON.parse(localStorage.getItem(key)!)).toMatchObject({ revealedAnswer: true, awaitingNext: true });
+  expect(attempts()).toHaveLength(0);
+  const before = readLearningActivities(user);
+  const reply = conversationTurns(unit)[0].reply.en;
+  const listen = tree.root.findAllByType('button').find((node) => node.props['aria-label']?.endsWith(`: ${reply}`))!;
+  await act(async () => listen.props.onClick());
+  expect(vi.mocked(playEnglish).mock.calls.at(-1)?.[0]).toBe(reply);
+  expect(readLearningActivities(user)).toEqual(before);
 });
 it('la presentación vertical espera el gesto tras cada respuesta, incluso en diálogo de cadencia automática', async () => {
   const automatic = structuredClone(unit);

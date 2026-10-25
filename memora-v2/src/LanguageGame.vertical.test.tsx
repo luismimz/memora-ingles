@@ -156,6 +156,67 @@ it('la respuesta del personaje ya recibida reaparece completa y en silencio, sin
   expect(text(tree.toJSON())).toContain('Has practicado la escena.');
   expect(localStorage.getItem(`memora-v2.chat-checkpoint.${user}.${previewUnit.id}`)).toBeNull();
 });
+it('el mensaje interrumpido termina al volver y el borrador ayudado se retoma sin repetirlo', async () => {
+  const dialogue = previewUnit.communication!.dialogue!;
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  const key = `memora-v2.chat-checkpoint.${user}.${previewUnit.id}`;
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'conversation' });
+  localStorage.setItem(key, JSON.stringify({ version: previewUnit.contentVersion ?? '1', round: 0, turnId: 'respond', messages: [{ id: 'prompt-0', who: 'partner', text: dialogue.turns[0].en }], activeMessage: 'prompt-0', busy: true, input: '', helped: false, hintLevel: 0, awaitingNext: false, oral: false, revealedAnswer: false, savedMessages: [], serial: 0 }));
+  vi.mocked(playEnglish).mockClear(); await open();
+  expect(tree.root.findByType(AnswerStudio).props.disabled).toBe(true);
+  expect(tree.root.findByType(GameCard).props.onAdvance).toBeUndefined();
+  await act(async () => { vi.advanceTimersByTime(3000); });
+  expect(tree.root.findByType(AnswerStudio).props.disabled).toBe(false);
+  expect(playEnglish).toHaveBeenCalledOnce();
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'partner-prompt-0')).toHaveLength(1);
+  act(() => button('Pista escrita').props.onClick());
+  act(() => tree.root.findByType('input').props.onChange({ target: { value: 'I am' } }));
+  const before = readLearningActivities(user);
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await open();
+  expect(tree.root.findByType(AnswerStudio).props.value).toBe('I am');
+  expect(tree.root.findByType(AnswerStudio).props.disabled).toBe(false);
+  await act(async () => { vi.advanceTimersByTime(3000); });
+  expect(playEnglish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: dialogue.turns[1].en } }));
+  await act(async () => { vi.advanceTimersByTime(450); });
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
+});
+it('dos errores en el chat principal mantienen reparación y modelo al reabrir, sin acierto inventado', async () => {
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  const key = `memora-v2.chat-checkpoint.${user}.${previewUnit.id}`;
+  const attempts = () => readLearningActivities(user).filter((event) => event.activityId === 'turn-respond');
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'conversation' });
+  await open();
+  await act(async () => { vi.advanceTimersByTime(3000); });
+  for (const response of ['I playing', 'I play now']) {
+    act(() => tree.root.findByType('input').props.onChange({ target: { value: response } }));
+    act(() => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  }
+  expect(attempts()).toMatchObject([{ correct: false, helped: false }, { correct: false, helped: true }]);
+  expect(attempts()[1].parentAttemptId).toBe(attempts()[0].id);
+  const before = readLearningActivities(user);
+  act(() => tree.unmount()); await open();
+  expect(tree.root.findAllByType(AnswerStudio)).toHaveLength(0);
+  expect(text(tree.toJSON())).toContain('No necesitas repetirlo más');
+  expect(readLearningActivities(user)).toEqual(before);
+  await swipe(false);
+  expect(readLearningActivities(user)).toEqual(before);
+  const model = button('Ver el modelo y seguir →').props.onClick;
+  act(() => { model(); model(); });
+  await act(async () => { vi.advanceTimersByTime(3000); });
+  expect(JSON.parse(localStorage.getItem(key)!)).toMatchObject({ failedAttempts: 2, revealedAnswer: true, awaitingNext: true });
+  const modeled = readLearningActivities(user);
+  expect(modeled.filter((event) => event.activityId === 'chat-skip-respond')).toMatchObject([{ correct: null, helped: true, parentAttemptId: attempts()[1].id }]);
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await open();
+  expect(tree.root.findAllByType(AnswerStudio)).toHaveLength(0);
+  expect(readLearningActivities(user)).toEqual(modeled);
+  expect(playEnglish).not.toHaveBeenCalled();
+  await swipe(false);
+  expect(tree.root.findAllByType(ConversationPractice)).toHaveLength(0);
+  expect(attempts()).toHaveLength(2);
+  expect(attempts().some((event) => event.correct)).toBe(false);
+});
 it('el coach principal reabre explicación, piezas y acierto sin volver al inicio ni duplicar intentos', async () => {
   const saved = () => readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1');
   const open = async () => { await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
