@@ -33,6 +33,7 @@ it('orienta desde un historial vacío con una sola acción principal y el archiv
   const primary = tree.root.findAllByProps({ className: 'primary-action' });
   expect(primary).toHaveLength(1); expect(text(primary[0])).toBe('Ir a mi recorrido');
   expect(tree.root.findByProps({ className: 'evolution-section' }).props.open).toBeUndefined();
+  expect(tree.root.findAllByProps({ className: 'history-log' })).toHaveLength(0);
   const before = [...values];
   await act(async () => primary[0].props.onClick());
   expect(back).toHaveBeenCalledOnce(); expect(practice).not.toHaveBeenCalled();
@@ -72,6 +73,7 @@ it('la revisión no lee datos personales y el buscador/archivo no escriben progr
   expect(counts()).toEqual(['0', '0', '0']);
   expect(tree.root.findAllByType('time')).toHaveLength(0);
   expect(text(tree.toJSON())).toContain('no lee ni modifica tu historial');
+  await act(async () => tree.root.findByProps({ className: 'evolution-section' }).props.onToggle({ currentTarget: { open: true } }));
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'inexistente' } }));
   expect(text(tree.toJSON())).toContain('No hay coincidencias.');
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: '' } }));
@@ -87,4 +89,27 @@ it('una oportunidad futura no impide seguir aprendiendo ni se convierte en domin
   expect(next).not.toContain('repasos sugeridos entre');
   expect(counts()).toEqual(['0', '0', '0']);
   expect(tree.root.findByProps({ className: 'primary-action' }).props.disabled).toBeUndefined();
+});
+it('monta el archivo solo al abrirlo y conserva búsqueda, correcciones e historial al cerrar y volver', async () => {
+  const wrong = record({ correct: false, response: 'I playing', feedback: 'Añade AM.' });
+  record({ helped: true, parentAttemptId: wrong.id });
+  record({ source: 'authored', activityId: 'partner-reply', response: 'Tu mensaje llegó.', responseLanguage: 'es', correct: null, speaker: 'Emma' });
+  const before = [...values];
+  await mount();
+  const toggle = (open: boolean) => tree.root.findByProps({ className: 'evolution-section' }).props.onToggle({ currentTarget: { open } });
+  expect(tree.root.findAllByProps({ className: 'history-log' })).toHaveLength(0);
+  await act(async () => toggle(true));
+  expect(text(tree.toJSON())).toContain('Añade AM.');
+  expect(text(tree.toJSON())).toContain('Nuevo intento');
+  expect(text(tree.toJSON())).toContain('Tu mensaje llegó.');
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'inexistente' } }));
+  await act(async () => toggle(false));
+  expect(stopSpeech).toHaveBeenCalled();
+  expect(tree.root.findAllByProps({ className: 'history-log' })).toHaveLength(0);
+  await act(async () => toggle(true));
+  expect(tree.root.findByType('input').props.value).toBe('inexistente');
+  expect(text(tree.toJSON())).toContain('No hay coincidencias.');
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: '' } }));
+  expect(text(tree.toJSON())).toContain('Añade AM.');
+  expect([...values]).toEqual(before);
 });

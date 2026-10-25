@@ -8,7 +8,8 @@ import { conversationTurns } from './conversation';
 import { MirrorQuestion, MirrorRow, mirrorSegments } from '../components/MirrorPieces';
 import { MirrorWriteTest } from '../components/MirrorWriteTest';
 import { initializeJournal, readJournal } from './progressJournal';
-import { recordLearningActivity } from './learningActivity';
+import { readLearningActivities, recordLearningActivity } from './learningActivity';
+import { projectConversations } from './conversationHistory';
 import { restoreProgress } from './restoreProgress';
 import { dueSentenceMemories, recordSentenceExposure } from './memory';
 import { makeDeck } from '../components/DailyArcade';
@@ -89,7 +90,7 @@ describe('ficha espejo completa', () => {
     expect(makeDeck('learner', [unit], false).some((question) => question.sentenceKey && question.answer === "I'm eating.")).toBe(true);
     vi.useRealTimers();
   });
-  it('Mi evolución permite leer intentos, pistas y mensajes del personaje sin abrir el juego', () => {
+  it('Mi evolución conserva intentos y correcciones, pero abre primero el resumen sin montar el archivo', () => {
     const base = { unitId: unit.id, unitTitle: unit.title, contentVersion: '1', skill: lesson.id, phase: 'dialogue' as const, modality: 'writing' as const, prompt: 'What are you doing?', expected: "I'm working", helped: false };
     const wrong = recordLearningActivity('learner', { ...base, source: 'learner', activityId: 'turn-respond', response: 'I working', correct: false, feedback: 'Falta la pieza azul.' });
     recordLearningActivity('learner', { ...base, source: 'learner', activityId: 'turn-respond', response: "I'm working", correct: true, helped: true, parentAttemptId: wrong.id });
@@ -97,7 +98,10 @@ describe('ficha espejo completa', () => {
     const reconstructed = restoreProgress('learner', readJournal('learner')!.events);
     reconstructed.forEach((value, key) => localStorage.setItem(key, value));
     const html = renderToStaticMarkup(<EvolutionView userId="learner" units={[unit]} pilot={null} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} onBack={() => {}} onPractice={() => {}} onProfile={() => {}} onExit={() => {}} />);
-    expect(html).toContain('I working'); expect(html).toContain('Falta la pieza azul.'); expect(html).toContain('Mensaje del personaje'); expect(html).toContain('Vale, volveré después.'); expect(html).toContain('Nuevo intento');
+    const archive = projectConversations(readLearningActivities('learner'));
+    expect(JSON.stringify(archive)).toContain('I working'); expect(JSON.stringify(archive)).toContain('Falta la pieza azul.');
+    expect(archive[0].messages.some((message) => message.who === 'partner' && message.text.includes('come back later'))).toBe(true);
+    expect(html).toContain('Conversaciones e intentos'); expect(html).not.toContain('I working'); expect(html).not.toContain('history-log');
     expect(html).toContain('<dt>Aciertos escritos sin ayuda registrada</dt><dd>0</dd>');
     expect(html).toContain('<dt>Aciertos con ayuda u opciones</dt><dd>1</dd>');
   });

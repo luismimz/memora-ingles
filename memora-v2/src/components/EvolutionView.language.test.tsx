@@ -15,7 +15,10 @@ const unit = preparedDogWalkingPractice(source, 'ing', memories)!.unit;
 const user = 'history-language-isolated';
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
-async function history() { await act(async () => { tree = create(<EvolutionView userId={user} units={[]} pilot={null} syncStatus="saved" onBack={() => {}} onPractice={() => {}} onProfile={() => {}} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); }
+async function history() {
+  await act(async () => { tree = create(<EvolutionView userId={user} units={[]} pilot={null} syncStatus="saved" onBack={() => {}} onPractice={() => {}} onProfile={() => {}} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  await act(async () => tree.root.findByProps({ className: 'evolution-section' }).props.onToggle({ currentTarget: { open: true } }));
+}
 beforeEach(() => {
   vi.useFakeTimers(); vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
   const values = new Map<string, string>();

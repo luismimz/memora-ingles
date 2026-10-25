@@ -14,6 +14,7 @@ import { EvolutionMemoryLibrary } from './EvolutionMemoryLibrary';
 export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode = false, onBack, onPractice, onProfile, onExit, appearance, onToggleAppearance }: { userId: string; units: UnitSummary[]; pilot: AtomicUnit | null; syncStatus: SyncStatus; inspectionMode?: boolean; onBack: () => void; onPractice: () => void; onProfile: () => void; onExit: () => void; appearance: Appearance; onToggleAppearance: () => void }) {
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string>();
+  const [historyOpen, setHistoryOpen] = useState(false);
   const records = inspectionMode ? [] : readLearningActivities(userId);
   const memories = inspectionMode ? [] : readWordMemories(userId);
   const sentences = inspectionMode ? [] : readSentenceMemories(userId);
@@ -29,7 +30,7 @@ export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode
   const matched = conversations.filter((chat) => `${chat.title} ${chat.messages.map((message) => `${message.text} ${message.feedback ?? ''}`).join(' ')}`.toLowerCase().includes(query.toLowerCase()));
   const active = matched.find((chat) => chat.id === selected) ?? matched[0];
   const log = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [active?.id, active?.lastAt]);
+  useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [historyOpen, active?.id, active?.lastAt]);
   useEffect(() => () => stopSpeech(), []);
   return <main className="journey-screen evolution-screen">
     <header className="journey-header"><button type="button" className="journey-brand journey-brand-button" onClick={onBack}><span className="brand-mark">M</span><span>MEMORA</span></button><nav className="journey-menu" aria-label="Navegación principal"><button type="button" onClick={onBack}>Inicio</button><button type="button" aria-current="page">Mi evolución</button><button type="button" onClick={onProfile}>Perfil</button></nav><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button><button type="button" className="journey-exit" onClick={onExit}>Salir</button></header>
@@ -40,7 +41,8 @@ export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode
       <p className="evolution-evidence-note">Son intentos, incluidos los reintentos; no palabras nuevas ni dominio. Consultar un modelo o cerrar una tanda no suma una respuesta.</p>
       <div className="evolution-next"><h2>¿Qué toca ahora?</h2><p>{inspectionMode ? 'La revisión no consulta ni modifica tus repasos personales.' : due > 0 ? `${due} ${due === 1 ? 'repaso sugerido' : 'repasos sugeridos'} entre palabras, piezas y frases. El recorrido prepara la siguiente actividad disponible.` : nextReview ? `Próxima oportunidad sugerida: ${nextReview.toLocaleString('es-ES')}. Puedes seguir aprendiendo antes.` : 'Vuelve al recorrido para continuar desde tu posición. No necesitas escoger entre todos los apartados.'}</p><small>El repaso estima oportunidades; no conoce el instante exacto en que olvidarás algo.</small><button type="button" className="primary-action" onClick={onBack}>{responses.length || memories.length || sentences.length ? 'Volver a mi recorrido' : 'Ir a mi recorrido'}</button></div>
     </section>
-    <details className="evolution-section" onToggle={(event) => { if (event.currentTarget.open && log.current) log.current.scrollTop = log.current.scrollHeight; }}><summary>Conversaciones e intentos <small>Leer, buscar o escuchar lo que practicaste</small></summary>
+    <details className="evolution-section" onToggle={(event) => { setHistoryOpen(event.currentTarget.open); if (!event.currentTarget.open) stopSpeech(); }}><summary>Conversaciones e intentos <small>Leer, buscar o escuchar lo que practicaste</small></summary>
+    {historyOpen ? <>
     <section className="evolution-controls"><label>Buscar una conversación<input type="search" value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Emma, una expresión o una situación" /></label></section>
     <div className="evolution-layout history-chats"><nav className="history-list" aria-label="Mis conversaciones">{matched.map((chat) => <button type="button" key={chat.id} aria-current={active?.id === chat.id ? 'page' : undefined} onClick={() => setSelected(chat.id)}><strong>{chat.title}</strong><small>{chat.practice ? 'Trucos y Arcade · sin mezclarlos con los diálogos' : 'Un chat continuo · varias situaciones'}</small><span>{chat.messages.at(-1)?.text}</span></button>)}{!matched.length ? <p>{query.trim() ? 'No hay coincidencias.' : 'Tus conversaciones aparecerán aquí.'}</p> : null}</nav>
       <section className="history-conversation" aria-label="Intentos y correcciones"><header><h2>{active?.title ?? 'Tu próxima conversación'}</h2><p>Las repeticiones se agrupan. Los intentos originales y sus correcciones se conservan.</p></header>
@@ -54,7 +56,7 @@ export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode
         </article>)}{!active ? <p className="evolution-empty">Al conversar en una historia, podrás volver aquí y leerla sin entrar en el juego.</p> : null}</div>
       </section>
     </div>
-    </details>
+    </> : null}</details>
     <EvolutionMemoryLibrary memories={memories} sentences={sentences} onListen={(english) => void playEnglish(english)} onPractice={onPractice} />
   </main>;
 }
