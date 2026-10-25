@@ -4,7 +4,7 @@ import { stopSpeech } from '../services/audio';
 export const arcadeCheckpointDue = (completed: number, acknowledged: number, interval = 15) => completed > 0 && interval > 0 && completed % interval === 0 && completed !== acknowledged;
 
 /** One clock for vocabulary and grammar. Choosing an answer ends the question immediately. */
-export function useArcadeClock(index: number, revealed: boolean, enabled: boolean, onExpire: () => void, onAdvance: () => void, feedbackMs: number, durationMs = 6000, checkpointEvery = 15, calm = false) {
+export function useArcadeClock(index: number, revealed: boolean, enabled: boolean, onExpire: () => void, onAdvance: () => void, feedbackMs: number, durationMs = 6000, checkpointEvery = 15, calm = false, manualFeedback = calm) {
   const [paused, setPaused] = useState(false);
   const [remaining, setRemaining] = useState(durationMs);
   const [acknowledged, setAcknowledged] = useState(0);
@@ -25,9 +25,9 @@ export function useArcadeClock(index: number, revealed: boolean, enabled: boolea
     return () => window.clearInterval(timer);
   }, [index, enabled, paused, revealed, checkpoint, calm, durationMs]);
   useEffect(() => {
-    if (!enabled || paused || !revealed || checkpoint || calm) return;
+    if (!enabled || paused || !revealed || checkpoint || manualFeedback) return;
     const timer = window.setTimeout(() => { if (!advanced.current) { advanced.current = true; advance.current(); } }, feedbackMs);
     return () => window.clearTimeout(timer);
-  }, [index, enabled, paused, revealed, checkpoint, feedbackMs, calm]);
-  return { paused, remaining, checkpoint, advanceNow: () => { if (calm && enabled && revealed && !paused && !checkpoint && !advanced.current) { advanced.current = true; advance.current(); } }, togglePause: () => setPaused((value) => !value), continuePlaying: () => { setAcknowledged(index); setPaused(false); } };
+  }, [index, enabled, paused, revealed, checkpoint, feedbackMs, manualFeedback]);
+  return { paused, remaining, checkpoint, advanceNow: () => { if ((calm || manualFeedback) && enabled && revealed && !paused && !checkpoint && !advanced.current) { advanced.current = true; advance.current(); } }, togglePause: () => setPaused((value) => !value), continuePlaying: () => { setAcknowledged(index); setPaused(false); } };
 }

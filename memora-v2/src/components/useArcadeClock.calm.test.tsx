@@ -7,8 +7,8 @@ const expire = vi.fn();
 const advance = vi.fn();
 let root: ReactTestRenderer;
 let clock: ReturnType<typeof useArcadeClock>;
-function Harness({ calm, revealed = false, index = 0 }: { calm: boolean; revealed?: boolean; index?: number }) {
-  clock = useArcadeClock(index, revealed, true, expire, advance, 1000, 6000, 15, calm);
+function Harness({ calm, revealed = false, index = 0, manualFeedback }: { calm: boolean; revealed?: boolean; index?: number; manualFeedback?: boolean }) {
+  clock = useArcadeClock(index, revealed, true, expire, advance, 1000, 6000, 15, calm, manualFeedback);
   return null;
 }
 beforeEach(() => {
@@ -50,5 +50,26 @@ it('activar sin reloj cancela el tiempo pendiente y respeta pausa y feedback al 
   act(() => clock.togglePause());
   act(() => root.update(<Harness calm={false} revealed />));
   act(() => { vi.advanceTimersByTime(1000); });
+  expect(advance).toHaveBeenCalledOnce();
+});
+it('separa responder sin reloj de continuar automáticamente después del acierto', () => {
+  act(() => { root = create(<Harness calm manualFeedback={false} />); });
+  act(() => { vi.advanceTimersByTime(60000); });
+  expect(expire).not.toHaveBeenCalled(); expect(advance).not.toHaveBeenCalled();
+  act(() => root.update(<Harness calm revealed manualFeedback={false} />));
+  act(() => { vi.advanceTimersByTime(500); clock.togglePause(); });
+  act(() => { vi.advanceTimersByTime(5000); });
+  expect(advance).not.toHaveBeenCalled();
+  act(() => clock.togglePause());
+  act(() => { vi.advanceTimersByTime(1000); });
+  expect(advance).toHaveBeenCalledOnce();
+});
+it('consultar el resultado cancela avance pendiente sin crear otro reloj ni doble avance', () => {
+  act(() => { root = create(<Harness calm revealed manualFeedback={false} />); });
+  act(() => { vi.advanceTimersByTime(250); });
+  act(() => root.update(<Harness calm revealed manualFeedback />));
+  act(() => { vi.advanceTimersByTime(10000); });
+  expect(advance).not.toHaveBeenCalled();
+  act(() => { clock.advanceNow(); clock.advanceNow(); });
   expect(advance).toHaveBeenCalledOnce();
 });

@@ -37,7 +37,7 @@ beforeEach(() => {
 it('pide escritura sin imagen ni opciones, acepta minúsculas y registra recuperación independiente', () => {
   render();
   expect(nodes.some((node) => node.props.className === 'recall-choices')).toBe(false);
-  expect(hooks.duration).toBe(16000);
+  expect(hooks.calm).toBe(true); expect(hooks.duration).toBe(0);
   const expected = previewUnit.words[2].en;
   nodes.find((node) => node.type === 'input')!.props.onChange({ target: { value: expected.toLowerCase() } });
   render(); nodes.find((node) => node.type === 'form')!.props.onSubmit({ preventDefault() {} });
@@ -61,7 +61,7 @@ it('el error de escritura activa el recordatorio de la misma palabra e historia'
   render(); nodes.find((node) => node.type === 'form')!.props.onSubmit({ preventDefault() {} });
   render();
   const card = nodes.find((node) => node.props.showBack === true)!;
-  expect(card.props.back.props.word).toEqual(previewUnit.words[2]);
+  expect(card.props.back.props.children[0].props.word).toEqual(previewUnit.words[2]);
   expect(readLearningActivities('learner').at(-1)?.correct).toBe(false);
 });
 it('conserva el punto de parada número 15 después de un cambio de modo', () => {
@@ -84,7 +84,7 @@ it('recupera sin reloj al entrar y permite cambiarlo sin tocar el aprendizaje', 
   render();
   const control = nodes.find((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')!;
   expect(control.props['aria-pressed']).toBe(true);
-  expect(nodes.find((node) => node.props.role === 'status')?.props.children).toContain('Sin cuenta atrás');
+  expect(hooks.calm).toBe(true);
   control.props.onClick(); render();
   expect(readArcadeCalm('learner')).toBe(false);
   expect(readWordMemories('learner')).toEqual(memories);

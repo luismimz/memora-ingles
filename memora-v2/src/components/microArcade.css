@@ -34,6 +34,7 @@
 .arcade-stream-foot small { color: var(--muted); font-size: .65rem; }
 .arcade-stream-card .recall-choices button.is-correct { border-color: #25ba83; background: rgba(54,210,147,.12); }
 .arcade-reminder { padding: 30px; }
+.arcade-rescue { display: grid; justify-items: center; gap: 12px; width: 100%; padding-bottom: 24px; }
 .arcade-reminder-chain { display: flex; align-items: center; justify-content: center; gap: .8rem; flex-wrap: wrap; font-size: clamp(1.5rem, 4vw, 2.2rem); }
 .arcade-reminder-chain > strong:first-child { color: var(--warm); }
 .arcade-reminder-story { font-size: 1.15rem; line-height: 1.5; margin: 0; }

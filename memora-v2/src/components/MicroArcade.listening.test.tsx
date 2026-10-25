@@ -6,6 +6,7 @@ import { microRounds } from '../domain/microArcade';
 import { readWordMemories, recordWordRecall } from '../domain/memory';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readAttempts } from '../domain/learningProfile';
+import { recordActiveWordAttempt } from '../domain/activeRecall';
 import { playEnglish, type PlaybackResult } from '../services/audio';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'played', source: 'browser' })), playSpanish: vi.fn(), playSnap: vi.fn(), stopSpeech: vi.fn(), prefetchSpeech: vi.fn() }));
@@ -14,7 +15,7 @@ const user = 'listening-isolated';
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).trim() === label)!;
-async function mount(unit = previewUnit) { await act(async () => { tree = create(<MicroArcade userId={user} units={[unit]} inspection={false} initialRound={1} onExit={() => {}} automatic />); }); }
+async function mount(unit = previewUnit, initialRound = 1, onExit = () => {}) { await act(async () => { tree = create(<MicroArcade userId={user} units={[unit]} inspection={false} initialRound={initialRound} onExit={onExit} automatic />); }); }
 beforeEach(() => {
   vi.useFakeTimers(); vi.mocked(playEnglish).mockReset().mockResolvedValue({ status: 'played', source: 'browser' });
   const values = new Map<string, string>();
@@ -42,7 +43,7 @@ it('escucha sin revelar la palabra, exige reproducción completada y registra ca
   expect(memory.capabilities?.auditory).toMatchObject({ attempts: 1, correct: 1, independentCorrect: 0 });
   expect(memory.capabilities?.recall).toBeUndefined();
   expect(readAttempts(user).at(-1)?.direction).toBe('auditory');
-  expect(text(tree.toJSON())).toContain('Has reconocido el significado del audio');
+  expect(text(tree.toJSON())).toContain('Bien.');
 });
 
 it('audio bloqueado permite texto sin fallo ni acierto auditivo ficticio', async () => {
@@ -85,7 +86,7 @@ it('arrancar no habilita respuestas; pausar invalida la escucha y su final tard�
   expect(readLearningActivities(user)).toHaveLength(0);
   await act(async () => button('Pausar').props.onClick());
   await act(async () => resolve({ status: 'played', source: 'kokoro' }));
-  await act(async () => button('Seguir').props.onClick());
+  await act(async () => button('Reanudar').props.onClick());
   expect(button(target.es).props.disabled).toBe(true);
   expect(text(tree.toJSON())).not.toContain('Reproducción finalizada');
   await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
@@ -102,7 +103,8 @@ it('tras acertar muestra palabra y significado con continuación junto al result
   expect(text(tree.toJSON())).toContain(target.es);
   expect(text(tree.toJSON())).not.toContain('Escucha y elige lo que significa.');
   expect(button('Seguir →')).toBeUndefined();
-  expect(button('Continuar →').props.className).toBe('primary-action');
+  expect(button('Continuar →')).toBeUndefined();
+  expect(text(tree.toJSON())).toContain('Seguimos con el siguiente reto');
   const before = readLearningActivities(user);
   vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'blocked', source: 'kokoro' });
   await act(async () => button('🔊 Escuchar de nuevo').props.onClick());
@@ -124,7 +126,7 @@ it('pausar la repetición del resultado no deja su altavoz bloqueado al reanudar
   await act(async () => { void button('🔊 Escuchar de nuevo').props.onClick(); });
   expect(button('🔊 Escuchar de nuevo').props.disabled).toBe(true);
   await act(async () => button('Pausar').props.onClick());
-  await act(async () => button('Seguir').props.onClick());
+  await act(async () => button('Reanudar').props.onClick());
   await act(async () => resolve({ status: 'played', source: 'kokoro' }));
   expect(button('🔊 Escuchar de nuevo').props.disabled).toBe(false);
   expect(button('Continuar →').props.disabled).toBe(false);
@@ -140,4 +142,57 @@ it('no monta escucha sin dos significados y sonidos preparados distintos', async
   expect(text(tree.toJSON())).not.toContain('ESCUCHA Y CONECTA');
   expect(button('🔊 Reproducir palabra inglesa')).toBeUndefined();
   expect(readLearningActivities(user)).toHaveLength(0);
+});
+it('enlaza elegir, escuchar y escribir sin pulsar Continuar, sin reloj y sale una sola vez', async () => {
+  const rounds = microRounds(user, [previewUnit]);
+  const exit = vi.fn();
+  await mount(previewUnit, 0, exit);
+  const header = tree.root.findByType('header');
+  expect(header.findAllByType('details')).toHaveLength(1);
+  const primaryHeader = header.findAllByType('button').filter((node) => node.parent?.props.className !== 'play-options-panel');
+  expect(primaryHeader.map((node) => text(node))).toEqual(['← Salir', 'Pausar']);
+  await act(async () => { vi.advanceTimersByTime(60000); });
+  expect(readLearningActivities(user)).toHaveLength(0);
+  await act(async () => button(rounds[0].word.en).props.onClick());
+  expect(button('Continuar →')).toBeUndefined();
+  await act(async () => { vi.advanceTimersByTime(2200); });
+  expect(button('🔊 Reproducir palabra inglesa')).toBeDefined();
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  await act(async () => button(rounds[1].word.es).props.onClick());
+  await act(async () => { vi.advanceTimersByTime(2200); });
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: rounds[2].word.en } }));
+  await act(async () => { vi.advanceTimersByTime(450); });
+  expect(button('Continuar →')).toBeUndefined();
+  await act(async () => { vi.advanceTimersByTime(2200); });
+  expect(exit).toHaveBeenCalledOnce();
+  await act(async () => { vi.advanceTimersByTime(10000); });
+  expect(exit).toHaveBeenCalledOnce();
+  expect(readAttempts(user).slice(-3).map((attempt) => attempt.direction)).toEqual(['recognition', 'auditory', 'recall']);
+  expect(readLearningActivities(user)).toHaveLength(3);
+});
+it('el error espera ayuda sin saltar al siguiente reto y conserva el primer intento', async () => {
+  const rounds = microRounds(user, [previewUnit]);
+  await mount(previewUnit, 0);
+  const wrong = previewUnit.words.find((word) => word.en !== rounds[0].word.en)!;
+  await act(async () => button(wrong.en).props.onClick());
+  const before = readLearningActivities(user);
+  await act(async () => { vi.advanceTimersByTime(60000); });
+  expect(readLearningActivities(user)).toEqual(before);
+  expect(readLearningActivities(user)[0].correct).toBe(false);
+  expect(button('Seguir con ayuda →')).toBeDefined();
+  expect(button('🔊 Reproducir palabra inglesa')).toBeUndefined();
+});
+it('una palabra pendiente de preparación conserva la pausa incluso después de acertar', async () => {
+  const unit = { ...previewUnit, words: [previewUnit.words[0]] };
+  localStorage.setItem(`memora-v2.memory.${user}`, '[]');
+  recordActiveWordAttempt(user, unit, unit.words[0], '', 'skip', true);
+  expect(microRounds(user, [unit])[0].pendingModel).toBe(true);
+  const exit = vi.fn();
+  await mount(unit, 0, exit);
+  await act(async () => button(unit.words[0].en).props.onClick());
+  await act(async () => { vi.advanceTimersByTime(60000); });
+  expect(exit).not.toHaveBeenCalled();
+  expect(button('Continuar →')).toBeDefined();
+  await act(async () => button('Continuar →').props.onClick());
+  expect(exit).toHaveBeenCalledOnce();
 });
