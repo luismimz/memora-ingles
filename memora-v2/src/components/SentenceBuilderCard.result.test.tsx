@@ -12,7 +12,10 @@ const sentence = previewUnit.sentence;
 const text = (value: any): string => typeof value === 'string' ? value : Array.isArray(value) ? value.map(text).join(' ') : value?.children ? text(value.children) : '';
 const button = (label: string) => tree.root.findAllByType('button').find((node) => (node.props['aria-label'] ?? text(node).trim()) === label)!;
 const card = (filledSlots = sentence.slots.length) => <SentenceBuilderCard vertical sentence={sentence} filledSlots={filledSlots} sceneWord={previewUnit.words[0]} processForm={previewUnit.grammar[0]} index={0} total={1} choiceSeed={0} onPick={pick} onAttempt={attempt} onNext={next} />;
-async function mount(filledSlots = sentence.slots.length) { await act(async () => { tree = create(card(filledSlots)); }); }
+async function mount(filledSlots = sentence.slots.length) {
+  await act(async () => { tree = create(card(0)); });
+  if (filledSlots) await act(async () => { tree.update(card(filledSlots)); });
+}
 async function swipe() {
   const region = tree.root.findByProps({ role: 'region' });
   const event = { target: { closest: () => null }, currentTarget: { scrollTop: 0, scrollHeight: 600, clientHeight: 600 } };
@@ -28,6 +31,17 @@ beforeEach(() => {
   vi.stubGlobal('window', { setTimeout, clearTimeout, matchMedia: () => ({ matches: true }), getSelection: () => null });
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('reabrir una frase completa conserva el resultado en silencio, con escucha y slide disponibles', async () => {
+  await act(async () => { tree = create(card()); });
+  expect(text(tree.toJSON())).toContain('✓ FRASE ARMADA');
+  expect(playEnglish).not.toHaveBeenCalled();
+  expect(text(tree.toJSON())).not.toContain('No se completó');
+  await act(async () => button('🔊 Escuchar la frase').props.onClick());
+  expect(playEnglish).toHaveBeenCalledOnce();
+  await swipe();
+  expect(next).toHaveBeenCalledOnce(); expect(attempt).not.toHaveBeenCalled();
+});
 
 it('el montaje se confirma aunque falle el audio y ofrece repetición y avance juntos sin otro intento', async () => {
   await mount();

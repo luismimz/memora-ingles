@@ -20,6 +20,9 @@ import { makeGrammarChecks } from './domain/grammarPractice';
 import { GrammarCoach } from './components/GrammarCoach';
 import { GameCard } from './components/GameCard';
 import { GrammarOrder } from './components/GrammarOrder';
+import { AnswerStudio } from './components/AnswerStudio';
+import { SentenceBuilderCard } from './components/SentenceBuilderCard';
+import { ConversationPractice } from './components/ConversationPractice';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -71,6 +74,47 @@ it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar',
   await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(before);
+});
+it('borrador ayudado y resultado final reanudados enlazan al constructor y al chat sin repetir intentos', async () => {
+  const value: AtomicUnit = { ...previewUnit, grammar: [previewUnit.grammar[0]], practiceSentences: undefined };
+  const lesson = lessonForForm(value.grammar[0], value.words.find((word) => word.en.toLowerCase() === value.grammar[0].englishBase)?.es.toLowerCase())!;
+  const checkIndex = lesson.checks.findIndex((check) => check.kind === 'write');
+  expect(checkIndex).toBe(lesson.checks.length - 1);
+  const check = lesson.checks[checkIndex];
+  const saved = () => readGameCheckpoint(user, value.id, value.contentVersion ?? '1');
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar', coach: { lessonId: lesson.id, position: { stage: lesson.steps.length, checkIndex, checkId: check.id, input: 'I am', feedback: 'idle', helped: true } } });
+  await open();
+  expect(tree.root.findByType(AnswerStudio).props.value).toBe('I am');
+  await act(async () => { vi.advanceTimersByTime(1000); });
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: check.answers[0] } }));
+  await act(async () => { vi.advanceTimersByTime(450); });
+  expect(saved()?.coach?.position.feedback).toBe('correct');
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
+  const before = readLearningActivities(user);
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await open();
+  expect(text(tree.toJSON())).toContain('✓ Acertaste');
+  expect(playEnglish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+  await swipe(false);
+  expect(saved()?.phase).toBe('build');
+  for (let expectedSlot = 0; expectedSlot < value.sentence.slots.length; expectedSlot++) {
+    const builder = tree.root.findByType(SentenceBuilderCard);
+    const slot = builder.props.filledSlots;
+    expect(slot).toBe(expectedSlot);
+    const choice = value.sentence.slots[slot].en;
+    await act(async () => builder.findAllByType('button').find((node) => text(node) === choice)!.props.onClick());
+  }
+  const built = readLearningActivities(user);
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await open();
+  expect(text(tree.toJSON())).toContain('✓ FRASE ARMADA');
+  expect(playEnglish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(built);
+  await swipe(false);
+  expect(saved()?.phase).toBe('conversation');
+  expect(tree.root.findByType(ConversationPractice)).toBeTruthy();
+  expect(next).not.toHaveBeenCalled();
 });
 it('el cierre gramatical tras reanudar cuenta intentos de la sesión original, no de otra versión o sesión', async () => {
   const form = previewUnit.grammar[0];

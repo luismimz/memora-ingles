@@ -38,6 +38,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   useEffect(() => () => { if (wrongTimer.current !== null) window.clearTimeout(wrongTimer.current); }, []);
 
   const completed = filledSlots === sentence.slots.length;
+  const observedResult = useRef({ sentence: sentence.en, completed });
   const active = sentence.slots[filledSlots];
   const errorChoice = lastIncorrectChoice ?? (lastError?.slot === filledSlots ? lastError.choice : undefined);
   const errorText = active && errorChoice !== undefined ? constructionFeedback(sentence, filledSlots, errorChoice, vocabulary) : '';
@@ -56,7 +57,10 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   }
   useEffect(() => {
     setAudioStatus('idle');
-    if (completed) void listenToSentence();
+    // Only narrate a completion observed here, never a restored result.
+    const previous = observedResult.current;
+    observedResult.current = { sentence: sentence.en, completed };
+    if (completed && previous.sentence === sentence.en && !previous.completed) void listenToSentence();
     return () => { audioRequest.current++; stopSpeech(); };
   }, [completed, sentence.en]);
 
