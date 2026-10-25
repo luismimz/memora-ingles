@@ -38,7 +38,7 @@ it('separa ajustes de aprendizaje, con una sola acción principal y sin leer est
   expect(text(tree.toJSON())).not.toContain('El recuerdo sigue fresco');
   expect(text(tree.toJSON())).not.toContain('aciertos al recordar');
   expect(tree.root.findAllByProps({ className: 'primary-action' })).toHaveLength(1);
-  expect(vi.mocked(localStorage.getItem).mock.calls.every(([key]) => key === 'memora-v2.avatar.settings-isolated')).toBe(true);
+  expect(vi.mocked(localStorage.getItem).mock.calls.every(([key]) => ['memora-v2.avatar.settings-isolated', 'memora-v2.arcade-cadence.settings-isolated'].includes(key))).toBe(true);
   act(() => { button('Volver a mi recorrido').props.onClick(); button('Ver Mi evolución').props.onClick(); button('Cambiar a modo oscuro').props.onClick(); });
   expect(back).toHaveBeenCalledOnce(); expect(evolution).toHaveBeenCalledOnce(); expect(appearance).toHaveBeenCalledOnce();
   expect(exit).not.toHaveBeenCalled(); expect(values.size).toBe(0);
@@ -51,6 +51,35 @@ it('administración y cierre de sesión son secundarios, solo usan los callbacks
   act(() => button('Gestionar contenido').props.onClick()); expect(manage).toHaveBeenCalledOnce();
   expect(exit).not.toHaveBeenCalled();
   act(() => button('Cerrar sesión').props.onClick()); expect(exit).toHaveBeenCalledOnce();
+  expect(values.size).toBe(0);
+});
+it('el ritmo usa la preferencia compartida, conserva rondas y persiste sin crear aprendizaje', () => {
+  const key = 'memora-v2.arcade-cadence.settings-isolated';
+  const cadence = { seen: ['word-1'], words: 1, pending: 'grammar', calm: true };
+  values.set(key, JSON.stringify(cadence));
+  mount();
+  const rhythm = () => tree.root.findByProps({ 'aria-label': 'Jugar sin cuenta atrás' });
+  expect(rhythm().props['aria-pressed']).toBe(true);
+  expect(localStorage.setItem).not.toHaveBeenCalled();
+  act(() => rhythm().props.onClick());
+  expect(JSON.parse(values.get(key)!)).toEqual({ ...cadence, calm: false });
+  expect(text(tree.toJSON())).toContain('Ritmo guardado en este navegador.');
+  act(() => tree.unmount()); mount();
+  expect(rhythm().props['aria-pressed']).toBe(false);
+  act(() => tree.update(<ProfileView {...props} userId="other-settings-isolated" />));
+  expect(rhythm().props['aria-pressed']).toBe(false);
+  act(() => rhythm().props.onClick());
+  expect(JSON.parse(values.get(key)!)).toEqual({ ...cadence, calm: false });
+  expect(JSON.parse(values.get('memora-v2.arcade-cadence.other-settings-isolated')!).calm).toBe(true);
+  expect([...values.keys()].every((stored) => stored.startsWith('memora-v2.arcade-cadence.'))).toBe(true);
+});
+it('si falla guardar el ritmo no simula una preferencia persistida', () => {
+  mount();
+  vi.mocked(localStorage.setItem).mockImplementation(() => { throw new Error('full'); });
+  act(() => tree.root.findByProps({ 'aria-label': 'Jugar sin cuenta atrás' }).props.onClick());
+  expect(tree.root.findByProps({ 'aria-label': 'Jugar sin cuenta atrás' }).props['aria-pressed']).toBe(false);
+  expect(text(tree.toJSON())).toContain('No se pudo guardar el ritmo.');
+  expect(text(tree.toJSON())).not.toContain('Ritmo guardado en este navegador.');
   expect(values.size).toBe(0);
 });
 it('guarda una foto válida solo en este navegador y conserva límites de tipo y tamaño', () => {

@@ -34,8 +34,8 @@ function read(userId: string): Cadence {
   } catch { /* A missing UI checkpoint never changes learning evidence. */ }
   return { seen: [], words: 0, pending: null };
 }
-function save(userId: string, value: Cadence) {
-  try { progressStorage().setItem(key(userId), JSON.stringify(value)); } catch { /* Learning progress remains independent. */ }
+function save(userId: string, value: Cadence): boolean {
+  try { progressStorage().setItem(key(userId), JSON.stringify(value)); return true; } catch { return false; }
 }
 /** Scheduling only: this never creates attempts, learned words or completion events. */
 export function completeArcadeCadence(userId: string, stopId: string, version: string, grammar: boolean): AutomaticArcadeMode | null {
@@ -52,7 +52,7 @@ export function completeArcadeCadence(userId: string, stopId: string, version: s
 export const pendingAutomaticArcade = (userId: string) => read(userId).pending;
 /** Presentation preference only; retain cadence and learning evidence unchanged. */
 export const readArcadeCalm = (userId: string) => read(userId).calm === true;
-export function writeArcadeCalm(userId: string, calm: boolean) { save(userId, { ...read(userId), calm }); }
+export function writeArcadeCalm(userId: string, calm: boolean): boolean { return save(userId, { ...read(userId), calm }); }
 export function consumeAutomaticArcade(userId: string) {
   const value = read(userId);
   value.pending = null; value.words = 0;

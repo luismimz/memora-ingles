@@ -48,7 +48,7 @@ it('guarda sin reloj por alumno sin consumir rondas, borrar identidades ni crear
   completeArcadeCadence('learner', 'trick:play:ing', '1', true);
   const before = JSON.parse(localStorage.getItem('memora-v2.arcade-cadence.learner')!);
   expect(readArcadeCalm('learner')).toBe(false);
-  writeArcadeCalm('learner', true);
+  expect(writeArcadeCalm('learner', true)).toBe(true);
   expect(JSON.parse(localStorage.getItem('memora-v2.arcade-cadence.learner')!)).toEqual({ ...before, calm: true });
   expect(readArcadeCalm('learner')).toBe(true);
   expect(readArcadeCalm('other')).toBe(false);
@@ -57,4 +57,9 @@ it('guarda sin reloj por alumno sin consumir rondas, borrar identidades ni crear
   expect(completeArcadeCadence('learner', 'word-1', '1', false)).toBeNull();
   expect(localStorage.getItem('memora-v2.learning.learner')).toBeNull();
   expect(localStorage.getItem('memora-v2.memory.learner')).toBeNull();
+});
+it('informa cuando no puede persistir la preferencia sin afirmar un cambio guardado', () => {
+  vi.stubGlobal('localStorage', { getItem: () => null, setItem: () => { throw new Error('full'); } });
+  expect(writeArcadeCalm('learner', true)).toBe(false);
+  expect(readArcadeCalm('learner')).toBe(false);
 });

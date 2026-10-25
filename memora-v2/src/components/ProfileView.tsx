@@ -3,6 +3,7 @@ import { readAvatar, saveAvatar } from '../domain/learningProfile';
 import type { Appearance } from '../useAppearance';
 import { syncLabels, type SyncStatus } from '../services/progressSync';
 import './profileSettings.css';
+import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 
 export function ProfileView({ userId, appearance, onToggleAppearance, onBack, onExit, onEvolution, onManageContent, syncStatus }: {
   userId: string; appearance: Appearance; onToggleAppearance: () => void;
@@ -12,10 +13,14 @@ export function ProfileView({ userId, appearance, onToggleAppearance, onBack, on
   const [avatar, setAvatar] = useState(() => readAvatar(userId));
   const [avatarError, setAvatarError] = useState('');
   const [avatarStatus, setAvatarStatus] = useState('');
+  const [calm, setCalm] = useState(() => readArcadeCalm(userId));
+  const [rhythmStatus, setRhythmStatus] = useState('');
+  const [rhythmError, setRhythmError] = useState('');
   const reader = useRef<FileReader | null>(null);
   const avatarRequest = useRef(0);
   useEffect(() => {
     setAvatar(readAvatar(userId)); setAvatarError(''); setAvatarStatus('');
+    setCalm(readArcadeCalm(userId)); setRhythmStatus(''); setRhythmError('');
     return () => { avatarRequest.current++; reader.current?.abort(); reader.current = null; };
   }, [userId]);
 
@@ -53,6 +58,12 @@ export function ProfileView({ userId, appearance, onToggleAppearance, onBack, on
     <div className="profile-settings-grid">
       <section className="profile-settings-card" aria-labelledby="profile-photo-title"><h2 id="profile-photo-title">Tu foto</h2><div className="profile-photo-row"><span className="profile-avatar" aria-label="Tu imagen de perfil">{avatar ? <img src={avatar} alt="" /> : 'M'}</span><div><label className="profile-upload">Cambiar foto<input type="file" accept="image/png,image/jpeg,image/webp" onChange={uploadAvatar} /></label><p>JPG, PNG o WebP · hasta 500 KB.</p></div></div><small>Se guarda solo en este navegador, no en tu cuenta.</small>{avatarError ? <p className="profile-error" role="alert">{avatarError}</p> : null}{avatarStatus ? <p role="status">{avatarStatus}</p> : null}</section>
       <section className="profile-settings-card" aria-labelledby="profile-appearance-title"><h2 id="profile-appearance-title">Apariencia</h2><p>Estás usando el modo {appearance === 'light' ? 'claro' : 'oscuro'}.</p><button type="button" className="quiet-action" onClick={onToggleAppearance}>Cambiar a modo {appearance === 'light' ? 'oscuro' : 'claro'}</button></section>
+      <section className="profile-settings-card profile-settings-storage" aria-labelledby="profile-rhythm-title"><h2 id="profile-rhythm-title">Ritmo de Arcade</h2><p>{calm ? 'Sin cuenta atrás. Tú decides cuándo avanzar.' : 'Con reloj en los retos que lo permiten.'}</p><button type="button" className="quiet-action" aria-label="Jugar sin cuenta atrás" aria-pressed={calm} onClick={() => {
+        setRhythmStatus(''); setRhythmError('');
+        const next = !calm;
+        if (!writeArcadeCalm(userId, next)) { setRhythmError('No se pudo guardar el ritmo. Puedes activar «Sin reloj» dentro de Arcade para esa sesión.'); return; }
+        setCalm(next); setRhythmStatus('Ritmo guardado en este navegador.');
+      }}>{calm ? 'Sin reloj activado' : 'Activar sin reloj'}</button><p><small>Usa la misma preferencia que Arcade de palabras y gramática. Solo afecta a retos con reloj; la enseñanza sigue a tu ritmo.</small></p>{rhythmStatus ? <p role="status">{rhythmStatus}</p> : null}{rhythmError ? <p role="alert" className="profile-error">{rhythmError}</p> : null}</section>
       <section className="profile-settings-card profile-settings-storage" aria-labelledby="profile-storage-title"><h2 id="profile-storage-title">Guardado de tu práctica</h2><p role="status">{syncStatus ? syncLabels[syncStatus] : 'Vista de revisión: no registra aprendizaje.'}</p><p>Los ajustes de esta pantalla no completan actividades ni cambian tus intentos.</p>{onEvolution ? <button type="button" className="quiet-action" onClick={onEvolution}>Ver Mi evolución</button> : null}</section>
     </div>
     <div className="profile-settings-return"><button type="button" className="primary-action" onClick={onBack}>Volver a mi recorrido</button></div>
