@@ -8,7 +8,7 @@ export interface AssociationAudioState {
 }
 
 /** Audio accompanies discovery; it never gates visibility, advancement or mastery. */
-export function useAssociationAudio(word: AtomicWord) {
+export function useAssociationAudio(word: AtomicWord, autoPlay = true) {
   const [audioState, setAudioState] = useState<AssociationAudioState>({ status: 'preparing', source: null });
   const generation = useRef(0);
   const run = useCallback(async (wordOnly: boolean) => {
@@ -36,10 +36,11 @@ export function useAssociationAudio(word: AtomicWord) {
   }, [word.en, word.audioUrl, word.scene, word.associationMode]);
 
   useEffect(() => {
+    if (!autoPlay) return;
     void run(false);
     if (word.associationMode !== 'cognate') prefetchSpanish(word.scene);
     return () => { generation.current++; stopSpeech(); };
-  }, [run, word.associationMode, word.scene]);
+  }, [run, word.associationMode, word.scene, autoPlay]);
 
   // AssociationCard stays mounted while its word assembly replaces the scene.
   // Invalidate pending narration at that boundary, not only on unmount.

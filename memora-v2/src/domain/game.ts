@@ -1,5 +1,6 @@
 export type Phase = 'associate' | 'recall' | 'reward' | 'grammar' | 'build' | 'conversation' | 'complete';
 export type LearningMode = 'adventure' | 'vocabulary' | 'grammar';
+export interface WordAssemblyPosition { selected: number[]; hinted: boolean; modelUsed: boolean }
 
 export interface GameState {
   phase: Phase;
@@ -26,6 +27,8 @@ export interface GameState {
   /** Current construction repair, restored without replaying a learner attempt. */
   buildRepair?: { failures: number; choice: string; previousAttemptId?: string };
   buildModelUsed?: boolean;
+  /** Local spelling rehearsal position only, never evidence of recall. */
+  wordAssembly?: WordAssemblyPosition;
 }
 
 export type GameAction =
@@ -36,6 +39,7 @@ export type GameAction =
   | { type: 'continue'; grammarCount?: number; sentenceCount?: number; slotCount?: number; conversation?: boolean; wordCount?: number; grammarOnly?: boolean }
   | { type: 'reviewJump'; phase: Phase; index?: number }
   | { type: 'grammarPlayed' }
+  | { type: 'assemblyProgress'; wordIndex: number; position: WordAssemblyPosition }
   | { type: 'prepareSlot'; sentenceIndex: number; slotIndex: number; step: number; stepCount: number }
   | { type: 'constructionError'; slotIndex: number; choice: string; previousAttemptId?: string }
   | { type: 'chooseSlot'; correct: boolean; slotCount: number; withModel?: boolean }
@@ -51,8 +55,10 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'connected':
       if (state.phase !== 'associate') return state;
       return (action.isLast ?? state.wordIndex >= (action.wordCount ?? 3) - 1)
-        ? { ...state, phase: 'recall', recallIndex: 0 }
-        : { ...state, phase: 'associate', wordIndex: action.nextWordIndex ?? state.wordIndex + 1 };
+        ? { ...state, wordAssembly: undefined, phase: 'recall', recallIndex: 0 }
+        : { ...state, wordAssembly: undefined, phase: 'associate', wordIndex: action.nextWordIndex ?? state.wordIndex + 1 };
+    case 'assemblyProgress':
+      return state.phase === 'associate' && state.wordIndex === action.wordIndex ? { ...state, wordAssembly: action.position } : state;
     case 'answered': {
       if (state.phase !== 'recall' || state.recallAnswered) return state;
       const combo = action.correct ? state.combo + 1 : 0;

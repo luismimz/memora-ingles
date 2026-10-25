@@ -14,6 +14,7 @@ import { WordAssembly } from './components/WordAssembly';
 import { getPlayableGrammar } from './domain/unit';
 import { lessonForForm } from './domain/grammarLesson';
 import { recordGrammarAttempt, readGrammarAttempts } from './domain/grammarMemory';
+import { playEnglish, playSpanish } from './services/audio';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -65,6 +66,39 @@ it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar',
   await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(before);
+});
+it('salir y volver conserva montaje parcial y modelo usado sin repetir historia ni fabricar intento', async () => {
+  await mount(); await swipe(false);
+  const assembly = tree.root.findByType(WordAssembly);
+  const choices = assembly.findByProps({ className: 'assembly-bank' }).findAllByType('button');
+  await act(async () => choices.find((node) => node.props['aria-label'].endsWith('pieza 1'))!.props.onClick());
+  await act(async () => assembly.findByType('details').props.onToggle({ currentTarget: { open: true } }));
+  expect(checkpoint()?.wordAssembly).toMatchObject({ selected: [0], modelUsed: true });
+  const before = readLearningActivities(user);
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
+  await mount();
+  const restored = tree.root.findByType(WordAssembly);
+  expect(restored.findAllByProps({ className: 'is-filled' })).toHaveLength(1);
+  expect(playEnglish).not.toHaveBeenCalled(); expect(playSpanish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+  await swipe();
+  expect(checkpoint()?.wordIndex).toBe(1);
+  expect(checkpoint()?.wordAssembly).toBeUndefined();
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
+});
+it('reanudar un montaje completo no reproduce audio ni vuelve a pedir piezas', async () => {
+  await mount(); await swipe(false);
+  while (tree.root.findAllByProps({ className: 'assembly-bank' }).length) {
+    const available = tree.root.findByProps({ className: 'assembly-bank' }).findAllByType('button').filter((node) => !node.props.disabled).sort((a, b) => Number(a.props['aria-label'].split('pieza ')[1]) - Number(b.props['aria-label'].split('pieza ')[1]));
+    await act(async () => available[0].props.onClick());
+  }
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await mount();
+  expect(tree.root.findByType(WordAssembly)).toBeTruthy();
+  expect(tree.root.findAllByProps({ className: 'assembly-bank' })).toHaveLength(0);
+  expect(playEnglish).not.toHaveBeenCalled();
+  await swipe(false);
+  expect(checkpoint()?.wordIndex).toBe(1);
+  expect(checkpoint()?.wordAssembly).toBeUndefined();
 });
 it('reutilizar una estructura mantiene slide y deja repetir la explicación sin fabricar aciertos', async () => {
   const reviewUnit: AtomicUnit = { ...previewUnit, grammarRole: 'review' };

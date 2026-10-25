@@ -21,6 +21,10 @@ beforeEach(() => {
   speech.playEnglish.mockResolvedValue(played); speech.playSpanish.mockResolvedValue(played);
 });
 describe('audio acompañante de la asociación', () => {
+  it('restaurar directamente el montaje no inicia ni precarga la narración', async () => {
+    useAssociationAudio(previewUnit.words[0], false); hooks.effects[0](); await flush();
+    expect(speech.playEnglish).not.toHaveBeenCalled(); expect(speech.playSpanish).not.toHaveBeenCalled(); expect(speech.prefetchSpanish).not.toHaveBeenCalled();
+  });
   it('mantiene palabra → historia → palabra y solo continúa tras reproducciones confirmadas', async () => {
     useAssociationAudio(previewUnit.words[0]); hooks.effects[0](); await flush();
     expect(speech.playEnglish).toHaveBeenCalledTimes(2);

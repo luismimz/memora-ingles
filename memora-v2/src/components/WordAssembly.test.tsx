@@ -65,3 +65,11 @@ it('consultar el modelo es opcional y el resultado distingue su uso sin evaluar 
   expect(next).not.toHaveBeenCalled();
   act(() => tree.unmount());
 });
+it('un subpaso incompatible con las letras actuales vuelve a piezas vacías sin aceptar la palabra', () => {
+  const next = vi.fn(); let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<WordAssembly word={{ ...previewUnit.words[0], en: 'GO', es: 'ir' }} initialPosition={{ selected: [1, 0], hinted: true, modelUsed: false }} onContinue={next} />); });
+  expect(tree.root.findAllByProps({ className: 'is-filled' })).toHaveLength(0);
+  expect(tree.root.findByType(GameCard).props.onAdvance).toBeUndefined();
+  expect(next).not.toHaveBeenCalled();
+  act(() => tree.unmount());
+});

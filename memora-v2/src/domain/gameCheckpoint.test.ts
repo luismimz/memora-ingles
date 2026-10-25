@@ -13,6 +13,18 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('conserva piezas/ayudas en la misma posición y descarta solo un subpaso corrupto', () => {
+    const state = { ...initialGame, wordIndex: 2, wordAssembly: { selected: [0, 2], hinted: true, modelUsed: false } };
+    writeGameCheckpoint('learner', 'letters', '1', state);
+    expect(readGameCheckpoint('learner', 'letters', '1')).toEqual(state);
+    expect(readGameCheckpoint('other', 'letters', '1')).toBeNull();
+    expect(readGameCheckpoint('learner', 'letters', '2')).toBeNull();
+    for (const selected of [[0, 0], [-1], [1.5]]) {
+      writeGameCheckpoint('learner', 'letters', '1', { ...state, wordAssembly: { ...state.wordAssembly, selected } });
+      expect(readGameCheckpoint('learner', 'letters', '1')).toMatchObject({ phase: 'associate', wordIndex: 2 });
+      expect(readGameCheckpoint('learner', 'letters', '1')?.wordAssembly).toBeUndefined();
+    }
+  });
   it('el desenlace con modelo requiere su identidad nueva y rechaza estilos o elecciones corruptos', () => {
     const state = { ...initialGame, phase: 'recall' as const, recognitionStyle: 'scene-delivery-v1' as const, recallAnswered: true, recallOutcome: 'modeled' as const };
     writeGameCheckpoint('learner', 'model', '1', state);

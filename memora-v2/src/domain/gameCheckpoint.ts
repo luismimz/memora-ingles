@@ -20,6 +20,7 @@ export function readGameCheckpoint(userId: string, unitId: string, version: stri
     if (![state.wordIndex, state.recallIndex, state.grammarIndex, state.sentenceIndex].every((index) => Number.isInteger(index) && index! >= 0)) return null;
     if (state.preparationStep !== undefined && (!Number.isInteger(state.preparationStep) || state.preparationStep < 0 || state.preparationStep > 3)) return null;
     if (state.buildModelUsed !== undefined && typeof state.buildModelUsed !== 'boolean') return null;
+    if (state.wordAssembly !== undefined && (!state.wordAssembly || !Array.isArray(state.wordAssembly.selected) || state.wordAssembly.selected.length > 200 || !state.wordAssembly.selected.every((id) => Number.isInteger(id) && id >= 0) || new Set(state.wordAssembly.selected).size !== state.wordAssembly.selected.length || typeof state.wordAssembly.hinted !== 'boolean' || typeof state.wordAssembly.modelUsed !== 'boolean')) delete state.wordAssembly;
     if (state.buildRepair !== undefined && (!state.buildRepair || !Number.isInteger(state.buildRepair.failures) || state.buildRepair.failures < 1 || state.buildRepair.failures > 2 || typeof state.buildRepair.choice !== 'string' || (state.buildRepair.previousAttemptId !== undefined && typeof state.buildRepair.previousAttemptId !== 'string'))) return null;
     return { ...initialGame, ...state };
   } catch { return null; }

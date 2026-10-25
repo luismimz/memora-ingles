@@ -17,7 +17,7 @@ import { MnemonicSceneText, SceneVisual } from './components/SceneVisual';
 import { SentenceBuilderCard } from './components/SentenceBuilderCard';
 import { constructionFeedback } from './domain/sentenceConstruction';
 import { BridgeSoundNote } from './components/BridgeSoundNote';
-import { gameReducer, initialGame, type LearningMode } from './domain/game';
+import { gameReducer, initialGame, type LearningMode, type WordAssemblyPosition } from './domain/game';
 import { clearGameCheckpoint, readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
 import { grammarCaption, makeGrammarChecks } from './domain/grammarPractice';
 import { recordAttempt } from './domain/learningProfile';
@@ -131,20 +131,20 @@ function GrammarLesson({ form, baseSpanish, index, total, onReady, onContinue }:
   );
 }
 
-function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean }) {
-  const { audioState, listen, cancel } = useAssociationAudio(word);
+function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false, assemblyPosition, onAssemblyProgress }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean; assemblyPosition?: WordAssemblyPosition; onAssemblyProgress?: (position: WordAssemblyPosition) => void }) {
   const [reconstruct, setReconstruct] = useState(false);
-  const [assembling, setAssembling] = useState(false);
+  const [assembling, setAssembling] = useState(Boolean(vertical && !inspection && assemblyPosition));
+  const { audioState, listen, cancel } = useAssociationAudio(word, !assembling && !reconstruct);
   const rejectionKey = `memora-v2.rejected-association.${userId}.${word.en.toLocaleLowerCase('en-US')}`;
   const [associationRejected, setAssociationRejected] = useState(() => localStorage.getItem(rejectionKey) === '1');
 
   function connect() {
     cancel();
-    if (vertical && !inspection) setAssembling(true);
+    if (vertical && !inspection) { onAssemblyProgress?.({ selected: [], hinted: false, modelUsed: false }); setAssembling(true); }
     else if (word.reconstruction && !associationRejected) setReconstruct(true);
     else onConnect();
   }
-  if (assembling) return <WordAssembly vertical={vertical} word={word} onContinue={onConnect} />;
+  if (assembling) return <WordAssembly vertical={vertical} word={word} initialPosition={assemblyPosition} onProgress={onAssemblyProgress} onContinue={onConnect} />;
   if (reconstruct) return <SceneReconstruction vertical={vertical} unit={unit} word={word} userId={userId} inspection={inspection} onContinue={() => { if (vertical && !inspection) setAssembling(true); else onConnect(); }} />;
   if (word.associationMode === 'cognate') return <CognateAssociationCard vertical={vertical} word={word} index={index} total={total} audioState={audioState} onListen={listen} onConnect={connect} />;
 
@@ -411,7 +411,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       </>}
       {reviewMode && learningMode === 'adventure' ? <nav className="review-nav" aria-label="Revisar pasos de la unidad"><label htmlFor="review-step">Revisar fase</label><select id="review-step" value={currentReviewStep} onChange={(event) => jumpToStep(event.target.value)}>{unit.words.map((item, index) => <option key={`associate-${index}`} value={`associate-${index}`}>{index + 1}. Asociación {item.en}</option>)}{unit.words.map((_, index) => <option key={`recall-${index}`} value={`recall-${index}`}>Recordar {unit.words[recalledWordIndex(unit, index)].en}</option>)}<option value="reward-0">Resultado de memoria</option>{grammarForms.map((form, index) => <option key={`grammar-${index}`} value={`grammar-${index}`}>Transformación {index + 1}: {form.english}</option>)}{sentences.map((_, index) => <option key={`build-${index}`} value={`build-${index}`}>Construir frase {index + 1}/{sentences.length}</option>)}{unit.communication?.dialogue ? <option value="conversation-0">Practicar conversación</option> : null}<option value="complete-0">Final de unidad</option></select><span>No guarda progreso</span></nav> : null}
       <section className="game-stage" aria-live="off">
-        {state.phase === 'associate' ? <AssociationCard vertical={vertical} key={`associate-${state.wordIndex}`} unit={unit} inspection={reviewMode} word={word} index={acquisitionPosition} total={acquisitionIndexes.length} userId={userId} location={unit.location?.label} onConnect={() => { const next = acquisitionIndexes[acquisitionPosition + 1]; playSnap(); dispatch({ type: 'connected', isLast: next === undefined, nextWordIndex: next, wordCount: unit.words.length }); }} /> : null}
+        {state.phase === 'associate' ? <AssociationCard vertical={vertical} key={`associate-${state.wordIndex}`} unit={unit} inspection={reviewMode} word={word} assemblyPosition={state.wordAssembly} onAssemblyProgress={(position) => dispatch({ type: 'assemblyProgress', wordIndex: state.wordIndex, position })} index={acquisitionPosition} total={acquisitionIndexes.length} userId={userId} location={unit.location?.label} onConnect={() => { const next = acquisitionIndexes[acquisitionPosition + 1]; playSnap(); dispatch({ type: 'connected', isLast: next === undefined, nextWordIndex: next, wordCount: unit.words.length }); }} /> : null}
 
         {state.phase === 'recall' && unit.activeRecall ? <ActiveRecallCard vertical={vertical} key={`active-recall-${state.recallIndex}`} unit={unit} word={recallWord} choices={choices} position={state.recallIndex} userId={userId} inspection={reviewMode} onFinish={(independent) => { dispatch({ type: 'answered', correct: independent }); dispatch({ type: 'nextRecall', wordCount: unit.words.length }); }} /> : null}
 
