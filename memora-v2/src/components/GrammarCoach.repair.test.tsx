@@ -84,6 +84,9 @@ it('la parada real comprueba al colocar las tres piezas sin buscar Enviar mensaj
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ activityId: 'order-message-v1', correct: true, helped: true }]);
   expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toMatchObject({ order: expect.any(Array), feedback: 'correct' });
   expect(tree.root.findAllByType('input')).toHaveLength(0);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(text(tree.toJSON())).toContain('Acertaste');
+  expect(tree.root.findAllByProps({ 'aria-label': 'Continuar al siguiente reto' })).toHaveLength(1);
 });
 it('una estructura ya practicada enseña solo el nuevo ejemplo antes del puzle y respeta una partida reanudada', async () => {
   recordGrammarAttempt(user, { skill: 'present-continuous:brush', unitId: 'prior-isolated', check: 'use', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
@@ -124,7 +127,15 @@ it('pedir ayuda y enviar inmediatamente conserva la ayuda en las dos evidencias 
   expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toMatchObject({ helped: true, feedback: 'correct' });
   act(() => tree.unmount()); await mount();
   expect(readGrammarAttempts(user).filter((event) => event.check === 'use' && event.unitId === previewUnit.id)).toHaveLength(1);
-  expect(tree.root.findByType('input').props.disabled).toBe(true);
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  expect(text(tree.toJSON())).toContain('Acertaste');
+  expect(text(tree.toJSON())).toContain('I am playing');
+  expect(text(tree.toJSON())).not.toContain('Ver cómo se arma');
+  const beforeAdvance = readLearningActivities(user);
+  await advance();
+  expect(finished).toHaveBeenCalledOnce();
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner' && event.correct !== null)).toEqual(beforeAdvance.filter((event) => event.source === 'learner' && event.correct !== null));
+  expect(readLearningActivities(user).filter((event) => event.phase === 'completion')).toMatchObject([{ correct: null }]);
 });
 it('el mensaje de jugar cambia la escena según el sentido y conserva el primer error al reparar', async () => {
   await mount(); await reachPuzzle();
