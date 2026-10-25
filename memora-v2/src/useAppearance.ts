@@ -18,6 +18,7 @@ export function useAppearance() {
   useEffect(() => {
     document.documentElement.dataset.appearance = appearance;
     document.documentElement.style.colorScheme = appearance;
+    document.querySelector?.('meta[name="theme-color"]')?.setAttribute('content', appearance === 'dark' ? '#111113' : '#f5f5f7');
     try { window.localStorage.setItem(storageKey, appearance); } catch { /* Preferencia temporal. */ }
   }, [appearance]);
 
