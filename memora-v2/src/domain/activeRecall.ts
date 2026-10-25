@@ -9,7 +9,9 @@ export const matchesWord = (word: AtomicWord, response: string) =>
 
 export function wordRecallHint(word: AtomicWord, level: number): string {
   if (level <= 1) return word.scene;
-  return `Empieza por ${word.en[0]}. Tiene ${word.en.length} letras.${word.bridge ? ` El puente ${word.bridge} es un apoyo aproximado, no la pronunciación inglesa ni la traducción.` : ' Recuerda su imagen y su significado.'}`;
+  const words = word.en.trim().split(/\s+/u);
+  const letters = [...word.en].filter((letter) => /\p{L}/u.test(letter)).length;
+  return `Empieza por ${words[0][0]}. Tiene ${words.length > 1 ? `${words.length} palabras y ` : ''}${letters} letras.${word.bridge ? ` El puente ${word.bridge} es un apoyo aproximado, no la pronunciación inglesa ni la traducción.` : ' Recuerda su imagen y su significado.'}`;
 }
 
 /** Every attempt uses the existing journal, SRS and history. A retry after help is never independent. */

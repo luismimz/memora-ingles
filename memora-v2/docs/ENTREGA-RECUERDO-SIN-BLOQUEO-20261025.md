@@ -9,3 +9,9 @@ Se reutiliza la frontera de cinco segundos del reconocimiento existente: solo de
 Verificación: 578 pruebas/112 archivos, TypeScript/Vite y diff correctos. Nuevos casos cubren salida visible única y neutral, modelo reanudado hasta cierre, demora tras recarga/error, checkpoint antiguo con borrador/ayuda, tiempo desconocido/negativo y replay/validación sin duplicados. Fallos iniciales fueron aserciones de tests (undefined omitido por JSON, selector details demasiado amplio, espacios del contador y evento neutral de cierre); corregidos sin modificar el comportamiento para satisfacerlos. Aviso de bundle inicial>500kB sigue vigente.
 
 Prueba humana: en una tanda ya preparada con recuerdo escrito activo, llegar a «Recuerda», consultar la palabra sin desplegar ayudas, volver a entrar y continuar hasta el resultado. No se habilitan unidades o modos editoriales nuevos. Inspección visual física/móvil, audio escuchado y diversión/retención pendientes; no reintentar controles previamente bloqueados. La demora guardada no se presenta como puntuación de rapidez.
+
+## Ayuda finita y coherencia visual
+
+Las ayudas de escena pasan de historia a inicial y finalmente «Pista completa». El botón final se desactiva; llamadas repetidas o reanudación no duplican consultas de la misma pista. Audio, opciones y consulta neutral siguen disponibles. La pista distingue palabras de letras: espacios y apóstrofos no se cuentan como letras de una expresión.
+
+Se retiran colores marrones y focos azules locales de activeRecall.css en favor de los tokens compartidos claro/oscuro. Comprobar queda como acción principal; consultar modelo es secundaria.41 enfocadas/4 archivos,580/112 integración, TypeScript/Vite/diff correctos. Inspección visual pendiente, no se acredita contraste de pantalla o calidad estética solo por CSS/tests.

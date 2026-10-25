@@ -79,13 +79,16 @@ export function ActiveRecallCard({ unit, word, choices, position, userId, inspec
   const locked = useRef(false);
   useEffect(() => { if (!state.done) locked.current = false; }, [state]);
   const [audioStatus, setAudioStatus] = useState('');
+  const sceneHintLevel = useRef(state.level);
+  sceneHintLevel.current = state.level;
   const helped = useRef(state.helped);
   const audioRequest = useRef(0);
   useEffect(() => () => { audioRequest.current++; stopSpeech(); }, []);
   function hint(kind: 'scene' | 'audio' | 'options') {
-    if (state.done || locked.current) return;
+    if (state.done || locked.current || kind === 'scene' && sceneHintLevel.current >= 2) return;
     helped.current = true;
-    const level = Math.min(2, state.level + 1);
+    const level = kind === 'scene' ? Math.min(2, sceneHintLevel.current + 1) : state.level;
+    if (kind === 'scene') sceneHintLevel.current = level;
     const cue = kind === 'audio' ? 'Has pedido el modelo inglés como ayuda.' : kind === 'options' ? 'Elige entre palabras que ya has visto.' : wordRecallHint(word, level);
     setState((current) => ({ ...current, helped: true, level: kind === 'scene' ? level : current.level, choosing: current.choosing || kind === 'options', feedback: cue }));
     if (!inspection) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `recall-hint:${word.en}:${kind}`, skill: word.en, phase: 'arcade', source: 'authored', modality: 'choice', prompt: word.es, response: cue, expected: '', correct: null, helped: true, parentAttemptId: state.parent || undefined });
@@ -125,7 +128,7 @@ export function ActiveRecallCard({ unit, word, choices, position, userId, inspec
     {state.done ? <><strong className="memory-answer" lang="en">{word.en}</strong><SceneVisual word={word} compact />{!vertical ? <button type="button" className="primary-action" onClick={continueRecall}>Continuar →</button> : null}</> : <>
       {state.choosing ? <div className="memory-options">{choices.map((choice) => <button type="button" key={choice.id} onClick={() => answer(choice.en, 'choice')}>{choice.en}</button>)}</div> : <form className="memory-write" onSubmit={(event) => { event.preventDefault(); answer(state.input, 'writing'); }}><label className="sr-only" htmlFor="word-recall">La palabra en inglés</label><input id="word-recall" lang="en" value={state.input} onChange={(event) => setState((current) => ({ ...current, input: event.target.value }))} autoComplete="off" autoCapitalize="none" spellCheck={false} placeholder="Prueba a recordarla…" /><button type="submit" disabled={!state.input.trim()}>Comprobar</button></form>}
       <button type="button" className="quiet-action" onClick={() => answer('', 'skip')}>Ver palabra y pasar</button>
-      <details className="memory-help"><summary>¿Necesitas ayuda?</summary><p>Puedes recuperar la historia, escuchar o elegir. Usar ayuda no es fallar.</p><div className="memory-tools"><button type="button" onClick={() => hint('scene')}>{state.level ? 'Una pista más' : 'Recordar la historia'}</button><button type="button" onClick={() => hint('audio')}>🔊 Escuchar la palabra</button>{!state.choosing ? <button type="button" onClick={() => hint('options')}>Prefiero elegir</button> : null}</div></details>
+      <details className="memory-help"><summary>¿Necesitas ayuda?</summary><p>Puedes recuperar la historia, escuchar o elegir. Usar ayuda no es fallar.</p><div className="memory-tools"><button type="button" disabled={state.level >= 2} onClick={() => hint('scene')}>{state.level >= 2 ? 'Pista completa' : state.level === 1 ? 'Ver la inicial' : 'Recordar la historia'}</button><button type="button" onClick={() => hint('audio')}>🔊 Escuchar la palabra</button>{!state.choosing ? <button type="button" onClick={() => hint('options')}>Prefiero elegir</button> : null}</div></details>
     </>}
   </div></GameCard>;
 }

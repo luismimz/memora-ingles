@@ -101,6 +101,29 @@ it('una segunda pista para cognado sin puente no inventa una asociación ni pron
   const hint = wordRecallHint({ ...word, bridge: '' }, 2);
   expect(hint).not.toContain('El puente'); expect(hint).not.toContain('undefined'); expect(hint).toContain('imagen y su significado');
 });
+it('las pistas de escena tienen dos pasos reales y no repiten la misma consulta al insistir o reanudar', async () => {
+  await mount();
+  const ask = button('Recordar la historia').props.onClick;
+  await act(async () => ask());
+  expect(button('Ver la inicial')).toBeTruthy();
+  await act(async () => { for (let index = 0; index < 10; index++) ask(); });
+  expect(button('Pista completa').props.disabled).toBe(true);
+  expect(text(tree.toJSON())).toContain(`Empieza por ${word.en[0]}`);
+  const hints = readLearningActivities(user);
+  expect(hints).toHaveLength(2);
+  expect(hints.every((row) => row.source === 'authored' && row.correct === null)).toBe(true);
+  act(() => tree.unmount()); await mount();
+  expect(button('Pista completa').props.disabled).toBe(true);
+  await act(async () => button('Pista completa').props.onClick());
+  expect(readLearningActivities(user)).toEqual(hints);
+  expect(button('Ver palabra y pasar')).toBeTruthy();
+  expect(button('🔊 Escuchar la palabra').props.disabled).toBeUndefined();
+  expect(finish).not.toHaveBeenCalled();
+});
+it('la pista de una expresión no cuenta espacios ni apóstrofos como letras', () => {
+  expect(wordRecallHint({ ...word, en: 'GO OUT' }, 2)).toContain('2 palabras y 5 letras');
+  expect(wordRecallHint({ ...word, en: "DON\'T" }, 2)).toContain('4 letras');
+});
 
 it('primer error y reparación llevan al modelo: ráfagas/reload/continuación no inventan acierto', async () => {
   await mount();
