@@ -33,6 +33,7 @@ export interface GameState {
   wordAssembly?: WordAssemblyPosition;
   fallbackLesson?: GrammarFallbackPosition;
   coach?: { lessonId: string; position: TrickCheckpoint };
+  sessionStartedAt?: string;
 }
 
 export type GameAction =

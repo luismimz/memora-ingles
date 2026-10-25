@@ -127,7 +127,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   const completedSession = useRef(false);
   const completionSaved = useRef(false);
   const continuedCompletion = useRef(false);
-  const sessionStarted = useRef(new Date().toISOString());
+  const sessionStarted = useRef(state.sessionStartedAt ?? new Date().toISOString());
   // Capture before the completion effect appends its neutral closure event.
   const recallSummary = useMemo(() => unit.activeRecall && learningMode !== 'grammar'
     ? summarizeActiveRecall(readLearningActivities(userId), unit, learningMode) : undefined,
@@ -159,7 +159,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   useEffect(() => {
     if (reviewMode || startInConversation) return;
     if (state.phase === 'complete' || learningMode === 'vocabulary' && state.phase === 'reward') clearGameCheckpoint(userId, checkpointId);
-    else writeGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1', state);
+    else writeGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1', learningMode === 'grammar' ? { ...state, sessionStartedAt: sessionStarted.current } : state);
   }, [reviewMode, startInConversation, state, unit.contentVersion, checkpointId, userId, learningMode]);
 
   useEffect(() => {
@@ -190,7 +190,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       return;
     }
     const finished = new Date();
-    const grammarAttempts = learningMode === 'grammar' ? readLearningActivities(userId).filter((activity) => activity.unitId === unit.id && activity.at >= sessionStarted.current && activity.source === 'learner' && activity.correct !== null && ['grammar', 'construction'].includes(activity.phase)) : [];
+    const grammarAttempts = learningMode === 'grammar' ? readLearningActivities(userId).filter((activity) => activity.unitId === unit.id && activity.contentVersion === (unit.contentVersion ?? '1') && activity.at >= sessionStarted.current && activity.source === 'learner' && activity.correct !== null && ['grammar', 'construction'].includes(activity.phase)) : [];
     const result = { correct: learningMode === 'grammar' ? grammarAttempts.filter((attempt) => attempt.correct).length : recallSummary?.correct ?? state.correct, attempted: learningMode === 'grammar' ? grammarAttempts.length : recallSummary?.attempted ?? Math.max(0, unit.words.length - (state.recognitionModels ?? 0)), completedAt: finished.toISOString(), nextReviewAt: nextReviewAt(finished, state.correct === unit.words.length ? 0 : -1).toISOString() };
     try {
       completeLearningMode(userId, unit, learningMode, result);

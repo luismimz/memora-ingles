@@ -13,6 +13,14 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('descarta una fecha de sesión inválida o futura sin borrar la posición', () => {
+    for (const sessionStartedAt of ['not-a-date', '3000-01-01T00:00:00.000Z']) {
+      writeGameCheckpoint('learner', 'dated', '1', { ...initialGame, phase: 'grammar', grammarIndex: 1, sessionStartedAt });
+      const restored = readGameCheckpoint('learner', 'dated', '1');
+      expect(restored).toMatchObject({ phase: 'grammar', grammarIndex: 1 });
+      expect(restored?.sessionStartedAt).toBeUndefined();
+    }
+  });
   it('restaura el formato existente del coach y descarta solo una posición inválida', () => {
     const state = { ...initialGame, phase: 'grammar' as const, coach: { lessonId: 'prepared', position: { stage: 2, checkIndex: 0, checkId: 'write', input: 'draft', feedback: 'help' as const, helped: true, previousAttemptId: 'prior', checkFailures: 1 } } };
     writeGameCheckpoint('learner', 'coach', '1', state);

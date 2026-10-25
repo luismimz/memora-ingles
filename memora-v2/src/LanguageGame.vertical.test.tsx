@@ -4,7 +4,7 @@ import { LanguageGame } from './LanguageGame';
 import { previewUnit } from './preview/previewUnit';
 import { initialGame } from './domain/game';
 import { readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
-import { readLearningActivities } from './domain/learningActivity';
+import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
 import { initializeJournal } from './domain/progressJournal';
 import type { AtomicUnit } from './domain/unit';
 import { recalledWordIndex } from './domain/activeRecall';
@@ -71,6 +71,24 @@ it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar',
   await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(before);
+});
+it('el cierre gramatical tras reanudar cuenta intentos de la sesión original, no de otra versión o sesión', async () => {
+  const form = previewUnit.grammar[0];
+  const lesson = lessonForForm(form, previewUnit.words.find((word) => word.en.toLowerCase() === form.englishBase)?.es.toLowerCase())!;
+  const check = lesson.checks.at(-1)!;
+  const started = '2026-10-25T10:00:00.000Z';
+  const record = (version: string) => recordLearningActivity(user, { unitId: previewUnit.id, unitTitle: previewUnit.title, contentVersion: version, activityId: check.id, skill: lesson.id, phase: 'grammar', source: 'learner', modality: 'writing', prompt: check.prompt, response: check.answers[0], expected: check.answers[0], correct: true, helped: false });
+  vi.setSystemTime(new Date('2026-10-25T09:59:00Z')); record(previewUnit.contentVersion ?? '1');
+  vi.setSystemTime(new Date('2026-10-25T10:02:00Z')); record('different-version');
+  vi.setSystemTime(new Date('2026-10-25T10:03:00Z')); record(previewUnit.contentVersion ?? '1');
+  writeGameCheckpoint(user, `${previewUnit.id}:grammar`, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar', sessionStartedAt: started, coach: { lessonId: lesson.id, position: { stage: lesson.steps.length, checkIndex: lesson.checks.length - 1, checkId: check.id, input: check.answers[0], feedback: 'correct', helped: false } } });
+  vi.setSystemTime(new Date('2026-10-25T10:10:00Z'));
+  await act(async () => { tree = create(<LanguageGame learningMode="grammar" unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  const before = readLearningActivities(user).filter((event) => event.phase === 'grammar');
+  expect(text(tree.toJSON())).toContain('✓ Acertaste');
+  await swipe(false);
+  expect(readSessions(user)).toMatchObject([{ correct: 1, attempted: 1 }]);
+  expect(readLearningActivities(user).filter((event) => event.phase === 'grammar')).toEqual(before);
 });
 it('el coach principal reabre explicación, piezas y acierto sin volver al inicio ni duplicar intentos', async () => {
   const saved = () => readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1');
