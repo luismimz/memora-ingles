@@ -140,6 +140,28 @@ it('la respuesta del personaje no corta el modelo con otra voz automática al pa
   expect(vi.mocked(playEnglish).mock.calls.at(-1)?.[0]).toBe(reply);
   expect(readLearningActivities(user)).toEqual(before);
 });
+it('el modelo mostrado permite repetir su audio fallido sin volver a pasar ni alterar el resultado', async () => {
+  await mount(true);
+  let resolve!: (result: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  act(() => button('Ver respuesta y pasar').props.onClick());
+  const model = () => tree.root.findAllByProps({ className: 'chat-audio-hint' })[0];
+  expect(model()).toBeDefined();
+  expect(model().props['aria-busy']).toBe(true);
+  expect(JSON.parse(localStorage.getItem(key)!)).toMatchObject({ awaitingNext: true });
+  await act(async () => resolve({ status: 'blocked', source: null }));
+  expect(text(model().parent)).toContain('Audio no disponible');
+  const before = readLearningActivities(user);
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'played', source: 'kokoro' });
+  await act(async () => model().props.onClick());
+  expect(vi.mocked(playEnglish).mock.calls.at(-1)?.[0]).toBe(conversationTurns(unit)[0].expected.en);
+  expect(text(model().parent)).not.toContain('Audio no disponible');
+  expect(readLearningActivities(user)).toEqual(before);
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await mount(true);
+  expect(model()).toBeDefined();
+  expect(playEnglish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+});
 it('la presentación vertical espera el gesto tras cada respuesta, incluso en diálogo de cadencia automática', async () => {
   const automatic = structuredClone(unit);
   delete automatic.communication!.dialogue!.continueMode;

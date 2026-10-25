@@ -10,7 +10,7 @@ import { readLearningActivities, recordLearningActivity as persistLearningActivi
 import { recordSentenceExposure } from '../domain/memory';
 import { KeysScene } from './KeysScene';
 import { GrammarText } from './GrammarText';
-import { playEnglish, playSpanish, playSnap, stopSpeech } from '../services/audio';
+import { playSpanish, playSnap, stopSpeech } from '../services/audio';
 import { MirrorText } from './MirrorPieces';
 import { mirrorHint, nextMirrorHint } from '../domain/mirrorLesson';
 import { useSpeechPlayback } from './useSpeechPlayback';
@@ -148,8 +148,8 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     clearTimeout(timer.current);
     timer.current = setTimeout(following, 1800);
   }
-  function reply() {
-    modelAudio.reset();
+  function reply(keepModelAudio = false) {
+    if (!keepModelAudio) modelAudio.reset();
     setBusy(true); setOral(false); setInput('');
     const incoming = `reply-${round}`;
     setActiveMessage(incoming);
@@ -212,10 +212,10 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     helpedRef.current = true;
     setHelped(true);
     setRevealedAnswer(true);
-    setMessages((current) => [...current, { id: id(), who: 'coach', text: `Así se dice: ${turn.expected.en} (${turn.expected.es})`, instant: true }]);
-    void playEnglish(turn.expected.en);
+    setMessages((current) => [...current, { id: id(), who: 'coach', text: `Así se dice: ${turn.expected.en} (${turn.expected.es})`, audioHint: turn.expected.en, instant: true }]);
+    void modelAudio.listen(turn.expected.en);
     if (!reviewMode) replyTo.current = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-skip-${turn.id}`, skill: unit.mirror?.id ?? unit.id, phase: turn.id === 'transfer' ? 'transfer' : 'dialogue', source: 'learner', modality: 'choice', prompt: displayedPrompt, response: '(pasó con modelo)', expected: turn.expected.en, correct: null, helped: true, feedback: 'Se mostró la respuesta; no cuenta como acierto.', parentAttemptId: previousAttempt.current }).id;
-    reply();
+    reply(true);
   }
   function listenToModel() {
     if (busy || sending.current) return;
@@ -233,7 +233,8 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
     const active = !historical && !message.instant && message.id === activeMessage;
     // The model already owns the voice when passing with help. Keep the reply
     // readable and ready, without cancelling that pronunciation model.
-    return <TypedChatMessage key={message.id} message={historical ? { ...message, instant: true } : message} partner={partner} form={form} renderText={unit.mirror ? (text, language) => <MirrorText text={text} lesson={unit.mirror!} language={language} /> : undefined} autoSpeak={active && !revealedAnswer} onReady={active ? () => messageReady(message.id) : undefined} />;
+    const modelPlayback = !historical && revealedAnswer && message.who === 'coach' && message.audioHint === turn.expected.en ? modelAudio : undefined;
+    return <TypedChatMessage key={message.id} message={historical ? { ...message, instant: true } : message} partner={partner} form={form} renderText={unit.mirror ? (text, language) => <MirrorText text={text} lesson={unit.mirror!} language={language} /> : undefined} autoSpeak={active && !revealedAnswer} onReady={active ? () => messageReady(message.id) : undefined} audioPlayback={modelPlayback} />;
   };
   return <GameCard vertical={vertical} stepKey={`chat:${round}:${awaitingNext ? 'reply' : 'answer'}`} onAdvance={vertical && awaitingNext ? following : undefined} advanceLabel={followingLabel} className={`conversation-card chat-card ${turns.length === 1 ? 'chat-single-turn' : ''}`}>
     <div className="conversation-content chat-content">

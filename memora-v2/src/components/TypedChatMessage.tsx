@@ -5,11 +5,12 @@ import { AssociationAudioStatus } from './AssociationAudioStatus';
 import { useSpeechPlayback } from './useSpeechPlayback';
 
 export interface ChatMessage { id: string; who: 'partner' | 'learner' | 'coach'; text: string; language?: 'en' | 'es'; translation?: string; audioHint?: string; correct?: boolean; instant?: boolean }
-export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, renderText }: { message: ChatMessage; partner: string; form: GrammarForm; autoSpeak: boolean; onReady?: () => void; renderText?: (text: string, language: 'en' | 'es') => ReactNode }) {
+export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, renderText, audioPlayback }: { message: ChatMessage; partner: string; form: GrammarForm; autoSpeak: boolean; onReady?: () => void; renderText?: (text: string, language: 'en' | 'es') => ReactNode; audioPlayback?: Pick<ReturnType<typeof useSpeechPlayback>, 'audio' | 'listen' | 'label'> }) {
   const [visible, setVisible] = useState(message.instant ? message.text.length : 0);
   const ready = useRef(onReady); ready.current = onReady;
   const speak = useRef(autoSpeak); speak.current = autoSpeak;
-  const { audio, listen, label: audioLabel } = useSpeechPlayback();
+  const ownPlayback = useSpeechPlayback();
+  const { audio, listen, label: audioLabel } = audioPlayback ?? ownPlayback;
   useEffect(() => {
     let delay: ReturnType<typeof setTimeout>; let interval: ReturnType<typeof setInterval>;
     let active = true;
