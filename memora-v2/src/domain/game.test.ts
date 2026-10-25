@@ -2,6 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { gameReducer, initialGame, type GameState } from './game';
 
 describe('flujo de la unidad', () => {
+  it('la posición del coach pertenece a la forma activa y se retira al cambiar de forma o fase', () => {
+    const state: GameState = { ...initialGame, phase: 'grammar', grammarPlayed: true };
+    const action = { type: 'coachProgress' as const, grammarIndex: 0, lessonId: 'prepared', position: { stage: 1, checkIndex: 0, input: '', feedback: 'idle' as const, helped: false } };
+    const saved = gameReducer(state, action);
+    expect(saved.coach?.lessonId).toBe('prepared');
+    expect(gameReducer(initialGame, action)).toBe(initialGame);
+    expect(gameReducer(saved, { ...action, grammarIndex: 1 })).toBe(saved);
+    expect(gameReducer(saved, { type: 'continue', grammarCount: 2 }).coach).toBeUndefined();
+    expect(gameReducer(saved, { type: 'continue', grammarCount: 1 })).toMatchObject({ phase: 'build', coach: undefined });
+  });
   it('el modelo de reconocimiento solo cierra una tarea nueva pendiente, sin sumar ni restar evidencia', () => {
     const legacy: GameState = { ...initialGame, phase: 'recall' };
     expect(gameReducer(legacy, { type: 'recognitionModel' })).toBe(legacy);

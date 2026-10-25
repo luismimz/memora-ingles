@@ -19,6 +19,7 @@ import { GrammarFallbackLesson } from './components/GrammarFallbackLesson';
 import { makeGrammarChecks } from './domain/grammarPractice';
 import { GrammarCoach } from './components/GrammarCoach';
 import { GameCard } from './components/GameCard';
+import { GrammarOrder } from './components/GrammarOrder';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -70,6 +71,53 @@ it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar',
   await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(before);
+});
+it('el coach principal reabre explicación, piezas y acierto sin volver al inicio ni duplicar intentos', async () => {
+  const saved = () => readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1');
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await open(); await swipe(false);
+  expect(saved()?.coach?.position.stage).toBe(1);
+  act(() => tree.unmount()); vi.mocked(playSpanish).mockClear(); await open();
+  expect(saved()?.coach?.position.stage).toBe(1); expect(playSpanish).not.toHaveBeenCalled();
+  await swipe(false); await swipe(false);
+  act(() => tree.root.findByType(GrammarOrder).props.onChange([1]));
+  act(() => tree.unmount()); await open();
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([1]);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+  act(() => { const order = tree.root.findByType(GrammarOrder); order.props.onChange([1, 2, 0]); order.props.onAnswer('I AM PLAYING'); });
+  expect(saved()?.coach?.position.feedback).toBe('correct');
+  const before = readLearningActivities(user);
+  expect(before.filter((event) => event.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
+  act(() => tree.unmount()); await open();
+  expect(text(tree.toJSON())).toContain('✓ Acertaste');
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(readLearningActivities(user)).toEqual(before);
+  await swipe(false);
+  expect(saved()?.coach?.position.checkId).not.toBe('order-message-v1');
+});
+it('reanudar un modelo mantiene el límite y no registra otro modelo ni intento por abrirlo', async () => {
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await open(); for (let i = 0; i < 3; i++) await swipe(false);
+  act(() => tree.root.findByType(GrammarOrder).props.onAnswer('PLAYING I AM'));
+  act(() => tree.root.findByType(GrammarOrder).props.onAnswer('PLAYING I AM'));
+  const before = readLearningActivities(user);
+  expect(before.filter((event) => event.activityId === 'model:order-message-v1')).toHaveLength(1);
+  act(() => tree.unmount()); await open();
+  expect(text(tree.toJSON())).toContain('Vamos con ayuda');
+  expect(readLearningActivities(user)).toEqual(before);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+});
+it('reanudar la explicación elegida no vuelve a interponer el atajo de una estructura conocida', async () => {
+  const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
+  const lesson = lessonForForm(value.grammar[0], value.words.find((word) => word.en.toLowerCase() === value.grammar[0].englishBase)?.es.toLowerCase())!;
+  recordGrammarAttempt(user, { unitId: 'earlier', skill: lesson.id, check: 'prior', kind: 'choose', correct: true, helped: false, at: new Date().toISOString() });
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar', coach: { lessonId: lesson.id, position: { stage: 1, checkIndex: 0, checkId: lesson.checks[0].id, input: '', feedback: 'idle', helped: false } } });
+  await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  expect(tree.root.findByType(GrammarCoach)).toBeTruthy();
+  expect(text(tree.toJSON())).not.toContain('Una estructura conocida');
+  expect(readGameCheckpoint(user, value.id, value.contentVersion ?? '1')?.coach?.position.stage).toBe(1);
 });
 it('la entrada normal al coach conocido usa slide y no resuelve el orden pendiente al deslizar', async () => {
   writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });

@@ -1,3 +1,4 @@
+import type { TrickCheckpoint } from './trickCheckpoint';
 export type Phase = 'associate' | 'recall' | 'reward' | 'grammar' | 'build' | 'conversation' | 'complete';
 export type LearningMode = 'adventure' | 'vocabulary' | 'grammar';
 export interface WordAssemblyPosition { selected: number[]; hinted: boolean; modelUsed: boolean }
@@ -31,6 +32,7 @@ export interface GameState {
   /** Local spelling rehearsal position only, never evidence of recall. */
   wordAssembly?: WordAssemblyPosition;
   fallbackLesson?: GrammarFallbackPosition;
+  coach?: { lessonId: string; position: TrickCheckpoint };
 }
 
 export type GameAction =
@@ -43,6 +45,7 @@ export type GameAction =
   | { type: 'grammarPlayed' }
   | { type: 'assemblyProgress'; wordIndex: number; position: WordAssemblyPosition }
   | { type: 'fallbackProgress'; grammarIndex: number; position: GrammarFallbackPosition }
+  | { type: 'coachProgress'; grammarIndex: number; lessonId: string; position: TrickCheckpoint }
   | { type: 'prepareSlot'; sentenceIndex: number; slotIndex: number; step: number; stepCount: number }
   | { type: 'constructionError'; slotIndex: number; choice: string; previousAttemptId?: string }
   | { type: 'chooseSlot'; correct: boolean; slotCount: number; withModel?: boolean }
@@ -64,6 +67,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       return state.phase === 'associate' && state.wordIndex === action.wordIndex ? { ...state, wordAssembly: action.position } : state;
     case 'fallbackProgress':
       return state.phase === 'grammar' && state.grammarIndex === action.grammarIndex ? { ...state, fallbackLesson: action.position } : state;
+    case 'coachProgress':
+      return state.phase === 'grammar' && state.grammarIndex === action.grammarIndex ? { ...state, coach: { lessonId: action.lessonId, position: action.position } } : state;
     case 'answered': {
       if (state.phase !== 'recall' || state.recallAnswered) return state;
       const combo = action.correct ? state.combo + 1 : 0;
@@ -80,8 +85,8 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
     case 'continue':
       if (state.phase === 'reward') return { ...state, phase: 'grammar', grammarIndex: 0 };
       if (state.phase === 'grammar' && state.grammarPlayed) return state.grammarIndex >= (action.grammarCount ?? 4) - 1
-        ? { ...state, fallbackLesson: undefined, phase: action.grammarOnly ? 'complete' : 'build' }
-        : { ...state, fallbackLesson: undefined, grammarIndex: state.grammarIndex + 1, grammarPlayed: false };
+        ? { ...state, fallbackLesson: undefined, coach: undefined, phase: action.grammarOnly ? 'complete' : 'build' }
+        : { ...state, fallbackLesson: undefined, coach: undefined, grammarIndex: state.grammarIndex + 1, grammarPlayed: false };
       if (state.phase === 'build' && state.filledSlots === action.slotCount) return state.sentenceIndex >= (action.sentenceCount ?? 1) - 1
         ? { ...state, phase: action.conversation ? 'conversation' : 'complete' }
         : { ...state, sentenceIndex: state.sentenceIndex + 1, filledSlots: 0, buildRepair: undefined, buildModelUsed: undefined };

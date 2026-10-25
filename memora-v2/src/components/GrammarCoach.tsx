@@ -5,7 +5,7 @@ import { GameCard } from './GameCard';
 import { grammarChecksForExperience, type GrammarLessonData } from '../domain/grammarLesson';
 import { GrammarRow, GrammarCaption, GrammarText } from './GrammarText';
 import { recordGrammarAttempt } from '../domain/grammarMemory';
-import { contextualCorrection, recordLearningActivity } from '../domain/learningActivity';
+import { contextualCorrection, readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
 import type { AtomicWord, GrammarForm } from '../domain/unit';
 import { SceneVisual } from './SceneVisual';
 import { playEnglish, playSpanish, playSnap, stopSpeech } from '../services/audio';
@@ -60,6 +60,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const correctSubmission = useRef<string>();
   const advancedCheck = useRef<string>();
   const shownModel = useRef<string>();
+  const restoredTeaching = useRef(teachingStage !== undefined);
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const previousAttempt = useRef<string | undefined>(validCheckpoint?.previousAttemptId);
   const readyRef = useRef(onReady);
@@ -84,9 +85,12 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   useEffect(() => {
     if (step || !check || !needsModel || reviewMode || shownModel.current === check.id) return;
     shownModel.current = check.id;
+    if (previousAttempt.current && readLearningActivities(userId).some((event) => event.unitId === unitId && event.contentVersion === contentVersion && event.skill === lesson.id && event.activityId === `model:${check.id}` && event.parentAttemptId === previousAttempt.current)) return;
     recordLearningActivity(userId, { unitId, unitTitle, contentVersion, activityId: `model:${check.id}`, skill: lesson.id, phase: 'grammar', source: 'authored', modality: 'choice', prompt: check.prompt, response: modelMessage!, expected: '', correct: null, helped: true, parentAttemptId: previousAttempt.current, feedback: 'Modelo mostrado con ayuda; no es un acierto independiente.' });
   }, [step, check, needsModel, reviewMode, modelMessage]);
   useEffect(() => {
+    const restored = restoredTeaching.current; restoredTeaching.current = false;
+    if (restored) return;
     if (!step || paused) return;
     // Spanish TTS expands ING as the abbreviation for «ingeniero». The written
     // suffix stays visible; the English model pronounces it inside the verb.

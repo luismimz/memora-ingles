@@ -13,6 +13,16 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('restaura el formato existente del coach y descarta solo una posición inválida', () => {
+    const state = { ...initialGame, phase: 'grammar' as const, coach: { lessonId: 'prepared', position: { stage: 2, checkIndex: 0, checkId: 'write', input: 'draft', feedback: 'help' as const, helped: true, previousAttemptId: 'prior', checkFailures: 1 } } };
+    writeGameCheckpoint('learner', 'coach', '1', state);
+    expect(readGameCheckpoint('learner', 'coach', '1')).toEqual(state);
+    expect(readGameCheckpoint('other', 'coach', '1')).toBeNull();
+    expect(readGameCheckpoint('learner', 'coach', '2')).toBeNull();
+    writeGameCheckpoint('learner', 'coach', '1', { ...state, coach: { ...state.coach, position: { ...state.coach.position, checkFailures: 5 } } });
+    expect(readGameCheckpoint('learner', 'coach', '1')).toMatchObject({ phase: 'grammar', grammarIndex: 0 });
+    expect(readGameCheckpoint('learner', 'coach', '1')?.coach).toBeUndefined();
+  });
   it('guarda navegación gramatical sin cruzar usuario/versión ni perder la fase por un subpaso corrupto', () => {
     const state = { ...initialGame, phase: 'grammar' as const, fallbackLesson: { step: 4, subjectIndex: 0, checkIndex: 0, prepared: true, outcome: 'correct' as const, failures: 0 } };
     writeGameCheckpoint('learner', 'fallback', '1', state);

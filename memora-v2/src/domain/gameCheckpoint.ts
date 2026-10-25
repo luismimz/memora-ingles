@@ -1,4 +1,5 @@
 import { initialGame, type GameState } from './game';
+import { parseTrickCheckpoint } from './trickCheckpoint';
 
 const key = (userId: string, unitId: string) => `memora-v2.checkpoint.${userId}.${unitId}`;
 const mirrorKey = (userId: string, unitId: string) => `memora-v2.mirror-checkpoint.${userId}.${unitId}`;
@@ -11,6 +12,7 @@ export function readGameCheckpoint(userId: string, unitId: string, version: stri
     const saved = value as { version?: string; state?: Partial<GameState> };
     if (saved.version !== version || !saved.state) return null;
     const state = saved.state;
+    if (state.coach !== undefined && (!state.coach || typeof state.coach.lessonId !== 'string' || !state.coach.lessonId.trim() || !parseTrickCheckpoint(state.coach.position))) delete state.coach;
     if (state.recognitionStyle !== undefined && state.recognitionStyle !== 'scene-delivery-v1') return null;
     if (state.recallChoice !== undefined && typeof state.recallChoice !== 'string') return null;
     if (state.recognitionModels !== undefined && (state.recognitionStyle !== 'scene-delivery-v1' || !Number.isInteger(state.recognitionModels) || state.recognitionModels < 0)) return null;
