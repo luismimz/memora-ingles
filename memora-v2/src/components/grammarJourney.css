@@ -1,0 +1,17 @@
+.journey-screen.grammar-journey { padding: 0 max(20px, calc((100vw - 1000px) / 2)) 40px; background: var(--page); }
+:root[data-appearance='dark'] .journey-screen.grammar-journey { background: var(--page); }
+.grammar-guided-content { display: grid; gap: 22px; padding-top: 28px; }
+.grammar-location { margin: 0; color: var(--muted); font-size: .8rem; line-height: 1.5; }
+.grammar-next { padding: clamp(24px, 5vw, 40px); border: 1px solid var(--line); border-radius: 26px; background: var(--surface-strong); box-shadow: var(--shadow); }
+.grammar-next .eyebrow { margin: 0 0 12px; color: var(--accent-ink); font-size: .7rem; letter-spacing: .1em; }
+.grammar-next h1 { margin: 0; max-width: 28ch; font-size: clamp(1.7rem, 4vw, 2.6rem); line-height: 1.15; letter-spacing: -.035em; overflow-wrap: anywhere; }
+.grammar-next > p:not(.eyebrow) { max-width: 55ch; margin: 16px 0 24px; color: var(--muted); line-height: 1.6; }
+.grammar-next .primary-action { min-width: 240px; }
+.grammar-route { border-top: 1px solid var(--line); }
+.grammar-route > summary { min-height: 64px; padding: 18px 8px; cursor: pointer; color: var(--ink); font-weight: 750; }
+.grammar-route > summary small { display: block; margin: 5px 0 0 18px; color: var(--muted); font-size: .75rem; font-weight: 400; }
+.grammar-journey .grammar-journey-hint { max-width: none; margin: 0; padding: 20px; border: 1px solid var(--line); }
+.grammar-journey-hint p + p { margin-top: 8px; }
+.grammar-journey-hint button { margin-top: 12px; }
+.grammar-route :focus-visible, .grammar-next :focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
+@media (max-width: 620px) { .journey-screen.grammar-journey { padding: 0 16px 30px; } .grammar-next .primary-action { min-width: 0; width: 100%; } .grammar-guided-content { padding-top: 22px; gap: 18px; } }

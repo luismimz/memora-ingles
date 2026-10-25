@@ -6,6 +6,8 @@ import { readLearningActivities } from '../domain/learningActivity';
 import { JourneyMap } from './JourneyMap';
 import type { Appearance } from '../useAppearance';
 import './homeV2.css';
+import './homeGuided.css';
+import './grammarJourney.css';
 import { useEffect, useRef, useState } from 'react';
 
 export function GrammarJourney({ units, userId, inspection, resumeId, notice, onRetry, onOpen, onPrepare, onBack, onArcade, onEvolution, appearance, onToggleAppearance }: {
@@ -13,6 +15,7 @@ export function GrammarJourney({ units, userId, inspection, resumeId, notice, on
   onOpen: (stop: UnitSummary) => void; onBack: () => void; onArcade: () => void; onEvolution?: () => void; appearance: Appearance; onToggleAppearance: () => void;
   onPrepare?: (stop: UnitSummary) => void;
 }) {
+  const [showMap, setShowMap] = useState(false);
   const [selected, setSelected] = useState<UnitSummary | null>(null);
   const requirements = useRef<HTMLElement>(null);
   useEffect(() => { if (selected) requirements.current?.focus(); }, [selected]);
@@ -27,19 +30,33 @@ export function GrammarJourney({ units, userId, inspection, resumeId, notice, on
   const requirementStop = selectedLocked ?? current;
   const missing = requirementStop ? missingGrammarStop(requirementStop, units, memories, userId) : [];
   const needsWords = route.length > 0 && !route.some((stop) => !lockedIds.has(stop.id));
+  const canContinue = Boolean(current && (!lockedIds.has(current.id) || completedIds.has(current.id)));
   return <main className="journey-screen home-v2 grammar-journey">
-    <div className={`home-play-hub ${route.length ? 'has-map' : ''}`}>
-      <header className="journey-header home-header">
-        <button type="button" className="home-text-button" onClick={onBack}>← Inicio</button>
-        <nav className="home-nav" aria-label="Navegación principal"><button type="button" aria-current="page">Gramática</button><button type="button" onClick={onArcade}>Arcade</button><button type="button" onClick={onEvolution} disabled={!onEvolution}>Mi evolución</button></nav>
-        <button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button>
-      </header>
-      {notice ? <div className="journey-error" role="status"><p>{notice}</p><button type="button" className="quiet-action" onClick={onRetry}>Volver a intentar</button></div> : null}
-      <div className="home-hub-content">
-        <div className="home-intro"><div><h1>Tus palabras, nuevos poderes</h1><p className="home-catalogue"><strong>{completedIds.size}/{route.length}</strong> trucos practicados · un paso cada vez</p></div></div>
-        {needsWords || selectedLocked ? <section ref={requirements} tabIndex={-1} className="grammar-journey-hint" aria-live="polite" aria-label="Palabras necesarias para el truco">{selectedLocked ? <p><strong>{selectedLocked.title}</strong></p> : null}<p>Para jugar, prepara estas palabras: <strong>{missing.join(', ')}</strong>.</p><button type="button" className="quiet-action" onClick={() => { if (onPrepare && requirementStop) onPrepare(requirementStop); else onBack(); }}>{onPrepare ? 'Aprender estas palabras →' : 'Preparar palabras en Inicio →'}</button></section> : null}
-        {route.length ? <JourneyMap units={route} currentId={current?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} onLockedOpen={setSelected} continueLabel={current && completedIds.has(current.id) ? 'Volver a practicar →' : undefined} /> : <section className="journey-empty"><h2>Este camino está preparándose.</h2><p>Aún no hay trucos publicados disponibles. Puedes seguir jugando en Inicio.</p><button type="button" className="primary-action" onClick={onBack}>Volver al juego →</button></section>}
-      </div>
+    <header className="home-guided-header">
+      <button type="button" className="home-text-button" onClick={onBack}>← Inicio</button>
+      <span className="home-header-caption">Tus frases · un paso cada vez</span>
+      <details className="home-navigation"><summary>Menú <span aria-hidden="true">☰</span></summary>
+        <nav aria-label="Opciones de gramática">
+          <button type="button" onClick={onArcade}>Arcade</button>
+          <button type="button" onClick={onEvolution} disabled={!onEvolution}>Mi evolución</button>
+          <button type="button" onClick={onToggleAppearance}>Activar modo {appearance === 'light' ? 'oscuro' : 'claro'}</button>
+        </nav>
+      </details>
+    </header>
+    {notice ? <div className="journey-error" role="status"><p>{notice}</p><button type="button" className="quiet-action" onClick={onRetry}>Volver a intentar</button></div> : null}
+    <div className="grammar-guided-content">
+      <p className="grammar-location">{completedIds.size} de {route.length} prácticas de frases registradas · no mide dominio</p>
+      {current ? <section className="grammar-next" aria-labelledby="grammar-next-title">
+        <p className="eyebrow">{canContinue ? resumed?.id === current.id && !completedIds.has(current.id) ? 'RETOMA TU FRASE' : completedIds.has(current.id) ? 'PRÁCTICA CONOCIDA' : 'AHORA TE TOCA' : 'PRIMERO, SUS PALABRAS'}</p>
+        <h1 id="grammar-next-title">{current.title}</h1>
+        <p>{canContinue ? 'Descubre cómo decirlo, monta el mensaje y úsalo. Puedes salir y retomarlo.' : 'Esta frase necesita palabras que todavía debes preparar.'}</p>
+        {canContinue ? <button type="button" className="primary-action" onClick={() => onOpen(current)}>{completedIds.has(current.id) ? 'Volver a practicar →' : 'Continuar con esta frase →'}</button> : null}
+      </section> : <section className="journey-empty"><h1>Este camino está preparándose.</h1><p>Aún no hay trucos publicados disponibles. Puedes seguir jugando en Inicio.</p><button type="button" className="primary-action" onClick={onBack}>Volver al juego →</button></section>}
+      {needsWords || selectedLocked ? <section ref={requirements} tabIndex={-1} className="grammar-journey-hint" aria-live="polite" aria-label="Palabras necesarias para el truco">{selectedLocked ? <p><strong>{selectedLocked.title}</strong></p> : null}<p>Para jugar, prepara estas palabras: <strong>{missing.join(', ')}</strong>.</p><button type="button" className="quiet-action" onClick={() => { if (onPrepare && requirementStop) onPrepare(requirementStop); else onBack(); }}>{onPrepare ? 'Aprender estas palabras →' : 'Preparar palabras en Inicio →'}</button></section> : null}
+      {route.length ? <details className="grammar-route" onToggle={(event) => setShowMap(event.currentTarget.open)}>
+        <summary>Ver mi recorrido de frases <small>Ubicarme o elegir otra práctica</small></summary>
+        {showMap ? <JourneyMap units={route} currentId={current?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} onLockedOpen={setSelected} continueLabel={current && completedIds.has(current.id) ? 'Volver a practicar →' : undefined} /> : null}
+      </details> : null}
     </div>
     {inspection ? <p className="mirror-save">Vista de prueba · no guarda progreso</p> : null}
   </main>;
