@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { lazy, useEffect, useRef, useState, type FormEvent } from 'react';
+import { DeferredScreen } from './components/DeferredScreen';
 import { LanguageGame } from './LanguageGame';
 import { LearningLibrary } from './components/LearningLibrary';
 import { missingGrammarWords } from './domain/learningModes';
@@ -7,13 +8,10 @@ import type { LearningMode } from './domain/game';
 import { JourneyHome } from './components/JourneyHomeV2';
 import { completedVocabularyStop } from './domain/journeyMap';
 import { ProfileView } from './components/ProfileView';
-import { ContentManager } from './components/ContentManager';
 import { ArcadeExperience, eligibleGrammarUnits } from './components/ArcadeExperience';
 import { readLearningActivities } from './domain/learningActivity';
 import { shouldOfferMicroArcade, microRounds, arcadeCandidateIds } from './domain/microArcade';
 import { completeArcadeCadence, consumeAutomaticArcade, pendingAutomaticArcade, separatedArcadeUnits, type AutomaticArcadeMode } from './domain/arcadeCadence';
-import { PhrasalFusionDemo } from './components/PhrasalFusionDemo';
-import { GrammarWorkshop } from './components/GrammarWorkshop';
 import { EvolutionView } from './components/EvolutionView';
 import { MirrorLessonExperience } from './components/MirrorLessonExperience';
 import { PlayingGrammarReview } from './components/PlayingGrammarReview';
@@ -30,6 +28,10 @@ import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { loadLearningLibrary } from './services/directus';
 import { GrammarJourney } from './components/GrammarJourney';
 import { grammarJourney, grammarPreparationCandidate, missingGrammarStop, nextGrammarStop, readGrammarPosition, writeGrammarPosition } from './domain/grammarJourney';
+
+const ContentManager = lazy(() => import('./components/ContentManager').then((module) => ({ default: module.ContentManager })));
+const PhrasalFusionDemo = lazy(() => import('./components/PhrasalFusionDemo').then((module) => ({ default: module.PhrasalFusionDemo })));
+const GrammarWorkshop = lazy(() => import('./components/GrammarWorkshop').then((module) => ({ default: module.GrammarWorkshop })));
 
 const previewAllowed = import.meta.env.DEV;
 const previewRequested = previewAllowed && new URLSearchParams(window.location.search).has('preview');
@@ -153,13 +155,13 @@ export default function App() {
     return () => controller.abort();
   }, [authenticated, preview]);
 
-  if (fusionOpen) return <PhrasalFusionDemo onBack={() => setFusionOpen(false)} onPractice={(family) => { void import('./preview/phrasalPacks').then(({ makePhrasalPacks }) => {
+  if (fusionOpen) return <DeferredScreen label="el laboratorio" onBack={() => setFusionOpen(false)}><PhrasalFusionDemo onBack={() => setFusionOpen(false)} onPractice={(family) => { void import('./preview/phrasalPacks').then(({ makePhrasalPacks }) => {
     const packs = makePhrasalPacks(family);
     setLearningMode('vocabulary'); setLibraryUnits(packs); setLibraryMode('vocabulary');
     setConversationStart(false); setExpansionTest(null); setContentOpen(false);
     setReviewMode(true); setUnit(packs[0]); setFusionOpen(false);
-  }).catch(() => setUnitError('No se pudo preparar esta familia.')); }} />;
-  if (grammarOpen) return <GrammarWorkshop onBack={() => setGrammarOpen(false)} />;
+  }).catch(() => setUnitError('No se pudo preparar esta familia.')); }} /></DeferredScreen>;
+  if (grammarOpen) return <DeferredScreen label="el taller de gramática" onBack={() => setGrammarOpen(false)}><GrammarWorkshop onBack={() => setGrammarOpen(false)} /></DeferredScreen>;
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -518,7 +520,7 @@ return <><LanguageGame learningMode={learningMode} key={`${unit.id}-${userId}-${
   if (preview || authenticated) return <>{evolutionOpen
     ? <EvolutionView userId={userId} units={units} pilot={pilot} syncStatus={syncStatus} inspectionMode={preview} onBack={() => setEvolutionOpen(false)} onPractice={() => void openArcade()} onProfile={() => { setEvolutionOpen(false); setProfileOpen(true); }} onExit={exit} appearance={appearance} onToggleAppearance={toggleAppearance} />
     : contentOpen && isAdmin && !preview
-    ? <ContentManager userId={userId} onBack={() => setContentOpen(false)} onReview={reviewManagedUnit} onPublished={refreshPublishedUnits} onTest={testExpansionMission} />
+    ? <DeferredScreen label="el gestor de contenido" onBack={() => setContentOpen(false)}><ContentManager userId={userId} onBack={() => setContentOpen(false)} onReview={reviewManagedUnit} onPublished={refreshPublishedUnits} onTest={testExpansionMission} /></DeferredScreen>
     : profileOpen
     ? <ProfileView userId={userId} units={units} syncStatus={preview ? undefined : syncStatus} appearance={appearance} onToggleAppearance={toggleAppearance} onBack={() => setProfileOpen(false)} onExit={exit} onArcade={() => void openArcade()} onEvolution={!preview ? () => { setProfileOpen(false); setEvolutionOpen(true); } : undefined} onManageContent={isAdmin && !preview ? () => { setProfileOpen(false); setContentOpen(true); } : undefined} />
     : <JourneyHome resumeLearningMode={resumeMode} onWords={() => void openLibrary('vocabulary')} onGrammar={() => void openLibrary('grammar')} units={units} userId={userId} resumeUnitId={lastOpenedUnitId} error={unitError} onOpen={(summary) => void openUnit(summary)} onConverse={(summary) => void openUnit(summary, true)} onArcade={() => void openArcade()} onManageContent={isAdmin && !preview ? () => setContentOpen(true) : undefined} onMirror={preview || isAdmin && mirrorPilot ? openMirrorFromHome : undefined} onGrammarReview={preview || isAdmin ? () => setGrammarOpen(true) : undefined} onFusionDemo={preview || isAdmin ? () => setFusionOpen(true) : undefined} onTryPreview={previewAllowed && !preview ? usePreview : undefined} onExit={exit} onEvolution={!preview ? () => setEvolutionOpen(true) : undefined} onProfile={() => setProfileOpen(true)} appearance={appearance} onToggleAppearance={toggleAppearance} />}{microOverlay}</>;
