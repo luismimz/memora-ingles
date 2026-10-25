@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { LanguageGame } from './LanguageGame';
 import { previewUnit } from './preview/previewUnit';
 import { initialGame } from './domain/game';
+import { getUnitSentences } from './domain/unit';
 import { readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
 import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
 import { preparedFixture } from './test/grammarPracticeFixtures';
@@ -29,6 +30,24 @@ async function swipe() {
     vi.advanceTimersByTime(230);
   });
 }
+
+it('el cierre real conserva continuación y Eco opcional sin fabricar otro intento', async () => {
+  const sentences = getUnitSentences(previewUnit);
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'build', sentenceIndex: sentences.length - 1, filledSlots: sentences[sentences.length - 1].slots.length });
+  await mount({ ...previewUnit, communication: undefined });
+  await act(async () => { button('Continuar con mi frase →').props.onClick(); vi.advanceTimersByTime(230); });
+  const actions = tree.root.findByProps({ className: 'practice-closure-actions' }).findAllByType('button');
+  expect(actions).toHaveLength(2);
+  expect(text(actions[0])).toBe('Seguir →');
+  expect(text(actions[1])).toBe('Terminar por hoy');
+  const extras = tree.root.findByProps({ className: 'practice-closure-extras' });
+  expect(extras.props.open).toBeUndefined();
+  expect(extras.findAllByProps({ className: 'echo-practice' })).toHaveLength(1);
+  const attempts = readLearningActivities(user).filter((event) => event.source === 'learner');
+  await act(async () => { actions[0].props.onClick(); });
+  expect(next).toHaveBeenCalledOnce();
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toEqual(attempts);
+});
 beforeEach(() => {
   vi.useFakeTimers(); next.mockClear();
   const values = new Map<string, string>();
