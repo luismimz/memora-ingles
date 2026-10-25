@@ -9,6 +9,7 @@ import { playEnglish, playSpanish, stopSpeech } from '../services/audio';
 import { syncLabels, type SyncStatus } from '../services/progressSync';
 import type { Appearance } from '../useAppearance';
 import './evolutionChat.css';
+import { EvolutionMemoryLibrary } from './EvolutionMemoryLibrary';
 
 export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode = false, onBack, onPractice, onProfile, onExit, appearance, onToggleAppearance }: { userId: string; units: UnitSummary[]; pilot: AtomicUnit | null; syncStatus: SyncStatus; inspectionMode?: boolean; onBack: () => void; onPractice: () => void; onProfile: () => void; onExit: () => void; appearance: Appearance; onToggleAppearance: () => void }) {
   const [query, setQuery] = useState('');
@@ -54,6 +55,6 @@ export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode
       </section>
     </div>
     </details>
-    <section className="evolution-controls history-library"><details><summary>Palabras, frases y práctica extra</summary>{!memories.length && !sentences.length ? <p>Aún no hay palabras o frases guardadas para mostrar aquí.</p> : null}{memories.map((memory) => <details key={memory.key}><summary>{memory.word.en} · {memory.word.es}</summary><p>{memory.word.scene}</p>{memory.word.bridge ? <p>{memory.word.bridge} → {memory.word.en} → {memory.word.es}</p> : null}<button type="button" onClick={() => void playEnglish(memory.word.en)}>🔊 Escuchar</button></details>)}{sentences.map((sentence) => <details key={sentence.key}><summary>{sentence.sentenceEn}</summary><p>{sentence.sentenceEs}</p><small>Próximo repaso sugerido: {new Date(sentence.nextReviewAt).toLocaleString('es-ES')}</small></details>)}<button type="button" className="quiet-action" onClick={onPractice}>Practicar en Arcade</button></details></section>
+    <EvolutionMemoryLibrary memories={memories} sentences={sentences} onListen={(english) => void playEnglish(english)} onPractice={onPractice} />
   </main>;
 }
