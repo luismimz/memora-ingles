@@ -61,6 +61,15 @@ it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opciona
   expect(tree.root.findByType('input').props.value).toBe('casa');
   expect(tree.root.findAllByType('article')).toHaveLength(12);
   expect(focused.at(-1)).toBe(catalogue.units[10].title);
+  await click('← Inicio');
+  await click('Perfil y ajustes');
+  await act(async () => { await import('./components/ProfileView'); });
+  expect(tree.root.findAllByProps({ className: 'journey-screen profile-screen' })).toHaveLength(1);
+  await click('Mi evolución');
+  await act(async () => { await import('./components/EvolutionView'); });
+  expect(tree.root.findAllByProps({ className: 'journey-screen evolution-screen' })).toHaveLength(1);
+  await click('Inicio');
+  expect(tree.root.findAllByProps({ className: 'journey-screen home-v2 home-guided' })).toHaveLength(1);
   expect(readLearningActivities('app-episode-isolated').filter((item) => item.source === 'learner')).toHaveLength(0);
 });
 
