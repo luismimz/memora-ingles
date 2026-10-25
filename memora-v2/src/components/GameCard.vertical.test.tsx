@@ -83,12 +83,13 @@ it('la inercia no atraviesa el encuentro siguiente', () => {
   act(() => { vi.advanceTimersByTime(200); wheel(); vi.advanceTimersByTime(230); });
   expect(advance).toHaveBeenCalledTimes(2);
 });
-it('End lee hasta abajo sin navegar y una nueva pulsación al final avanza, no la repetida', () => {
-  const advance = vi.fn(); const preventDefault = vi.fn(); mount(advance);
-  act(() => { region().props.onKeyDown(event({ key: 'End', repeat: false, preventDefault })); viewport.scrollTop = 200; region().props.onScroll(event()); region().props.onKeyDown(event({ key: 'End', repeat: true, preventDefault })); vi.advanceTimersByTime(230); });
-  expect(advance).not.toHaveBeenCalled(); expect(preventDefault).not.toHaveBeenCalled();
-  act(() => { region().props.onKeyDown(event({ key: 'End', repeat: false, preventDefault })); vi.advanceTimersByTime(230); });
-  expect(advance).toHaveBeenCalledOnce(); expect(preventDefault).toHaveBeenCalledOnce();
+it('la región no captura teclas de lectura al final: avanzar por teclado requiere el botón explícito', () => {
+  const advance = vi.fn(); mount(advance);
+  expect(region().props.onKeyDown).toBeUndefined();
+  act(() => { viewport.scrollTop = 200; region().props.onScroll(event()); vi.advanceTimersByTime(230); });
+  expect(advance).not.toHaveBeenCalled();
+  act(() => { tree.root.findByType('button').props.onClick(); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
 });
 it('cancelar toque corta intención anterior', () => {
   const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;

@@ -30,3 +30,13 @@ it('mantener una flecha no encadena tarjetas; una pulsación nueva sigue disponi
   act(() => { key(true); vi.advanceTimersByTime(230); });
   expect(advance).toHaveBeenCalledOnce();
 });
+it('respeta atajos del navegador, selección de texto y combinaciones con modificadores', () => {
+  const advance = vi.fn(), preventDefault = vi.fn(), target = { closest: () => null };
+  act(() => { tree = create(<GameCard onAdvance={advance}>Modelo</GameCard>); });
+  for (const modifier of ['altKey', 'ctrlKey', 'metaKey', 'shiftKey']) {
+    act(() => tree.root.findByProps({ role: 'group' }).props.onKeyDown({ key: 'ArrowLeft', repeat: false, target, preventDefault, [modifier]: true }));
+  }
+  vi.stubGlobal('window', { setTimeout, clearTimeout, getSelection: () => ({ toString: () => 'texto seleccionado' }) });
+  act(() => { tree.root.findByProps({ role: 'group' }).props.onKeyDown({ key: 'ArrowLeft', repeat: false, target, preventDefault }); vi.advanceTimersByTime(230); });
+  expect(advance).not.toHaveBeenCalled(); expect(preventDefault).not.toHaveBeenCalled();
+});

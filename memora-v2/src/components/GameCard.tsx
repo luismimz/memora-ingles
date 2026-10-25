@@ -97,7 +97,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   }
 
   function keyDown(event: React.KeyboardEvent<HTMLDivElement>) {
-    if (event.repeat || interactiveCardTarget(event.target)) return;
+    if (event.repeat || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || interactiveCardTarget(event.target) || window.getSelection?.()?.toString()) return;
     if (event.key === 'ArrowLeft' && onAdvance && !exiting) {
       event.preventDefault();
       advance();
@@ -134,7 +134,6 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
           if (!wheelGesture.current.allowed) return;
           if (event.deltaY >= 40 && canLeave(event.target) && atEnd(event.currentTarget)) advance();
         }}
-        onKeyDown={(event) => { if (!event.repeat && ['ArrowDown', 'PageDown', 'End', ' '].includes(event.key) && canLeave(event.target) && atEnd(event.currentTarget)) { event.preventDefault(); advance(); } }}
         onScroll={(event) => {
           // Reading, layout changes and programmatic scroll never navigate.
           if (!atEnd(event.currentTarget)) touchStart.current = undefined;
