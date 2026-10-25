@@ -88,6 +88,32 @@ it('una forma sin coach entra en fallback vertical y enlaza al constructor sin c
   expect(readGameCheckpoint(user, value.id, value.contentVersion ?? '1')?.phase).toBe('build');
   expect(readLearningActivities(user).filter((row) => row.correct === true)).toHaveLength(0);
 });
+it('fallback reanuda enseñanza, reparación y resultado en su sitio sin nuevos intentos ni autoplay', async () => {
+  const value: AtomicUnit = { ...previewUnit, grammar: [previewUnit.grammar[0]], words: previewUnit.words.filter((word) => word.en.toLowerCase() !== previewUnit.grammar[0].englishBase) };
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  const saved = () => readGameCheckpoint(user, value.id, value.contentVersion ?? '1');
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await open(); await swipe(false); await swipe(false);
+  expect(saved()?.fallbackLesson?.step).toBe(2);
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await open();
+  expect(saved()?.fallbackLesson?.step).toBe(2); expect(playEnglish).not.toHaveBeenCalled();
+  await swipe(false); await swipe(false);
+  const check = makeGrammarChecks(value.grammar[0])[0];
+  await act(async () => button(check.choices.find((choice) => choice !== check.answer)!).props.onClick());
+  expect(saved()?.fallbackLesson?.failures).toBe(1);
+  const before = readLearningActivities(user);
+  act(() => tree.unmount()); await open();
+  expect(text(tree.toJSON())).toContain(check.hint);
+  await act(async () => button(check.answer).props.onClick());
+  expect(saved()?.fallbackLesson?.outcome).toBe('correct');
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await open();
+  expect(text(tree.toJSON())).toContain('✓ Acertaste'); expect(playEnglish).not.toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+  await swipe(false); await swipe(false);
+  const last = makeGrammarChecks(value.grammar[0])[1];
+  await act(async () => button(last.answer).props.onClick()); await swipe(false);
+  expect(saved()?.phase).toBe('build'); expect(saved()?.fallbackLesson).toBeUndefined();
+});
 it('salir y volver conserva montaje parcial y modelo usado sin repetir historia ni fabricar intento', async () => {
   await mount(); await swipe(false);
   const assembly = tree.root.findByType(WordAssembly);

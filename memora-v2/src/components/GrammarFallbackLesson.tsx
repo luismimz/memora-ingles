@@ -4,22 +4,34 @@ import { getExpandedEnglishSubject, getSpanishSubjectLabel, type GrammarForm } f
 import { playEnglish, playSpanish, playSnap, stopSpeech } from '../services/audio';
 import { GameCard } from './GameCard';
 import { GrammarMorphology } from './GrammarMorphology';
+import type { GrammarFallbackPosition } from '../domain/game';
 
 /** Compatibility presentation for forms without an authored coach. No new exercises or memory evidence. */
-export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady, onContinue, vertical = false }: {
+export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady, onContinue, vertical = false, initialPosition, onProgress }: {
   form: GrammarForm; baseSpanish?: string; index: number; total: number;
   onReady: () => void; onContinue: () => void; vertical?: boolean;
+  initialPosition?: GrammarFallbackPosition; onProgress?: (position: GrammarFallbackPosition) => void;
 }) {
   const progressive = (form.visualContract === 'present-continuous' || form.id === 'ing') && getExpandedEnglishSubject(form.subjects[0]) === 'I am';
-  const [step, setStep] = useState(progressive ? 0 : 3);
-  const [subjectIndex, setSubjectIndex] = useState(0);
   const checks = useMemo(() => progressive ? makeGrammarChecks(form) : [], [form, progressive]);
-  const [checkIndex, setCheckIndex] = useState(0);
-  const [prepared, setPrepared] = useState(true);
-  const [outcome, setOutcome] = useState<'pending' | 'correct' | 'model'>('pending');
-  const [failures, setFailures] = useState(0);
+  const [saved] = useState(() => {
+    const value = initialPosition;
+    if (!value || !Number.isInteger(value.step) || value.step < (progressive ? 0 : 3) || value.step > 4 || !Number.isInteger(value.checkIndex) || value.checkIndex < 0 || value.checkIndex > checks.length || !Number.isInteger(value.subjectIndex) || value.subjectIndex < 0 || value.subjectIndex >= form.subjects.length || typeof value.prepared !== 'boolean' || !['pending', 'correct', 'model'].includes(value.outcome) || !Number.isInteger(value.failures) || value.failures < 0 || value.failures > 2) return undefined;
+    if (value.step < 4 && (value.subjectIndex !== 0 || value.checkIndex !== 0 || value.outcome !== 'pending' || value.failures !== 0 || !value.prepared)) return undefined;
+    if ((!value.prepared || value.checkIndex === checks.length) && value.outcome !== 'pending') return undefined;
+    if (value.outcome === 'model' && value.failures !== 2 || value.outcome === 'pending' && value.failures >= 2) return undefined;
+    if (value.step === 4 && checks[value.checkIndex] && form.subjects[value.subjectIndex].phrase !== checks[value.checkIndex].answer) return undefined;
+    return value;
+  });
+  const [step, setStep] = useState(saved?.step ?? (progressive ? 0 : 3));
+  const [subjectIndex, setSubjectIndex] = useState(saved?.subjectIndex ?? 0);
+  const [checkIndex, setCheckIndex] = useState(saved?.checkIndex ?? 0);
+  const [prepared, setPrepared] = useState(saved?.prepared ?? true);
+  const [outcome, setOutcome] = useState<'pending' | 'correct' | 'model'>(saved?.outcome ?? 'pending');
+  const [failures, setFailures] = useState(saved?.failures ?? 0);
   const [audio, setAudio] = useState('');
   const request = useRef(0), readySent = useRef(false), continued = useRef(false);
+  const restoredAudio = useRef(Boolean(saved));
   const check = checks[checkIndex];
   const ready = step === 4 && !check;
   const subject = form.subjects[subjectIndex];
@@ -29,6 +41,8 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
   const audioCurrent = useRef({ phrase, caption: explanation }); audioCurrent.current = { phrase, caption: explanation };
   const answerLock = useRef(false);
   const readyCallback = useRef(onReady); readyCallback.current = onReady;
+  const positionCallback = useRef(onProgress); positionCallback.current = onProgress;
+  useEffect(() => { positionCallback.current?.({ step, subjectIndex, checkIndex, prepared, outcome, failures }); }, [step, subjectIndex, checkIndex, prepared, outcome, failures]);
   async function listen(explanation = false) {
     const token = ++request.current;
     setAudio('Preparando audio…');
@@ -40,6 +54,7 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
   }
   useEffect(() => {
     // A different model cancels the previous voice, but sound never advances a lesson.
+    if (restoredAudio.current) { restoredAudio.current = false; return; }
     if (step === 4 && prepared && check && outcome === 'pending') return;
     void listen();
     return () => { request.current++; stopSpeech(); };

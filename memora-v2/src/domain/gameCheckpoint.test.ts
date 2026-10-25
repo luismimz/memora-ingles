@@ -13,6 +13,16 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('guarda navegación gramatical sin cruzar usuario/versión ni perder la fase por un subpaso corrupto', () => {
+    const state = { ...initialGame, phase: 'grammar' as const, fallbackLesson: { step: 4, subjectIndex: 0, checkIndex: 0, prepared: true, outcome: 'correct' as const, failures: 0 } };
+    writeGameCheckpoint('learner', 'fallback', '1', state);
+    expect(readGameCheckpoint('learner', 'fallback', '1')).toEqual(state);
+    expect(readGameCheckpoint('other', 'fallback', '1')).toBeNull();
+    expect(readGameCheckpoint('learner', 'fallback', '2')).toBeNull();
+    writeGameCheckpoint('learner', 'fallback', '1', { ...state, fallbackLesson: { ...state.fallbackLesson, failures: 8 } });
+    expect(readGameCheckpoint('learner', 'fallback', '1')).toMatchObject({ phase: 'grammar', grammarIndex: 0 });
+    expect(readGameCheckpoint('learner', 'fallback', '1')?.fallbackLesson).toBeUndefined();
+  });
   it('conserva piezas/ayudas en la misma posición y descarta solo un subpaso corrupto', () => {
     const state = { ...initialGame, wordIndex: 2, wordAssembly: { selected: [0, 2], hinted: true, modelUsed: false } };
     writeGameCheckpoint('learner', 'letters', '1', state);
