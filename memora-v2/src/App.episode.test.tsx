@@ -8,8 +8,11 @@ import { readTrickCheckpoint } from './domain/trickCheckpoint';
 import { GrammarOrder } from './components/GrammarOrder';
 import { MicroArcade } from './components/MicroArcade';
 import { pendingAutomaticArcade } from './domain/arcadeCadence';
+import type { AtomicUnit } from './domain/unit';
 
-vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
+const catalogue = vi.hoisted(() => ({ units: null as AtomicUnit[] | null }));
+
+vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn() }));
 vi.mock('./services/progressSync', async (original) => ({ ...await original<typeof import('./services/progressSync')>(), startProgressSync: (_id: string, callback: (status: string) => void) => { callback('saved'); return { stop: vi.fn() }; } }));
 vi.mock('./services/directus', async (original) => ({
   ...await original<typeof import('./services/directus')>(),
@@ -17,11 +20,12 @@ vi.mock('./services/directus', async (original) => ({
   loadIdentity: async () => ({ id: 'app-episode-isolated', isAdmin: false }),
   loadPublishedUnitSummaries: async () => [{ ...previewUnit, grammarTricks: grammarTricks(previewUnit) }],
   loadUnit: async () => previewUnit,
+  loadLearningLibrary: async () => ({ units: catalogue.units ?? [previewUnit], failed: [] }),
   loadKeysPilot: async () => null, loadMirrorPilot: async () => null,
   loadAsset: async () => '',
 }));
 let tree: ReactTestRenderer;
-const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
+const text = (node: any): string => typeof node === 'string' || typeof node === 'number' ? String(node) : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick()); };
 async function advance() {
   const target = { closest: () => null };
@@ -34,7 +38,31 @@ async function advance() {
     vi.advanceTimersByTime(230);
   });
 }
-afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+afterEach(() => { if (tree) act(() => tree.unmount()); catalogue.units = null; vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opcional', async () => {
+  vi.useFakeTimers();
+  const values = new Map<string, string>();
+  const local = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
+  vi.stubGlobal('localStorage', local);
+  vi.stubGlobal('window', { localStorage: local, location: { search: '' }, addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(), setTimeout, clearTimeout, setInterval, clearInterval, matchMedia: () => ({ matches: true }), getSelection: () => null });
+  vi.stubGlobal('document', { documentElement: { dataset: {}, style: {} } });
+  catalogue.units = Array.from({ length: 14 }, (_, index) => ({ ...previewUnit, id: `optional-${index}`, kind: 'vocabulary-pack', title: `Tanda · Casa · ${index}` }));
+  const focused: string[] = [];
+  const App = (await import('./App')).default;
+  await act(async () => { tree = create(<App />, { createNodeMock: (node) => node.type === 'h2' ? { focus: () => focused.push(String(node.props.children)) } : null }); });
+  await click('Aprender palabras');
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'casa' } }));
+  await act(async () => tree.root.findByProps({ className: 'learning-library-more' }).findByType('button').props.onClick());
+  expect(tree.root.findAllByType('article')).toHaveLength(12);
+  await act(async () => tree.root.findAllByType('article')[10].findByType('button').props.onClick());
+  expect(tree.root.findAllByProps({ className: 'play-intention' })).toHaveLength(1);
+  await click('← Recorrido');
+  expect(tree.root.findByType('input').props.value).toBe('casa');
+  expect(tree.root.findAllByType('article')).toHaveLength(12);
+  expect(focused.at(-1)).toBe(catalogue.units[10].title);
+  expect(readLearningActivities('app-episode-isolated').filter((item) => item.source === 'learner')).toHaveLength(0);
+});
 
 it('App real monta Inicio→episodio→salir/reanudar→chat→cierre sin sustituir hooks ni progreso', async () => {
   vi.useFakeTimers();

@@ -1,13 +1,17 @@
 .learning-library > section { margin: 2rem 0; }
 .learning-library h1 { font-size: clamp(2rem, 4vw, 3rem); line-height: 1.1; }
 .learning-library-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr)); gap: 1rem; }
-.learning-library-grid article { padding: 1.5rem; border: 1px solid #bba28a; border-radius: 24px; background: var(--surface, #fffaf3); }
+.learning-library-grid article { padding: 1.5rem; border: 1px solid var(--line); border-radius: 24px; background: var(--surface-strong); }
 .learning-library-grid h2 { font-size: 1.5rem; line-height: 1.2; }
 .learning-library-grid p { line-height: 1.6; overflow-wrap: anywhere; }
 .learning-library-grid button { min-height: 44px; margin: .5rem .3rem .5rem 0; }
 .learning-requirements { color: var(--accent-ink); }
-.learning-library button:focus-visible { outline: 3px solid #28788f; outline-offset: 3px; }
-.home-mode-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr)); }
+.learning-library :is(button, input, select, h2):focus-visible { outline: 3px solid var(--accent); outline-offset: 3px; }
 .learning-library-filters { display: flex; flex-wrap: wrap; gap: 16px; margin: 20px 0; }
-.learning-library-filters label { display: grid; gap: 8px; flex: 1; min-width: 200px; font-size: .85rem; color: var(--muted); }
+.learning-library-filters label { display: grid; gap: 8px; flex: 1; min-width: min(100%, 200px); font-size: .85rem; color: var(--muted); }
 .learning-library-filters input, .learning-library-filters select { min-height: 48px; border: 1px solid var(--line); border-radius: 12px; padding: 12px; background: var(--surface-soft); color: var(--ink); font: inherit; }
+.learning-library-results { color: var(--muted); font-size: .82rem; line-height: 1.6; }
+.learning-library-practiced { display: inline-block; padding: 6px 10px; border-radius: 10px; background: var(--surface-soft); color: var(--muted); font-size: .72rem; line-height: 1.4; }
+.learning-library-more { display: grid; justify-items: center; gap: 12px; margin: 24px 0; }
+.learning-library-more button { min-height: 48px; padding: 12px 20px; }
+.learning-library-more small { color: var(--muted); text-align: center; line-height: 1.5; }

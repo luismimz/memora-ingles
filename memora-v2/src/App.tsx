@@ -1,7 +1,7 @@
 import { lazy, useEffect, useRef, useState, type FormEvent } from 'react';
 import { DeferredScreen } from './components/DeferredScreen';
 import { LanguageGame } from './LanguageGame';
-import { LearningLibrary } from './components/LearningLibrary';
+import { LearningLibrary, type LibraryBrowseState } from './components/LearningLibrary';
 import { missingGrammarWords } from './domain/learningModes';
 import { readWordMemories } from './domain/memory';
 import type { LearningMode } from './domain/game';
@@ -46,6 +46,7 @@ export default function App() {
   const [learningMode, setLearningMode] = useState<LearningMode>(playingReviewRequested ? 'grammar' : 'adventure');
   const [libraryMode, setLibraryMode] = useState<'vocabulary' | 'grammar' | null>(null);
   const [libraryUnits, setLibraryUnits] = useState<AtomicUnit[]>([]);
+  const libraryBrowse = useRef<Record<string, LibraryBrowseState>>({});
   const [conversationStart, setConversationStart] = useState(false);
   const [lastOpenedUnitId, setLastOpenedUnitId] = useState<string | null>(null);
   const [resumeMode, setResumeMode] = useState<LearningMode>('adventure');
@@ -516,7 +517,7 @@ return <><LanguageGame learningMode={learningMode} key={`${unit.id}-${userId}-${
   if (loading) return <div className="gate-screen"><div className="gate-card"><div className="loading-orb">◌</div><h1>Preparando tu escena…</h1><p>Tu siguiente experiencia está casi lista.</p></div></div>;
   if (authenticated && error && !profileOpen && !contentOpen) return <div className="gate-screen"><div className="gate-card"><p className="eyebrow">DIRECTUS</p><h1>No se pudo cargar la home</h1><p>{error}</p>{isAdmin ? <button type="button" className="primary-action" onClick={() => setProfileOpen(true)}>Mi perfil · Gestionar contenido →</button> : null}<button type="button" onClick={() => { setAuthenticated(false); setError(null); }}>Volver al acceso</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Ver la experiencia de prueba</button> : null}</div></div>;
   if (libraryMode === 'grammar' && !unit && (preview || authenticated)) return <GrammarJourney units={libraryUnits} userId={userId} inspection={preview} resumeId={readGrammarPosition(userId) || (resumeMode === 'grammar' ? lastOpenedUnitId : null)} notice={libraryNotice} onRetry={() => void openLibrary('grammar')} onOpen={openGrammarStop} onPrepare={(stop) => void prepareGrammarStop(stop)} onBack={() => setLibraryMode(null)} onArcade={() => { setLibraryMode(null); void openArcade(); }} onEvolution={!preview ? () => { setLibraryMode(null); setEvolutionOpen(true); } : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />;
-  if (libraryMode && !unit && (preview || authenticated)) return <LearningLibrary mode={libraryMode} units={libraryUnits} userId={userId} inspection={preview} notice={libraryNotice} onRetry={() => void openLibrary(libraryMode)} onOpen={openLibraryUnit} onBack={() => setLibraryMode(null)} onWords={() => void openLibrary('vocabulary')} />;
+  if (libraryMode && !unit && (preview || authenticated)) return <LearningLibrary mode={libraryMode} units={libraryUnits} userId={userId} inspection={preview} initialBrowse={libraryBrowse.current[`${userId}:${libraryMode}`]} onBrowseChange={(state) => { libraryBrowse.current[`${userId}:${libraryMode}`] = state; }} notice={libraryNotice} onRetry={() => void openLibrary(libraryMode)} onOpen={openLibraryUnit} onBack={() => setLibraryMode(null)} onWords={() => void openLibrary('vocabulary')} />;
   if (preview || authenticated) return <>{evolutionOpen
     ? <EvolutionView userId={userId} units={units} pilot={pilot} syncStatus={syncStatus} inspectionMode={preview} onBack={() => setEvolutionOpen(false)} onPractice={() => void openArcade()} onProfile={() => { setEvolutionOpen(false); setProfileOpen(true); }} onExit={exit} appearance={appearance} onToggleAppearance={toggleAppearance} />
     : contentOpen && isAdmin && !preview
