@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { LanguageGame } from './LanguageGame';
-import { previewUnit } from './preview/previewUnit';
+import { previewUnit, reviewUnits } from './preview/previewUnit';
 import { initialGame } from './domain/game';
 import { readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
 import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
@@ -729,6 +729,17 @@ it('la explicación de compatibilidad vuelve al mismo montaje sin cuestionario n
   }
   await swipe(false);
   expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+});
+it('el recordatorio corresponde al mensaje montado, no a la última forma visitada', async () => {
+  const value: AtomicUnit = { ...previewUnit, practiceSentences: undefined, grammar: [previewUnit.grammar[0], reviewUnits[2].grammar[0]] };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'build', grammarIndex: 1, filledSlots: 1 });
+  await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  const before = readGameCheckpoint(user, value.id, value.contentVersion ?? '1');
+  await act(async () => button('Recordar el truco').props.onClick());
+  expect(tree.root.findByType(GrammarCoach).props.form).toBe(value.grammar[0]);
+  await act(async () => button('← Mi mensaje').props.onClick());
+  expect(readGameCheckpoint(user, value.id, value.contentVersion ?? '1')).toEqual({ ...before, grammarHelpUsed: true });
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
 });
 it('marcar una unidad como repaso no evita enseñar una estructura sin práctica anterior', async () => {
   const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };

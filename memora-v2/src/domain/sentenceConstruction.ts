@@ -1,5 +1,15 @@
-import type { AtomicWord, UnitSentence } from './unit';
+import type { AtomicWord, GrammarForm, UnitSentence } from './unit';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
+
+/** Match an explicitly authored sentence piece, not the last form visited or an inferred tense. */
+export function constructionGrammar(sentence: UnitSentence, forms: readonly GrammarForm[]): GrammarForm | undefined {
+  if (forms.length === 1) return forms[0];
+  const key = (text: string) => text.trim().toLocaleLowerCase('en-US').replace(/[’‘]/g, "'").replace(/[.!?]+$/u, '').replace(/\s+/g, ' ').trim();
+  const pieces = new Set(sentence.slots.map((slot) => key(slot.en)));
+  const matches = forms.filter((form) => form.subjects.some((subject) => pieces.has(key(subject.phrase))));
+  // Ambiguous or unlinked content must not silently show an unrelated trick.
+  return matches.length === 1 ? matches[0] : undefined;
+}
 
 /** Explain only authored correspondences; never guess a distractor's translation. */
 export function constructionFeedback(sentence: UnitSentence, slotIndex: number, choice: string, vocabulary: readonly AtomicWord[] = []): string {

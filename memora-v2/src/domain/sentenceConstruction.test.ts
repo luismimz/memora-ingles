@@ -1,6 +1,7 @@
 import { expect, it } from 'vitest';
-import { constructionFeedback } from './sentenceConstruction';
+import { constructionFeedback, constructionGrammar } from './sentenceConstruction';
 import type { UnitSentence } from './unit';
+import { previewUnit, reviewUnits } from '../preview/previewUnit';
 
 const sentence: UnitSentence = { en: 'I have a book.', es: 'Yo tengo un libro.', pronunciationTip: '', slots: [
   { en: 'I', es: 'Yo', choices: ['I', 'have'] },
@@ -8,6 +9,16 @@ const sentence: UnitSentence = { en: 'I have a book.', es: 'Yo tengo un libro.',
   { en: 'a', es: 'un', choices: ['a', 'I'] },
   { en: 'book.', es: 'libro', choices: ['pen.', 'book.'] },
 ] };
+it('vincula el truco a una pieza explícita y no adivina entre varias formas', () => {
+  const playing = previewUnit.grammar[0], cooking = reviewUnits[2].grammar[0];
+  expect(constructionGrammar(previewUnit.sentence, [cooking, playing])).toBe(playing);
+  const typographic = { ...previewUnit.sentence, slots: [{ ...previewUnit.sentence.slots[0], en: 'I’M   PLAYING.' }] };
+  expect(constructionGrammar(typographic, [cooking, playing])).toBe(playing);
+  expect(constructionGrammar(sentence, [cooking, playing])).toBeUndefined();
+  expect(constructionGrammar(previewUnit.sentence, [playing, { ...playing, id: 'another' }])).toBeUndefined();
+  expect(constructionGrammar(sentence, [playing])).toBe(playing); // Legacy single-form context is unchanged.
+  expect(constructionGrammar(sentence, [])).toBeUndefined();
+});
 it('deriva el significado de piezas enseñadas y conserva una corrección concreta', () => {
   expect(constructionFeedback(sentence, 1, 'a')).toBe('«a» corresponde a «un». Aquí necesitas «tengo».');
   expect(constructionFeedback(sentence, 1, 'have')).toBe('Pieza colocada con apoyo.');
