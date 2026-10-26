@@ -72,6 +72,24 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it('descartar el descubrimiento respeta la decisión visible aunque no se pueda guardar la preferencia', async () => {
+  writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...initialGame, wordIndex: 2, recognitionStyle: 'scene-delivery-v1' });
+  await mount();
+  const original = localStorage.setItem;
+  const writing = vi.spyOn(localStorage, 'setItem').mockImplementation((key, value) => {
+    if (key.startsWith('memora-v2.rejected-association.')) throw new Error('Preference unavailable');
+    original(key, value);
+  });
+  try {
+    await act(async () => button('Esta asociación no me ayuda').props.onClick());
+    expect(tree.root.findAllByType(CausalAssociationCard)).toHaveLength(0);
+    expect(button('Volver a usar el puente')).toBeDefined();
+    expect(text(tree.toJSON())).not.toContain(unit.words[2].scene);
+    expect(readLearningActivities(user)).toEqual([]);
+    expect(readWordMemories(user)).toEqual([]);
+  } finally { writing.mockRestore(); }
+});
+
 it('disco→escritorio enlaza descubrimiento, montaje y significado con ayudas retiradas sin acreditar por tocar', async () => {
   writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...initialGame, wordIndex: 2, recognitionStyle: 'scene-delivery-v1' });
   await mount();

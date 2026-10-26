@@ -39,12 +39,12 @@ import { CausalAssociationCard } from './components/CausalAssociationCard';
 function AssociationCard(props: Parameters<typeof StandardAssociationCard>[0]) {
   const [rejected, setRejected] = useState(() => isAssociationRejected(props.userId, props.word));
   if (props.vertical && !props.inspection && !rejected && supportsCausalDiscovery(props.word)) return <CausalAssociationCard {...props} onReject={() => { rememberAssociationPreference(props.userId, props.word, true); setRejected(true); }} />;
-  return <StandardAssociationCard {...props} onPreferenceChange={setRejected} />;
+  return <StandardAssociationCard {...props} rejectedPreference={rejected} onPreferenceChange={setRejected} />;
 }
-function StandardAssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false, assemblyPosition, onAssemblyProgress, onPreferenceChange }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean; assemblyPosition?: WordAssemblyPosition; onAssemblyProgress?: (position: WordAssemblyPosition) => void; onPreferenceChange?: (rejected: boolean) => void }) {
+function StandardAssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false, assemblyPosition, onAssemblyProgress, onPreferenceChange, rejectedPreference }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean; assemblyPosition?: WordAssemblyPosition; onAssemblyProgress?: (position: WordAssemblyPosition) => void; onPreferenceChange?: (rejected: boolean) => void; rejectedPreference?: boolean }) {
   const [reconstruct, setReconstruct] = useState(false);
   const [assembling, setAssembling] = useState(Boolean(vertical && !inspection && assemblyPosition));
-  const [associationRejected, setAssociationRejected] = useState(() => isAssociationRejected(userId, word));
+  const [associationRejected, setAssociationRejected] = useState(() => rejectedPreference ?? isAssociationRejected(userId, word));
   const { audioState, listen, cancel } = useAssociationAudio(word, !assembling && !reconstruct, !associationRejected);
 
   function connect() {
