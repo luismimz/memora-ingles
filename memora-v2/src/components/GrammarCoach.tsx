@@ -37,7 +37,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // A conversational exchange may take over one of the written checks.
   const generatedContinuous = Boolean(form && !form.lesson && lesson.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
   const preparedMessage = [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill, treeLocationSkill, meatCookingSkill].includes(lesson.id);
-  const stream = puzzle && (generatedContinuous || preparedMessage);
+  const stream = puzzle && (explanationOnly || generatedContinuous || preparedMessage);
   // Keep an already-started ordering task for this mount, even if a newly
   // connected constructor would otherwise defer it. Do not shift indices as
   // onProgress writes each new checkpoint back to the parent.
