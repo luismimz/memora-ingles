@@ -483,6 +483,30 @@ it.each(['order-message-v1', 'meaning-now-v1', 'use'])('el rescate de %s present
   await swipe(false);
   expect(readLearningActivities(user)).toEqual(before);
 });
+it.each(['order-message-v1', 'meaning-now-v1', 'use'])('el acierto restaurado de %s ya no se presenta como tarea pendiente', async (id) => {
+  const lesson = lessonForForm(previewUnit.grammar[0], previewUnit.words.find((word) => word.en.toLowerCase() === previewUnit.grammar[0].englishBase)?.es.toLowerCase())!;
+  const checkIndex = lesson.checks.findIndex((check) => check.id === id);
+  const check = lesson.checks[checkIndex];
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar', coach: { lessonId: lesson.id, position: { stage: lesson.steps.length, checkIndex, checkId: check.id, input: check.answers[0], feedback: 'correct', helped: false, order: check.ordering ? [1, 2, 0] : undefined } } });
+  vi.mocked(playEnglish).mockClear();
+  await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  expect(text(tree.root.findByType('h2'))).toBe('✓ Acertaste');
+  expect(text(tree.root.findByProps({ className: 'eyebrow' }))).toBe('RESULTADO');
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(tree.root.findAllByType(AnswerStudio)).toHaveLength(0);
+  expect(tree.root.findByType(GameCard).props.advanceLabel).toBe('Continuar al siguiente reto');
+  expect(text(tree.toJSON())).toContain(check.success);
+  if (check.situation) {
+    expect(tree.root.findAllByProps({ className: 'situation-result' })).toHaveLength(1);
+    expect(tree.root.findAllByType('button').filter((node) => node.props['data-drop-choice']).every((node) => node.props.disabled)).toBe(true);
+    expect(text(tree.toJSON())).not.toContain('Lleva el mensaje a su escena');
+  }
+  expect(playEnglish).not.toHaveBeenCalled();
+  const before = readLearningActivities(user);
+  expect(before).toHaveLength(0);
+  await swipe(false);
+  expect(readLearningActivities(user)).toEqual(before);
+});
 it('reanudar la explicación elegida no vuelve a interponer el atajo de una estructura conocida', async () => {
   const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
   const lesson = lessonForForm(value.grammar[0], value.words.find((word) => word.en.toLowerCase() === value.grammar[0].englishBase)?.es.toLowerCase())!;

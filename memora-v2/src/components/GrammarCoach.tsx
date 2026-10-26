@@ -166,7 +166,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
     <div className={`coach-content${step ? ' coach-teaching' : ''}`}>
       {step ? <p className="coach-teaching-step">{exampleBridge ? 'UNA ACCIÓN NUEVA' : 'Mira las piezas'} · {stage + 1}/{lesson.steps.length}</p> : <>
       {stream ? <p className="coach-language">{finished ? 'Preparación terminada · vamos a usarla' : `Práctica · reto ${checkIndex + 1} de ${checks.length}`}</p> : null}
-      <p className="eyebrow">{finished ? 'AHORA, ÚSALO' : needsModel ? 'MODELO' : ordering ? 'MONTA EL MENSAJE' : situation ? 'EL MENSAJE CAMBIA LA ESCENA' : check.id === 'meaning-now-v1' ? 'ENTIENDE EL MENSAJE' : check.kind === 'explain' ? 'AHORA TÚ ENSEÑAS' : check.kind === 'write' ? 'TU PRIMERA RESPUESTA' : 'PRUÉBALO'}</p></>}
+      <p className="eyebrow">{finished ? 'AHORA, ÚSALO' : needsModel ? 'MODELO' : streamSolved ? 'RESULTADO' : ordering ? 'MONTA EL MENSAJE' : situation ? 'EL MENSAJE CAMBIA LA ESCENA' : check.id === 'meaning-now-v1' ? 'ENTIENDE EL MENSAJE' : check.kind === 'explain' ? 'AHORA TÚ ENSEÑAS' : check.kind === 'write' ? 'TU PRIMERA RESPUESTA' : 'PRUÉBALO'}</p></>}
       {!needsModel && (!writing || feedback === 'correct') && !situation && !ordering && (actionScene ? <GrammarActionScene lesson={lesson} form={form} stage={step ? 'teach' : finished ? 'finished' : check.kind === 'write' ? 'write' : 'explain'} feedback={feedback} /> : sceneWord ? <SceneVisual word={sceneWord} compact /> : null)}
       {step ? <>
         <GrammarComparison step={step} previous={lesson.steps[stage - 1]} />
