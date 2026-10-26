@@ -177,6 +177,8 @@ it('retirar revisión del episodio conserva el checkpoint pero no evalúa contex
 });
 it('PLAY publicado enlaza un episodio corto sin habilitar COMPUTER/DESK u otra construcción de la fuente', async () => {
   await reachBuild(previewUnit);
+  expect(text(tree.toJSON())).not.toContain('Toca o mueve las piezas; puedes cambiar su posición.');
+  expect(tree.root.findAllByProps({ className: 'order-instruction' })).toHaveLength(1);
   const current = readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1');
   expect(current).toMatchObject({ episodeId: 'ing:short-playing-v1', continuation: { phase: 'build', filledSlots: 0 } });
   await act(async () => button('I').props.onClick());
