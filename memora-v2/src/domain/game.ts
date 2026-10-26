@@ -29,7 +29,7 @@ export interface GameState {
   /** Current construction repair, restored without replaying a learner attempt. */
   buildRepair?: { failures: number; choice: string; previousAttemptId?: string };
   buildModelUsed?: boolean;
-  /** A voluntary grammar model consultation, not an attempt or a correct response. */
+  /** A construction/grammar model consultation, not an attempt or a correct response. */
   grammarHelpUsed?: boolean;
   /** Local spelling rehearsal position only, never evidence of recall. */
   wordAssembly?: WordAssemblyPosition;
@@ -121,7 +121,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase !== 'build' || state.filledSlots >= action.slotCount || !action.correct) return state;
       if (action.withModel ? (state.buildRepair?.failures ?? 0) < 2 : (state.buildRepair?.failures ?? 0) >= 2) return state;
       const { preparationStep: _preparation, buildRepair: _repair, ...rest } = state;
-      return { ...rest, filledSlots: state.filledSlots + 1, ...(action.withModel ? { buildModelUsed: true } : {}) };
+      return { ...rest, filledSlots: state.filledSlots + 1, ...(action.withModel ? { buildModelUsed: true, grammarHelpUsed: true } : {}) };
     }
     case 'reviewJump': {
       const index = Math.max(0, Math.floor(action.index ?? 0));

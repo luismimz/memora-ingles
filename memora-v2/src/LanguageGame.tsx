@@ -85,6 +85,9 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       if (startInConversation && unit.communication?.dialogue) return { ...initialGame, phase: 'conversation' as const };
       const saved = readGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1');
       if (!saved) return start;
+      // Legacy positions already carrying a model consultation retain it in
+      // later conversation. Do not infer lost history from unrelated sessions.
+      if (saved.buildModelUsed) saved.grammarHelpUsed = true;
       if ((saved.recognitionModels ?? 0) > unit.words.length) return start;
       if (saved.recognitionStyle === 'scene-delivery-v1' && saved.recognitionModels === undefined) {
         // Additive compatibility with the just-published model outcome: restore

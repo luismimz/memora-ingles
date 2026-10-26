@@ -220,6 +220,33 @@ it('dos errores en el chat principal mantienen reparación y modelo al reabrir, 
 const constructionUnit: AtomicUnit = { ...previewUnit, communication: undefined, practiceSentences: undefined,
   sentence: { ...previewUnit.sentence, en: 'I am playing', es: 'Estoy jugando.', slots: [{ en: 'I am playing', es: 'Estoy jugando.', choices: ['I am playing', 'I playing'] }] } };
 const openConstructionUnit = async (learningMode: 'adventure' | 'grammar' = 'adventure') => { await act(async () => { tree = create(<LanguageGame unit={constructionUnit} userId={user} learningMode={learningMode} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+it('el rescate de una frase conserva ayuda durante otra construcción y reentrada antes de conversar', async () => {
+  const value: AtomicUnit = { ...previewUnit, sentence: constructionUnit.sentence, practiceSentences: [previewUnit.sentence] };
+  const saved = () => readGameCheckpoint(user, value.id, value.contentVersion ?? '1');
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'build' });
+  await open();
+  for (let index = 0; index < 2; index++) await act(async () => { tree.root.findByType(SentenceBuilderCard).findAllByType('button').find((node) => text(node) === 'I playing')!.props.onClick(); });
+  await act(async () => { tree.root.findByType(SentenceBuilderCard).props.onAcceptModel(); });
+  expect(saved()?.grammarHelpUsed).toBe(true);
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'constructed-0')).toMatchObject([{ source: 'authored', correct: null, helped: true }]);
+  await swipe(false);
+  expect(saved()).toMatchObject({ sentenceIndex: 1, filledSlots: 0, grammarHelpUsed: true });
+  const events = readLearningActivities(user);
+  act(() => tree.unmount()); await open();
+  expect(readLearningActivities(user)).toEqual(events);
+  for (const slot of value.practiceSentences![0].slots) await act(async () => { tree.root.findByType(SentenceBuilderCard).findAllByType('button').find((node) => text(node) === slot.en)!.props.onClick(); });
+  await swipe(false);
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+  expect(JSON.parse(localStorage.getItem(`memora-v2.chat-checkpoint.${user}.${value.id}`)!).helped).toBe(true);
+  expect(readLearningActivities(user).filter((event) => event.phase === 'construction' && event.correct === false)).toHaveLength(2);
+});
+it('un checkpoint legado con modelo de construcción conserva esa ayuda al entrar al chat sin reescribir intentos', async () => {
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'conversation', buildModelUsed: true });
+  await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+});
 it('si el mismo mensaje se construirá después, conserva comprensión y escritura pero lo monta una sola vez', async () => {
   writeGameCheckpoint(user, constructionUnit.id, constructionUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
   await openConstructionUnit();
