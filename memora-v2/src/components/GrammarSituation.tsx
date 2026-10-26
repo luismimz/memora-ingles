@@ -129,7 +129,7 @@ export function SituationScreen({ state }: { state: SituationState }) {
 }
 
 interface GrammarSituationProps {
-  check: LessonCheck; selected: string; feedback: 'idle' | 'help' | 'correct'; onAnswer: (answer: string) => void; onListen: () => void; disabled?: boolean; listenDisabled?: boolean;
+  check: LessonCheck; selected: string; feedback: 'idle' | 'help' | 'correct'; onAnswer: (answer: string) => void; onListen?: () => void; listenControl?: ReactNode; disabled?: boolean; listenDisabled?: boolean;
   presentationKey?: string;
 }
 export function GrammarSituation(props: GrammarSituationProps) {
@@ -137,21 +137,21 @@ export function GrammarSituation(props: GrammarSituationProps) {
   return <SituationDelivery {...props} key={`${props.presentationKey ?? ''}:${props.check.id}:${props.check.situation.message}`} />;
 }
 
-function SituationDelivery({ check, selected, feedback, onAnswer, onListen, disabled = false, listenDisabled = false, presentationKey = '' }: GrammarSituationProps) {
+function SituationDelivery({ check, selected, feedback, onAnswer, onListen, listenControl, disabled = false, listenDisabled = false, presentationKey = '' }: GrammarSituationProps) {
   const situation = check.situation!;
   const scene = situation.scenes.find((item) => item.choice === selected);
-  if (situation.scenes.every((item) => item.state === 'meat-cooking' || item.state === 'meat-stored')) return <SceneDelivery message={situation.message} presentationKey={`${presentationKey}:${check.id}`} selected={selected} feedback={feedback} onAnswer={onAnswer} onListen={onListen} disabled={disabled} listenDisabled={listenDisabled} options={situation.scenes.map((item) => ({ choice: item.choice, label: item.choice, visual: <SituationScreen state={item.state} /> }))}>
+  if (situation.scenes.every((item) => item.state === 'meat-cooking' || item.state === 'meat-stored')) return <SceneDelivery message={situation.message} presentationKey={`${presentationKey}:${check.id}`} selected={selected} feedback={feedback} onAnswer={onAnswer} onListen={onListen} listenControl={listenControl} disabled={disabled} listenDisabled={listenDisabled} options={situation.scenes.map((item) => ({ choice: item.choice, label: item.choice, visual: <SituationScreen state={item.state} /> }))}>
     {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{scene.state === 'meat-cooking' ? 'Mensaje entregado: está cocinando carne ahora.' : 'La carne está guardada en la nevera y la sartén sigue vacía. COOKING MEAT cuenta que la está cocinando ahora.'}</p></div> : null}
   </SceneDelivery>;
-  return <SceneDelivery message={situation.message} presentationKey={`${presentationKey}:${check.id}`} selected={selected} feedback={feedback} onAnswer={onAnswer} onListen={onListen} disabled={disabled} listenDisabled={listenDisabled} options={situation.scenes.map((item) => ({ choice: item.choice, label: item.choice, visual: <SituationScreen state={item.state} /> }))}>
+  return <SceneDelivery message={situation.message} presentationKey={`${presentationKey}:${check.id}`} selected={selected} feedback={feedback} onAnswer={onAnswer} onListen={onListen} listenControl={listenControl} disabled={disabled} listenDisabled={listenDisabled} options={situation.scenes.map((item) => ({ choice: item.choice, label: item.choice, visual: <SituationScreen state={item.state} /> }))}>
     {scene && feedback !== 'idle' ? <div className="situation-result" role="status"><SituationScreen state={scene.state} /><p>{scene.state === 'tree-near-walking' ? 'Mensaje entregado: pasea a su perro cerca del árbol.' : scene.state === 'tree-far-walking' ? 'El paseo ocurre lejos del árbol. NEAR THE TREE indica cerca del árbol, sin necesidad de tocarlo.' : scene.state === 'walking-dog' ? 'Mensaje entregado: está paseando a su perro ahora.' : scene.state === 'waiting-dog' ? 'La persona y el perro están esperando quietos. WALKING MY DOG cuenta que el paseo ya está ocurriendo.' : scene.state === 'mirror-brushing' ? 'Mensaje entregado: se está cepillando los dientes junto al espejo.' : scene.state === 'window-brushing' ? 'Ambas personas se cepillan los dientes, pero esta está junto a una ventana. BY THE MIRROR indica el espejo.' : scene.state === 'kitchen-cooking' ? 'Mensaje entregado: está cocinando dentro de la cocina.' : scene.state === 'garden-cooking' ? 'Las dos personas cocinan, pero esta está en el jardín. IN THE KITCHEN indica la cocina.' : scene.state === 'cooking-dinner' ? 'Mensaje entregado: está cocinando la cena, todavía no está servida.' : scene.state === 'dinner-served' ? 'Aquí la cena ya está servida. COOKING DINNER cuenta que sigue preparándose.' : scene.state === 'desk-playing' ? 'Mensaje entregado: está jugando en su escritorio.' : scene.state === 'floor-playing' ? 'Esta persona juega en el suelo. AT MY DESK indica el escritorio.' : scene.state === 'computer-playing' ? 'Mensaje entregado: está jugando usando su ordenador.' : scene.state === 'console-playing' ? 'Las dos personas juegan, pero esta usa una consola. ON MY COMPUTER indica el ordenador.' : feedback === 'correct' ? scene.state === 'search-keys' ? 'Mensaje entregado: el personaje busca las llaves, no el móvil.' : scene.state === 'making-bed' ? 'Mensaje entregado: la persona está haciendo la cama, no descansando en ella.' : 'Mensaje entregado: la escena muestra la acción en marcha.' : scene.state === 'resting-bed' ? 'En esta imagen la persona descansa. MAKING MY BED cuenta que está haciendo su cama.' : scene.state === 'search-phone' ? 'Has señalado el móvil. MY KEYS indica que busca sus llaves.' : scene.state === 'brush-ready' ? 'El cepillo sigue en el vaso. El mensaje cuenta que la persona ya está cepillando.' : scene.state === 'cook-ready' ? 'La olla sigue apartada. El mensaje cuenta que la persona ya está cocinando.' : 'Has dejado el mando guardado. ¿Es eso lo que cuenta el mensaje?'}</p></div> : null}
   </SceneDelivery>;
 }
 
 /** Shared presentation gesture only. The caller owns attempts, help and progress. */
-export function SceneDelivery({ message, options, selected, feedback, onAnswer, onListen, disabled = false, listenDisabled = false, presentationKey = '', instruction = 'Lleva el mensaje a su escena, o toca la escena.', children }: {
+export function SceneDelivery({ message, options, selected, feedback, onAnswer, onListen, listenControl, disabled = false, listenDisabled = false, presentationKey = '', instruction = 'Lleva el mensaje a su escena, o toca la escena.', children }: {
   message: string; options: { choice: string; label: string; visual: ReactNode }[];
-  selected: string; feedback: 'idle' | 'help' | 'correct'; onAnswer: (answer: string) => void; onListen: () => void;
+  selected: string; feedback: 'idle' | 'help' | 'correct'; onAnswer: (answer: string) => void; onListen?: () => void; listenControl?: ReactNode;
   disabled?: boolean; listenDisabled?: boolean; presentationKey?: string; instruction?: string; children?: ReactNode;
 }) {
   const root = useRef<HTMLDivElement>(null);
@@ -191,7 +191,7 @@ export function SceneDelivery({ message, options, selected, feedback, onAnswer, 
       onDragStart={(event) => event.preventDefault()}
       onPointerDown={(event) => { if (locked || event.button !== 0 || event.isPrimary === false) return; event.preventDefault(); event.stopPropagation(); gesture.current = { id: event.pointerId, x: event.clientX, y: event.clientY }; event.currentTarget.setPointerCapture?.(event.pointerId); move(event); }}
       onPointerMove={move} onPointerUp={release} onPointerCancel={cancel} onLostPointerCapture={cancel}>{message}{!locked ? <small lang="es">↘ Lleva este mensaje</small> : null}</div>
-    <button type="button" className="quiet-action" disabled={listenDisabled} onClick={onListen} aria-label="Escuchar el mensaje inglés">🔊 Escuchar</button>
+    {listenControl ?? <button type="button" className="quiet-action" disabled={listenDisabled} onClick={onListen} aria-label="Escuchar el mensaje inglés">🔊 Escuchar</button>}
     <div className="situation-options" role="group" aria-label="Elige la escena que comunica el mensaje">
       {scenes.map((item) => <button type="button" ref={(node) => { if (node) destinations.current.set(item.choice, node); else destinations.current.delete(item.choice); }} key={item.choice} data-drop-choice={item.choice} className={drag?.over === item.choice ? 'is-drop-target' : ''} aria-pressed={selected === item.choice} disabled={locked} onClick={() => onAnswer(item.choice)}>{item.visual}<span>{item.label}</span></button>)}
     </div>
