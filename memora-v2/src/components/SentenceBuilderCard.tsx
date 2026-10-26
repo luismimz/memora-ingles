@@ -89,13 +89,13 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const continueSentence = () => { audioRequest.current++; stopSpeech(); onNext(); };
   return <GameCard key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? continueSentence : undefined : completed ? continueSentence : undefined} advanceLabel={vertical ? preparationStep ? preparationAdvanceLabel : sentenceAdvanceLabel : ''} reserveFooter={!vertical} revealFooter={Boolean(preparationStep && vertical || completed)}>
     <div className="builder-content">
-      <p className="eyebrow">{completed ? '✓ FRASE ARMADA' : 'CONSTRUYE'} · {index + 1}/{total}</p>
+      <p className="eyebrow">{completed ? '✓ FRASE ARMADA' : preparationStep ? 'DESCUBRE' : needsModel ? 'CON AYUDA' : 'CONSTRUYE'} · {index + 1}/{total}</p>
       {!completed ? <SceneVisual word={sceneWord} compact /> : null}
       <h1>{showProcess(sentence.es, processForm.spanish, processForm.spanishStem, processForm.spanishEnding)}</h1>
       <div className={`sentence-rail ${completed ? 'is-complete' : ''}`} role="group" aria-label="Correspondencia del español con el inglés">
         {sentence.slots.map((slot, slotIndex) => <div className={`sentence-slot ${slotIndex === filledSlots ? 'is-active' : ''} ${slotIndex < filledSlots ? 'is-filled' : ''}`} key={`${slotIndex}-${slot.en}`}>
           <span className="sentence-slot-es">{slot.es}</span>
-          <span className="sentence-slot-en">{slotIndex < filledSlots ? slot.en : slotIndex === filledSlots ? '¿…?' : '· · ·'}</span>
+          <span className="sentence-slot-en">{slotIndex < filledSlots ? slot.en : slotIndex === filledSlots && !preparationStep && !needsModel ? '¿…?' : '· · ·'}</span>
         </div>)}
       </div>
       {!completed && preparationStep ? <div className="slot-preparation">

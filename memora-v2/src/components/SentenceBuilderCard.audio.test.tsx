@@ -18,6 +18,31 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
 
+it('enseñar una pieza no parece una tarea sin controles y enlaza directamente a construir', async () => {
+  await act(async () => { tree = create(render()); });
+  const heading = () => text(tree.root.findAllByProps({ className: 'eyebrow' })[0]).replace(/\s+/gu, ' ').replace(/\s*\/\s*/gu, '/');
+  const rail = () => text(tree.root.findByProps({ 'aria-label': 'Correspondencia del español con el inglés' }));
+  for (let step = 0; step < 3; step++) {
+    expect(heading()).toBe('DESCUBRE · 1/1');
+    expect(rail()).not.toContain('¿…?');
+    expect(tree.root.findAllByProps({ className: 'slot-options' })).toHaveLength(0);
+    expect(tree.root.findByProps({ className: 'slot-preparation' }).findAllByProps({ lang: 'en' }).length).toBeGreaterThan(0);
+    act(() => tree.root.findAllByType('button').find((node) => text(node).includes(step === 2 ? 'Usar estas piezas' : 'Ver la siguiente pieza'))!.props.onClick());
+    expect(prepare).toHaveBeenLastCalledWith(step + 1);
+    await act(async () => { tree.update(render(step + 1)); });
+  }
+  expect(heading()).toBe('CONSTRUYE · 1/1');
+  expect(rail()).toContain('¿…?');
+  expect(tree.root.findAllByProps({ className: 'slot-preparation' })).toHaveLength(0);
+  expect(tree.root.findAllByProps({ className: 'slot-options' })).toHaveLength(1);
+  expect(attempt).not.toHaveBeenCalled(); expect(pick).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();
+  await act(async () => { tree.update(render(3, true)); });
+  expect(heading()).toBe('CON AYUDA · 1/1');
+  expect(rail()).not.toContain('¿…?');
+  expect(tree.root.findAllByType('button').find((node) => text(node) === 'Colocar con ayuda')).toBeTruthy();
+  expect(accept).not.toHaveBeenCalled(); expect(attempt).not.toHaveBeenCalled();
+});
+
 it('preparación muestra fallo recuperable y reintento sin completar ni responder por escuchar', async () => {
   await act(async () => { tree = create(render()); });
   let resolve!: (result: PlaybackResult) => void;
