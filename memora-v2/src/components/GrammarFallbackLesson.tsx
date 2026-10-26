@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { grammarCaption, makeGrammarChecks } from '../domain/grammarPractice';
 import { getExpandedEnglishSubject, getSpanishSubjectLabel, type GrammarForm } from '../domain/unit';
-import { playEnglish, playSpanish, playSnap, stopSpeech } from '../services/audio';
+import { playSnap, stopSpeech } from '../services/audio';
 import { GameCard } from './GameCard';
 import { GrammarMorphology } from './GrammarMorphology';
 import type { GrammarFallbackPosition } from '../domain/game';
+import { useSpeechPlayback } from './useSpeechPlayback';
+import { AssociationAudioStatus } from './AssociationAudioStatus';
 
 /** Compatibility presentation for forms without an authored coach. No new exercises or memory evidence. */
 export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady, onContinue, vertical = false, explanationOnly = false, initialPosition, onProgress }: {
@@ -29,8 +31,8 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
   const [prepared, setPrepared] = useState(saved?.prepared ?? true);
   const [outcome, setOutcome] = useState<'pending' | 'correct' | 'model'>(saved?.outcome ?? 'pending');
   const [failures, setFailures] = useState(saved?.failures ?? 0);
-  const [audio, setAudio] = useState('');
-  const request = useRef(0), readySent = useRef(false), continued = useRef(false);
+  const playback = useSpeechPlayback();
+  const readySent = useRef(false), continued = useRef(false);
   const restoredAudio = useRef(Boolean(saved));
   const check = checks[checkIndex];
   const ready = step === 4 && !check;
@@ -43,18 +45,10 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
   const readyCallback = useRef(onReady); readyCallback.current = onReady;
   const positionCallback = useRef(onProgress); positionCallback.current = onProgress;
   useEffect(() => { if (!explanationOnly) positionCallback.current?.({ step, subjectIndex, checkIndex, prepared, outcome, failures }); }, [step, subjectIndex, checkIndex, prepared, outcome, failures, explanationOnly]);
-  async function listen(explanation = false) {
-    const token = ++request.current;
-    setAudio('Preparando audio…');
-    try {
-      const started = () => { if (token === request.current) setAudio('Reproduciendo…'); };
-      const result = explanation ? await playSpanish(audioCurrent.current.caption || form.memoryTrick?.explanation || '', true, started) : await playEnglish(audioCurrent.current.phrase, undefined, true, started);
-      if (token === request.current) setAudio(result.status === 'played' ? '' : 'Audio no disponible · toca 🔊');
-    } catch { if (token === request.current) setAudio('Audio no disponible · toca 🔊'); }
-  }
+  const listen = (explanation = false) => playback.listen(explanation ? audioCurrent.current.caption : audioCurrent.current.phrase, explanation ? 'es' : 'en');
   useEffect(() => {
     // A different model cancels the previous voice, but sound never advances a lesson.
-    const cancel = () => { request.current++; stopSpeech(); };
+    const cancel = () => { playback.reset(); stopSpeech(); };
     if (restoredAudio.current) { restoredAudio.current = false; return cancel; }
     if (step === 4 && prepared && check && outcome === 'pending') return cancel;
     void listen();
@@ -72,7 +66,7 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
   }
   function advance() {
     if (continued.current) return;
-    request.current++; stopSpeech(); setAudio('');
+    playback.reset(); stopSpeech();
     if (explanationOnly) {
       if (step < 3) setStep(step + 1);
       else { continued.current = true; onContinue(); }
@@ -106,7 +100,7 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
         {caption ? <p className="grammar-caption">{caption}</p> : null}
         {!prepared && getExpandedEnglishSubject(subject) !== subject.en ? <p className="grammar-caption" lang="en">{getExpandedEnglishSubject(subject)} → {subject.en}</p> : null}
       </>}
-      {!(step === 4 && prepared && check && outcome === 'pending') ? <><button type="button" className="round-audio" aria-label="Escuchar el modelo" aria-busy={audio === 'Preparando audio…'} title={audio || 'Escuchar el modelo'} onClick={() => void listen()}>🔊</button>{audio && !['Preparando audio…', 'Reproduciendo…'].includes(audio) ? <p role="status">{audio}</p> : null}</> : null}
+      {!(step === 4 && prepared && check && outcome === 'pending') ? <><button type="button" className="round-audio" aria-label="Escuchar el modelo" aria-busy={playback.audio?.status === 'preparing'} title={playback.label} onClick={() => void listen()}>🔊</button><AssociationAudioStatus compact state={playback.audio} /></> : null}
       {ready ? <details><summary>Otra persona o una explicación</summary>{form.subjects.length > 1 ? <div className="subject-list" aria-label="Cambia quién realiza la acción">{form.subjects.map((item, person) => <button type="button" key={`${item.en}-${item.es}`} onClick={() => setSubjectIndex(person)} aria-pressed={person === subjectIndex}>{getSpanishSubjectLabel(item.es, form.spanish)}</button>)}</div> : null}<button type="button" className="quiet-action" onClick={() => void listen(true)}>🔊 Repetir la explicación</button></details> : null}
     </div>
   </GameCard>;

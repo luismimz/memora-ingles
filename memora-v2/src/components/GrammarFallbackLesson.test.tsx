@@ -82,6 +82,24 @@ it('otras formas conservan su explicación revisada sin inventar ING/I AM ni eje
   expect(text(tree.toJSON())).not.toContain('Primera pista');
   await advance(); expect(ready).toHaveBeenCalledOnce(); await advance(); expect(next).toHaveBeenCalledOnce();
 });
+it('cancelar voz no muestra un fallo y el reintento conserva paso y práctica', async () => {
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'cancelled', source: null });
+  await mount();
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  expect(ready).not.toHaveBeenCalled();
+  const replay = tree.root.findByProps({ 'aria-label': 'Escuchar el modelo' });
+  let resolve!: (value: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
+  await act(async () => replay.props.onClick());
+  expect(replay.props['aria-busy']).toBe(true);
+  await act(async () => resolve({ status: 'unavailable', source: null }));
+  expect(text(tree.toJSON())).toContain('Audio no disponible · toca 🔊');
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'played', source: 'kokoro' });
+  await act(async () => replay.props.onClick());
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  expect(tree.root.findByType(GrammarMorphology).props.step).toBe(0);
+  expect(ready).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();
+});
 it('un final de audio de la pantalla anterior no cambia el estado de la nueva', async () => {
   let resolve!: (value: PlaybackResult) => void;
   vi.mocked(playEnglish).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
