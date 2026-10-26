@@ -4,6 +4,8 @@ Petición humana: reconstruir la práctica desde la experiencia de un principian
 
 ## Interacción
 
+26/10, ayuda también la primera vez: el constructor general muestra Recordar el truco siempre que existe su lección, no solo si reviewedGrammar detectó práctica anterior sin ayudas. No cambia la entrada a gramática ni omite enseñanza inicial; se elimina una restricción de acceso a ayuda, no una puerta de contenido. Conserva grammarHelpUsed, piezas/recarga y conversación ayudada. Regresión montada de estructura nueva sin historial: montaje parcial→consulta→retorno→recarga→chat, sin inventar intentos anteriores ni acreditar por consultar; las pruebas de enseñanza inicial siguen vigentes.
+
 26/10, gesto uniforme en el recordatorio: GrammarCoach permite presentación vertical cuando explanationOnly y puzzle están activos, también para una lección authored fuera de los contratos de práctica vertical. Solo consulta de pasos existentes→volver al mensaje; no abre preguntas ni activa contenido/contratos nuevos. La práctica authored normal conserva su presentación y guardas. Prueba montada con datos sintéticos aislados detecta primero ausencia de slides, luego recorre los pasos y vuelve una vez sin entrar en el ejercicio; otro caso exige que la práctica normal siga sin habilitarse como contrato nuevo.
 
 26/10, orientación al abrir el recordatorio: el foco entra en un encabezado accesible de la explicación y regresa al control que la abrió al cerrar. No nuevo texto visible ni parada adicional. El encabezado no entra en la secuencia normal de Tab y el foco solo se mueve al abrir, no al cambiar cada slide. Regresión montada exige la entrada de foco antes ausente; se conservan retorno, menú/Escape, posición y ayudas.

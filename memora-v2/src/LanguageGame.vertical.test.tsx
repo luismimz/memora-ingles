@@ -682,6 +682,27 @@ it('una estructura practicada entra al montaje y el recordatorio vuelve a la mis
   await swipe(false);
   expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
 });
+it('una estructura nueva también permite consultar el truco sin perder el montaje ni inventar práctica anterior', async () => {
+  const value: AtomicUnit = { ...previewUnit, grammarRole: undefined, practiceSentences: undefined };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'build', filledSlots: 1 });
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  await open();
+  expect(readGrammarAttempts(user)).toHaveLength(0);
+  const before = readLearningActivities(user);
+  await act(async () => button('Recordar el truco').props.onClick());
+  expect(tree.root.findByType(GrammarCoach).props.explanationOnly).toBe(true);
+  await act(async () => button('← Mi mensaje').props.onClick());
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  expect(readLearningActivities(user)).toEqual(before);
+  expect(readGrammarAttempts(user)).toHaveLength(0);
+  act(() => tree.unmount()); await open();
+  expect(readGameCheckpoint(user, value.id, value.contentVersion ?? '1')).toMatchObject({ phase: 'build', filledSlots: 1, grammarHelpUsed: true });
+  for (let index = 1; index < value.sentence.slots.length; index++) {
+    await act(async () => tree.root.findByType(SentenceBuilderCard).findAllByType('button').find((node) => text(node) === value.sentence.slots[index].en)!.props.onClick());
+  }
+  await swipe(false);
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+});
 it('marcar una unidad como repaso no evita enseñar una estructura sin práctica anterior', async () => {
   const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
   writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
