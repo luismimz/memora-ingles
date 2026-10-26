@@ -703,6 +703,33 @@ it('una estructura nueva también permite consultar el truco sin perder el monta
   await swipe(false);
   expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
 });
+it('la explicación de compatibilidad vuelve al mismo montaje sin cuestionario ni progreso inventado', async () => {
+  const value: AtomicUnit = { ...previewUnit, practiceSentences: undefined, grammar: [previewUnit.grammar[0]], words: previewUnit.words.filter((word) => word.en.toLowerCase() !== previewUnit.grammar[0].englishBase) };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'build', filledSlots: 1 });
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  const saved = () => readGameCheckpoint(user, value.id, value.contentVersion ?? '1');
+  await open();
+  const before = saved(), events = readLearningActivities(user), attempts = readGrammarAttempts(user);
+  await act(async () => button('Recordar el truco').props.onClick());
+  expect(tree.root.findByType(GrammarFallbackLesson).props.explanationOnly).toBe(true);
+  for (let i = 0; i < 3; i++) await swipe(false);
+  expect(tree.root.findByType(GameCard).props.advanceLabel).toBe('Volver a mi mensaje');
+  expect(tree.root.findAllByProps({ className: 'grammar-check' })).toHaveLength(0);
+  await swipe(false);
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  expect(saved()).toEqual({ ...before, grammarHelpUsed: true });
+  expect(readLearningActivities(user)).toEqual(events);
+  expect(readGrammarAttempts(user)).toEqual(attempts);
+  act(() => tree.unmount()); await open();
+  expect(saved()).toEqual({ ...before, grammarHelpUsed: true });
+  await act(async () => button('Recordar el truco').props.onClick());
+  await act(async () => button('← Mi mensaje').props.onClick());
+  for (let index = 1; index < value.sentence.slots.length; index++) {
+    await act(async () => tree.root.findByType(SentenceBuilderCard).findAllByType('button').find((node) => text(node) === value.sentence.slots[index].en)!.props.onClick());
+  }
+  await swipe(false);
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+});
 it('marcar una unidad como repaso no evita enseñar una estructura sin práctica anterior', async () => {
   const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
   writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });

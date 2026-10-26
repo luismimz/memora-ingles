@@ -7,15 +7,15 @@ import { GrammarMorphology } from './GrammarMorphology';
 import type { GrammarFallbackPosition } from '../domain/game';
 
 /** Compatibility presentation for forms without an authored coach. No new exercises or memory evidence. */
-export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady, onContinue, vertical = false, initialPosition, onProgress }: {
+export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady, onContinue, vertical = false, explanationOnly = false, initialPosition, onProgress }: {
   form: GrammarForm; baseSpanish?: string; index: number; total: number;
-  onReady: () => void; onContinue: () => void; vertical?: boolean;
+  onReady: () => void; onContinue: () => void; vertical?: boolean; explanationOnly?: boolean;
   initialPosition?: GrammarFallbackPosition; onProgress?: (position: GrammarFallbackPosition) => void;
 }) {
   const progressive = (form.visualContract === 'present-continuous' || form.id === 'ing') && getExpandedEnglishSubject(form.subjects[0]) === 'I am';
   const checks = useMemo(() => progressive ? makeGrammarChecks(form) : [], [form, progressive]);
   const [saved] = useState(() => {
-    const value = initialPosition;
+    const value = explanationOnly ? undefined : initialPosition;
     if (!value || !Number.isInteger(value.step) || value.step < (progressive ? 0 : 3) || value.step > 4 || !Number.isInteger(value.checkIndex) || value.checkIndex < 0 || value.checkIndex > checks.length || !Number.isInteger(value.subjectIndex) || value.subjectIndex < 0 || value.subjectIndex >= form.subjects.length || typeof value.prepared !== 'boolean' || !['pending', 'correct', 'model'].includes(value.outcome) || !Number.isInteger(value.failures) || value.failures < 0 || value.failures > 2) return undefined;
     if (value.step < 4 && (value.subjectIndex !== 0 || value.checkIndex !== 0 || value.outcome !== 'pending' || value.failures !== 0 || !value.prepared)) return undefined;
     if ((!value.prepared || value.checkIndex === checks.length) && value.outcome !== 'pending') return undefined;
@@ -42,7 +42,7 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
   const answerLock = useRef(false);
   const readyCallback = useRef(onReady); readyCallback.current = onReady;
   const positionCallback = useRef(onProgress); positionCallback.current = onProgress;
-  useEffect(() => { positionCallback.current?.({ step, subjectIndex, checkIndex, prepared, outcome, failures }); }, [step, subjectIndex, checkIndex, prepared, outcome, failures]);
+  useEffect(() => { if (!explanationOnly) positionCallback.current?.({ step, subjectIndex, checkIndex, prepared, outcome, failures }); }, [step, subjectIndex, checkIndex, prepared, outcome, failures, explanationOnly]);
   async function listen(explanation = false) {
     const token = ++request.current;
     setAudio('Preparando audio…');
@@ -60,7 +60,7 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
     void listen();
     return cancel;
   }, [phrase, step, checkIndex, prepared, outcome]);
-  useEffect(() => { if (ready && !readySent.current) { readySent.current = true; readyCallback.current(); } }, [ready]);
+  useEffect(() => { if (!explanationOnly && ready && !readySent.current) { readySent.current = true; readyCallback.current(); } }, [ready, explanationOnly]);
   function answer(value: string) {
     if (step !== 4 || !prepared || !check || outcome !== 'pending' || answerLock.current) return;
     answerLock.current = true;
@@ -73,6 +73,11 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
   function advance() {
     if (continued.current) return;
     request.current++; stopSpeech(); setAudio('');
+    if (explanationOnly) {
+      if (step < 3) setStep(step + 1);
+      else { continued.current = true; onContinue(); }
+      return;
+    }
     const complete = () => {
       continued.current = true;
       if (!readySent.current) { readySent.current = true; readyCallback.current(); }
@@ -92,7 +97,7 @@ export function GrammarFallbackLesson({ form, baseSpanish, index, total, onReady
     setCheckIndex(next); setPrepared(nextSubject < 0); setOutcome('pending'); setFailures(0); answerLock.current = false;
   }
   const canAdvance = step < 4 || ready || !prepared || outcome !== 'pending';
-  const label = step < 3 ? 'Ver la siguiente pieza' : step === 3 && !checks.length ? 'Continuar' : step === 3 || !prepared ? 'Probar con estas piezas' : ready ? index === total - 1 ? 'Montar el mensaje' : 'Siguiente forma' : 'Continuar';
+  const label = explanationOnly && step === 3 ? 'Volver a mi mensaje' : step < 3 ? 'Ver la siguiente pieza' : step === 3 && !checks.length ? 'Continuar' : step === 3 || !prepared ? 'Probar con estas piezas' : ready ? index === total - 1 ? 'Montar el mensaje' : 'Siguiente forma' : 'Continuar';
   return <GameCard vertical={vertical} stepKey={`${step}:${checkIndex}:${prepared}:${outcome}`} onAdvance={canAdvance ? advance : undefined} advanceControl advanceLabel={label} revealFooter={canAdvance} className="lesson-card">
     <div className="lesson-content">
       {step === 4 && prepared && check ? outcome !== 'pending' ? <><h1 role="status">{outcome === 'correct' ? '✓ Acertaste' : 'Vamos con el modelo'}</h1><p className="assembled-phrase" lang="en">{check.answer}</p>{outcome === 'model' ? <p>{check.hint}</p> : null}</> : <><h1>{check.prompt}</h1><div className="grammar-check"><div>{check.choices.map((choice) => <button type="button" key={choice} onClick={() => answer(choice)}>{choice}</button>)}</div>{failures > 0 ? <p role="status">{check.hint}</p> : null}</div></> : <>

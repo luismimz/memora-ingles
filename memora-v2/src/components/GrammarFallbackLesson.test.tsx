@@ -18,6 +18,19 @@ async function mount(value = form, vertical = true) { await act(async () => { tr
 beforeEach(() => { vi.useFakeTimers(); ready.mockClear(); next.mockClear(); vi.mocked(playEnglish).mockReset().mockResolvedValue({ status: 'blocked', source: null }); vi.stubGlobal('window', { setTimeout, clearTimeout, matchMedia: () => ({ matches: true }) }); });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it.each([true, false])('consultar enseñanza progressive=%s ignora posición de práctica y no acredita ni guarda', async (progressive) => {
+  const progress = vi.fn();
+  const value = progressive ? form : { ...form, id: 'isolated-other', visualContract: undefined };
+  await act(async () => { tree = create(<GrammarFallbackLesson form={value} index={0} total={1} onReady={ready} onContinue={next} explanationOnly vertical initialPosition={{ step: 4, subjectIndex: 0, checkIndex: 0, prepared: true, outcome: 'pending', failures: 0 }} onProgress={progress} />); });
+  for (let i = 0; i < (progressive ? 3 : 0); i++) await advance();
+  expect(tree.root.findByType(GameCard).props.advanceLabel).toBe('Volver a mi mensaje');
+  expect(tree.root.findAllByProps({ className: 'grammar-check' })).toHaveLength(0);
+  const finish = tree.root.findByType(GameCard).props.onAdvance;
+  await act(async () => { finish(); finish(); });
+  expect(next).toHaveBeenCalledOnce();
+  expect(ready).not.toHaveBeenCalled();
+  expect(progress).not.toHaveBeenCalled();
+});
 it('cada modelo espera el slide; sonido/tiempo no saltan enseñanza ni resuelven retos', async () => {
   await mount();
   await act(async () => { vi.advanceTimersByTime(60000); });
