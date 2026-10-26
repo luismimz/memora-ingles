@@ -15,6 +15,15 @@ export function journeyEntryMode(unit?: UnitSummary): LearningMode {
   return unit && unit.kind !== 'vocabulary-pack' && unit.kind !== 'grammar-lesson' && unit.hasDialogue && unit.sentence?.es && unit.grammarTricks?.length ? 'adventure' : 'vocabulary';
 }
 
+/** Reuse previously practiced, unchanged word models; still ask for retrieval.
+ * This removes repeated spelling setup, never establishes mastery or a score. */
+export function canReuseSceneVocabulary(unit: AtomicUnit, memories: WordMemory[]): boolean {
+  return Boolean(unit.communication?.dialogue && getPlayableGrammar(unit).length && unit.words.length
+    && unit.words.every((word) => memories.some((memory) => practicedWordMeaning(memory, word)
+      && memory.word.scene === word.scene && memory.word.bridge === word.bridge
+      && memory.word.associationMode === word.associationMode)));
+}
+
 /** Readiness means prior successful practice, not a promise of long-term mastery. */
 export function missingGrammarWords(unit: AtomicUnit, memories: WordMemory[]): string[] {
   const required = requiredGrammarWords(unit);

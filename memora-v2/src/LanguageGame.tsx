@@ -21,10 +21,10 @@ import { BridgeSoundNote } from './components/BridgeSoundNote';
 import { advanceReviewedGrammar, gameReducer, initialGame, type GameAction, type GameState, type LearningMode, type WordAssemblyPosition } from './domain/game';
 import { clearGameCheckpoint, readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
 import { recordAttempt } from './domain/learningProfile';
-import { completeLearningMode } from './domain/learningModes';
+import { canReuseSceneVocabulary, completeLearningMode } from './domain/learningModes';
 import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
 import { readGrammarAttempts } from './domain/grammarMemory';
-import { recordChunkExposure, recordSentenceExposure, recordWordRecall } from './domain/memory';
+import { readWordMemories, recordChunkExposure, recordSentenceExposure, recordWordRecall } from './domain/memory';
 import { getPlayableGrammar, getUnitSentences, makeRecallChoices, nextReviewAt, type AtomicUnit, type AtomicWord } from './domain/unit';
 import { playEnglish, playMiss, playSnap, prefetchSpeech, stopSpeech } from './services/audio';
 import type { Appearance } from './useAppearance';
@@ -94,7 +94,8 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       if (reviewMode) return start;
       if (startInConversation && unit.communication?.dialogue) return { ...initialGame, phase: 'conversation' as const };
       const saved = readGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1');
-      if (!saved) return start;
+      if (!saved) return vertical && learningMode === 'adventure' && canReuseSceneVocabulary(unit, readWordMemories(userId))
+        ? { ...start, phase: 'recall' as const } : start;
       // Legacy positions already carrying a model consultation retain it in
       // later conversation. Do not infer lost history from unrelated sessions.
       if (saved.buildModelUsed) saved.grammarHelpUsed = true;
