@@ -312,7 +312,7 @@ it('enlaza elegir, escuchar y escribir deslizando, sin saltar preguntas ni resul
   await swipe();
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: rounds[2].word.en } }));
   await act(async () => { vi.advanceTimersByTime(450); });
-  expect(button('Terminar el repaso')).toBeDefined();
+  expect(button('Seguir la aventura')).toBeDefined();
   await swipe();
   expect(exit).toHaveBeenCalledOnce();
   await act(async () => { vi.advanceTimersByTime(10000); });
@@ -347,7 +347,7 @@ it('una palabra pendiente de preparación conserva la pausa incluso después de 
   await act(async () => button(unit.words[0].en).props.onClick());
   await act(async () => { vi.advanceTimersByTime(60000); });
   expect(exit).not.toHaveBeenCalled();
-  expect(button('Terminar el repaso')).toBeDefined();
+  expect(button('Seguir la aventura')).toBeDefined();
   await swipe();
   expect(exit).toHaveBeenCalledOnce();
 });

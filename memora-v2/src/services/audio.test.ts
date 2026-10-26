@@ -26,6 +26,21 @@ beforeEach(async () => {
 afterEach(() => { audio.stopSpeech(); vi.clearAllTimers(); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
 describe('Kokoro y reproducción sin falsos éxitos', () => {
+  it('reintento explícito con voz local comienza sin pedir ni esperar otro archivo; no acredita llamar speak', async () => {
+    const started = vi.fn(), finished = vi.fn();
+    const promise = audio.playEnglish('science', undefined, true, started, true).then((result) => { finished(result); return result; });
+    expect(synthesis.speak).toHaveBeenCalledOnce(); expect(deps.apiRequest).not.toHaveBeenCalled(); expect(deps.loadAsset).not.toHaveBeenCalled();
+    expect(started).not.toHaveBeenCalled(); expect(finished).not.toHaveBeenCalled();
+    utterances[0].onstart?.(); expect(started).toHaveBeenCalledExactlyOnceWith('browser'); expect(finished).not.toHaveBeenCalled();
+    utterances[0].onend?.(); expect(await promise).toEqual({ status: 'played', source: 'browser' }); expect(vi.getTimerCount()).toBe(0);
+  });
+  it('voz local sigue respetando bloqueo y cancelación, sin fabricar reproducción', async () => {
+    const blocked = audio.playEnglish('science', undefined, true, undefined, true);
+    utterances[0].onerror?.({ error: 'not-allowed' }); expect(await blocked).toEqual({ status: 'blocked', source: 'browser' });
+    const cancelled = audio.playEnglish('science', undefined, true, undefined, true);
+    audio.stopSpeech(); expect(await cancelled).toEqual({ status: 'cancelled', source: 'browser' });
+    expect(deps.apiRequest).not.toHaveBeenCalled(); expect(vi.getTimerCount()).toBe(0);
+  });
   it('un reto que espera el final no confunde play resuelto con audio terminado', async () => {
     const finished = vi.fn();
     const promise = audio.playEnglish('habit', undefined, true).then((result) => { finished(result); return result; });

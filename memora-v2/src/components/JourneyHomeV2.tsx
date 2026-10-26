@@ -69,8 +69,11 @@ export function JourneyHome(props: Props) {
   const conversationUnit = [...completed].reverse().find((unit) => unit.hasDialogue && activities.some((activity) => activity.unitId === unit.id && activity.source === 'learner' && activity.correct === true && ['dialogue', 'transfer'].includes(activity.phase)));
   const trickCheckpoint = resume?.routeTrick ? readTrickCheckpoint(userId, resume.id, resume.contentVersion ?? '1') : null;
   const currentIndex = featured ? stories.findIndex((unit) => unit.id === featured.id) + 1 : 0;
-  const missionLabel = featured?.routeTrick ? trickCheckpoint?.continuation?.phase === 'build' ? 'Monta tu mensaje' : trickCheckpoint?.continuation?.phase === 'conversation' ? 'Responde al personaje' : 'Descubre cómo decirlo' : resume ? gameCheckpoint ? gameCheckpoint.phase === 'recall' && gameCheckpoint.recognitionStyle === 'scene-delivery-v1' ? 'Lleva la palabra a su escena' : activityLabels[gameCheckpoint.phase] ?? 'Retoma esta práctica' : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
+  const missionLabel = featured?.routeTrick ? trickCheckpoint?.continuation?.phase === 'build' ? 'Monta tu mensaje' : trickCheckpoint?.continuation?.phase === 'conversation' ? 'Responde al personaje' : 'Descubre cómo decirlo' : resume ? gameCheckpoint ? gameCheckpoint.wordAssembly ? 'Retoma tu palabra' : gameCheckpoint.phase === 'recall' && gameCheckpoint.recognitionStyle === 'scene-delivery-v1' ? 'Lleva la palabra a su escena' : activityLabels[gameCheckpoint.phase] ?? 'Retoma esta práctica' : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
     : featured && completedIds.has(featured.id) ? 'Vuelve a practicar' : featuredPresentation?.pack ? 'Conecta y recuerda estas palabras' : 'Descubre esta historia';
+
+  const methodSteps = featured?.routeTrick ? ['Descubre', 'Monta', 'Conversa'] : ['Descubre', 'Arma', 'Recuerda'];
+  const methodStep = featured?.routeTrick ? trickCheckpoint?.continuation?.phase === 'conversation' ? 2 : trickCheckpoint?.continuation?.phase === 'build' ? 1 : 0 : gameCheckpoint?.phase === 'recall' ? 2 : gameCheckpoint?.wordAssembly ? 1 : 0;
 
   return <main className="journey-screen home-v2 home-guided" id="inicio">
     <header className="home-guided-header">
@@ -78,6 +81,7 @@ export function JourneyHome(props: Props) {
       <NavigationMenu label="Navegación principal">
         <button type="button" onClick={onProfile}>Perfil y ajustes</button>
         <button type="button" onClick={onEvolution} disabled={!onEvolution}>Mi evolución</button>
+{onManageContent || onFusionDemo || onGrammarReview || onMirror ? <details className="home-tools"><summary>Herramientas y pruebas</summary><div>{onManageContent ? <button type="button" onClick={onManageContent}>Gestionar contenido</button> : null}{onMirror ? <button type="button" onClick={onMirror}>Ficha Espejo</button> : null}{onGrammarReview ? <button type="button" onClick={onGrammarReview}>Revisar trucos</button> : null}{onFusionDemo ? <button type="button" onClick={onFusionDemo}>Laboratorio TURN</button> : null}</div></details> : null}
         <button type="button" onClick={onToggleAppearance}>Activar modo {appearance === 'light' ? 'oscuro' : 'claro'}</button>
         <button type="button" onClick={onExit}>Salir</button>
       </NavigationMenu>
@@ -88,7 +92,7 @@ export function JourneyHome(props: Props) {
         <div className="home-now-context"><span>{resume ? 'Actividad en curso' : completedIds.has(featured.id) ? 'Práctica conocida' : 'Tu siguiente paso'}</span><small aria-label={`Paso ${currentIndex} de ${stories.length}`}>{`${currentIndex} / ${stories.length}`}</small></div>
         <div className="home-now-main"><ScreenHeading id="home-adventure-title">{missionLabel}</ScreenHeading><p className="home-now-place">{featuredPresentation?.title}</p>
           <button type="button" className="primary-action home-continue" onClick={() => onOpen(featured)}>{completedIds.has(featured.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">→</span></button>
-          <p className="home-method" aria-label="El recorrido: descubre, arma y recuerda"><span>Descubre</span><i aria-hidden="true">→</i><span>Arma</span><i aria-hidden="true">→</i><span>Recuerda</span></p>
+          <p className="home-method" aria-label="Tu fase actual">{methodSteps.map((step, index) => <span key={step} aria-current={index === methodStep ? 'step' : undefined}>{index > 0 ? <i aria-hidden="true">→</i> : null}{step}</span>)}</p>
           <details className="home-about"><summary>Qué voy a hacer</summary><p>{featuredPresentation?.subtitle}</p><p>{resume ? 'Tu actividad y tus ayudas siguen donde las dejaste.' : 'Te enseñamos antes de pedirte una respuesta.'}</p></details>
         </div>
       </section> : <section className="journey-empty"><ScreenHeading>La aventura está preparándose.</ScreenHeading><p>Aún no hay una misión publicada.</p>{onTryPreview ? <button type="button" className="primary-action" onClick={onTryPreview}>Probar la experiencia →</button> : null}</section>}
@@ -105,7 +109,6 @@ export function JourneyHome(props: Props) {
           {conversationUnit ? <button type="button" onClick={() => onConverse(conversationUnit)}>Volver a una conversación conocida</button> : null}
         </nav></details>
       </div></details>
-      {onManageContent || onFusionDemo || onGrammarReview || onMirror ? <details className="home-tools"><summary>Herramientas y pruebas</summary><div>{onManageContent ? <button type="button" onClick={onManageContent}>Gestionar contenido</button> : null}{onMirror ? <button type="button" onClick={onMirror}>Ficha Espejo</button> : null}{onGrammarReview ? <button type="button" onClick={onGrammarReview}>Revisar trucos</button> : null}{onFusionDemo ? <button type="button" onClick={onFusionDemo}>Laboratorio TURN</button> : null}</div></details> : null}
     </div>
   </main>;
 }

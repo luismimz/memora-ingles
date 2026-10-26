@@ -1,6 +1,21 @@
 .micro-dialog { inset: 0; width: 100%; height: 100dvh; max-width: none; max-height: none; padding: 0; border: 0; margin: 0; background: var(--page); color: var(--ink); }
 .micro-dialog::backdrop { background: rgba(30,26,22,.65); }
 .arcade-pairs { width: 100%; min-width: 0; display: grid; gap: 18px; text-align: center; }
+.arcade-trail { display: flex; flex: 0 0 auto; justify-content: center; gap: 8px; list-style: none; margin: 0 auto; padding: 12px 16px; width: min(100%, 680px); }
+.arcade-trail li { flex: 1; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 10px 8px; border-radius: 14px; color: var(--muted); background: var(--surface-soft); }
+.arcade-trail li[aria-current='step'] { color: var(--accent-ink); box-shadow: inset 0 0 0 1px currentColor; }
+.arcade-trail li > span { font-size: 1.25rem; line-height: 1; }
+.arcade-trail small { font-size: .7rem; font-weight: 650; }
+.arcade-grammar-shell { height: 100%; min-height: 0; display: flex; flex-direction: column; }
+.arcade-grammar-shell > .arcade-stream-tools { padding: 8px 16px; flex: 0 0 auto; align-items: center; justify-content: space-between; }
+.arcade-mode-options { position: relative; font-size: .8rem; }
+.arcade-mode-options summary { min-height: 44px; display: grid; align-items: center; cursor: pointer; }
+.arcade-mode-options[open] { z-index: 20; }
+.arcade-mode-options[open] > button { display: block; background: var(--surface-strong); border: 1px solid var(--line); width: 150px; }
+.arcade-correction { padding: 16px; border-left: 3px solid var(--task-model); border-radius: 16px; background: var(--surface-soft); text-align: left; }
+.arcade-correction p { margin: 8px 0 0; font-size: .9rem; line-height: 1.5; }
+.arcade-grammar-options button.is-model { border-color: var(--task-model); background: var(--surface-soft); }
+.arcade-grammar-options button.is-wrong { border: 2px solid var(--task-retry); }
 .arcade-pairs h1 { margin: 0; font-size: clamp(1.8rem, 5vw, 2.7rem); line-height: 1.15; }
 .pairs-instruction { margin: 0; color: var(--muted); font-size: .95rem; }
 .pairs-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
@@ -61,8 +76,7 @@
 .arcade-reminder-chain { display: flex; align-items: center; justify-content: center; gap: .8rem; flex-wrap: wrap; font-size: clamp(1.5rem, 4vw, 2.2rem); }
 .arcade-reminder-chain > strong:first-child { color: var(--warm); }
 .arcade-reminder-story { font-size: 1.15rem; line-height: 1.5; margin: 0; }
-.arcade-grammar-shell { width: min(100%, 610px); }
-.arcade-grammar-shell > .arcade-stream-tools { justify-content: flex-end; }
+.arcade-grammar-shell { width: min(100%, 680px); }
 .arcade-grammar-options { grid-template-columns: repeat(2, 1fr); }
 .arcade-grammar-prompt { font-size: clamp(1.2rem, 3vw, 1.8rem); line-height: 1.5; }
 .grammar-gap { border: 1px dashed var(--accent); border-radius: 8px; padding: 0 .5rem; }

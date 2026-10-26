@@ -8,6 +8,8 @@ vi.mock('react', async (original) => ({ ...await original<typeof import('react')
 import { ArcadeExperience } from './ArcadeExperience';
 import { MicroArcade } from './MicroArcade';
 import { GrammarArcade } from './GrammarArcade';
+import { SentenceBuilderCard } from './SentenceBuilderCard';
+import { ConversationPractice } from './ConversationPractice';
 function render(inspection = true, automatic = false) {
   hooks.index = 0;
   return ArcadeExperience({ userId: 'learner', units: [previewUnit], inspection, automatic, onExit() {} });
@@ -33,5 +35,13 @@ it('la sorpresa no entra en el ciclo de cinco más cinco más cinco', () => {
   expect(tree.props.automatic).toBe(true);
   expect(tree.props.onGrammar).toBeUndefined();
   tree.props.onRoundAdvance(5); tree = render(true, true);
+  expect(tree.type).toBe(MicroArcade);
+});
+it('el mixto conserva superficie vertical de piezas a conversación y siguiente reto', () => {
+  let tree = render(); tree.props.onMix(); tree = render(); tree.props.onUse(); tree = render();
+  expect(tree.props.children.type).toBe(SentenceBuilderCard); expect(tree.props.children.props.vertical).toBe(true);
+  tree.props.children.props.onNext(); tree = render();
+  expect(tree.props.children.type).toBe(ConversationPractice); expect(tree.props.children.props.vertical).toBe(true);
+  tree.props.children.props.onContinue(); tree = render();
   expect(tree.type).toBe(MicroArcade);
 });

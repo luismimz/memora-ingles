@@ -26,15 +26,15 @@ it('la sorpresa no recicla una escena hasta intercalar tres acciones distintas, 
   expect(units).toEqual([{ id: 'play' }, { id: 'other' }, { id: 'old' }]);
   expect(localStorage.getItem('memora-v2.memory.learner')).toBeNull();
 });
-it('programa una ronda cada cuatro misiones distintas, persiste y no cuenta cierres repetidos', () => {
-  for (let index = 1; index <= 3; index++) expect(completeArcadeCadence('learner', `word-${index}`, '1', false)).toBeNull();
-  expect(completeArcadeCadence('learner', 'word-3', '1', false)).toBeNull();
-  expect(completeArcadeCadence('learner', 'word-4', '1', false)).toBe('associations');
+it('rompe la repetición tras dos tandas distintas, persiste y no cuenta cierres repetidos', () => {
+  expect(completeArcadeCadence('learner', 'word-1', '1', false)).toBeNull();
+  expect(completeArcadeCadence('learner', 'word-1', '1', false)).toBeNull();
+  expect(completeArcadeCadence('learner', 'word-2', '1', false)).toBe('associations');
   expect(pendingAutomaticArcade('learner')).toBe('associations');
   expect(pendingAutomaticArcade('other')).toBeNull();
   consumeAutomaticArcade('learner');
-  expect(completeArcadeCadence('learner', 'word-4', '1', false)).toBeNull();
-  expect(completeArcadeCadence('learner', 'word-5', '1', false)).toBeNull();
+  expect(completeArcadeCadence('learner', 'word-2', '1', false)).toBeNull();
+  expect(completeArcadeCadence('learner', 'word-3', '1', false)).toBeNull();
 });
 it('un truco solicita gramática incluso en Inicio, sin crear progreso de aprendizaje', () => {
   expect(completeArcadeCadence('learner', 'trick:play:ing', '1', true)).toBe('grammar');

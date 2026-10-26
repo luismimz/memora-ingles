@@ -22,6 +22,11 @@
 .home-about { margin-top: 12px; font-size: .85rem; color: var(--muted); }
 .home-method { display: flex; gap: 9px; align-items: center; color: var(--muted); font-size: .8rem; margin: 16px 0 0; }
 .home-method i { font-style: normal; color: var(--accent-ink); }
+.home-method > span { display: flex; align-items: center; gap: 9px; }
+.home-method > span[aria-current='step'] { color: var(--accent-ink); font-weight: 700; }
+.home-navigation nav { max-height: min(70dvh, 600px); overflow-y: auto; }
+.home-navigation .home-tools { margin: 0; border-top: 1px solid var(--line); }
+.home-navigation .home-tools > div { display: grid; gap: 0; }
 .home-about > summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; width: fit-content; }
 .home-about > p { max-width: 48ch; margin: 8px 0; line-height: 1.6; }
 .home-progress, .home-explore { border-top: 1px solid var(--line); }

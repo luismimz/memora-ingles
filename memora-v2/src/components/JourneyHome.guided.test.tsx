@@ -6,13 +6,15 @@ import { grammarTricks, trickStop } from '../domain/journeyTricks';
 import { recordWordRecall } from '../domain/memory';
 import { readLearningActivities } from '../domain/learningActivity';
 import { writeTrickCheckpoint } from '../domain/trickCheckpoint';
+import { writeGameCheckpoint } from '../domain/gameCheckpoint';
+import { initialGame, type LearningMode } from '../domain/game';
 const source = { ...previewUnit, grammarTricks: grammarTricks(previewUnit) };
 const stop = trickStop(source, source.grammarTricks[0]);
 const user = 'home-guided-isolated';
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const open = vi.fn();
-function mount(units = [source], resumeUnitId?: string) { act(() => { tree = create(<JourneyHome units={units} userId={user} resumeUnitId={resumeUnitId} onOpen={open} onConverse={() => {}} onWords={() => {}} onGrammar={() => {}} onArcade={() => {}} onEvolution={() => {}} onExit={() => {}} onProfile={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); }
+function mount(units = [source], resumeUnitId?: string, resumeLearningMode: LearningMode = 'adventure') { act(() => { tree = create(<JourneyHome units={units} userId={user} resumeUnitId={resumeUnitId} resumeLearningMode={resumeLearningMode} onOpen={open} onConverse={() => {}} onWords={() => {}} onGrammar={() => {}} onArcade={() => {}} onEvolution={() => {}} onExit={() => {}} onProfile={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); }
 beforeEach(() => {
   open.mockClear(); const rows = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => rows.get(key) ?? null, setItem: (key: string, value: string) => rows.set(key, value), removeItem: (key: string) => rows.delete(key) });
@@ -60,4 +62,14 @@ it('lo practicado procede de memorias, no del tamaño del catálogo ni de abrir 
 it('sin catálogo no muestra un Continuar vacío ni una actividad guardada inventada', () => {
   mount([]); expect(text(tree.toJSON())).toContain('Aún no hay una misión publicada.');
   expect(tree.root.findAllByType('button').some((node) => text(node).includes('Continuar jugando'))).toBe(false);
+});
+it('el montaje de la captura se identifica desde Inicio sin revelar la palabra ni tocar el checkpoint', () => {
+  writeGameCheckpoint(user, `${source.id}:vocabulary`, source.contentVersion ?? '1', { ...initialGame, wordAssembly: { selected: [0], hinted: false, modelUsed: false, layout: 'letters-v2' } });
+  const before = localStorage.getItem(`memora-v2.checkpoint.${user}.${source.id}:vocabulary`);
+  mount([source], source.id, 'vocabulary');
+  expect(text(tree.root.findByType('h1'))).toBe('Retoma tu palabra');
+  expect(text(tree.root.findByProps({ 'aria-current': 'step' }))).toContain('Arma');
+  expect(text(tree.root.findByProps({ className: 'home-now' }))).not.toContain(source.words[0].en);
+  expect(localStorage.getItem(`memora-v2.checkpoint.${user}.${source.id}:vocabulary`)).toBe(before);
+  expect(readLearningActivities(user)).toEqual([]);
 });

@@ -2,6 +2,7 @@ import { AnswerStudio } from './AnswerStudio';
 import { useEffect, useRef, useState } from 'react';
 import { arcadePairs, microRounds, type MicroRound } from '../domain/microArcade';
 import { ArcadePairs } from './ArcadePairs';
+import { ArcadeTrail } from './ArcadeTrail';
 import { commitMicroAttempt } from '../domain/microArcadeProgress';
 import { recordLearningActivity } from '../domain/learningActivity';
 import type { AtomicUnit } from '../domain/unit';
@@ -139,7 +140,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
 
   const reminder = round ? <div className="arcade-rescue"><ArcadeWordReminder userId={userId} word={round.word} paused={clock.paused} manual vertical /></div> : undefined;
   const canContinue = Boolean(round && result && !clock.checkpoint && !clock.paused);
-  const nextLabel = result === 'rescue' ? 'Seguir con ayuda' : automatic && index - startRound + 1 >= limit ? 'Terminar el repaso' : 'Siguiente reto';
+  const nextLabel = result === 'rescue' ? 'Seguir con ayuda' : automatic && index - startRound + 1 >= limit ? 'Seguir la aventura' : 'Siguiente reto';
   return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen play-flow micro-screen arcade-stream-screen">
     <header className="game-topbar play-header arcade-header">
       <button type="button" className="activity-back" onClick={onExit}>← Volver</button><span className="play-intention">Arcade</span>
@@ -155,6 +156,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
         </details>
       </div>
     </header>
+    {round ? <ArcadeTrail current={pairs.length ? 0 : listening ? 1 : writing ? 2 : 0} /> : null}
     <section className="game-stage"><GameCard feedback={result === 'correct' || result === 'paired' ? 'correct' : result === 'rescue' || result === 'paired-model' ? 'model' : undefined} vertical stepKey={`${index}:${result === 'rescue' ? 'rescue' : 'challenge'}:${clock.checkpoint}`} onAdvance={clock.checkpoint ? onExit : canContinue ? clock.advanceNow : undefined} advanceLabel={clock.checkpoint ? 'Volver al recorrido' : nextLabel} className="arcade-stream-card recall-calm">
     {clock.checkpoint ? <ArcadeCheckpoint inFeed onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : pairs.length ? <ArcadePairs key={index} rounds={pairs} seed={choiceSeed + index} paused={clock.paused} onPair={(target, answer, correct) => {
       const key = target.word.en;

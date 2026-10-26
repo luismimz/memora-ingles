@@ -9,8 +9,9 @@ export interface AssociationAudioState {
 
 /** Audio accompanies discovery; it never gates visibility, advancement or mastery. */
 export function useAssociationAudio(word: AtomicWord, autoPlay = true, narrateScene = true) {
-  const [audioState, setAudioState] = useState<AssociationAudioState>({ status: 'preparing', source: null });
+  const [audioState, setAudioState] = useState<AssociationAudioState | undefined>({ status: 'preparing', source: null });
   const generation = useRef(0);
+  const failedWord = useRef('');
   const run = useCallback(async (wordOnly: boolean) => {
     const token = ++generation.current;
     const current = () => token === generation.current;
@@ -18,6 +19,7 @@ export function useAssociationAudio(word: AtomicWord, autoPlay = true, narrateSc
     const started = (source: SpeechSource) => { if (current()) setAudioState({ status: 'playing', source }); };
     const accept = (result: PlaybackResult) => {
       if (!current()) return false;
+      if (result.status === 'cancelled') { setAudioState(undefined); return false; }
       if (result.status !== 'played') {
         setAudioState({ status: result.status === 'unavailable' ? 'unavailable' : 'blocked', source: result.source });
         return false;
@@ -27,7 +29,9 @@ export function useAssociationAudio(word: AtomicWord, autoPlay = true, narrateSc
     };
     preparing();
     const safe = (playback: Promise<PlaybackResult>) => playback.catch(() => ({ status: 'unavailable' as const, source: null }));
-    const first = await safe(playEnglish(word.en.toLowerCase(), word.audioUrl, true, started));
+    const key = JSON.stringify([word.en, word.audioUrl]);
+    const first = await safe(wordOnly && failedWord.current === key ? playEnglish(word.en.toLowerCase(), word.audioUrl, true, started, true) : playEnglish(word.en.toLowerCase(), word.audioUrl, true, started));
+    if (current()) failedWord.current = first.status === 'blocked' || first.status === 'unavailable' ? key : '';
     if (!accept(first) || wordOnly || !narrateScene || word.associationMode === 'cognate') return;
     preparing();
     if (!accept(await safe(playSpanish(word.scene, true, started)))) return;
@@ -44,5 +48,5 @@ export function useAssociationAudio(word: AtomicWord, autoPlay = true, narrateSc
 
   // AssociationCard stays mounted while its word assembly replaces the scene.
   // Invalidate pending narration at that boundary, not only on unmount.
-  return { audioState, listen: () => { void run(true); }, cancel: () => { generation.current++; stopSpeech(); } };
+  return { audioState, listen: () => { void run(true); }, cancel: () => { generation.current++; stopSpeech(); setAudioState(undefined); } };
 }

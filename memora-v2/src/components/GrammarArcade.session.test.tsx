@@ -5,6 +5,7 @@ const hooks = vi.hoisted(() => ({ index: 0, state: new Map<number, unknown>(), a
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (initial: unknown) => { const id = hooks.index++; if (!hooks.state.has(id)) hooks.state.set(id, typeof initial === 'function' ? initial() : initial); return [hooks.state.get(id), (value: unknown) => hooks.state.set(id, typeof value === 'function' ? value(hooks.state.get(id)) : value)]; },
   useRef: (current: unknown) => { const id = hooks.index++; if (!hooks.state.has(id)) hooks.state.set(id, { current }); return hooks.state.get(id); },
+  useEffect: () => undefined,
 }));
 vi.mock('./useArcadeClock', () => ({ useArcadeClock: (index: number, _revealed: boolean, _enabled: boolean, expire: () => void, advance: () => void, _feedback: number, _duration: number, interval: number) => {
   hooks.advance = advance; hooks.expire = expire;
@@ -37,9 +38,10 @@ it('tras responder deja ver el feedback y vuelve al recorrido sin reciclar BRUSH
   render(); hooks.advance();
   expect(exit).toHaveBeenCalledOnce();
 });
-it('un timeout también termina tras su rescate, no reinicia la misma pregunta', () => {
+it('una omisión explícita de compatibilidad deja modelo en la misma superficie vertical', () => {
   render(); hooks.expire(); render();
-  expect(nodes.some((node) => node.props.showBack === true)).toBe(true);
+  expect(nodes.some((node) => node.props.feedback === 'model' && node.props.vertical === true)).toBe(true);
+  expect(nodes.some((node) => node.props.showBack === true)).toBe(false);
   expect(exit).not.toHaveBeenCalled();
   hooks.advance(); expect(exit).toHaveBeenCalledOnce();
 });
@@ -50,10 +52,10 @@ it('Arcade manual cierra el lote de una frase; repetir requiere una decisión ex
 });
 it('Gramática reutiliza la preferencia sin reloj guardada por asociaciones', () => {
   writeArcadeCalm('isolated', true);
-  render();
+  render(false);
   const control = nodes.find((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás');
   expect(control.props['aria-pressed']).toBe(true);
   expect(nodes.find((node) => node.props.role === 'status')?.props.children).toContain('Sin cuenta atrás');
-  control.props.onClick(); render();
+  control.props.onClick(); render(false);
   expect(readArcadeCalm('isolated')).toBe(false);
 });

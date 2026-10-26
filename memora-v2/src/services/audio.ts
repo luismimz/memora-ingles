@@ -53,7 +53,7 @@ export function stopSpeech() {
   if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 }
 
-function playSpeech(text: string, language: SpeechLanguage, staticAudioId?: string, waitForEnd = false, onStarted?: (source: SpeechSource) => void): Promise<PlaybackResult> {
+function playSpeech(text: string, language: SpeechLanguage, staticAudioId?: string, waitForEnd = false, onStarted?: (source: SpeechSource) => void, deviceVoice = false): Promise<PlaybackResult> {
   stopSpeech();
   const serial = playSerial;
   return new Promise((resolve) => {
@@ -100,6 +100,9 @@ function playSpeech(text: string, language: SpeechLanguage, staticAudioId?: stri
       cleanups.push(() => { utterance.onstart = null; utterance.onend = null; utterance.onerror = null; });
       try { window.speechSynthesis.speak(utterance); } catch { finish('unavailable'); }
     };
+    // Explicit retry uses the existing device fallback immediately, not another
+    // wait for the same failed remote request. Events still determine playback.
+    if (deviceVoice) { browserFallback(); return; }
     // Kokoro can take seconds to generate a new clip. Keep the page usable while
     // waiting, rather than replacing a healthy voice after just 300 milliseconds.
     const clearPreparation = schedule(browserFallback, 25_000);
@@ -137,13 +140,13 @@ function playSpeech(text: string, language: SpeechLanguage, staticAudioId?: stri
   });
 }
 
-export function playEnglish(text: string, staticAudioId?: string, waitForEnd = false, onStarted?: (source: SpeechSource) => void): Promise<PlaybackResult> {
-  return playSpeech(text, 'en', staticAudioId, waitForEnd, onStarted);
+export function playEnglish(text: string, staticAudioId?: string, waitForEnd = false, onStarted?: (source: SpeechSource) => void, deviceVoice = false): Promise<PlaybackResult> {
+  return playSpeech(text, 'en', staticAudioId, waitForEnd, onStarted, deviceVoice);
 }
 
 /** Lee la escena mnemotécnica en español y vuelve al sintetizador del navegador si Kokoro no está disponible. */
-export function playSpanish(text: string, waitForEnd = false, onStarted?: (source: SpeechSource) => void): Promise<PlaybackResult> {
-  return playSpeech(text, 'es', undefined, waitForEnd, onStarted);
+export function playSpanish(text: string, waitForEnd = false, onStarted?: (source: SpeechSource) => void, deviceVoice = false): Promise<PlaybackResult> {
+  return playSpeech(text, 'es', undefined, waitForEnd, onStarted, deviceVoice);
 }
 
 let context: AudioContext | null = null;

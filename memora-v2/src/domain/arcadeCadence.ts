@@ -44,7 +44,9 @@ export function completeArcadeCadence(userId: string, stopId: string, version: s
   if (!value.seen.includes(identity)) {
     value.seen.push(identity);
     if (grammar) value.pending = 'grammar';
-    else if (++value.words >= 4 && !value.pending) value.pending = 'associations';
+    // Shorter presentation run; the pool still requires genuine exposure and
+    // three intervening answered actions. This does not change SRS intervals.
+    else if (++value.words >= 2 && !value.pending) value.pending = 'associations';
     save(userId, value);
   }
   return value.pending;

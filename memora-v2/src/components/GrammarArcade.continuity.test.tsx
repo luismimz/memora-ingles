@@ -1,0 +1,44 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { GrammarArcade } from './GrammarArcade';
+import { GameCard } from './GameCard';
+import { previewUnit } from '../preview/previewUnit';
+import { grammarArcadeRounds } from '../domain/grammarArcadeRounds';
+import { readLearningActivities } from '../domain/learningActivity';
+vi.mock('../domain/grammarArcadeRounds', () => ({ grammarArcadeRounds: vi.fn() }));
+vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'played', source: 'kokoro' })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
+let tree: ReactTestRenderer;
+const user = 'arcade-flow-isolated', exit = vi.fn();
+beforeEach(() => {
+  vi.useFakeTimers(); exit.mockClear();
+  const data = new Map<string, string>();
+  vi.stubGlobal('localStorage', { getItem: (key: string) => data.get(key) ?? null, setItem: (key: string, value: string) => data.set(key, value) });
+  vi.stubGlobal('window', { setTimeout, clearTimeout, setInterval, clearInterval, dispatchEvent: vi.fn(), matchMedia: () => ({ matches: true }), getSelection: () => null });
+  const slot = { en: 'AM', es: 'ESTOY', choices: ['AM', 'IS'] };
+  vi.mocked(grammarArcadeRounds).mockReturnValue([{ unit: previewUnit, sentence: previewUnit.sentence, slotIndex: 0, slot, skill: 'prepared-example', conceptual: true }]);
+});
+afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+const option = (text: string) => tree.root.findAllByType('button').find((node) => node.props.children === text)!;
+it('gramática no escénica tampoco caduca; acierto conserva superficie y termina por gesto sin otro menú', async () => {
+  act(() => { tree = create(<GrammarArcade userId={user} units={[previewUnit]} inspection={false} automatic onExit={exit} onWords={() => {}} />); });
+  const key = tree.root.findByType(GameCard).props.stepKey;
+  expect(tree.root.findByType(GameCard).props.vertical).toBe(true);
+  await act(async () => { vi.advanceTimersByTime(30000); });
+  expect(readLearningActivities(user)).toEqual([]); expect(exit).not.toHaveBeenCalled();
+  await act(async () => option('AM').props.onClick());
+  expect(tree.root.findByType(GameCard).props.stepKey).toBe(key); expect(tree.root.findByType(GameCard).props.feedback).toBe('correct');
+  await act(async () => { vi.advanceTimersByTime(30000); }); expect(exit).not.toHaveBeenCalled();
+  act(() => tree.root.findByType(GameCard).props.onAdvance()); expect(exit).toHaveBeenCalledOnce();
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
+});
+it('pausa protege la respuesta y el rescate queda debajo de las mismas opciones, sin flip ni acierto inventado', async () => {
+  act(() => { tree = create(<GrammarArcade userId={user} units={[previewUnit]} inspection={false} automatic onExit={exit} onWords={() => {}} />); });
+  act(() => option('Pausar').props.onClick()); act(() => option('IS').props.onClick());
+  expect(readLearningActivities(user)).toEqual([]);
+  act(() => option('Seguir').props.onClick()); await act(async () => option('IS').props.onClick());
+  expect(tree.root.findByType(GameCard).props.feedback).toBe('model'); expect(tree.root.findByType(GameCard).props.showBack).toBeUndefined();
+  expect(tree.root.findByProps({ className: 'arcade-correction' }).props.role).toBe('status');
+  expect(option('AM').props.className).toBe('is-model');
+  await act(async () => option('AM').props.onClick());
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ correct: false }]);
+});

@@ -21,6 +21,13 @@ beforeEach(() => {
   speech.playEnglish.mockResolvedValue(played); speech.playSpanish.mockResolvedValue(played);
 });
 describe('audio acompañante de la asociación', () => {
+  it('una cancelación no se disfraza de audio bloqueado ni solicita voz alternativa después', async () => {
+    speech.playEnglish.mockResolvedValueOnce({ status: 'cancelled', source: 'kokoro' });
+    const hook = useAssociationAudio(previewUnit.words[0]); hooks.effects[0](); await flush();
+    expect(hooks.state).toBeUndefined(); expect(speech.playSpanish).not.toHaveBeenCalled();
+    hook.listen(); await flush();
+    expect(speech.playEnglish).toHaveBeenLastCalledWith(previewUnit.words[0].en.toLowerCase(), previewUnit.words[0].audioUrl, true, expect.any(Function));
+  });
   it('con puente rechazado conserva modelo inglés sin narrar ni precargar la historia', async () => {
     useAssociationAudio(previewUnit.words[0], true, false); hooks.effects[0](); await flush();
     expect(speech.playEnglish).toHaveBeenCalledOnce();
@@ -45,6 +52,7 @@ describe('audio acompañante de la asociación', () => {
     expect(hooks.state?.status).toBe('blocked'); expect(speech.playSpanish).not.toHaveBeenCalled();
     speech.playEnglish.mockResolvedValue(played);
     hook.listen(); await flush();
+    expect(speech.playEnglish).toHaveBeenLastCalledWith(previewUnit.words[0].en.toLowerCase(), previewUnit.words[0].audioUrl, true, expect.any(Function), true);
     expect(hooks.state?.status).toBe('ready'); expect(speech.playSpanish).not.toHaveBeenCalled();
   });
   it('un clic manual invalida la secuencia automática todavía pendiente', async () => {

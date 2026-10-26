@@ -42,7 +42,7 @@ it('la recuperación de significado usa escenas preparadas y no una casilla de p
 it('error muestra consecuencia y modelo sin puntuar otro acierto; audio solicitado no acredita escucha', async () => {
   await mount();
   await act(async () => tree.root.findByType(GrammarSituation).props.onListen());
-  expect(playEnglish).toHaveBeenCalledWith('I am playing');
+  expect(playEnglish).toHaveBeenCalledWith('I am playing', undefined, true, expect.any(Function));
   expect(readLearningActivities(user)).toMatchObject([{ source: 'authored', correct: null }]);
   const answer = tree.root.findByType(GrammarSituation).props.onAnswer;
   await act(async () => { answer('Todavía no estoy jugando.'); answer('Estoy jugando ahora.'); });

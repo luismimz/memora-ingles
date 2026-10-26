@@ -58,7 +58,7 @@ it('el laboratorio general revierte las dos caras del ejemplo preparado, sin sum
   expect(text(tree.toJSON()).replace(/\s+\./g, '.')).toContain('Yo.');
   expect(playEnglish).toHaveBeenLastCalledWith('I', undefined, true, expect.any(Function));
   await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar el ejemplo visible' }).props.onClick());
-  expect(playEnglish).toHaveBeenLastCalledWith('I', undefined, true, expect.any(Function));
+  expect(playEnglish).toHaveBeenLastCalledWith('I', undefined, true, expect.any(Function), true);
   expect(text(tree.toJSON())).toContain('Audio no disponible');
   await act(async () => tree.root.findByProps({ 'aria-pressed': true }).props.onClick());
   expect(text(tree.toJSON())).toContain('ESTOY');

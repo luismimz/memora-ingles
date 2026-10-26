@@ -57,7 +57,7 @@ export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => {
 function ArcadeDialog({ children, onExit }: { children: React.ReactNode; onExit: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { const current = dialog.current; current?.showModal(); return () => { current?.close(); stopSpeech(); }; }, []);
-  return <dialog ref={dialog} className="micro-dialog" aria-label="Memora Arcade" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen micro-screen"><header className="game-topbar"><button type="button" className="activity-back" onClick={onExit}>← Volver donde estaba</button><span>MEMORA ARCADE</span></header><section className="game-stage">{children}</section></div></dialog>;
+  return <dialog ref={dialog} className="micro-dialog" aria-label="Memora Arcade" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen play-flow micro-screen arcade-stream-screen"><header className="game-topbar play-header arcade-header"><button type="button" className="activity-back" onClick={onExit}>← Recorrido</button><span className="play-intention">Arcade</span></header><section className="game-stage">{children}</section></div></dialog>;
 }
 
 /** Optional modes share the same attempts, SRS and conversation history. */
@@ -65,7 +65,7 @@ export function ArcadeExperience({ userId, units: sourceUnits, inspection, onExi
   // Freeze a prepared pool for this session; answering one round must not erase
   // its own feedback or change the next round underneath the learner.
   const [units] = useState(() => automatic && !inspection ? separatedArcadeUnits(sourceUnits, readLearningActivities(userId)) : sourceUnits);
-  const [stage, setStage] = useState<'associations' | 'grammar' | 'build' | 'chat' | 'finish'>(() => initialMode === 'grammar' && (inspection || eligibleGrammarUnits(userId, units).length) ? 'grammar' : 'associations');
+  const [stage, setStage] = useState<'associations' | 'grammar' | 'build' | 'chat'>(() => initialMode === 'grammar' && (inspection || eligibleGrammarUnits(userId, units).length) ? 'grammar' : 'associations');
   const [mixed, setMixed] = useState(false);
   const [selected, setSelected] = useState<AtomicUnit>(() => (inspection ? units.filter((unit) => unit.communication?.dialogue) : eligibleMixedUnits(userId, units))[0]);
   const [filled, setFilled] = useState(0);
@@ -83,11 +83,10 @@ export function ArcadeExperience({ userId, units: sourceUnits, inspection, onExi
   const anotherRound = () => { const index = available.findIndex((unit) => unit.id === selected?.id); setSelected(available[(index + 1) % available.length]); setFilled(0); previous.current = undefined; setStage('associations'); };
   if (stage === 'grammar') return <ArcadeDialog onExit={onExit}><GrammarArcade units={grammarUnits} userId={userId} inspection={inspection} onExit={onExit} onWords={() => setStage('associations')} initialRound={completedRounds.current} onRoundAdvance={advanceRound} automatic={automatic} /></ArcadeDialog>;
   if (stage === 'associations') return <MicroArcade userId={userId} units={mixed && selected ? [selected] : units} inspection={inspection} onExit={onExit} onUse={mixed && selected ? () => setStage('build') : undefined} onOnlyWords={mixed && selected ? () => setMixed(false) : undefined} onMix={!automatic && !mixed && selected ? () => setMixed(true) : undefined} onGrammar={!automatic && grammarUnits.length ? () => setStage('grammar') : undefined} initialRound={completedRounds.current} onRoundAdvance={advanceRound} automatic={automatic} />;
-  if (stage === 'build' && selected) return <ArcadeDialog onExit={onExit}><SentenceBuilderCard sentence={selected.sentence} sceneWord={selected.words[0]} processForm={getPlayableGrammar(selected)[0]} index={0} total={1} filledSlots={filled} choiceSeed={1} onAttempt={(choice, correct, slotIndex) => {
+  if (stage === 'build' && selected) return <ArcadeDialog onExit={onExit}><SentenceBuilderCard vertical sentence={selected.sentence} sceneWord={selected.words[0]} processForm={getPlayableGrammar(selected)[0]} index={0} total={1} filledSlots={filled} choiceSeed={1} onAttempt={(choice, correct, slotIndex) => {
     if (!inspection) { const slot = selected.sentence.slots[slotIndex]; const attempt = recordLearningActivity(userId, { unitId: selected.id, unitTitle: selected.title, contentVersion: selected.contentVersion ?? '1', activityId: `micro:${sessionId}:build:${slotIndex}`, skill: selected.grammar[0].id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, parentAttemptId: previous.current, feedback: correct ? 'Pieza recuperada con opciones.' : 'Compara las piezas y prueba otra vez.' }); previous.current = correct ? undefined : attempt.id; }
   }} onPick={() => { if (!inspection) { recordChunkExposure(userId, selected.id, selected.sentence, filled); if (filled === selected.sentence.slots.length - 1) recordSentenceExposure(userId, selected.id, selected.sentence); } setFilled((value) => value + 1); }} onNext={() => setStage('chat')} /></ArcadeDialog>;
-  if (stage === 'chat' && selected) return <ArcadeDialog onExit={onExit}><ConversationPractice unit={selected} userId={userId} reviewMode={inspection} checkpointScope={`arcade:${sessionId}`} onContinue={() => setStage('finish')} /></ArcadeDialog>;
-  return <ArcadeDialog onExit={onExit}><GameCard className="micro-card"><div className="micro-content"><p className="eyebrow">ASOCIAR → USAR → CONVERSAR</p><h1>¡Lo has usado!</h1>{inspection ? <small>Demostración · no guarda progreso</small> : null}
-    <button type="button" className="primary-action" onClick={anotherRound}>Continuar →</button><button type="button" className="quiet-action" onClick={() => { setMixed(false); anotherRound(); }}>Solo palabras</button><button type="button" className="quiet-action" onClick={onExit}>Volver donde estaba</button>
+  if (stage === 'chat' && selected) return <ArcadeDialog onExit={onExit}><ConversationPractice vertical unit={selected} userId={userId} reviewMode={inspection} checkpointScope={`arcade:${sessionId}`} onContinue={anotherRound} /></ArcadeDialog>;
+  return <ArcadeDialog onExit={onExit}><GameCard vertical onAdvance={onExit} advanceLabel="Volver donde estaba" className="micro-card"><div className="micro-content"><h1>Esta escena no está disponible.</h1>{inspection ? <small>Demostración · no guarda progreso</small> : null}
   </div></GameCard></ArcadeDialog>;
 }

@@ -125,6 +125,12 @@ describe('continuidad real desde App', () => {
       await flush();
       if (index < 3) {
         game().props.onNext(); await flush();
+        if (index === 2) {
+          // Two vocabulary stops now insert a short eligible surprise, without
+          // consuming or losing the prepared trick that follows this pack.
+          const arcade = overlay(); expect((arcade.props as any).initialMode).toBe('associations');
+          (arcade.props as any).onExit(); await flush();
+        }
         if (index === 0 || index === 2) await finishPreparedTrick();
         expect(practiced).toHaveLength(index < 2 ? 1 : 2);
       }
