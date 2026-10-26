@@ -56,6 +56,45 @@ it('escucha sin revelar la palabra, exige reproducción completada y registra ca
   expect(text(tree.toJSON())).toContain('Acertaste');
 });
 
+it.each([false, true])('reintentar audio pendiente en resultado=%s ignora su final antiguo sin fabricar aprendizaje', async (result) => {
+  const target = microRounds(user, [previewUnit])[1].word;
+  await mount();
+  if (result) {
+    await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+    await act(async () => button(target.es).props.onClick());
+  }
+  const before = readLearningActivities(user);
+  const label = result ? '🔊 Escuchar de nuevo' : '🔊 Reproducir palabra inglesa';
+  let old!: (value: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { old = done; }));
+  await act(async () => button(label).props.onClick());
+  expect(button(label).props.disabled).toBe(false);
+  expect(button(label).props['aria-busy']).toBe(true);
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'blocked', source: null });
+  await act(async () => button(label).props.onClick());
+  await act(async () => old({ status: 'played', source: 'kokoro' }));
+  expect(text(tree.toJSON())).toContain('No se completó el audio');
+  if (!result) expect(button(target.es).props.disabled).toBe(true);
+  expect(readLearningActivities(user)).toEqual(before);
+  await act(async () => button(label).props.onClick());
+  expect(text(tree.toJSON())).not.toContain('No se completó el audio');
+  if (!result) expect(button(target.es).props.disabled).toBe(false);
+  expect(readLearningActivities(user)).toEqual(before);
+});
+it.each([false, true])('cancelar audio en resultado=%s no lo presenta como fallo ni acierto auditivo', async (result) => {
+  const target = microRounds(user, [previewUnit])[1].word;
+  await mount();
+  if (result) {
+    await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+    await act(async () => button(target.es).props.onClick());
+  }
+  const before = readLearningActivities(user);
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'cancelled', source: null });
+  await act(async () => button(result ? '🔊 Escuchar de nuevo' : '🔊 Reproducir palabra inglesa').props.onClick());
+  expect(text(tree.toJSON())).not.toContain('No se completó el audio');
+  if (!result) expect(button(target.es).props.disabled).toBe(true);
+  expect(readLearningActivities(user)).toEqual(before);
+});
 it('audio bloqueado permite texto sin fallo ni acierto auditivo ficticio', async () => {
   vi.mocked(playEnglish).mockResolvedValue({ status: 'blocked', source: null });
   const target = microRounds(user, [previewUnit])[1].word;
@@ -134,7 +173,7 @@ it('pausar la repetición del resultado no deja su altavoz bloqueado al reanudar
     started?.('kokoro'); return new Promise((done) => { resolve = done; });
   });
   await act(async () => { void button('🔊 Escuchar de nuevo').props.onClick(); });
-  expect(button('🔊 Escuchar de nuevo').props.disabled).toBe(true);
+  expect(button('🔊 Escuchar de nuevo').props.disabled).toBe(false);
   await act(async () => button('Pausar').props.onClick());
   await act(async () => button('Reanudar').props.onClick());
   await act(async () => resolve({ status: 'played', source: 'kokoro' }));
