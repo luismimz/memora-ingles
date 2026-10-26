@@ -24,6 +24,7 @@ import { dogWalkingLesson, dogWalkingSkill } from '../domain/dogWalkingPractice'
 import { treeLocationSkill } from '../domain/treeLocationPractice';
 import { meatCookingLesson, meatCookingSkill } from '../domain/meatCookingPractice';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
+import { constructionFeedback } from '../domain/sentenceConstruction';
 
 export function eligibleGrammarUnits(userId: string, units: AtomicUnit[]): AtomicUnit[] {
   const practiced = new Set([...readGrammarAttempts(userId).filter((attempt) => attempt.correct).map((attempt) => attempt.unitId),
@@ -71,11 +72,37 @@ export function ArcadeExperience({ userId, units: sourceUnits, inspection, onExi
   const [selected, setSelected] = useState<AtomicUnit>(() => (inspection ? units.filter((unit) => unit.communication?.dialogue) : eligibleMixedUnits(userId, units))[0]);
   const [filled, setFilled] = useState(0);
   const [preparationHelp, setPreparationHelp] = useState(false);
+  const [, refreshBuild] = useState(0);
   const [sessionId] = useState(() => crypto.randomUUID());
   const previous = useRef<string>();
   const completedRounds = useRef(0);
   const available = inspection ? units.filter((unit) => unit.communication?.dialogue) : eligibleMixedUnits(userId, units);
   const grammarUnits = inspection ? units : eligibleGrammarUnits(userId, units);
+  const buildKey = `${selected?.id}:${filled}`;
+  const buildGuard = useRef({ key: buildKey, failures: 0, placed: false, choice: undefined as string | undefined });
+  if (buildGuard.current.key !== buildKey) buildGuard.current = { key: buildKey, failures: 0, placed: false, choice: undefined };
+  function attemptPiece(choice: string, correct: boolean, slotIndex: number): false | void {
+    const guard = buildGuard.current, slot = selected?.sentence.slots[slotIndex];
+    if (stage !== 'build' || guard.key !== buildKey || guard.placed || guard.failures >= 2 || slotIndex !== filled || !slot?.choices.includes(choice) || correct !== (choice === slot.en)) return false;
+    if (!correct) { guard.failures++; guard.choice = choice; refreshBuild((value) => value + 1); }
+    if (!inspection) {
+      const attempt = recordLearningActivity(userId, { unitId: selected.id, unitTitle: selected.title, contentVersion: selected.contentVersion ?? '1', activityId: `micro:${sessionId}:build:${slotIndex}`, skill: selected.grammar[0].id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, pieceSignature: piecePreparationKey(slot, getPlayableGrammar(selected)[0]), parentAttemptId: previous.current, feedback: constructionFeedback(selected.sentence, slotIndex, choice, selected.words) });
+      previous.current = correct ? undefined : attempt.id;
+    }
+  }
+  function placePiece(withModel = false) {
+    const guard = buildGuard.current, slot = selected?.sentence.slots[filled];
+    if (stage !== 'build' || guard.key !== buildKey || guard.placed || !slot || (withModel ? guard.failures < 2 : guard.failures >= 2)) return;
+    guard.placed = true;
+    if (withModel) setPreparationHelp(true);
+    if (!inspection) {
+      if (withModel) recordLearningActivity(userId, { unitId: selected.id, unitTitle: selected.title, contentVersion: selected.contentVersion ?? '1', activityId: `micro:${sessionId}:build-model:${filled}`, skill: selected.grammar[0].id, phase: 'construction', source: 'authored', modality: 'choice', prompt: slot.es, response: slot.en, expected: '', correct: null, helped: true, parentAttemptId: previous.current, feedback: 'Pieza colocada con modelo; no es un acierto.' });
+      recordChunkExposure(userId, selected.id, selected.sentence, filled);
+      if (filled === selected.sentence.slots.length - 1) recordSentenceExposure(userId, selected.id, selected.sentence);
+    }
+    previous.current = undefined;
+    setFilled((value) => value + 1);
+  }
   function advanceRound(completed: number) {
     completedRounds.current = completed;
     if (automatic) return;
@@ -85,9 +112,7 @@ export function ArcadeExperience({ userId, units: sourceUnits, inspection, onExi
   const anotherRound = () => { const index = available.findIndex((unit) => unit.id === selected?.id); setSelected(available[(index + 1) % available.length]); setFilled(0); setPreparationHelp(false); previous.current = undefined; setStage('associations'); };
   if (stage === 'grammar') return <ArcadeDialog onExit={onExit}><GrammarArcade units={grammarUnits} userId={userId} inspection={inspection} onExit={onExit} onWords={() => setStage('associations')} initialRound={completedRounds.current} onRoundAdvance={advanceRound} automatic={automatic} /></ArcadeDialog>;
   if (stage === 'associations') return <MicroArcade userId={userId} units={mixed && selected ? [selected] : units} inspection={inspection} onExit={onExit} onUse={mixed && selected ? () => setStage('build') : undefined} onOnlyWords={mixed && selected ? () => setMixed(false) : undefined} onMix={!automatic && !mixed && selected ? () => setMixed(true) : undefined} onGrammar={!automatic && grammarUnits.length ? () => setStage('grammar') : undefined} initialRound={completedRounds.current} onRoundAdvance={advanceRound} automatic={automatic} />;
-  if (stage === 'build' && selected) return <ArcadeDialog onExit={onExit}><SentenceBuilderCard vertical compactPreparation={!inspection && canReusePiecePreparation(readLearningActivities(userId), selected.sentence.slots[filled], getPlayableGrammar(selected)[0])} onPreparationReview={() => setPreparationHelp(true)} sentence={selected.sentence} sceneWord={selected.words[0]} processForm={getPlayableGrammar(selected)[0]} index={0} total={1} filledSlots={filled} choiceSeed={1} onAttempt={(choice, correct, slotIndex) => {
-    if (!inspection) { const slot = selected.sentence.slots[slotIndex]; const attempt = recordLearningActivity(userId, { unitId: selected.id, unitTitle: selected.title, contentVersion: selected.contentVersion ?? '1', activityId: `micro:${sessionId}:build:${slotIndex}`, skill: selected.grammar[0].id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, pieceSignature: piecePreparationKey(slot, getPlayableGrammar(selected)[0]), parentAttemptId: previous.current, feedback: correct ? 'Pieza recuperada con opciones.' : 'Compara las piezas y prueba otra vez.' }); previous.current = correct ? undefined : attempt.id; }
-  }} onPick={() => { if (!inspection) { recordChunkExposure(userId, selected.id, selected.sentence, filled); if (filled === selected.sentence.slots.length - 1) recordSentenceExposure(userId, selected.id, selected.sentence); } setFilled((value) => value + 1); }} onNext={() => setStage('chat')} /></ArcadeDialog>;
+  if (stage === 'build' && selected) return <ArcadeDialog onExit={onExit}><SentenceBuilderCard modelUsed={Boolean(preparationHelp)} vertical vocabulary={selected.words} needsModel={buildGuard.current.failures >= 2} lastIncorrectChoice={buildGuard.current.choice} onAcceptModel={() => placePiece(true)} compactPreparation={!inspection && canReusePiecePreparation(readLearningActivities(userId), selected.sentence.slots[filled], getPlayableGrammar(selected)[0])} onPreparationReview={() => setPreparationHelp(true)} sentence={selected.sentence} sceneWord={selected.words[0]} processForm={getPlayableGrammar(selected)[0]} index={0} total={1} filledSlots={filled} choiceSeed={1} onAttempt={attemptPiece} onPick={() => placePiece()} onNext={() => { if (filled === selected.sentence.slots.length) setStage('chat'); }} /></ArcadeDialog>;
   if (stage === 'chat' && selected) return <ArcadeDialog onExit={onExit}><ConversationPractice vertical initialHelped={preparationHelp} unit={selected} userId={userId} reviewMode={inspection} checkpointScope={`arcade:${sessionId}`} onContinue={anotherRound} /></ArcadeDialog>;
   return <ArcadeDialog onExit={onExit}><GameCard vertical onAdvance={onExit} advanceLabel="Volver donde estaba" className="micro-card"><div className="micro-content"><h1>Esta escena no está disponible.</h1>{inspection ? <small>Demostración · no guarda progreso</small> : null}
   </div></GameCard></ArcadeDialog>;

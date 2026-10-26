@@ -23,6 +23,13 @@ function render(filledSlots = 1, sentence = deskPreparedUnit.sentence, overrides
 }
 const button = (text: string) => nodes.find((node) => node.type === 'button' && node.props.children === text)!;
 beforeEach(() => { hooks.states.clear(); vi.clearAllMocks(); });
+it('terminar con un modelo conserva estado de apoyo, no un acierto verde', () => {
+  const html = render(deskPreparedUnit.sentence.slots.length, deskPreparedUnit.sentence, { modelUsed: true, vertical: true });
+  expect(nodes[0].props.feedback).toBe('model');
+  expect(html).toContain('Frase armada con ayuda.');
+  expect(html).not.toContain('✓ FRASE ARMADA');
+  expect(pick).not.toHaveBeenCalled(); expect(attempt).not.toHaveBeenCalled();
+});
 it('mantiene roles preparados entre carril, objetivo español y fichas sin elegir por el alumno', () => {
   const unit = contextualProcessFixture;
   render(1, unit.sentence, { processForm: unit.grammar[0], vocabulary: unit.words, sceneWord: unit.words[0] });

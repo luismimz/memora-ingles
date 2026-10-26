@@ -16,7 +16,7 @@ function showProcess(text: string, word: string, stem: string, ending: string): 
   return <>{text.slice(0, position)}<span className="builder-process"><span className="morph-root">{stem}</span><span className="morph-intent">{ending}</span></span>{text.slice(position + word.length)}</>;
 }
 
-export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, processForm, index, total, filledSlots, choiceSeed, onPick, onNext, onAttempt, preparationStep: savedPreparationStep, onPreparationChange, needsModel = false, lastIncorrectChoice, onAcceptModel, vertical = false, grammarHelp, compactPreparation = false, onPreparationReview }: {
+export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, processForm, index, total, filledSlots, choiceSeed, onPick, onNext, onAttempt, preparationStep: savedPreparationStep, onPreparationChange, needsModel = false, modelUsed = false, lastIncorrectChoice, onAcceptModel, vertical = false, grammarHelp, compactPreparation = false, onPreparationReview }: {
   sentence: UnitSentence;
   vocabulary?: readonly AtomicWord[];
   sceneWord: AtomicWord;
@@ -28,7 +28,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   onPick: () => void;
   onNext: () => void;
   onAttempt?: (choice: string, correct: boolean, slotIndex: number) => void | false;
-  needsModel?: boolean; lastIncorrectChoice?: string; onAcceptModel?: () => void; vertical?: boolean;
+  needsModel?: boolean; modelUsed?: boolean; lastIncorrectChoice?: string; onAcceptModel?: () => void; vertical?: boolean;
   preparationStep?: number;
   onPreparationChange?: (step: number) => void; grammarHelp?: ReactNode;
   compactPreparation?: boolean; onPreparationReview?: () => void;
@@ -85,9 +85,9 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const preparationAdvanceLabel = preparationIndex === (active?.preparation?.length ?? 0) - 1 ? 'Usar estas piezas →' : 'Ver la siguiente pieza →';
   const sentenceAdvanceLabel = index === total - 1 ? 'Usar mi frase →' : 'Siguiente frase →';
   const continueSentence = () => { playback.reset(); stopSpeech(); onNext(); };
-  return <GameCard feedback={completed ? 'correct' : needsModel ? 'model' : errorText ? 'retry' : undefined} key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? continueSentence : undefined : completed ? continueSentence : undefined} advanceLabel={vertical ? preparationStep ? preparationAdvanceLabel : sentenceAdvanceLabel : ''} reserveFooter={!vertical} revealFooter={Boolean(preparationStep && vertical || completed)}>
+  return <GameCard feedback={completed ? modelUsed ? 'model' : 'correct' : needsModel ? 'model' : errorText ? 'retry' : undefined} key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? continueSentence : undefined : completed ? continueSentence : undefined} advanceLabel={vertical ? preparationStep ? preparationAdvanceLabel : sentenceAdvanceLabel : ''} reserveFooter={!vertical} revealFooter={Boolean(preparationStep && vertical || completed)}>
     <div className="builder-content">
-      <p className="eyebrow">{completed ? '✓ FRASE ARMADA' : preparationStep ? 'DESCUBRE' : needsModel ? 'CON AYUDA' : 'CONSTRUYE'} · {index + 1}/{total}</p>
+      <p className="eyebrow">{completed ? modelUsed ? 'CON APOYO' : '✓ FRASE ARMADA' : preparationStep ? 'DESCUBRE' : needsModel ? 'CON AYUDA' : 'CONSTRUYE'} · {index + 1}/{total}</p>
       {!completed ? <SceneVisual word={sceneWord} compact /> : null}
       <h1>{showProcess(sentence.es, processForm.spanish, processForm.spanishStem, processForm.spanishEnding)}</h1>
       <div className={`sentence-rail ${completed ? 'is-complete' : ''}`} role="group" aria-label="Correspondencia del español con el inglés">
@@ -115,7 +115,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
         <div className="slot-options">{options?.map((choice) => <button type="button" data-piece-role={pieceRole(choice, 'en')} key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>
       </div> : <div className="builder-finish" aria-live="polite">
-        <p role="status">Frase armada. Ya puedes usarla.</p>
+        <p role="status">{modelUsed ? 'Frase armada con ayuda. Ya puedes usarla.' : 'Frase armada. Ya puedes usarla.'}</p>
         <button type="button" className="quiet-action" aria-label="Escuchar la frase" aria-busy={playback.audio?.status === 'preparing'} onClick={() => void listenToSentence()}>
           🔊 {playback.audio?.status === 'preparing' || playback.audio?.status === 'playing' ? playback.label : 'Escuchar la frase'}
         </button>
