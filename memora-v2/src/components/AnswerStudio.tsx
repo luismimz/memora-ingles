@@ -24,13 +24,11 @@ export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, a
   useEffect(() => { edited.current = false; fired.current = ''; cancel(); }, [taskKey]);
   useEffect(() => { schedule(); return cancel; }, [taskKey, value, disabled]);
   return <section className="answer-studio" aria-label="Tu reto de escritura">
-    <div className="answer-studio-direction"><span>ES</span><span aria-hidden="true">→</span><strong>EN</strong></div>
-    <p className="answer-studio-instruction">Escribe en inglés</p>
+    <label className="answer-studio-instruction" htmlFor={id}>Escribe en inglés</label>
     <div className="answer-studio-target" id={`${id}-target`} lang="es">{target}</div>
     <form onSubmit={(event) => { event.preventDefault(); cancel(); if (!disabled && !composing.current && value.trim()) onAnswer(value); }}>
-      <label className="sr-only" htmlFor={id}>Escribe en inglés el mensaje de arriba</label>
-      <input id={id} aria-describedby={`${id}-target ${id}-status`} lang="en" value={value} onChange={(event) => { edited.current = true; onChange(event.target.value); }} onCompositionStart={() => { composing.current = true; cancel(); }} onCompositionEnd={() => { composing.current = false; schedule(); }} autoComplete="off" autoCapitalize="none" enterKeyHint="send" spellCheck={false} disabled={disabled} placeholder="Tu respuesta en inglés" />
+      <input id={id} aria-describedby={`${id}-target ${id}-status`} lang="en" value={value} onChange={(event) => { edited.current = true; onChange(event.target.value); }} onCompositionStart={() => { composing.current = true; cancel(); }} onCompositionEnd={() => { composing.current = false; schedule(); }} autoComplete="off" autoCapitalize="none" enterKeyHint="send" spellCheck={false} disabled={disabled} placeholder="Tu respuesta" />
     </form>
-    <p id={`${id}-status`} className="answer-studio-status">Se reconoce al acertar. <kbd aria-label="Enter">↵</kbd> para revisar tu intento.</p>
+    <p id={`${id}-status`} className="answer-studio-status">Se reconoce al acertar. <kbd aria-label="Enter">↵</kbd> para revisar.</p>
   </section>;
 }

@@ -1,16 +1,15 @@
 .answer-studio { width: min(100%, 600px); margin: 12px auto; text-align: center; display: grid; justify-items: stretch; gap: 12px; }
-.answer-studio-direction { display: flex; align-items: center; justify-content: center; gap: 14px; font-size: .7rem; letter-spacing: .12em; color: var(--muted); }
-.answer-studio-direction strong { color: var(--accent-ink); }
 .answer-studio-instruction { margin: 0; font-size: .9rem; color: var(--muted); font-weight: 650; }
 .answer-studio-target { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.25; color: var(--ink); font-weight: 650; letter-spacing: -.035em; text-wrap: balance; }
 .answer-studio-target .coach-row { justify-content: center; margin: 0; font-size: inherit; font-weight: inherit; }
 .answer-studio-target .coach-piece { background: transparent; border-radius: 0; padding: 0; font-weight: 650; }
-.answer-studio form { margin-top: 12px; width: 100%; }
+.answer-studio form { margin: 0; width: 100%; }
 .answer-studio form input { box-sizing: border-box; width: 100%; min-height: 76px; padding: 18px 22px; border: 2px solid var(--line); border-radius: 18px; background: var(--surface-strong); color: var(--ink); text-align: center; font: inherit; font-size: clamp(1.3rem, 4vw, 1.8rem); box-shadow: 0 8px 28px #00000006; transition: border-color .18s, box-shadow .18s; }
 .answer-studio input:focus { outline: none; border-color: var(--accent-ink); box-shadow: 0 0 0 4px var(--surface-soft); }
 .answer-studio input::placeholder { font-size: 1rem; color: var(--muted); font-weight: 400; }
 .answer-studio input:disabled { opacity: .75; }
-.answer-studio-status { margin: 0; font-size: .76rem; color: var(--muted); }
+.answer-studio-status { margin: 0; font-size: .76rem; color: var(--muted); opacity: 0; }
+.answer-studio:focus-within .answer-studio-status { opacity: 1; }
 .coach-response-studio { width: min(100%, 680px); margin-inline: auto; }
 .coach-response-studio .answer-studio form { display: block; }
 .coach-content:has(.coach-response-studio) { gap: 10px; }

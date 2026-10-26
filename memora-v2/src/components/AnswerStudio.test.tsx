@@ -11,6 +11,18 @@ function Harness({ initial = '', taskKey = 'task' }: { initial?: string; taskKey
 const type = (value: string) => act(() => tree.root.findByType('input').props.onChange({ target: { value } }));
 beforeEach(() => { vi.useFakeTimers(); answer.mockClear(); });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); });
+it.each(['jugar', 'Estoy jugando en mi ordenador.'])('una sola consigna visible etiqueta el campo y conserva el objetivo %s', (target) => {
+  act(() => { tree = create(<AnswerStudio id="isolated" taskKey="isolated" target={target} value="" onChange={() => {}} onAnswer={answer} accepts={() => false} />); });
+  const label = tree.root.findByType('label');
+  expect(label.props.className).toBe('answer-studio-instruction');
+  expect(label.props.htmlFor).toBe('isolated');
+  expect(label.children).toEqual(['Escribe en inglés']);
+  expect(tree.root.findAllByProps({ className: 'answer-studio-direction' })).toHaveLength(0);
+  expect(tree.root.findByProps({ id: 'isolated-target' }).children).toEqual([target]);
+  expect(tree.root.findByType('input').props['aria-describedby']).toBe('isolated-target isolated-status');
+  expect(tree.root.findByType('input').props.placeholder).toBe('Tu respuesta');
+  expect(answer).not.toHaveBeenCalled();
+});
 it('reconoce respuesta completa una vez, sin botón y sin evaluar borradores incompletos', () => {
   act(() => { tree = create(<Harness />); });
   expect(tree.root.findAllByType('button')).toHaveLength(0);
