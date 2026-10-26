@@ -20,6 +20,7 @@ const user = 'episode-isolated';
 const stop = trickStop(unit, grammarTricks(unit)[0]);
 const finished = vi.fn(); const next = vi.fn();
 const reminderFocus = vi.fn();
+const reminderHeadingFocus = vi.fn();
 let tree: ReactTestRenderer;
 const text = (value: any): string => typeof value === 'string' ? value : Array.isArray(value) ? value.map(text).join(' ') : value?.children ? text(value.children) : '';
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).trim() === label)!;
@@ -28,6 +29,7 @@ const learner = () => readLearningActivities(user).filter((event) => event.sourc
 async function mount(value = unit, sceneBoxes?: Map<string, { left: number; top: number; right: number; bottom: number }>) {
   await act(async () => { tree = create(<JourneyTrickExperience unit={value} stop={stop} userId={user} inspection={false} onFinished={finished} onNext={next} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />, { createNodeMock: (node) => {
     if (node.type === 'button' && node.props.children === 'Recordar el truco') return { focus: reminderFocus };
+    if (node.type === 'h1' && node.props.children === 'Recordar el truco') return { focus: reminderHeadingFocus };
     if (!sceneBoxes) return null;
     if (node.props.className === 'grammar-situation') return { getBoundingClientRect: () => ({ left: 100, top: 100 }) };
     const choice = node.props['data-drop-choice'];
@@ -59,7 +61,7 @@ async function reachBuild(value = unit) {
   expect(tree.root.findAllByType(value.grammarContinuation ? SentenceBuilderCard : GrammarOrder)).toHaveLength(1);
 }
 beforeEach(() => {
-  vi.useFakeTimers(); finished.mockClear(); next.mockClear(); reminderFocus.mockClear(); vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
+  vi.useFakeTimers(); finished.mockClear(); next.mockClear(); reminderFocus.mockClear(); reminderHeadingFocus.mockClear(); vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) });
   vi.stubGlobal('window', { setTimeout, clearTimeout, dispatchEvent: vi.fn(), matchMedia: () => ({ matches: true }), getSelection: () => null });
@@ -387,6 +389,8 @@ it('el recordatorio devuelve el montaje parcial y el foco sin cuestionario ni nu
   const before = readLearningActivities(user);
   await act(async () => button('Recordar el truco').props.onClick());
   expect(tree.root.findByType(GrammarCoach).props).toMatchObject({ explanationOnly: true, reviewMode: true });
+  expect(reminderHeadingFocus).toHaveBeenCalledOnce();
+  expect(tree.root.findByType('h1').props.tabIndex).toBe(-1);
   expect(checkpoint()?.continuation).toMatchObject({ phase: 'build', filledSlots: 1, modelUsed: true });
   for (let step = 0; step < 3; step++) await advance();
   expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
