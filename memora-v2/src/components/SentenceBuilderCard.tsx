@@ -2,9 +2,11 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { GameCard } from './GameCard';
 import { SceneVisual } from './SceneVisual';
 import type { AtomicWord, GrammarForm, UnitSentence } from '../domain/unit';
-import { playEnglish, playMiss, playSnap, stopSpeech, type PlaybackResult } from '../services/audio';
+import { playMiss, playSnap, stopSpeech } from '../services/audio';
 import { constructionFeedback } from '../domain/sentenceConstruction';
 import { SpeechModelButton } from './SpeechModelButton';
+import { useSpeechPlayback } from './useSpeechPlayback';
+import { AssociationAudioStatus } from './AssociationAudioStatus';
 import './sentencePreparation.css';
 
 function showProcess(text: string, word: string, stem: string, ending: string): ReactNode {
@@ -31,8 +33,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
 }) {
   const [wrongChoice, setWrongChoice] = useState<string | null>(null);
   const [lastError, setLastError] = useState<{ slot: number; choice: string } | null>(null);
-  const [audioStatus, setAudioStatus] = useState<'idle' | 'loading' | 'playing' | PlaybackResult['status']>('idle');
-  const audioRequest = useRef(0);
+  const playback = useSpeechPlayback();
   const [preparation, setPreparation] = useState({ slot: filledSlots, step: 0 });
   const wrongTimer = useRef<number | null>(null);
   const answeredSlot = useRef(-1);
@@ -48,21 +49,14 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
     : preparation.slot === filledSlots ? preparation.step : 0;
   const preparationStep = active?.preparation?.[preparationIndex];
   const options = active && (choiceSeed + filledSlots) % 2 ? [...active.choices].reverse() : active?.choices;
-  async function listenToSentence() {
-    const request = ++audioRequest.current;
-    setAudioStatus('loading');
-    const result = await Promise.resolve(playEnglish(sentence.en, undefined, true, () => {
-      if (audioRequest.current === request) setAudioStatus('playing');
-    })).catch(() => ({ status: 'unavailable' as const, source: null }));
-    if (audioRequest.current === request) setAudioStatus(result?.status ?? 'unavailable');
-  }
+  const listenToSentence = () => playback.listen(sentence.en);
   useEffect(() => {
-    setAudioStatus('idle');
+    playback.reset();
     // Only narrate a completion observed here, never a restored result.
     const previous = observedResult.current;
     observedResult.current = { sentence: sentence.en, completed };
     if (completed && previous.sentence === sentence.en && !previous.completed) void listenToSentence();
-    return () => { audioRequest.current++; stopSpeech(); };
+    return () => { playback.reset(); stopSpeech(); };
   }, [completed, sentence.en, filledSlots, preparationIndex, needsModel]);
 
   function choose(choice: string) {
@@ -86,7 +80,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const advancePreparation = () => { stopSpeech(); setPreparation({ slot: filledSlots, step: preparationIndex + 1 }); onPreparationChange?.(preparationIndex + 1); };
   const preparationAdvanceLabel = preparationIndex === (active?.preparation?.length ?? 0) - 1 ? 'Usar estas piezas →' : 'Ver la siguiente pieza →';
   const sentenceAdvanceLabel = index === total - 1 ? 'Usar mi frase →' : 'Siguiente frase →';
-  const continueSentence = () => { audioRequest.current++; stopSpeech(); onNext(); };
+  const continueSentence = () => { playback.reset(); stopSpeech(); onNext(); };
   return <GameCard key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? continueSentence : undefined : completed ? continueSentence : undefined} advanceLabel={vertical ? preparationStep ? preparationAdvanceLabel : sentenceAdvanceLabel : ''} reserveFooter={!vertical} revealFooter={Boolean(preparationStep && vertical || completed)}>
     <div className="builder-content">
       <p className="eyebrow">{completed ? '✓ FRASE ARMADA' : preparationStep ? 'DESCUBRE' : needsModel ? 'CON AYUDA' : 'CONSTRUYE'} · {index + 1}/{total}</p>
@@ -114,7 +108,14 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         {active.note ? <p className="builder-note">{active.note}</p> : null}
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
         <div className="slot-options">{options?.map((choice) => <button type="button" key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>
-      </div> : <div className="builder-finish" aria-live="polite"><p role="status">Frase armada. Ya puedes usarla.</p><button type="button" className="quiet-action" disabled={audioStatus === 'loading' || audioStatus === 'playing'} onClick={() => void listenToSentence()}>🔊 Escuchar la frase</button>{audioStatus === 'loading' || audioStatus === 'playing' ? <small>{audioStatus === 'loading' ? 'Preparando audio…' : 'Reproduciendo…'}</small> : ['blocked', 'unavailable', 'cancelled'].includes(audioStatus) ? <small>No se completó el audio. Puedes continuar.</small> : null}{!vertical ? <button type="button" className="primary-action" onClick={continueSentence}>{sentenceAdvanceLabel}</button> : null}</div>}
+      </div> : <div className="builder-finish" aria-live="polite">
+        <p role="status">Frase armada. Ya puedes usarla.</p>
+        <button type="button" className="quiet-action" aria-label="Escuchar la frase" aria-busy={playback.audio?.status === 'preparing'} onClick={() => void listenToSentence()}>
+          🔊 {playback.audio?.status === 'preparing' || playback.audio?.status === 'playing' ? playback.label : 'Escuchar la frase'}
+        </button>
+        <AssociationAudioStatus compact state={playback.audio} />
+        {!vertical ? <button type="button" className="primary-action" onClick={continueSentence}>{sentenceAdvanceLabel}</button> : null}
+      </div>}
       {grammarHelp ? <div className="builder-grammar-help">{grammarHelp}</div> : null}
     </div>
   </GameCard>;

@@ -741,6 +741,17 @@ it('el recordatorio corresponde al mensaje montado, no a la última forma visita
   expect(readGameCheckpoint(user, value.id, value.contentVersion ?? '1')).toEqual({ ...before, grammarHelpUsed: true });
   expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
 });
+it('el color del proceso acompaña la forma del mensaje y no la primera forma ING de la unidad', async () => {
+  const cooking = reviewUnits[2];
+  const value: AtomicUnit = { ...cooking, practiceSentences: undefined, grammar: [previewUnit.grammar[0], cooking.grammar[0]] };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'build', grammarIndex: 0 });
+  await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  const builder = tree.root.findByType(SentenceBuilderCard);
+  expect(builder.props.processForm).toBe(cooking.grammar[0]);
+  expect(builder.findAllByProps({ className: 'builder-process' })).toHaveLength(1);
+  expect(readLearningActivities(user)).toHaveLength(0);
+  expect(readGameCheckpoint(user, value.id, value.contentVersion ?? '1')).toMatchObject({ phase: 'build', grammarIndex: 0, filledSlots: 0 });
+});
 it('marcar una unidad como repaso no evita enseñar una estructura sin práctica anterior', async () => {
   const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
   writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });

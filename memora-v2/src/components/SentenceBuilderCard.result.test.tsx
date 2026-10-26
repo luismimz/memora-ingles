@@ -32,12 +32,36 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it('cancelar el modelo no anuncia fallo ni acredita escucha', async () => {
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'cancelled', source: null });
+  await mount();
+  expect(text(tree.toJSON())).not.toContain('No se completó');
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  expect(attempt).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();
+});
+it('una voz pendiente admite reintento y descarta el resultado anterior sin perder el slide', async () => {
+  let old!: (value: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { old = done; }));
+  await mount();
+  expect(button('Escuchar la frase').props.disabled).not.toBe(true);
+  await act(async () => button('Escuchar la frase').props.onClick());
+  expect(playEnglish).toHaveBeenCalledTimes(2);
+  expect(text(tree.toJSON())).toContain('Audio no disponible');
+  await act(async () => old({ status: 'played', source: 'kokoro' }));
+  expect(text(tree.toJSON())).toContain('Audio no disponible');
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'played', source: 'kokoro' });
+  await act(async () => button('Escuchar la frase').props.onClick());
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  await swipe();
+  expect(next).toHaveBeenCalledOnce(); expect(attempt).not.toHaveBeenCalled(); expect(pick).not.toHaveBeenCalled();
+});
 it('reabrir una frase completa conserva el resultado en silencio, con escucha y slide disponibles', async () => {
   await act(async () => { tree = create(card()); });
   expect(text(tree.toJSON())).toContain('✓ FRASE ARMADA');
   expect(playEnglish).not.toHaveBeenCalled();
   expect(text(tree.toJSON())).not.toContain('No se completó');
-  await act(async () => button('🔊 Escuchar la frase').props.onClick());
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  await act(async () => button('Escuchar la frase').props.onClick());
   expect(playEnglish).toHaveBeenCalledOnce();
   await swipe();
   expect(next).toHaveBeenCalledOnce(); expect(attempt).not.toHaveBeenCalled();
@@ -47,13 +71,14 @@ it('el montaje se confirma aunque falle el audio y ofrece repetición y avance j
   await mount();
   expect(text(tree.toJSON())).toContain('✓ FRASE ARMADA');
   expect(text(tree.toJSON())).toContain('Frase armada. Ya puedes usarla.');
-  expect(text(tree.toJSON())).toContain('No se completó el audio. Puedes continuar.');
+  expect(text(tree.toJSON())).toContain('Audio no disponible · toca 🔊');
   expect(tree.root.findAllByProps({ className: 'slot-picker' })).toHaveLength(0);
-  expect(button('🔊 Escuchar la frase').props.disabled).toBe(false);
+  expect(button('Escuchar la frase').props.disabled).not.toBe(true);
   expect(button('Usar mi frase').parent!.props.className).toBe('card-vertical-next');
   vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'played', source: 'kokoro' });
-  await act(async () => button('🔊 Escuchar la frase').props.onClick());
+  await act(async () => button('Escuchar la frase').props.onClick());
   expect(text(tree.toJSON())).not.toContain('No se completó');
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
   await swipe();
   expect(next).toHaveBeenCalledOnce();
   expect(attempt).not.toHaveBeenCalled(); expect(pick).not.toHaveBeenCalled();
@@ -62,19 +87,20 @@ it('el audio pendiente no retiene la salida ni puede cambiar el resultado despu�
   let resolve!: (value: PlaybackResult) => void;
   vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
   await mount();
-  expect(text(tree.toJSON())).toContain('Preparando audio');
+  expect(text(tree.toJSON())).toContain('Preparando…');
   expect(button('Usar mi frase')).toBeDefined();
   await swipe();
   expect(next).toHaveBeenCalledOnce(); expect(stopSpeech).toHaveBeenCalled();
   await act(async () => resolve({ status: 'unavailable', source: null }));
   expect(text(tree.toJSON())).not.toContain('No se completó');
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
   expect(attempt).not.toHaveBeenCalled();
 });
 it('rechazo de reproducción tiene salida recuperable, no promesa rechazada sin manejar', async () => {
   vi.mocked(playEnglish).mockRejectedValueOnce(new Error('offline'));
   await mount();
-  expect(text(tree.toJSON())).toContain('No se completó el audio');
-  expect(button('🔊 Escuchar la frase').props.disabled).toBe(false);
+  expect(text(tree.toJSON())).toContain('Audio no disponible');
+  expect(button('Escuchar la frase').props.disabled).not.toBe(true);
   await swipe(); expect(next).toHaveBeenCalledOnce();
 });
 it('arrancar el sonido no lo da por terminado y nunca resuelve el montaje por escuchar o deslizar', async () => {
@@ -87,8 +113,8 @@ it('arrancar el sonido no lo da por terminado y nunca resuelve el montaje por es
   });
   await act(async () => tree.update(card()));
   expect(text(tree.toJSON())).toContain('Reproduciendo…');
-  expect(button('🔊 Escuchar la frase').props.disabled).toBe(true);
+  expect(button('Escuchar la frase').props.disabled).not.toBe(true);
   await act(async () => resolve({ status: 'played', source: 'kokoro' }));
-  expect(button('🔊 Escuchar la frase').props.disabled).toBe(false);
+  expect(button('Escuchar la frase').props.disabled).not.toBe(true);
   expect(next).not.toHaveBeenCalled(); expect(attempt).not.toHaveBeenCalled();
 });
