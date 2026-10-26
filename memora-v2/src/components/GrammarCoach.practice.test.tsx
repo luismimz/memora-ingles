@@ -153,17 +153,18 @@ it('incluso con estructura practicada monta piezas antes de exigir escritura', (
 });
 it('revela primero la persona y nunca muestra una traducción inglesa sin sujeto', () => {
   const first = render();
-  expect(first).toContain('¿Quién está jugando?');
+  expect(first).toContain('Verlo en inglés');
+  expect(first).not.toContain('¿Quién');
   expect(first).not.toContain('coach-language">INGLÉS');
-  button('¿Quién está jugando?').props.onClick();
+  button('Verlo en inglés').props.onClick();
   const revealed = render();
   expect(revealed).toContain('YO'); expect(revealed).toContain('am');
   expect(revealed).toContain('coach-language">INGLÉS');
 });
-it('el recorrido vertical conserva la pregunta preparada y orienta hasta la práctica sin acreditar aprendizaje', () => {
+it('el recorrido vertical demuestra la persona y orienta hasta la práctica sin una pregunta sin respuesta', () => {
   const props = { lesson: generatedLesson, puzzle: true };
   expect(render(props)).toContain('Mira las piezas · 1/3');
-  expect(nodes[0].props.advanceLabel).toBe('¿Quién está jugando?');
+  expect(nodes[0].props.advanceLabel).toBe('Verlo en inglés');
   nodes[0].props.onAdvance();
   expect(render(props)).toContain('Mira las piezas · 2/3');
   expect(nodes[0].props.advanceLabel).toBe('Ver cómo encajan las piezas →');

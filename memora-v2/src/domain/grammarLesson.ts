@@ -73,8 +73,8 @@ export function lessonForForm(form: GrammarForm, baseSpanish?: string): GrammarL
   return {
     id: `present-continuous:${form.englishBase}`, title: 'Lo que estás haciendo', language: 'en',
     steps: [
-      { caption: `Estoy ${form.spanish}. Antes de traducir: ¿quién está ${form.spanish}?`, es: [piece('Estoy ', 'auxiliary'), ...spanishVerb], en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), ...englishVerb], hideEnglish: true, advanceLabel: `¿Quién está ${form.spanish}?` },
-      { caption: 'YO. En español puedes omitir la persona; en estas frases inglesas debes escribirla. Hazla visible antes de traducir.', es: [piece('YO ', 'subject'), piece('estoy ', 'auxiliary'), ...spanishVerb], en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), ...englishVerb], advanceLabel: 'Ver cómo encajan las piezas →' },
+      { caption: `En «estoy ${form.spanish}», la persona ya está dentro de ESTOY: YO.`, es: [piece('Estoy ', 'auxiliary'), ...spanishVerb], en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), ...englishVerb], hideEnglish: true, advanceLabel: 'Verlo en inglés' },
+      { caption: 'Aquí el inglés escribe la persona: I. AM corresponde a «estoy».', es: [piece('YO ', 'subject'), piece('estoy ', 'auxiliary'), ...spanishVerb], en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), ...englishVerb], advanceLabel: 'Ver cómo encajan las piezas →' },
       { caption: `I + AM se juntan: I'M. La acción conserva ING, como ${form.spanishEnding} en «${form.spanish}».`, es: [piece('YO ', 'subject'), piece('estoy ', 'auxiliary'), ...spanishVerb], en: [piece("I'm ", 'auxiliary'), ...englishVerb], advanceLabel: 'Probarlo con mis palabras →' },
     ],
     checks: [

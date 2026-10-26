@@ -4,6 +4,17 @@ import { grammarExamples } from '../preview/grammarExamples';
 import { previewUnit } from '../preview/previewUnit';
 
 describe('trucos que se comprueban y se usan', () => {
+  it('demuestra la persona implícita sin una pregunta que no ofrece forma de responder', () => {
+    const lesson = lessonForForm(previewUnit.grammar[0], 'jugar')!;
+    expect(lesson.steps[0].caption).not.toContain('¿');
+    expect(lesson.steps[0].caption).toContain('YO');
+    expect(lesson.steps[0].advanceLabel).toBe('Verlo en inglés');
+    expect(lesson.steps[0].es.map((part) => part.text).join('')).toBe('Estoy jugando');
+    expect(lesson.steps[1].en.map((part) => part.text).join('')).toBe('I am playing');
+    expect(lesson.steps[1].caption).toContain('AM');
+    expect(lesson.steps[1].caption.split(/\s+/).length).toBeLessThanOrEqual(15);
+    expect(() => validateGrammarLesson(lesson)).not.toThrow();
+  });
   it('difiere solo el montaje coincidente y permite conservar una tarea ya iniciada', () => {
     const lesson = lessonForForm(previewUnit.grammar[0], 'jugar')!;
     expect(grammarChecksForExperience(lesson, [], ['I am playing.']).map((check) => check.id)).toEqual(['meaning-now-v1', 'use']);
