@@ -1,0 +1,8 @@
+.causal-phone { display: block; width: 100%; max-height: 240px; }
+.causal-phone-object { transform-origin: 210px 150px; }
+.causal-phone.is-active .causal-phone-object { transform: translateY(150px); }
+.causal-phone.is-active.is-animated .causal-phone-object { animation: phone-swallow .9s ease-in both; }
+.causal-phone.is-active.is-animated .causal-phone-depth { animation: pocket-swallow .9s ease-in-out both; transform-origin: 210px 164px; }
+@keyframes phone-swallow { 0%, 12% { transform: translateY(0); } 40% { transform: translateY(26px) rotate(-7deg); } 100% { transform: translateY(150px); } }
+@keyframes pocket-swallow { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.12, 1.6); } }
+@media (prefers-reduced-motion: reduce) { .causal-phone.is-active.is-animated .causal-phone-object, .causal-phone.is-active.is-animated .causal-phone-depth { animation: none; } }

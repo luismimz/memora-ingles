@@ -39,8 +39,8 @@ export function SceneVisual({ word, compact = false, showMemoryLink = false, hid
 
   return (
     <div className={`scene-visual ${compact ? 'is-compact' : ''}`} role="img" aria-label={hideAnswer ? 'Recuerda la imagen aprendida' : word.scene}>
-      {word.associationId?.startsWith('keys-cycle-') ? <KeysScene focus={word.en === 'PHONE' ? 'phone' : word.en === 'POCKET' ? 'pocket' : word.en === 'LOCK' ? 'lock' : 'key'} /> : url ? <img src={url} alt={hideAnswer ? '' : word.scene} loading="eager" draggable={false} onError={() => setUrl(null)} />
-        : mnemonicKind ? <MnemonicScene kind={mnemonicKind} /> : sceneKind ? <CognateScene kind={sceneKind} /> : <div className="scene-fallback"><div className="scene-emoji" aria-hidden="true"><span>{visual.emojis[0] || '🖼️'}</span>{visual.emojis[1] ? <span>{visual.emojis[1]}</span> : null}</div></div>}
+      {url ? <img src={url} alt={hideAnswer ? '' : word.scene} loading="eager" draggable={false} onError={() => setUrl(null)} /> : !word.imageUrl && mnemonicKind ? <MnemonicScene kind={mnemonicKind} /> : !word.imageUrl && word.associationId?.startsWith('keys-cycle-') ? <KeysScene focus={word.en === 'PHONE' ? 'phone' : word.en === 'POCKET' ? 'pocket' : word.en === 'LOCK' ? 'lock' : 'key'} />
+        : !word.imageUrl && sceneKind ? <CognateScene kind={sceneKind} /> : <div className="scene-fallback"><div className="scene-emoji" aria-hidden="true"><span>{visual.emojis[0] || '🖼️'}</span>{visual.emojis[1] ? <span>{visual.emojis[1]}</span> : null}</div></div>}
       {showMemoryLink ? <div className="scene-memory-link">{(word.memoryChain?.length ? word.memoryChain : [word.bridge, word.en, word.es].filter(Boolean)).map((part, index, chain) => <span className={index === 0 && Boolean(word.bridge) ? 'memory-bridge' : index === chain.length - 1 ? 'memory-meaning' : 'memory-english'} key={`${part}-${index}`}>{part.toUpperCase()}{index < chain.length - 1 ? <i aria-hidden="true">→</i> : null}</span>)}</div> : null}
     </div>
   );

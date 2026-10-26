@@ -29,6 +29,24 @@ it('un puzle, campo, ayuda o selección no navega y una pregunta no ofrece avanc
   act(() => tree.update(<GameCard vertical stepKey="question">Responde con las piezas</GameCard>));
   expect(tree.root.findAllByType('button')).toHaveLength(0);
 });
+
+it('una escena opt-in acepta el gesto desde la imagen, pero nunca habilita una tarea sin resolver', () => {
+  const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
+  const sceneTarget = { closest: () => ({ getAttribute: (name: string) => name === 'data-feed-surface' ? 'true' : null }) };
+  act(() => {
+    region().props.onTouchStart(event({ target: sceneTarget, touches: [{ clientY: 350 }] }));
+    region().props.onTouchMove(event({ target: sceneTarget, touches: [{ clientY: 200 }] }));
+    vi.advanceTimersByTime(230);
+  });
+  expect(advance).toHaveBeenCalledOnce();
+  act(() => tree.update(<GameCard vertical stepKey="unanswered">Responde primero</GameCard>));
+  act(() => {
+    region().props.onTouchStart(event({ target: sceneTarget, touches: [{ clientY: 350 }] }));
+    region().props.onTouchMove(event({ target: sceneTarget, touches: [{ clientY: 200 }] }));
+    vi.advanceTimersByTime(230);
+  });
+  expect(advance).toHaveBeenCalledOnce();
+});
 it('retirar autorización durante transición cancela la navegación antigua', () => {
   const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
   act(() => wheel());

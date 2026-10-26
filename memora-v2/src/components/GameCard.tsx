@@ -112,7 +112,13 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
 
   if (vertical) {
     const atEnd = (node: HTMLElement) => node.scrollTop >= node.scrollHeight - node.clientHeight - 2;
-    const canLeave = (target: EventTarget) => Boolean(onAdvance && revealFooter && !interactiveCardTarget(target) && !window.getSelection?.()?.toString());
+    const canLeave = (target: EventTarget) => {
+      // A large scene may be both tappable and the feed's swipe surface. This
+      // explicit opt-in never enables scrolling through answer tiles or inputs.
+      const surface = (target as HTMLElement).closest?.('[data-feed-surface]');
+      const sceneSurface = surface?.getAttribute?.('data-feed-surface') === 'true';
+      return Boolean(onAdvance && revealFooter && (!interactiveCardTarget(target) || sceneSurface) && !window.getSelection?.()?.toString());
+    };
     return <div className={`game-card-anchor card-vertical ${className}`} data-feedback={feedback}>
       <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : ''}`} role="region" aria-label="Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir." tabIndex={0}
         style={{ transform: `translate3d(0, ${dragX}px, 0)` }}

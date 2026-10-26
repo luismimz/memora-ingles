@@ -1,8 +1,11 @@
 import { expect, it } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
+import { act, create } from 'react-test-renderer';
 import { previewUnit, reviewUnits } from '../preview/previewUnit';
 import { SceneVisual } from './SceneVisual';
 import { mnemonicSceneKind } from '../domain/wordVisual';
+import { CausalPhoneScene } from './CausalPhoneScene';
+import { KeysScene } from './KeysScene';
 
 it.each([['COMPUTER', 'computer-compota'], ['DESK', 'desk-disco']])('%s recupera su historia visual exacta sin escribir la respuesta en la imagen', (en, kind) => {
   const word = previewUnit.words.find((item) => item.en === en)!;
@@ -91,4 +94,43 @@ it('MEAT visualiza el mitin lanzando carne sin sustituir otro sentido o medio pr
   expect(mnemonicSceneKind({ ...word, scene: 'Otra escena de carne.' })).toBeUndefined();
   expect(mnemonicSceneKind({ ...word, associationMode: 'cognate' })).toBeUndefined();
   expect(JSON.stringify(word)).toBe(before);
+});
+
+it('PILLOW muestra una almohada y su piloto, no una cama genérica ni una respuesta escrita en la imagen', () => {
+  const word = reviewUnits.flatMap((unit) => unit.words).find((item) => item.en === 'PILLOW')!;
+  const before = JSON.stringify(word);
+  expect(mnemonicSceneKind(word)).toBe('pillow-piloto');
+  const hidden = renderToStaticMarkup(<SceneVisual word={word} hideAnswer />);
+  expect(hidden).toContain('data-mnemonic-scene="pillow-piloto"');
+  expect(hidden).toContain('causal-pillow-cushion');
+  expect(hidden).toContain('causal-pillow-pilot');
+  expect(hidden).not.toContain('<text'); expect(hidden).not.toContain('PILLOW');
+  expect(hidden).not.toContain('👨‍✈️'); expect(hidden).not.toContain('🛏️');
+  for (const change of [{ bridge: 'Otro' }, { es: 'otro sentido' }, { scene: 'Otra escena' }, { imageUrl: 'own-image' }]) expect(mnemonicSceneKind({ ...word, ...change })).toBeUndefined();
+  expect(JSON.stringify(word)).toBe(before);
+});
+
+it('PHONE usa la escena exacta del fondo, conserva un móvil visible en ayuda y no mezcla las máscaras SVG', () => {
+  const word = reviewUnits.flatMap((unit) => unit.words).find((item) => item.en === 'PHONE')!;
+  expect(mnemonicSceneKind(word)).toBe('phone-fondo');
+  const hidden = renderToStaticMarkup(<SceneVisual word={word} hideAnswer />);
+  expect(hidden).toContain('data-mnemonic-scene="phone-fondo"');
+  expect(hidden).not.toContain('is-active'); expect(hidden).not.toContain('PHONE');
+  const pair = renderToStaticMarkup(<><CausalPhoneScene active /><CausalPhoneScene active={false} /></>);
+  const ids = [...pair.matchAll(/id="(phone-pocket-[^"]+)"/g)].map((match) => match[1]);
+  expect(new Set(ids).size).toBe(2);
+  expect(mnemonicSceneKind({ ...word, scene: 'Otro móvil.' })).toBeUndefined();
+});
+
+it('una imagen propia prevalece sobre el ciclo de llaves y no se sustituye por otro dibujo si falla', () => {
+  const word = { ...reviewUnits.flatMap((unit) => unit.words).find((item) => item.en === 'PHONE')!, imageUrl: 'https://assets.invalid/own-scene.png' };
+  let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<SceneVisual word={word} />); });
+  expect(tree.root.findByType('img').props.src).toBe(word.imageUrl);
+  expect(tree.root.findAllByType(KeysScene)).toHaveLength(0);
+  expect(tree.root.findAllByType(CausalPhoneScene)).toHaveLength(0);
+  act(() => tree.root.findByType('img').props.onError());
+  expect(tree.root.findAllByType(KeysScene)).toHaveLength(0);
+  expect(tree.root.findAllByType(CausalPhoneScene)).toHaveLength(0);
+  act(() => tree.unmount());
 });

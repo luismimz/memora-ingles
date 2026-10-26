@@ -2,11 +2,13 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { CausalAssociationCard } from './CausalAssociationCard';
 import { CausalDeskScene } from './CausalDeskScene';
+import { CausalPillowScene } from './CausalPillowScene';
+import { CausalPhoneScene } from './CausalPhoneScene';
 import { GameCard } from './GameCard';
 import { WordAssembly } from './WordAssembly';
 import { SceneVisual } from './SceneVisual';
 import { WordSceneDelivery } from './WordSceneDelivery';
-import { previewUnit } from '../preview/previewUnit';
+import { previewUnit, reviewUnits } from '../preview/previewUnit';
 import { hasCausalDiscovery, recordCausalDiscovery, supportsCausalDiscovery } from '../domain/causalDiscovery';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readWordMemories } from '../domain/memory';
@@ -88,4 +90,41 @@ it('salir durante una voz pendiente no acredita escucha ni activa la transformac
   act(() => tree.unmount());
   await act(async () => resolve({ status: 'played', source: 'kokoro' }));
   expect(readLearningActivities(user)).toEqual([]); expect(readWordMemories(user)).toEqual([]);
+});
+
+it('deslizar sobre la escena no reproduce un clic fantasma; tocar o usar teclado sigue funcionando', async () => {
+  await mount();
+  const surface = tree.root.findByProps({ 'data-feed-surface': 'true' });
+  act(() => surface.props.onTouchStart({ touches: [{ clientY: 350 }] }));
+  act(() => surface.props.onTouchMove({ touches: [{ clientY: 200 }] }));
+  act(() => surface.props.onTouchEnd());
+  await act(async () => surface.props.onClick({ detail: 1 }));
+  expect(readLearningActivities(user)).toEqual([]);
+  await act(async () => surface.props.onClick({ detail: 0 }));
+  expect(readLearningActivities(user)).toHaveLength(1);
+  expect(tree.root.findByType(CausalDeskScene).props.active).toBe(true);
+});
+
+it.each(['PILLOW', 'PHONE'])('%s representa su acción preparada y enlaza con piezas sin acreditar por tocar', async (en) => {
+  const source = reviewUnits.find((unit) => unit.words.some((item) => item.en === en))!;
+  const target = source.words.find((item) => item.en === en)!;
+  const Scene = en === 'PHONE' ? CausalPhoneScene : CausalPillowScene;
+  expect(supportsCausalDiscovery(target)).toBe(true);
+  expect(supportsCausalDiscovery({ ...target, scene: 'Otra historia.' })).toBe(false);
+  expect(supportsCausalDiscovery({ ...target, imageUrl: 'author-image' })).toBe(false);
+  const open = async () => { await act(async () => { tree = create(<CausalAssociationCard unit={source} word={target} userId={user} index={2} total={3} onConnect={connect} onAssemblyProgress={progress} onReject={reject} />); }); };
+  await open();
+  expect(playEnglish).toHaveBeenCalledWith(target.en, target.audioUrl, true, expect.any(Function));
+  expect(tree.root.findByType(Scene).props.active).toBe(false);
+  await act(async () => tree.root.findByProps({ 'aria-label': en === 'PHONE' ? 'Tocar el fondo del bolsillo' : 'Hacer aterrizar al piloto' }).props.onClick());
+  expect(tree.root.findByType(Scene).props.active).toBe(true);
+  expect(readLearningActivities(user)).toMatchObject([{ source: 'authored', correct: null, prompt: en === 'PHONE' ? 'Haz que el fondo se trague el móvil.' : 'Haz que el piloto aterrice.', wordSnapshot: { en, scene: target.scene } }]);
+  const records = readLearningActivities(user);
+  act(() => tree.unmount()); await open();
+  expect(tree.root.findByType(Scene).props.active).toBe(true);
+  expect(readLearningActivities(user)).toEqual(records);
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  expect(tree.root.findByType(WordAssembly).props.sceneAsHelp).toBe(true);
+  expect(tree.root.findByType(SceneVisual).parent!.type).toBe('details');
+  expect(readWordMemories(user)).toEqual([]); expect(connect).not.toHaveBeenCalled();
 });

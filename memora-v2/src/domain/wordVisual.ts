@@ -1,6 +1,6 @@
 import type { AtomicWord } from './unit';
 
-export type MnemonicSceneKind = 'computer-compota' | 'desk-disco' | 'pan-panda' | 'egg-ego' | 'meat-mitin';
+export type MnemonicSceneKind = 'computer-compota' | 'desk-disco' | 'pan-panda' | 'egg-ego' | 'meat-mitin' | 'pillow-piloto' | 'phone-fondo';
 /** Only depict the already authored story, never replace another author's cue. */
 export function mnemonicSceneKind(word: AtomicWord): MnemonicSceneKind | undefined {
   if (word.associationMode !== 'acoustic_bridge' || word.imageUrl) return undefined;
@@ -14,6 +14,10 @@ export function mnemonicSceneKind(word: AtomicWord): MnemonicSceneKind | undefin
     && word.scene === 'Un EGO enorme sale del HUEVO y aplaude.') return 'egg-ego';
   if (word.en === 'MEAT' && word.es === 'carne' && word.bridge === 'MITIN'
     && word.scene === 'Un MITIN lanza CARNE desde la tribuna de cocina.') return 'meat-mitin';
+  if (word.en === 'PILLOW' && word.es === 'almohada' && word.bridge === 'PILOTO'
+    && word.scene === 'Un PILOTO aterriza sobre la ALMOHADA y rebota.') return 'pillow-piloto';
+  if (word.en === 'PHONE' && word.es === 'móvil' && word.bridge === 'FONDO'
+    && word.scene === 'El FONDO de tu bolsillo se traga el MÓVIL.') return 'phone-fondo';
   return undefined;
 }
 
