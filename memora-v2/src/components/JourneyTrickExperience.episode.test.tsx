@@ -6,6 +6,7 @@ import { JourneyTrickExperience } from './JourneyTrickExperience';
 import { SentenceBuilderCard } from './SentenceBuilderCard';
 import { ConversationPractice } from './ConversationPractice';
 import { GrammarOrder } from './GrammarOrder';
+import { GrammarCoach } from './GrammarCoach';
 import { grammarTricks, trickStop } from '../domain/journeyTricks';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readGrammarAttempts } from '../domain/grammarMemory';
@@ -18,6 +19,7 @@ vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
 const user = 'episode-isolated';
 const stop = trickStop(unit, grammarTricks(unit)[0]);
 const finished = vi.fn(); const next = vi.fn();
+const reminderFocus = vi.fn();
 let tree: ReactTestRenderer;
 const text = (value: any): string => typeof value === 'string' ? value : Array.isArray(value) ? value.map(text).join(' ') : value?.children ? text(value.children) : '';
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).trim() === label)!;
@@ -25,6 +27,7 @@ const checkpoint = () => readTrickCheckpoint(user, stop.id, unit.contentVersion 
 const learner = () => readLearningActivities(user).filter((event) => event.source === 'learner');
 async function mount(value = unit, sceneBoxes?: Map<string, { left: number; top: number; right: number; bottom: number }>) {
   await act(async () => { tree = create(<JourneyTrickExperience unit={value} stop={stop} userId={user} inspection={false} onFinished={finished} onNext={next} onExit={() => {}} syncStatus="saved" appearance="light" onToggleAppearance={() => {}} />, { createNodeMock: (node) => {
+    if (node.type === 'button' && node.props.children === 'Recordar el truco') return { focus: reminderFocus };
     if (!sceneBoxes) return null;
     if (node.props.className === 'grammar-situation') return { getBoundingClientRect: () => ({ left: 100, top: 100 }) };
     const choice = node.props['data-drop-choice'];
@@ -56,7 +59,7 @@ async function reachBuild(value = unit) {
   expect(tree.root.findAllByType(value.grammarContinuation ? SentenceBuilderCard : GrammarOrder)).toHaveLength(1);
 }
 beforeEach(() => {
-  vi.useFakeTimers(); finished.mockClear(); next.mockClear(); vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
+  vi.useFakeTimers(); finished.mockClear(); next.mockClear(); reminderFocus.mockClear(); vi.mocked(playEnglish).mockClear(); vi.mocked(playSpanish).mockClear();
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) });
   vi.stubGlobal('window', { setTimeout, clearTimeout, dispatchEvent: vi.fn(), matchMedia: () => ({ matches: true }), getSelection: () => null });
@@ -141,6 +144,10 @@ it('el modelo del constructor conserva dos errores/reload y nunca coloca dos vec
   expect(learner().filter((event) => event.phase === 'construction')).toMatchObject([{ correct: false }, { correct: false }]);
   const before = learner();
   act(() => tree.unmount()); await mount();
+  expect(learner()).toEqual(before);
+  await act(async () => button('Recordar el truco').props.onClick());
+  await act(async () => button('← Mi mensaje').props.onClick());
+  expect(checkpoint()?.continuation).toMatchObject({ filledSlots: 0, failures: 2, modelUsed: true });
   expect(learner()).toEqual(before);
   const model = button('Colocar con ayuda').props.onClick;
   await act(async () => { model(); model(); });
@@ -343,6 +350,11 @@ it('reanuda la preparación de una pieza y reinicia solo al pasar a la pieza sig
   expect(tree.root.findByType(SentenceBuilderCard).props.preparationStep).toBe(1);
   expect(playEnglish).not.toHaveBeenCalled();
   expect(learner()).toEqual(before);
+  await act(async () => button('Recordar el truco').props.onClick());
+  await act(async () => button('← Mi mensaje').props.onClick());
+  expect(tree.root.findByType(SentenceBuilderCard).props.preparationStep).toBe(1);
+  expect(checkpoint()?.continuation).toMatchObject({ preparationStep: 1, filledSlots: 1, modelUsed: true });
+  expect(learner()).toEqual(before);
   await advance();
   expect(tree.root.findAllByProps({ className: 'slot-preparation' })).toHaveLength(0);
   act(() => { previousPreparationChange(1); previousPreparationChange(99); });
@@ -354,7 +366,7 @@ it('reanuda la preparación de una pieza y reinicia solo al pasar a la pieza sig
   await advance();
   await act(async () => button('playing.').props.onClick());
   await advance();
-  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(false);
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
   expect(learner().filter((event) => event.phase === 'construction')).toHaveLength(3);
   const after = learner();
   for (const preparationStep of [undefined, 99]) {
@@ -367,6 +379,60 @@ it('reanuda la preparación de una pieza y reinicia solo al pasar a la pieza sig
     expect(checkpoint()?.continuation?.preparationStep).toBe(1);
     expect(learner()).toEqual(after);
   }
+});
+
+it('el recordatorio devuelve el montaje parcial y el foco sin cuestionario ni nuevos intentos', async () => {
+  await reachBuild();
+  await act(async () => button('I').props.onClick());
+  const before = readLearningActivities(user);
+  await act(async () => button('Recordar el truco').props.onClick());
+  expect(tree.root.findByType(GrammarCoach).props).toMatchObject({ explanationOnly: true, reviewMode: true });
+  expect(checkpoint()?.continuation).toMatchObject({ phase: 'build', filledSlots: 1, modelUsed: true });
+  for (let step = 0; step < 3; step++) await advance();
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  expect(reminderFocus).toHaveBeenCalled();
+  expect(readLearningActivities(user)).toEqual(before);
+  await act(async () => button('Recordar el truco').props.onClick());
+  await act(async () => button('← Mi mensaje').props.onClick());
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  await act(async () => button('Recordar el truco').props.onClick());
+  const screen = tree.root.findByType('main');
+  act(() => screen.props.onKeyDown({ key: 'Escape', defaultPrevented: true, preventDefault: vi.fn() }));
+  expect(tree.root.findAllByType(GrammarCoach)).toHaveLength(1);
+  act(() => screen.props.onKeyDown({ key: 'Escape', defaultPrevented: false, preventDefault: vi.fn() }));
+  expect(tree.root.findAllByType(GrammarCoach)).toHaveLength(0);
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  expect(readLearningActivities(user)).toEqual(before);
+  for (const piece of ['am', 'playing.']) await act(async () => button(piece).props.onClick());
+  await advance();
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'I am playing' } }));
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  expect(learner().filter((event) => event.activityId === 'turn-respond')).toMatchObject([{ correct: true, helped: true }]);
+});
+
+it('el recordatorio del mensaje completo conserva las piezas recientes y rechaza un retorno antiguo', async () => {
+  await reachBuild(previewUnit);
+  const puzzle = tree.root.findByType(GrammarOrder);
+  const selected = [puzzle.props.pieces.findIndex((piece: { text: string }) => piece.text === 'I')];
+  const openReminder = button('Recordar el truco').props.onClick;
+  const before = learner();
+  await act(async () => { puzzle.props.onChange(selected); openReminder(); });
+  expect(tree.root.findByType(GrammarCoach).props.explanationOnly).toBe(true);
+  expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')?.continuation).toMatchObject({ filledSlots: 0, order: selected, modelUsed: true });
+  await act(async () => button('← Mi mensaje').props.onClick());
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual(selected);
+  expect(learner()).toEqual(before);
+  for (const piece of ['AM', 'PLAYING']) await act(async () => button(piece).props.onClick());
+  const saved = readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1');
+  const events = learner();
+  await act(async () => openReminder());
+  expect(tree.root.findAllByType(GrammarCoach)).toHaveLength(0);
+  expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')).toEqual(saved);
+  expect(learner()).toEqual(events);
+  await advance();
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
 });
 
 it('consultar audio antes de montar conserva ayuda aunque se coloquen fichas inmediatamente', async () => {
