@@ -50,7 +50,7 @@ function StandardAssociationCard({ unit, inspection, word, index, total, userId,
 
   function connect() {
     cancel();
-    if (vertical && !inspection) { recordWordDemonstration(userId, unit, word); onAssemblyProgress?.({ selected: [], hinted: false, modelUsed: false }); setAssembling(true); }
+    if (vertical && !inspection) { recordWordDemonstration(userId, unit, word); onAssemblyProgress?.({ selected: [], hinted: false, modelUsed: false, layout: 'letters-v2' }); setAssembling(true); }
     else if (word.reconstruction && !associationRejected) setReconstruct(true);
     else onConnect();
   }

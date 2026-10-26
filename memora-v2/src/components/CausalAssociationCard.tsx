@@ -40,7 +40,7 @@ export function CausalAssociationCard({ unit, word, userId, index, total, assemb
   }
   function assemble() {
     playback.reset(); stopSpeech();
-    onAssemblyProgress?.({ selected: [], hinted: false, modelUsed: false }); setAssembling(true);
+    onAssemblyProgress?.({ selected: [], hinted: false, modelUsed: false, layout: 'letters-v2' }); setAssembling(true);
   }
   if (assembling) return <WordAssembly word={word} userId={userId} vertical sceneAsHelp initialPosition={assemblyPosition} onProgress={onAssemblyProgress} onContinue={onConnect} />;
   if (!presentation) return null;

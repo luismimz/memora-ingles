@@ -34,4 +34,11 @@ describe('cognados con la presentación visual original', () => {
     expect(html.indexOf('role="status"')).toBeLessThan(html.indexOf('<details'));
     expect(html.match(/role="status"/gu)).toHaveLength(1);
   });
+  it('SCIENCE vertical compara con ciencia; la imagen de libros queda como ayuda opcional', () => {
+    const html = renderToStaticMarkup(<CognateAssociationCard vertical word={{ ...adult, en: 'SCIENCE', es: 'ciencia' }} index={1} total={3} onConnect={() => {}} />);
+    expect(html).toContain('cognate-connection'); expect(html).toContain('Ya lo conoces');
+    expect(html).toContain('aria-label="SCIENCE"'); expect(html).toContain('aria-label="ciencia"');
+    expect(html).toContain('is-shared'); expect(html).toContain('is-different');
+    expect(html.indexOf('scene-visual')).toBeGreaterThan(html.indexOf('<details'));
+  });
 });

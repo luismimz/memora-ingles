@@ -1,7 +1,7 @@
 import type { TrickCheckpoint } from './trickCheckpoint';
 export type Phase = 'associate' | 'recall' | 'reward' | 'grammar' | 'build' | 'conversation' | 'complete';
 export type LearningMode = 'adventure' | 'vocabulary' | 'grammar';
-export interface WordAssemblyPosition { selected: number[]; hinted: boolean; modelUsed: boolean }
+export interface WordAssemblyPosition { selected: number[]; hinted: boolean; modelUsed: boolean; layout?: 'letters-v2' }
 export interface GrammarFallbackPosition { step: number; subjectIndex: number; checkIndex: number; prepared: boolean; outcome: 'pending' | 'correct' | 'model'; failures: number }
 
 export interface GameState {

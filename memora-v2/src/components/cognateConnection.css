@@ -1,0 +1,12 @@
+.cognate-connection { width: 100%; display: grid; text-align: center; gap: 0; padding: 16px 0 8px; }
+.cognate-connection > div { min-width: 0; padding: 24px 16px; border: 1px solid var(--line); border-radius: 24px; background: var(--surface-soft); }
+.cognate-connection small { display: block; font-size: .72rem; font-weight: 650; color: var(--muted); margin-bottom: 10px; }
+.cognate-connection strong { display: block; font-size: clamp(1.4rem, 7vw, 2.8rem); line-height: 1.25; letter-spacing: -.04em; overflow-wrap: anywhere; }
+.cognate-connection .is-shared { color: var(--accent-ink); }
+.cognate-connection .is-different { color: var(--ink); text-decoration: underline; text-decoration-color: var(--warm); text-underline-offset: .16em; }
+.cognate-connection .cognate-new { background: var(--surface-strong); border-color: var(--accent-ink); box-shadow: 0 14px 30px #1d35600a; }
+.cognate-link { padding: 8px; font-size: 1.4rem; color: var(--accent-ink); }
+.cognate-connection p { margin: 18px 0 0; color: var(--muted); font-size: .82rem; }
+.play-flow .cognate-association { width: 100%; max-width: 560px; gap: 14px; }
+.play-flow .cognate-association > .association-word-top { justify-content: space-between; }
+.cognate-discovery-title { margin: 0; font-size: 1.2rem; letter-spacing: -.025em; }

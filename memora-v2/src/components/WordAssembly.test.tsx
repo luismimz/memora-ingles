@@ -88,3 +88,32 @@ it('un subpaso incompatible con las letras actuales vuelve a piezas vacías sin 
   expect(next).not.toHaveBeenCalled();
   act(() => tree.unmount());
 });
+
+it('tablero nuevo de MATHEMATICS: tres huecos, recarga estable y resultado unido, no fichas', async () => {
+  const progress = vi.fn(), next = vi.fn(); let tree!: ReturnType<typeof create>;
+  const word = { ...previewUnit.words[0], en: 'MATHEMATICS', es: 'matemáticas' };
+  act(() => { tree = create(<WordAssembly vertical sceneAsHelp word={word} onContinue={next} onProgress={progress} />); });
+  expect(tree.root.findByType('h2').children).toEqual(['Completa las letras']);
+  expect(tree.root.findByProps({ className: 'assembly-bank' }).findAllByType('button')).toHaveLength(3);
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Colocar A, pieza 2' }).props.onClick());
+  const saved = progress.mock.calls.at(-1)![0];
+  expect(saved).toEqual({ selected: [1], hinted: false, modelUsed: true, layout: 'letters-v2' });
+  act(() => tree.unmount());
+  act(() => { tree = create(<WordAssembly vertical sceneAsHelp word={word} initialPosition={saved} onContinue={next} onProgress={progress} />); });
+  expect(tree.root.findAllByProps({ className: 'is-filled' })).toHaveLength(1);
+  for (const [letter, id] of [['M', 6], ['C', 10]]) await act(async () => tree.root.findByProps({ 'aria-label': `Colocar ${letter}, pieza ${id}` }).props.onClick());
+  expect(tree.root.findByProps({ className: 'assembly-whole' }).children).toEqual(['MATHEMATICS']);
+  expect(tree.root.findAllByProps({ className: 'assembly-bank' })).toHaveLength(0);
+  expect(next).not.toHaveBeenCalled();
+  act(() => tree.root.findByType(GameCard).props.onAdvance()); expect(next).toHaveBeenCalledOnce();
+  act(() => tree.unmount());
+});
+
+it('un montaje largo anterior conserva las seis piezas y la selección, sin reiniciar', () => {
+  let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<WordAssembly word={{ ...previewUnit.words[0], en: 'MATHEMATICS' }} initialPosition={{ selected: [0, 1], hinted: false, modelUsed: false }} onContinue={() => {}} />); });
+  expect(tree.root.findByType('h2').children).toEqual(['Arma la palabra']);
+  expect(tree.root.findAllByProps({ className: 'is-filled' })).toHaveLength(2);
+  expect(tree.root.findByProps({ 'aria-label': 'Colocar EM, pieza 3' })).toBeTruthy();
+  act(() => tree.unmount());
+});

@@ -53,11 +53,11 @@ it('audio fallido no bloquea; montaje retira imagen principal, conserva ayuda y 
   await act(async () => tree.root.findByProps({ 'aria-label': 'Tocar el disco' }).props.onClick());
   await act(async () => tree.root.findByType(GameCard).props.onAdvance());
   expect(tree.root.findByType(WordAssembly).props.sceneAsHelp).toBe(true);
-  expect(progress).toHaveBeenCalledWith({ selected: [], hinted: false, modelUsed: false });
+  expect(progress).toHaveBeenCalledWith({ selected: [], hinted: false, modelUsed: false, layout: 'letters-v2' });
   expect(tree.root.findByType(SceneVisual).parent!.type).toBe('details');
   expect(tree.root.findByType(GameCard).props.onAdvance).toBeUndefined();
   await act(async () => tree.root.findByType('details').props.onToggle({ currentTarget: { open: true } }));
-  expect(progress).toHaveBeenLastCalledWith({ selected: [], hinted: false, modelUsed: true });
+  expect(progress).toHaveBeenLastCalledWith({ selected: [], hinted: false, modelUsed: true, layout: 'letters-v2' });
   for (const [index, letter] of [...word.en].entries()) await act(async () => tree.root.findByProps({ 'aria-label': `Colocar ${letter}, pieza ${index + 1}` }).props.onClick());
   expect(readWordMemories(user)).toEqual([]); expect(readLearningActivities(user)).toHaveLength(1);
   expect(tree.root.findByType('h2').children).toEqual(['Armada con modelo']);
