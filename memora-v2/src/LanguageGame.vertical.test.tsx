@@ -353,7 +353,7 @@ it('reanudar un modelo mantiene el límite y no registra otro modelo ni intento 
 it('reanudar la explicación elegida no vuelve a interponer el atajo de una estructura conocida', async () => {
   const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
   const lesson = lessonForForm(value.grammar[0], value.words.find((word) => word.en.toLowerCase() === value.grammar[0].englishBase)?.es.toLowerCase())!;
-  recordGrammarAttempt(user, { unitId: 'earlier', skill: lesson.id, check: 'prior', kind: 'choose', correct: true, helped: false, at: new Date().toISOString() });
+  recordGrammarAttempt(user, { unitId: 'earlier', skill: lesson.id, check: 'prior', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
   writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar', coach: { lessonId: lesson.id, position: { stage: 1, checkIndex: 0, checkId: lesson.checks[0].id, input: '', feedback: 'idle', helped: false } } });
   await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
   expect(tree.root.findByType(GrammarCoach)).toBeTruthy();
@@ -452,24 +452,62 @@ it('reanudar un montaje completo no reproduce audio ni vuelve a pedir piezas', a
   expect(checkpoint()?.wordIndex).toBe(1);
   expect(checkpoint()?.wordAssembly).toBeUndefined();
 });
-it('reutilizar una estructura mantiene slide y deja repetir la explicación sin fabricar aciertos', async () => {
-  const reviewUnit: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
+it('una estructura practicada entra al montaje y el recordatorio vuelve a la misma frase parcial sin acreditar nada', async () => {
+  const reviewUnit: AtomicUnit = { ...previewUnit, grammarRole: 'review', practiceSentences: undefined };
   const form = getPlayableGrammar(reviewUnit)[0];
   const base = reviewUnit.words.find((word) => word.en.toLowerCase() === form.englishBase?.toLowerCase())?.es.toLowerCase();
   const lesson = lessonForForm(form, base)!;
   expect(lesson).toBeTruthy();
-  recordGrammarAttempt(user, { unitId: 'earlier-unit', skill: lesson.id, check: 'isolated', kind: 'choose', correct: true, helped: false, at: new Date().toISOString() });
+  recordGrammarAttempt(user, { unitId: 'earlier-unit', skill: lesson.id, check: 'isolated', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
   writeGameCheckpoint(user, reviewUnit.id, reviewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
   await act(async () => { tree = create(<LanguageGame unit={reviewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
-  expect(text(tree.toJSON())).toContain('Una estructura conocida');
-  expect(button('Volver a ver el truco')).toBeTruthy();
-  expect(button('Usarlo ahora →')).toBeUndefined();
-  expect(tree.root.findByType('footer').findByType('button').props['aria-label']).toBe('Montar el mensaje');
+  expect(text(tree.toJSON())).not.toContain('Una estructura conocida');
+  expect(tree.root.findAllByType(SentenceBuilderCard)).toHaveLength(1);
   const before = readGrammarAttempts(user);
-  await swipe(false);
+  const builder = tree.root.findByType(SentenceBuilderCard);
+  const firstPiece = builder.props.sentence.slots[0].en;
+  await act(async () => { builder.findAllByType('button').find((node) => text(node) === firstPiece)!.props.onClick(); });
+  const saved = readGameCheckpoint(user, reviewUnit.id, reviewUnit.contentVersion ?? '1');
+  const events = readLearningActivities(user);
+  await act(async () => { button('Recordar el truco').props.onClick(); });
+  expect(tree.root.findByType(GrammarCoach).props.explanationOnly).toBe(true);
+  for (let index = 0; index < lesson.steps.length; index++) await swipe(false);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  expect(readGameCheckpoint(user, reviewUnit.id, reviewUnit.contentVersion ?? '1')).toEqual({ ...saved, grammarHelpUsed: true });
+  expect(readLearningActivities(user)).toEqual(events);
+  await act(async () => { button('Recordar el truco').props.onClick(); });
+  await act(async () => { button('← Mi mensaje').props.onClick(); });
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
   expect(readGameCheckpoint(user, reviewUnit.id, reviewUnit.contentVersion ?? '1')?.phase).toBe('build');
   expect(readGrammarAttempts(user)).toEqual(before);
-  expect(readLearningActivities(user).filter((event) => event.correct === true)).toHaveLength(0);
+  expect(readLearningActivities(user)).toEqual(events);
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={reviewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  act(() => tree.unmount()); await open();
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  expect(readLearningActivities(user)).toEqual(events);
+  for (let index = 1; index < reviewUnit.sentence.slots.length; index++) {
+    const current = tree.root.findByType(SentenceBuilderCard);
+    await act(async () => { current.findAllByType('button').find((node) => text(node) === reviewUnit.sentence.slots[index].en)!.props.onClick(); });
+  }
+  await swipe(false);
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+});
+it('marcar una unidad como repaso no evita enseñar una estructura sin práctica anterior', async () => {
+  const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  expect(tree.root.findAllByType(GrammarCoach)).toHaveLength(1);
+  expect(tree.root.findAllByType(SentenceBuilderCard)).toHaveLength(0);
+});
+it.each([['choose', false], ['write', true]] as const)('el resultado %s con ayuda=%s no sustituye el uso escrito sin ayudas al decidir la entrada directa', async (kind, helped) => {
+  const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
+  const lesson = lessonForForm(value.grammar[0], 'jugar')!;
+  recordGrammarAttempt(user, { unitId: 'earlier', skill: lesson.id, check: 'prior', kind, correct: true, helped, at: new Date().toISOString() });
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  expect(tree.root.findAllByType(GrammarCoach)).toHaveLength(1);
+  expect(tree.root.findAllByType(SentenceBuilderCard)).toHaveLength(0);
 });
 it('la asociación centra palabra, escena e historia, sin barras, ubicación, leyendas ni escena duplicadas', async () => {
   await mount();

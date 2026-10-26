@@ -17,7 +17,7 @@ import { MnemonicSceneText, SceneVisual } from './components/SceneVisual';
 import { SentenceBuilderCard } from './components/SentenceBuilderCard';
 import { constructionFeedback } from './domain/sentenceConstruction';
 import { BridgeSoundNote } from './components/BridgeSoundNote';
-import { gameReducer, initialGame, type LearningMode, type WordAssemblyPosition } from './domain/game';
+import { advanceReviewedGrammar, gameReducer, initialGame, type GameAction, type GameState, type LearningMode, type WordAssemblyPosition } from './domain/game';
 import { clearGameCheckpoint, readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
 import { recordAttempt } from './domain/learningProfile';
 import { completeLearningMode } from './domain/learningModes';
@@ -67,42 +67,60 @@ function AssociationCard({ unit, inspection, word, index, total, userId, locatio
 export function LanguageGame({ unit, userId, learningMode = 'adventure', preview = false, reviewMode = false, startInConversation = false, continuous = false, nextLabel = 'Seguir →', positionLabel = 'EN JUEGO', syncStatus, onFinished, onNext, onExit, onEvolution, onPractice, onComplete, appearance, onToggleAppearance }: { unit: AtomicUnit; userId: string; learningMode?: LearningMode; preview?: boolean; reviewMode?: boolean; startInConversation?: boolean; continuous?: boolean; nextLabel?: string; positionLabel?: string; syncStatus?: SyncStatus; onFinished?: () => void; onNext: () => void; onExit: () => void; onEvolution?: () => void; onPractice?: () => void; onComplete?: (result: { correct: number; attempted: number }) => void; appearance: Appearance; onToggleAppearance: () => void }) {
   const vertical = learningMode === 'vocabulary' && !reviewMode;
   const checkpointId = learningMode === 'adventure' ? unit.id : `${unit.id}:${learningMode}`;
-  const [state, dispatch] = useReducer(gameReducer, initialGame, () => {
-    const start = learningMode === 'grammar' ? { ...initialGame, phase: 'grammar' as const } : vertical && !unit.activeRecall
-      ? { ...initialGame, recognitionStyle: 'scene-delivery-v1' as const } : initialGame;
-    if (reviewMode) return start;
-    if (startInConversation && unit.communication?.dialogue) return { ...initialGame, phase: 'conversation' as const };
-    const saved = readGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1');
-    if (!saved) return start;
-    if ((saved.recognitionModels ?? 0) > unit.words.length) return start;
-    if (saved.recognitionStyle === 'scene-delivery-v1' && saved.recognitionModels === undefined) {
-      // Additive compatibility with the just-published model outcome: restore
-      // actual consultations since this unit's last completed vocabulary run.
-      const events = readLearningActivities(userId).filter((event) => event.unitId === unit.id && event.contentVersion === (unit.contentVersion ?? '1'));
-      const lastComplete = events.reduce((last, event, index) => event.activityId === 'vocabulary-completed' ? index : last, -1);
-      const visited = new Set(unit.words.slice(0, saved.recallIndex + Number(saved.recallAnswered)).map((item) => item.en));
-      const models = new Set(events.slice(lastComplete + 1).filter((event) => event.source === 'authored' && event.correct === null && event.activityId === `word-scene-model-v1:${event.skill}` && visited.has(event.skill)).map((event) => event.skill));
-      if (saved.recallOutcome === 'modeled') models.add(unit.words[saved.recallIndex]?.en);
-      saved.recognitionModels = models.size;
-    }
-    if (saved.wordIndex >= unit.words.length || saved.recallIndex >= unit.words.length || saved.grammarIndex >= Math.max(1, getPlayableGrammar(unit).length) || saved.sentenceIndex >= getUnitSentences(unit).length) return start;
-    if (saved.phase === 'conversation' && !unit.communication?.dialogue) return initialGame;
-    if (saved.phase === 'build' && !saved.buildRepair) {
-      const slot = getUnitSentences(unit)[saved.sentenceIndex]?.slots[saved.filledSlots];
-      const activityId = `build-${saved.sentenceIndex}-${saved.filledSlots}`;
-      const recent = readLearningActivities(userId).filter((event) => event.unitId === unit.id && event.contentVersion === (unit.contentVersion ?? '1') && event.phase === 'construction' && [activityId, `build-model-${saved.sentenceIndex}-${saved.filledSlots}`, `constructed-${saved.sentenceIndex}`].includes(event.activityId)).reverse();
-      const errors = [];
-      for (const event of recent) {
-        if (!slot || event.activityId !== activityId || event.source !== 'learner' || event.correct !== false || event.expected !== slot.en || event.prompt !== slot.es || !slot.choices.includes(event.response)) break;
-        errors.push(event);
-        if (errors.length === 2) break;
+  const grammarForms = useMemo(() => getPlayableGrammar(unit), [unit]);
+  const reviewedGrammar = useMemo(() => {
+    if (reviewMode || learningMode !== 'adventure' || unit.grammarRole !== 'review') return [];
+    const attempts = readGrammarAttempts(userId);
+    return grammarForms.flatMap((form, index) => {
+      const base = unit.words.find((word) => word.en.toLowerCase() === form.englishBase?.toLowerCase())?.es.toLowerCase();
+      const lesson = lessonForForm(form, base);
+      return lesson && attempts.some((attempt) => attempt.unitId !== unit.id && attempt.skill === lesson.id && attempt.kind === 'write' && attempt.correct && !attempt.helped) ? [{ index, lessonId: lesson.id }] : [];
+    });
+  }, [unit, userId, grammarForms, reviewMode, learningMode]);
+  const [state, dispatch] = useReducer((previous: GameState, action: GameAction) => advanceReviewedGrammar(gameReducer(previous, action), reviewedGrammar, grammarForms.length), initialGame, () => {
+    const restore = () => {
+      const start = learningMode === 'grammar' ? { ...initialGame, phase: 'grammar' as const } : vertical && !unit.activeRecall
+        ? { ...initialGame, recognitionStyle: 'scene-delivery-v1' as const } : initialGame;
+      if (reviewMode) return start;
+      if (startInConversation && unit.communication?.dialogue) return { ...initialGame, phase: 'conversation' as const };
+      const saved = readGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1');
+      if (!saved) return start;
+      if ((saved.recognitionModels ?? 0) > unit.words.length) return start;
+      if (saved.recognitionStyle === 'scene-delivery-v1' && saved.recognitionModels === undefined) {
+        // Additive compatibility with the just-published model outcome: restore
+        // actual consultations since this unit's last completed vocabulary run.
+        const events = readLearningActivities(userId).filter((event) => event.unitId === unit.id && event.contentVersion === (unit.contentVersion ?? '1'));
+        const lastComplete = events.reduce((last, event, index) => event.activityId === 'vocabulary-completed' ? index : last, -1);
+        const visited = new Set(unit.words.slice(0, saved.recallIndex + Number(saved.recallAnswered)).map((item) => item.en));
+        const models = new Set(events.slice(lastComplete + 1).filter((event) => event.source === 'authored' && event.correct === null && event.activityId === `word-scene-model-v1:${event.skill}` && visited.has(event.skill)).map((event) => event.skill));
+        if (saved.recallOutcome === 'modeled') models.add(unit.words[saved.recallIndex]?.en);
+        saved.recognitionModels = models.size;
       }
-      if (errors.length) saved.buildRepair = { failures: errors.length, choice: errors[0].response, previousAttemptId: errors[0].id };
-    }
-    const preparedSteps = getUnitSentences(unit)[saved.sentenceIndex]?.slots[saved.filledSlots]?.preparation?.length ?? 0;
-    return saved.preparationStep !== undefined && saved.preparationStep > preparedSteps ? { ...saved, preparationStep: 0 } : saved;
+      if (saved.wordIndex >= unit.words.length || saved.recallIndex >= unit.words.length || saved.grammarIndex >= Math.max(1, getPlayableGrammar(unit).length) || saved.sentenceIndex >= getUnitSentences(unit).length) return start;
+      if (saved.phase === 'conversation' && !unit.communication?.dialogue) return initialGame;
+      if (saved.phase === 'build' && !saved.buildRepair) {
+        const slot = getUnitSentences(unit)[saved.sentenceIndex]?.slots[saved.filledSlots];
+        const activityId = `build-${saved.sentenceIndex}-${saved.filledSlots}`;
+        const recent = readLearningActivities(userId).filter((event) => event.unitId === unit.id && event.contentVersion === (unit.contentVersion ?? '1') && event.phase === 'construction' && [activityId, `build-model-${saved.sentenceIndex}-${saved.filledSlots}`, `constructed-${saved.sentenceIndex}`].includes(event.activityId)).reverse();
+        const errors = [];
+        for (const event of recent) {
+          if (!slot || event.activityId !== activityId || event.source !== 'learner' || event.correct !== false || event.expected !== slot.en || event.prompt !== slot.es || !slot.choices.includes(event.response)) break;
+          errors.push(event);
+          if (errors.length === 2) break;
+        }
+        if (errors.length) saved.buildRepair = { failures: errors.length, choice: errors[0].response, previousAttemptId: errors[0].id };
+      }
+      const preparedSteps = getUnitSentences(unit)[saved.sentenceIndex]?.slots[saved.filledSlots]?.preparation?.length ?? 0;
+      return saved.preparationStep !== undefined && saved.preparationStep > preparedSteps ? { ...saved, preparationStep: 0 } : saved;
+    };
+    return advanceReviewedGrammar(restore(), reviewedGrammar, grammarForms.length);
   });
   const [expandedGrammarIndex, setExpandedGrammarIndex] = useState<number | null>(null);
+  const [reminderOpen, setReminderOpen] = useState(false);
+  const reminderTrigger = useRef<HTMLButtonElement>(null);
+  const returningFromReminder = useRef(false);
+  const closeReminder = () => { stopSpeech(); returningFromReminder.current = true; setReminderOpen(false); };
+  useEffect(() => { if (!reminderOpen && returningFromReminder.current) { returningFromReminder.current = false; reminderTrigger.current?.focus(); } }, [reminderOpen]);
   const [recallFeedback, setRecallFeedback] = useState<'idle' | 'correct' | 'wrong' | 'missed'>(() => state.phase === 'recall' && state.recallAnswered ? state.recallOutcome === 'modeled' ? 'missed' : state.recallOutcome ?? 'missed' : 'idle');
   const recallStartedAt = useRef(0);
   const [sessionSeed] = useState(() => Math.floor(Math.random() * 0x7fffffff));
@@ -116,7 +134,6 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
     // A grammar-only check does not practice the longer mission sentence.
     return [{ ...authored[0], en: subject.phrase, es, slots: [{ en: subject.phrase, es, choices: [subject.phrase, `I ${form.english}`] as [string, string] }] }];
   }, [unit, learningMode]);
-  const grammarForms = useMemo(() => getPlayableGrammar(unit), [unit]);
   const currentForm = grammarForms[state.grammarIndex];
   const baseSpanish = unit.words.find((word) => word.en.toLowerCase() === currentForm?.englishBase?.toLowerCase())?.es.toLowerCase();
   const currentLesson = useMemo(() => currentForm ? lessonForForm(currentForm, baseSpanish) : null, [currentForm, baseSpanish]);
@@ -303,6 +320,11 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   const progress = learningMode === 'vocabulary' ? Math.min(100, Math.round(adventureProgress / 60 * 100)) : learningMode === 'grammar' ? Math.min(100, Math.max(0, Math.round((adventureProgress - 60) / 40 * 100))) : adventureProgress;
   const intention = { associate: 'Palabras', recall: vertical ? 'Palabras' : unit.activeRecall ? 'Recuerda sin mirar el modelo' : sceneRecognition ? 'Lleva la palabra a su escena' : 'Encuentra la palabra', reward: 'Tanda practicada', grammar: 'Descubre cómo decirlo', build: state.filledSlots === sentence.slots.length ? 'Mensaje armado' : 'Monta tu mensaje', conversation: 'Conversación', complete: 'Tu mensaje ya tiene sentido' }[state.phase];
 
+  if (reminderOpen && currentLesson) return <main className="game-screen play-flow">
+    <PlayHeader title="Recordar el truco" backLabel="← Mi mensaje" onExit={closeReminder} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} />
+    <section className="game-stage"><GrammarCoach explanationOnly puzzle lesson={currentLesson} form={currentForm} userId={userId} unitId={unit.id} reviewMode onReady={() => {}} onContinue={closeReminder} /></section>
+  </main>;
+
   return (
     <main className={`game-screen${!reviewMode ? ' play-flow' : ''}`}>
       {!reviewMode ? <PlayHeader title={intention} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} progress={progress} position={positionLabel} trail={vertical ? { steps: ['Imagina', unit.activeRecall ? 'Recuerda' : 'Conecta', 'Tu tanda'], current: state.phase === 'associate' ? 0 : state.phase === 'recall' ? 1 : state.phase === 'reward' ? 2 : -1 } : undefined} /> : <>
@@ -328,12 +350,12 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
           <div className="reward-content"><SceneVisual word={unit.words[0]} compact />{state.correct >= Math.min(2, unit.words.length) ? <div className="reward-burst" aria-hidden="true">✨</div> : null}<p className="eyebrow">{recallSummary ? 'RECUERDO PRACTICADO' : `${state.correct}/${unit.words.length} RECONOCIDAS`}</p>{recallSummary ? <p className="reward-note">Respuestas registradas: {recallSummary.attempted}. Aciertos sin pistas: {recallSummary.independent}; con ayuda: {recallSummary.assisted}; modelos consultados: {recallSummary.models}. No mide dominio.</p> : null}<h1>{learningMode === 'vocabulary' ? 'Palabras listas para practicar.' : 'Ahora, úsalas con Emma.'}</h1><p className="reward-note">Con ayuda o sin ella, has practicado. El repaso volverá a las que lo necesiten.</p>{!vertical ? <><button type="button" className="primary-action" onClick={leaveReward}>{learningMode === 'vocabulary' ? nextLabel : 'Usar las palabras →'}</button>{onPractice ? <button type="button" className="arcade-invitation" onClick={onPractice}>✦ Jugar con mis asociaciones</button> : null}{learningMode === 'vocabulary' ? <button type="button" className="quiet-action" onClick={onExit}>Terminar por ahora</button> : null}</> : <p className="reward-note">Puedes continuar o salir por «Recorrido». Lo realizado queda guardado.</p>}</div>
         </GameCard> : null}
 
-        {state.phase === 'grammar' ? canFastReview && expandedGrammarIndex !== state.grammarIndex && !(state.coach && state.coach.lessonId === currentLesson?.id) ? <GameCard key={`grammar-revisit-${state.grammarIndex}`} vertical={!reviewMode} onAdvance={!reviewMode ? () => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); } : undefined} advanceLabel="Montar el mensaje" className="grammar-review-card"><div className="reward-content"><h1>Una estructura conocida</h1><p><strong lang="es">{currentForm.spanish}</strong> → <strong lang="en">{currentForm.english}</strong></p>{reviewMode ? <button type="button" className="primary-action" onClick={() => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); }}>Usarlo ahora →</button> : null}<button type="button" className="quiet-action" onClick={() => setExpandedGrammarIndex(state.grammarIndex)}>Volver a ver el truco</button></div></GameCard> : currentLesson ? <GrammarCoach checkpoint={!reviewMode && state.coach?.lessonId === currentLesson.id ? state.coach.position : undefined} onProgress={!reviewMode ? (position) => dispatch({ type: 'coachProgress', grammarIndex: state.grammarIndex, lessonId: currentLesson.id, position }) : undefined} puzzle={!reviewMode} repairLimit={!reviewMode ? 2 : undefined} key={currentForm.id} lesson={currentLesson} form={currentForm} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} conversationAnswers={learningMode === 'adventure' ? conversationPracticeAnswers(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : []} constructionAnswers={!reviewMode && learningMode === 'adventure' ? sentences.slice(state.sentenceIndex).map((item) => item.en) : []} reviewMode={reviewMode} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : <GrammarFallbackLesson initialPosition={!reviewMode ? state.fallbackLesson : undefined} onProgress={!reviewMode ? (position) => dispatch({ type: 'fallbackProgress', grammarIndex: state.grammarIndex, position }) : undefined} vertical={!reviewMode} key={currentForm.id} form={currentForm} baseSpanish={baseSpanish} index={state.grammarIndex} total={grammarForms.length} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : null}
+        {state.phase === 'grammar' ? reviewMode && canFastReview && expandedGrammarIndex !== state.grammarIndex && !(state.coach && state.coach.lessonId === currentLesson?.id) ? <GameCard key={`grammar-revisit-${state.grammarIndex}`} vertical={!reviewMode} onAdvance={!reviewMode ? () => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); } : undefined} advanceLabel="Montar el mensaje" className="grammar-review-card"><div className="reward-content"><h1>Una estructura conocida</h1><p><strong lang="es">{currentForm.spanish}</strong> → <strong lang="en">{currentForm.english}</strong></p>{reviewMode ? <button type="button" className="primary-action" onClick={() => { dispatch({ type: 'grammarPlayed' }); dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' }); }}>Usarlo ahora →</button> : null}<button type="button" className="quiet-action" onClick={() => setExpandedGrammarIndex(state.grammarIndex)}>Volver a ver el truco</button></div></GameCard> : currentLesson ? <GrammarCoach checkpoint={!reviewMode && state.coach?.lessonId === currentLesson.id ? state.coach.position : undefined} onProgress={!reviewMode ? (position) => dispatch({ type: 'coachProgress', grammarIndex: state.grammarIndex, lessonId: currentLesson.id, position }) : undefined} puzzle={!reviewMode} repairLimit={!reviewMode ? 2 : undefined} key={currentForm.id} lesson={currentLesson} form={currentForm} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} conversationAnswers={learningMode === 'adventure' ? conversationPracticeAnswers(unit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : []} constructionAnswers={!reviewMode && learningMode === 'adventure' ? sentences.slice(state.sentenceIndex).map((item) => item.en) : []} reviewMode={reviewMode} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : <GrammarFallbackLesson initialPosition={!reviewMode ? state.fallbackLesson : undefined} onProgress={!reviewMode ? (position) => dispatch({ type: 'fallbackProgress', grammarIndex: state.grammarIndex, position }) : undefined} vertical={!reviewMode} key={currentForm.id} form={currentForm} baseSpanish={baseSpanish} index={state.grammarIndex} total={grammarForms.length} onReady={() => dispatch({ type: 'grammarPlayed' })} onContinue={() => dispatch({ type: 'continue', grammarCount: grammarForms.length, grammarOnly: learningMode === 'grammar' })} /> : null}
 
-        {state.phase === 'build' ? <SentenceBuilderCard key={`build-${state.sentenceIndex}`} vertical={!reviewMode} sentence={sentence} vocabulary={unit.words} sceneWord={unit.words[0]} processForm={unit.grammar.find((form) => form.id === 'ing') ?? unit.grammar[0]} index={state.sentenceIndex} total={sentences.length} filledSlots={state.filledSlots} choiceSeed={sessionSeed + state.sentenceIndex} needsModel={(state.buildRepair?.failures ?? 0) >= 2} lastIncorrectChoice={state.buildRepair?.choice} onAcceptModel={() => placeConstruction(true)}
+        {state.phase === 'build' ? <SentenceBuilderCard grammarHelp={currentLesson && reviewedGrammar.some((item) => item.index === state.grammarIndex) ? <button ref={reminderTrigger} type="button" className="quiet-action" onClick={() => { stopSpeech(); dispatch({ type: 'openedGrammarHelp' }); setReminderOpen(true); }}>Recordar el truco</button> : undefined} key={`build-${state.sentenceIndex}`} vertical={!reviewMode} sentence={sentence} vocabulary={unit.words} sceneWord={unit.words[0]} processForm={unit.grammar.find((form) => form.id === 'ing') ?? unit.grammar[0]} index={state.sentenceIndex} total={sentences.length} filledSlots={state.filledSlots} choiceSeed={sessionSeed + state.sentenceIndex} needsModel={(state.buildRepair?.failures ?? 0) >= 2} lastIncorrectChoice={state.buildRepair?.choice} onAcceptModel={() => placeConstruction(true)}
           preparationStep={state.preparationStep ?? 0} onPreparationChange={(step) => dispatch({ type: 'prepareSlot', sentenceIndex: state.sentenceIndex, slotIndex: state.filledSlots, step, stepCount: sentence.slots[state.filledSlots]?.preparation?.length ?? 0 })}
           onAttempt={constructionAttempt} onPick={() => placeConstruction()} onNext={() => dispatch({ type: 'continue', sentenceCount: sentences.length, slotCount: sentence.slots.length, conversation: learningMode === 'adventure' && Boolean(unit.communication?.dialogue) })} /> : null}
-        {state.phase === 'conversation' && unit.communication?.dialogue ? <ConversationPractice vertical={!reviewMode} unit={unit} userId={userId} reviewMode={reviewMode} onContinue={() => dispatch({ type: 'continue' })} /> : null}
+        {state.phase === 'conversation' && unit.communication?.dialogue ? <ConversationPractice initialHelped={Boolean(state.grammarHelpUsed)} vertical={!reviewMode} unit={unit} userId={userId} reviewMode={reviewMode} onContinue={() => dispatch({ type: 'continue' })} /> : null}
 
 {state.phase === 'complete' && continuous && !reviewMode ? <GameCard vertical onAdvance={finishUnit} advanceLabel={nextLabel}><p role="status">Continuando…</p></GameCard> : state.phase === 'complete' ? <GameCard vertical={!reviewMode} stepKey="complete" key="complete" className="complete-card" onAdvance={!reviewMode || !onEvolution ? finishUnit : undefined} advanceLabel={nextLabel}><div className="complete-content"><div className="reward-burst" aria-hidden="true">✦</div><p className="eyebrow">{reviewMode ? 'VISTA DE REVISIÓN' : 'MUNDO 1 · ESCENA CONSEGUIDA'}</p><h1>{learningMode === 'grammar' ? 'Has practicado el truco.' : 'Has practicado la escena.'}</h1>{unit.communication?.intent ? <p className="capability-earned">Has trabajado: {unit.communication.intent}</p> : null}<p className="assembled-phrase">{sentences[sentences.length - 1].en}</p><p className="subject-translation">{sentences[sentences.length - 1].es}</p>{!reviewMode ? <p className="next-review">El repaso te dará otra oportunidad de recordar esta escena.</p> : null}<PracticeClosure nextLabel={nextLabel} onContinue={reviewMode ? finishUnit : undefined} onExit={onExit} onPractice={onPractice} onEvolution={onEvolution}><EchoPractice phrase={sentences[sentences.length - 1].en} parts={sentences[sentences.length - 1].slots.map((slot) => slot.en)} reply={unit.communication?.reply} /></PracticeClosure></div></GameCard> : null}
       </section>

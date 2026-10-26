@@ -62,7 +62,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   const [activeMessage, setActiveMessage] = useState(checkpoint?.activeMessage ?? 'prompt-0');
   const [busy, setBusy] = useState(checkpoint?.busy ?? true);
   const [input, setInput] = useState(checkpoint?.input ?? '');
-  const [helped, setHelped] = useState(checkpoint?.oral ? true : checkpoint?.helped ?? initialHelped);
+  const [helped, setHelped] = useState(Boolean(checkpoint?.oral || checkpoint?.helped || initialHelped));
   const [hintLevel, setHintLevel] = useState(checkpoint?.hintLevel ?? 0);
   const [awaitingNext, setAwaitingNext] = useState(checkpoint?.awaitingNext ?? false);
   const [oral, setOral] = useState(checkpoint?.oral ?? false);

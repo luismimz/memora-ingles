@@ -27,9 +27,9 @@ const saved = {
   hintLevel: 1, awaitingNext: false, oral: false, revealedAnswer: false,
   savedMessages: ['prompt-1'], previousAttempt: 'prior-wrong', replyTo: 'prior-wrong', serial: 3,
 };
-function render(inspection = false) {
+function render(inspection = false, initialHelped = false) {
   hooks.effects = [];
-  const tree = ConversationPractice({ unit, userId: user, reviewMode: inspection, onContinue: vi.fn() });
+  const tree = ConversationPractice({ unit, userId: user, reviewMode: inspection, initialHelped, onContinue: vi.fn() });
   const nodes: ReactElement<any>[] = [];
   const visit = (node: any) => { if (Array.isArray(node)) node.forEach(visit); else if (node?.props) { nodes.push(node); if (node.type === AnswerStudio) visit(AnswerStudio(node.props)); else visit(node.props.children); } };
   visit(tree); return nodes;
@@ -37,6 +37,15 @@ function render(inspection = false) {
 beforeEach(() => {
   storage = new Map([[key, JSON.stringify(saved)]]);
   vi.stubGlobal('localStorage', { getItem: (name: string) => storage.get(name) ?? null, setItem: (name: string, value: string) => storage.set(name, value), removeItem: (name: string) => storage.delete(name) });
+});
+it('una ayuda previa recién consultada no se pierde al restaurar un borrador que antes no tenía ayuda', () => {
+  storage.set(`memora-v2.grammar.${user}`, JSON.stringify([{ skill: 'question:look-for', kind: 'write', correct: true, helped: false }]));
+  storage.set(key, JSON.stringify({ ...saved, helped: false }));
+  const nodes = render(false, true);
+  expect(nodes.find((node) => node.type === 'input')!.props.value).toBe(saved.input);
+  hooks.effects[0]();
+  expect(JSON.parse(storage.get(key)!)).toMatchObject({ helped: true, input: saved.input, turnId: 'transfer' });
+  expect(readLearningActivities(user)).toHaveLength(0);
 });
 it('mantiene borrador y ayuda de transferencia y guarda su identidad en la nueva posición', () => {
   storage.set(`memora-v2.grammar.${user}`, JSON.stringify([{ skill: 'question:look-for', kind: 'write', correct: true, helped: false }]));

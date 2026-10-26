@@ -1,4 +1,6 @@
 .slot-preparation { display: grid; gap: 10px; width: 100%; min-width: 0; }
+.builder-grammar-help { width: 100%; text-align: center; }
+.builder-grammar-help > button { min-height: 44px; color: var(--muted); font-size: .8rem; }
 .slot-preparation p { margin: 0; overflow-wrap: anywhere; }
 .slot-preparation .coach-row { min-height: 0; font-size: clamp(1.4rem, 5vw, 2.2rem); }
 .slot-preparation button { min-height: 44px; white-space: normal; }

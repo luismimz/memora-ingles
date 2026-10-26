@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
-import { gameReducer, initialGame, type GameState } from './game';
+import { advanceReviewedGrammar, gameReducer, initialGame, type GameState } from './game';
 
 describe('flujo de la unidad', () => {
+  it('pasa directamente sobre repasos sin inventar resultados y se detiene ante una forma nueva o posición empezada', () => {
+    const state: GameState = { ...initialGame, phase: 'grammar', filledSlots: 1, sentenceIndex: 1 };
+    const known = [{ index: 0, lessonId: 'a' }, { index: 1, lessonId: 'b' }];
+    expect(advanceReviewedGrammar(state, known, 2)).toMatchObject({ phase: 'build', filledSlots: 1, sentenceIndex: 1, correct: 0 });
+    expect(advanceReviewedGrammar(state, known.slice(0, 1), 2)).toMatchObject({ phase: 'grammar', grammarIndex: 1 });
+    const started = { ...state, coach: { lessonId: 'a', position: { stage: 1, checkIndex: 0, input: '', feedback: 'idle' as const, helped: false } } };
+    expect(advanceReviewedGrammar(started, known, 2)).toBe(started);
+    expect(advanceReviewedGrammar(state, [], 2)).toBe(state);
+    expect(advanceReviewedGrammar(initialGame, known, 2)).toBe(initialGame);
+  });
   it('la posición del coach pertenece a la forma activa y se retira al cambiar de forma o fase', () => {
     const state: GameState = { ...initialGame, phase: 'grammar', grammarPlayed: true };
     const action = { type: 'coachProgress' as const, grammarIndex: 0, lessonId: 'prepared', position: { stage: 1, checkIndex: 0, input: '', feedback: 'idle' as const, helped: false } };

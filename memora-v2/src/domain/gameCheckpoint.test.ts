@@ -13,6 +13,16 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('conserva consulta de gramática sin migrar posiciones antiguas ni perder fase por una marca inválida', () => {
+    const state = { ...initialGame, phase: 'build' as const, filledSlots: 1, grammarHelpUsed: true };
+    writeGameCheckpoint('learner', 'help', '1', state);
+    expect(readGameCheckpoint('learner', 'help', '1')).toEqual(state);
+    expect(readGameCheckpoint('other', 'help', '1')).toBeNull();
+    expect(readGameCheckpoint('learner', 'help', '2')).toBeNull();
+    data.set('memora-v2.checkpoint.learner.help', JSON.stringify({ version: '1', state: { ...state, grammarHelpUsed: 'bad' } }));
+    expect(readGameCheckpoint('learner', 'help', '1')).toMatchObject({ phase: 'build', filledSlots: 1 });
+    expect(readGameCheckpoint('learner', 'help', '1')?.grammarHelpUsed).toBeUndefined();
+  });
   it('descarta una fecha de sesión inválida o futura sin borrar la posición', () => {
     for (const sessionStartedAt of ['not-a-date', '3000-01-01T00:00:00.000Z']) {
       writeGameCheckpoint('learner', 'dated', '1', { ...initialGame, phase: 'grammar', grammarIndex: 1, sessionStartedAt });

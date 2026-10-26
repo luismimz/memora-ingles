@@ -29,6 +29,8 @@ export interface GameState {
   /** Current construction repair, restored without replaying a learner attempt. */
   buildRepair?: { failures: number; choice: string; previousAttemptId?: string };
   buildModelUsed?: boolean;
+  /** A voluntary grammar model consultation, not an attempt or a correct response. */
+  grammarHelpUsed?: boolean;
   /** Local spelling rehearsal position only, never evidence of recall. */
   wordAssembly?: WordAssemblyPosition;
   fallbackLesson?: GrammarFallbackPosition;
@@ -44,6 +46,7 @@ export type GameAction =
   | { type: 'continue'; grammarCount?: number; sentenceCount?: number; slotCount?: number; conversation?: boolean; wordCount?: number; grammarOnly?: boolean }
   | { type: 'reviewJump'; phase: Phase; index?: number }
   | { type: 'grammarPlayed' }
+  | { type: 'openedGrammarHelp' }
   | { type: 'assemblyProgress'; wordIndex: number; position: WordAssemblyPosition }
   | { type: 'fallbackProgress'; grammarIndex: number; position: GrammarFallbackPosition }
   | { type: 'coachProgress'; grammarIndex: number; lessonId: string; position: TrickCheckpoint }
@@ -56,6 +59,17 @@ export const initialGame: GameState = {
   phase: 'associate', wordIndex: 0, recallIndex: 0, recallAnswered: false, correct: 0, combo: 0,
   maxCombo: 0, recallRuns: 0, grammarIndex: 0, grammarPlayed: false, filledSlots: 0, sentenceIndex: 0,
 };
+
+/** Navigation through declared, previously practiced reviews only; no learning evidence. */
+export function advanceReviewedGrammar(state: GameState, reviewed: readonly { index: number; lessonId: string }[], grammarCount: number): GameState {
+  let next = state;
+  while (next.phase === 'grammar' && next.grammarIndex < grammarCount) {
+    const entry = reviewed.find((item) => item.index === next.grammarIndex);
+    if (!entry || next.coach?.lessonId === entry.lessonId) break;
+    next = gameReducer(gameReducer(next, { type: 'grammarPlayed' }), { type: 'continue', grammarCount });
+  }
+  return next;
+}
 
 export function gameReducer(state: GameState, action: GameAction): GameState {
   switch (action.type) {
@@ -94,6 +108,7 @@ export function gameReducer(state: GameState, action: GameAction): GameState {
       if (state.phase === 'conversation') return { ...state, phase: 'complete' };
       return state;
     case 'grammarPlayed': return state.phase === 'grammar' ? { ...state, grammarPlayed: true } : state;
+    case 'openedGrammarHelp': return state.phase === 'build' ? { ...state, grammarHelpUsed: true } : state;
     case 'prepareSlot':
       if (state.phase !== 'build' || action.sentenceIndex !== state.sentenceIndex || action.slotIndex !== state.filledSlots
         || !Number.isInteger(action.stepCount) || action.stepCount < 1 || action.stepCount > 3

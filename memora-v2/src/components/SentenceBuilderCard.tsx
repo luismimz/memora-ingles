@@ -12,7 +12,7 @@ function showProcess(text: string, word: string, stem: string, ending: string): 
   return <>{text.slice(0, position)}<span className="builder-process"><span className="morph-root">{stem}</span><span className="morph-intent">{ending}</span></span>{text.slice(position + word.length)}</>;
 }
 
-export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, processForm, index, total, filledSlots, choiceSeed, onPick, onNext, onAttempt, preparationStep: savedPreparationStep, onPreparationChange, needsModel = false, lastIncorrectChoice, onAcceptModel, vertical = false }: {
+export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, processForm, index, total, filledSlots, choiceSeed, onPick, onNext, onAttempt, preparationStep: savedPreparationStep, onPreparationChange, needsModel = false, lastIncorrectChoice, onAcceptModel, vertical = false, grammarHelp }: {
   sentence: UnitSentence;
   vocabulary?: readonly AtomicWord[];
   sceneWord: AtomicWord;
@@ -26,7 +26,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   onAttempt?: (choice: string, correct: boolean, slotIndex: number) => void | false;
   needsModel?: boolean; lastIncorrectChoice?: string; onAcceptModel?: () => void; vertical?: boolean;
   preparationStep?: number;
-  onPreparationChange?: (step: number) => void;
+  onPreparationChange?: (step: number) => void; grammarHelp?: ReactNode;
 }) {
   const [wrongChoice, setWrongChoice] = useState<string | null>(null);
   const [lastError, setLastError] = useState<{ slot: number; choice: string } | null>(null);
@@ -114,6 +114,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
         <div className="slot-options">{options?.map((choice) => <button type="button" key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>
       </div> : <div className="builder-finish" aria-live="polite"><p role="status">Frase armada. Ya puedes usarla.</p><button type="button" className="quiet-action" disabled={audioStatus === 'loading' || audioStatus === 'playing'} onClick={() => void listenToSentence()}>🔊 Escuchar la frase</button>{audioStatus === 'loading' || audioStatus === 'playing' ? <small>{audioStatus === 'loading' ? 'Preparando audio…' : 'Reproduciendo…'}</small> : ['blocked', 'unavailable', 'cancelled'].includes(audioStatus) ? <small>No se completó el audio. Puedes continuar.</small> : null}{!vertical ? <button type="button" className="primary-action" onClick={continueSentence}>{sentenceAdvanceLabel}</button> : null}</div>}
+      {grammarHelp ? <div className="builder-grammar-help">{grammarHelp}</div> : null}
     </div>
   </GameCard>;
 }

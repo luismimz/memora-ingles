@@ -37,10 +37,10 @@ function TeachingModelAudio({ text }: { text: string }) {
     <AssociationAudioStatus state={playback.audio} compact />
   </>;
 }
-export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false }: {
+export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false, explanationOnly = false }: {
   lesson: GrammarLessonData; form?: GrammarForm; sceneWord?: AtomicWord; userId: string; unitId: string; unitTitle?: string; contentVersion?: string; conversationAnswers?: string[]; startAtPractice?: boolean; reviewMode: boolean; onReady: () => void; onContinue: () => void;
   checkpoint?: TrickCheckpoint | null; onProgress?: (state: TrickCheckpoint) => void; requirePractice?: boolean; schedulePractice?: boolean; omitGeneratedExplanation?: boolean;
-  repairLimit?: 2; puzzle?: boolean; startAtExample?: boolean; constructionAnswers?: string[]; reusePreparedSubject?: boolean;
+  repairLimit?: 2; puzzle?: boolean; startAtExample?: boolean; constructionAnswers?: string[]; reusePreparedSubject?: boolean; explanationOnly?: boolean;
 }) {
   // Resume the task that is actually shown, not the unfiltered lesson index.
   // A conversational exchange may take over one of the written checks.
@@ -54,14 +54,14 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
     ? lesson.checks.find((check) => check.id === checkpoint.checkId)
     : !generatedContinuous ? grammarChecksForExperience(lesson, conversationAnswers)[checkpoint.checkIndex] : undefined : undefined);
   const checks = grammarChecksForExperience(lesson, conversationAnswers, constructionAnswers, initialConstructionCheck.current?.ordering ? initialConstructionCheck.current.id : undefined).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain'));
-  const teachingStage = checkpoint && checkpoint.stage <= lesson.steps.length ? checkpoint.stage : undefined;
+  const teachingStage = !explanationOnly && checkpoint && checkpoint.stage <= lesson.steps.length ? checkpoint.stage : undefined;
   // Filtering earlier questions must not discard an identified unfinished response.
   const savedCheckIndex = checkpoint?.checkId !== undefined ? checks.findIndex((check) => check.id === checkpoint.checkId) : checkpoint?.checkIndex ?? -1;
   const savedPieces = checks[savedCheckIndex]?.ordering;
   const validOrder = !savedPieces || (!checkpoint?.order ? checkpoint?.feedback !== 'correct' : checkpoint.order.every((index) => Number.isInteger(index) && index >= 0 && index < savedPieces.length) && new Set(checkpoint.order).size === checkpoint.order.length && (checkpoint.feedback !== 'correct' || checkpoint.order.length === savedPieces.length));
   const validCheckpoint = teachingStage !== undefined && checkpoint && savedCheckIndex >= 0 && savedCheckIndex < checks.length
     && validOrder && (checkpoint.checkId !== undefined || (checks.length === lesson.checks.length && !generatedContinuous)) ? { ...checkpoint, checkIndex: savedCheckIndex } : null;
-  const [stage, setStage] = useState(teachingStage ?? (reusePreparedSubject && preparedMessage ? 2 : startAtExample && generatedContinuous ? lesson.steps.length - 1 : startAtPractice ? lesson.steps.length : 0));
+  const [stage, setStage] = useState(explanationOnly ? 0 : teachingStage ?? (reusePreparedSubject && preparedMessage ? 2 : startAtExample && generatedContinuous ? lesson.steps.length - 1 : startAtPractice ? lesson.steps.length : 0));
   const [paused, setPaused] = useState(false);
   const [checkIndex, setCheckIndex] = useState(validCheckpoint?.checkIndex ?? 0);
   const [input, setInput] = useState(validCheckpoint?.input ?? '');
@@ -121,6 +121,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   function skipKnownTrick() {
     stopSpeech();
     clearTimeout(timer.current);
+    if (explanationOnly) { continueRef.current(); return; }
     if (requirePractice) { setStage(lesson.steps.length); return; }
     readyRef.current();
     continueRef.current();
@@ -167,9 +168,9 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const streamSolved = stream && feedback === 'correct';
   const writing = !step && !finished && check?.kind === 'write' && !needsModel && !streamSolved;
   const writingPair = writing ? [...lesson.steps].reverse().find((sample) => !sample.hideEnglish && check.answers.some((value) => normalize(value) === normalize(sample.en.map((part) => part.text).join('')))) : undefined;
-  const advanceTeaching = () => { stopSpeech(); setStage((value) => value + 1); };
+  const advanceTeaching = () => { stopSpeech(); if (explanationOnly && stage === lesson.steps.length - 1) { continueRef.current(); return; } setStage((value) => value + 1); };
   const streamAdvance = step ? advanceTeaching : finished ? onContinue : needsModel || feedback === 'correct' ? nextCheck : undefined;
-  const teachingAdvanceLabel = step?.advanceLabel ?? (stage === lesson.steps.length - 1 ? 'Practicar el mensaje' : 'Ver la siguiente pieza');
+  const teachingAdvanceLabel = explanationOnly && stage === lesson.steps.length - 1 ? 'Volver a mi mensaje' : step?.advanceLabel ?? (stage === lesson.steps.length - 1 ? 'Practicar el mensaje' : 'Ver la siguiente pieza');
   return <GameCard vertical={stream} stepKey={`${stage}:${check?.id ?? ''}:${needsModel ? 'model' : streamSolved ? 'result' : 'task'}`} className={`coach-card${stream ? ' coach-stream' : ''}${actionScene ? ' coach-action-card' : ''}${situation || ordering ? ' coach-situation-card' : ''}`} reserveFooter={!stream && !actionScene && !situation && !ordering} revealFooter={stream ? Boolean(streamAdvance) : finished} onAdvance={stream ? streamAdvance : finished ? onContinue : undefined} advanceControl={!stream && finished} advanceLabel={!stream ? 'Construir frase' : step ? teachingAdvanceLabel : needsModel ? 'Continuar con el modelo' : 'Continuar al siguiente reto'}>
     <div className={`coach-content${step ? ' coach-teaching' : ''}`}>
       {step ? <p className="coach-teaching-step">{exampleBridge ? 'UNA ACCIÓN NUEVA' : 'Mira las piezas'} · {stage + 1}/{lesson.steps.length}</p> : <>
@@ -179,7 +180,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
       {step ? <>
         <GrammarComparison step={step} previous={lesson.steps[stage - 1]} />
         <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p>
-        <div className="coach-teaching-actions">{!step.hideEnglish ? <TeachingModelAudio key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
+        <div className="coach-teaching-actions">{!step.hideEnglish ? <TeachingModelAudio key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{explanationOnly ? teachingAdvanceLabel : step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
         {!stream ? <details className="coach-teaching-options"><summary>Opciones de explicación</summary><div><button type="button" className="quiet-action coach-pause" aria-pressed={paused} onClick={() => { stopSpeech(); setPaused((value) => !value); }}>{paused ? 'Reanudar explicación' : 'Pausar'}</button><button type="button" className="quiet-action" onClick={skipKnownTrick}>{requirePractice ? 'Ya lo entiendo · probarlo' : 'Ya conozco el truco · ir a la frase'}</button></div></details> : null}
       </> : !finished ? <div className={`coach-practice${writing ? ' coach-response-studio' : ''}`}>
         {!writing ? <h2>{streamSolved ? '✓ Acertaste' : situation ? 'Entrega el mensaje' : check.prompt}</h2> : null}

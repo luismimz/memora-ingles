@@ -4,9 +4,9 @@ import './playFlow.css';
 import { useDisclosureDismissal } from './useDisclosureDismissal';
 
 /** A shared play surface, not a new learning flow or progress store. */
-export function PlayHeader({ title, onExit, appearance, onToggleAppearance, syncStatus, inspection = false, progress, position, trail }: {
+export function PlayHeader({ title, onExit, appearance, onToggleAppearance, syncStatus, inspection = false, progress, position, trail, backLabel = '← Recorrido' }: {
   title: string; onExit: () => void; appearance: Appearance; onToggleAppearance: () => void;
-  syncStatus?: SyncStatus; inspection?: boolean; progress?: number; position?: string;
+  syncStatus?: SyncStatus; inspection?: boolean; progress?: number; position?: string; backLabel?: string;
   /** Location only, never inferred completion, prerequisites or a navigation control. */
   trail?: { steps: string[]; current: number };
 }) {
@@ -16,7 +16,7 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
   const currentTrail = trail && trail.current >= 0 && trail.current < trail.steps.length ? trail : undefined;
   return <>
     <header className="play-header">
-      <button type="button" className="activity-back" onClick={onExit}>← Recorrido</button>
+      <button type="button" className="activity-back" onClick={onExit}>{backLabel}</button>
       <div className="play-header-context"><p className="play-intention">{title}</p></div>
       <details className="play-options" onKeyDown={onKeyDown}>
         <summary ref={trigger} aria-label="Opciones y estado de guardado" title="Opciones y guardado">•••<span className={`play-save-dot${warning ? ' needs-attention' : ''}`} aria-hidden="true" /></summary>
