@@ -479,6 +479,12 @@ it('una estructura practicada entra al montaje y el recordatorio vuelve a la mis
   await act(async () => { button('Recordar el truco').props.onClick(); });
   await act(async () => { button('← Mi mensaje').props.onClick(); });
   expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  await act(async () => { button('Recordar el truco').props.onClick(); });
+  const reminder = tree.root.findByType('main');
+  await act(async () => { reminder.props.onKeyDown({ key: 'Escape', defaultPrevented: true, preventDefault: vi.fn() }); });
+  expect(tree.root.findAllByType(GrammarCoach)).toHaveLength(1);
+  await act(async () => { reminder.props.onKeyDown({ key: 'Escape', defaultPrevented: false, preventDefault: vi.fn() }); });
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
   expect(readGameCheckpoint(user, reviewUnit.id, reviewUnit.contentVersion ?? '1')?.phase).toBe('build');
   expect(readGrammarAttempts(user)).toEqual(before);
   expect(readLearningActivities(user)).toEqual(events);
@@ -499,6 +505,16 @@ it('marcar una unidad como repaso no evita enseñar una estructura sin práctica
   await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
   expect(tree.root.findAllByType(GrammarCoach)).toHaveLength(1);
   expect(tree.root.findAllByType(SentenceBuilderCard)).toHaveLength(0);
+});
+it('la inspección conserva su resumen y la apertura manual del truco sin guardar progreso', async () => {
+  const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
+  await act(async () => { tree = create(<LanguageGame reviewMode unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  await act(async () => { tree.root.findByType('select').props.onChange({ target: { value: 'grammar-0' } }); });
+  expect(text(tree.toJSON())).toContain('Una estructura conocida');
+  await act(async () => { button('Volver a ver el truco').props.onClick(); });
+  expect(tree.root.findAllByType(GrammarCoach)).toHaveLength(1);
+  expect(readGameCheckpoint(user, value.id, value.contentVersion ?? '1')).toBeNull();
+  expect(readLearningActivities(user)).toHaveLength(0);
 });
 it.each([['choose', false], ['write', true]] as const)('el resultado %s con ayuda=%s no sustituye el uso escrito sin ayudas al decidir la entrada directa', async (kind, helped) => {
   const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
