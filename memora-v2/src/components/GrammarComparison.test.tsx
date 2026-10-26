@@ -1,4 +1,5 @@
-import { expect, it } from 'vitest';
+import { expect, it, vi } from 'vitest';
+import { act, create } from 'react-test-renderer';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { GrammarComparison } from './GrammarComparison';
 import { piece, type LessonStep } from '../domain/grammarLesson';
@@ -9,8 +10,32 @@ it('mantiene el modelo completo y señala el cambio con texto, no solo color', (
   const html = renderToStaticMarkup(<GrammarComparison step={next} previous={first} />);
   expect(html).toContain('coach-subject">I ');
   expect(html).toContain('coach-auxiliary comparison-changed">AM');
-  expect(html).toContain('Cambia aquí:');
+  expect(html).toContain('Repetir cambio');
   expect(html).toContain('ESPAÑOL'); expect(html).toContain('INGLÉS');
+});
+it('demuestra I + am solo cuando cambia la forma, no el significado ni la acción', () => {
+  const es = [piece('Estoy jugando', 'auxiliary')];
+  const previous = { caption: '', es, en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), piece('playing', 'verb')] };
+  const step = { caption: '', es, en: [piece("I'm ", 'auxiliary'), piece('playing', 'verb')] };
+  const html = renderToStaticMarkup(<GrammarComparison step={step} previous={previous} />);
+  expect(html).toContain('comparison-contraction');
+  expect(html).toContain('comparison-source');
+  expect(html).toContain('aria-hidden="true"');
+  expect(html).toContain('coach-subject">I</span>');
+  expect(renderToStaticMarkup(<GrammarComparison step={{ ...step, es: [piece('Estoy comiendo', 'auxiliary')] }} previous={previous} />)).not.toContain('comparison-contraction');
+  expect(renderToStaticMarkup(<GrammarComparison step={{ ...step, en: [piece("I'm ", 'auxiliary'), piece('eating', 'verb')] }} previous={previous} />)).not.toContain('comparison-contraction');
+});
+it('repite únicamente la demostración y conserva el modelo completo', () => {
+  const advance = vi.fn();
+  let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<section onClick={advance}><GrammarComparison step={next} previous={first} /></section>); });
+  const replay = tree.root.findByType('button');
+  const stopPropagation = vi.fn();
+  act(() => { replay.props.onClick({ stopPropagation }); });
+  expect(stopPropagation).toHaveBeenCalledOnce();
+  expect(advance).not.toHaveBeenCalled();
+  expect(tree.root.findAllByProps({ lang: 'en' })[0].children.map((node: any) => node.children?.join('')).join('')).toBe('I AM');
+  act(() => { tree.unmount(); });
 });
 it('no revela inglés ni compara contra un modelo que todavía estaba oculto', () => {
   const hidden = { ...first, hideEnglish: true };

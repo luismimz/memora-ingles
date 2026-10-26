@@ -217,6 +217,23 @@ it('dos errores en el chat principal mantienen reparación y modelo al reabrir, 
   expect(attempts()).toHaveLength(2);
   expect(attempts().some((event) => event.correct)).toBe(false);
 });
+it('repetir el cambio gramatical mantiene paso, voz, intentos y continuidad por slide', async () => {
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  await swipe(false); await swipe(false);
+  expect(tree.root.findAllByProps({ className: 'comparison-contraction' })).toHaveLength(1);
+  const before = readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1');
+  const events = readLearningActivities(user);
+  vi.mocked(playSpanish).mockClear(); vi.mocked(playEnglish).mockClear();
+  const replay = tree.root.findAllByType('button').find((node) => text(node).includes('Repetir cambio'))!;
+  await act(async () => { replay.props.onClick({ stopPropagation: vi.fn() }); vi.advanceTimersByTime(2000); });
+  expect(readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1')).toEqual(before);
+  expect(readLearningActivities(user)).toEqual(events);
+  expect(playSpanish).not.toHaveBeenCalled(); expect(playEnglish).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();
+  await swipe(false);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
+  expect(readLearningActivities(user)).toEqual(events);
+});
 it('el coach principal reabre explicación, piezas y acierto sin volver al inicio ni duplicar intentos', async () => {
   const saved = () => readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1');
   const open = async () => { await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };

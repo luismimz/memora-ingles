@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'vitest';
 import raw from '../../content/keys-mission.json';
 import { validateUnit } from './unit';
-import { markGrammarText, grammarSentencePieces } from './grammarPresentation';
+import { markGrammarText, grammarSentencePieces, grammarTransition } from './grammarPresentation';
 import { validateGrammarLesson } from './grammarLesson';
+
+it('compara ocurrencias, no acredita palabras repetidas como piezas ya presentes', () => {
+  const step = { caption: '', es: [], en: [{ text: 'very ', role: 'context' as const }, { text: 'very ', role: 'context' as const }, { text: 'good', role: 'verb' as const }] };
+  expect(grammarTransition(step, { ...step, en: [step.en[0], step.en[2]] }).changed).toEqual([1]);
+  expect(grammarTransition(step, { ...step, hideEnglish: true }).changed).toEqual([]);
+  expect(grammarTransition({ ...step, hideEnglish: true }, step).changed).toEqual([]);
+  expect(grammarTransition(step, { ...step, en: [{ text: 'other', role: 'context' }] }).changed).toEqual([]);
+});
 
 describe('piezas visuales declaradas, sin adivinar terminaciones', () => {
   const form = validateUnit(raw).grammar[0];

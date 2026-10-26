@@ -1,5 +1,26 @@
-import type { LessonPiece } from './grammarLesson';
+import type { LessonPiece, LessonStep } from './grammarLesson';
 import type { GrammarForm } from './unit';
+
+export const grammarPieceIdentity = (part: LessonPiece) => `${part.role}:${part.text.trim().toLocaleLowerCase('en-US').replace(/[’‘]/g, "'")}`;
+
+/** Compare authored models only. A changed example is not a contraction demonstration. */
+export function grammarTransition(step: LessonStep, previous?: LessonStep): { changed: number[]; contraction: boolean } {
+  if (step.hideEnglish || !previous || previous.hideEnglish) return { changed: [], contraction: false };
+  const counts = new Map<string, number>();
+  previous.en.forEach((part) => { const key = grammarPieceIdentity(part); counts.set(key, (counts.get(key) ?? 0) + 1); });
+  const candidates = step.en.flatMap((part, index) => {
+    const key = grammarPieceIdentity(part); const count = counts.get(key) ?? 0;
+    if (!count) return [index];
+    counts.set(key, count - 1); return [];
+  });
+  const same = (a: LessonPiece[], b: LessonPiece[]) => a.length === b.length && a.every((part, index) => grammarPieceIdentity(part) === grammarPieceIdentity(b[index]));
+  const contraction = previous.en.length >= 2 && step.en.length >= 1
+    && grammarPieceIdentity(previous.en[0]) === 'subject:i'
+    && grammarPieceIdentity(previous.en[1]) === 'auxiliary:am'
+    && grammarPieceIdentity(step.en[0]) === "auxiliary:i'm"
+    && same(previous.en.slice(2), step.en.slice(1)) && same(previous.es, step.es);
+  return { changed: candidates.length < step.en.length ? candidates : [], contraction };
+}
 
 /** Literal, authored matches only. Never infer -er/-ing from a noun. */
 export function markGrammarText(text: string, marks: LessonPiece[]): LessonPiece[] {
