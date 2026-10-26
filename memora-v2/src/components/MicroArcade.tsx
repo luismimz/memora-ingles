@@ -3,7 +3,8 @@ import { useEffect, useRef, useState } from 'react';
 import { arcadePairs, microRounds, type MicroRound } from '../domain/microArcade';
 import { ArcadePairs } from './ArcadePairs';
 import { ArcadeTrail } from './ArcadeTrail';
-import { commitMicroAttempt } from '../domain/microArcadeProgress';
+import { commitMicroAttempt, commitMicroTimeout } from '../domain/microArcadeProgress';
+import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 import { recordLearningActivity } from '../domain/learningActivity';
 import type { AtomicUnit } from '../domain/unit';
 import { GameCard } from './GameCard';
@@ -13,7 +14,7 @@ import { playEnglish, playSnap, stopSpeech, prefetchSpeech, type PlaybackResult 
 import './microArcade.css';
 import './playFlow.css';
 import { useArcadeClock } from './useArcadeClock';
-import { ArcadeCheckpoint } from './ArcadeClock';
+import { ArcadeClock, ArcadeCheckpoint } from './ArcadeClock';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 import { arcadeSessionLength } from '../domain/arcadeSession';
 import { useDisclosureDismissal } from './useDisclosureDismissal';
@@ -33,6 +34,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const usedHintRef = useRef(usedHint);
   const [input, setInput] = useState('');
   const [showChoices, setShowChoices] = useState(false);
+  const [calm, setCalm] = useState(() => readArcadeCalm(userId));
   const [audioStatus, setAudioStatus] = useState<'idle' | 'loading' | 'playing' | PlaybackResult['status']>('idle');
   const audioRequest = useRef(0);
   const auditoryMode = useRef(false);
@@ -67,10 +69,18 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const options = [...baseOptions.slice(offset), ...baseOptions.slice(0, offset)];
   useEffect(() => { dialog.current?.showModal(); return () => { audioRequest.current++; dialog.current?.close(); stopSpeech(); }; }, []);
   useEffect(() => { if (listening && round) prefetchSpeech(round.word.en, round.word.audioUrl); }, [index, listening]);
-  const clock = useArcadeClock(index, revealed, Boolean(round), () => {}, () => {
+  // Only prepared single-choice retrieval is timed. New models, matching,
+  // typing, help and the audio channel are not races.
+  const timed = Boolean(round && !round.pendingModel && !inspection && !calm && !pairs.length && !writing && !usedHint && options.length >= 2);
+  const waitingForAudio = listening && audioStatus !== 'played';
+  const clock = useArcadeClock(index, revealed, Boolean(round), () => {
+    if (!timed || waitingForAudio || answered.current) return;
+    if (!inspection) commitMicroTimeout(userId, round!, crypto.randomUUID(), `${sessionId}:${index}`);
+    remember();
+  }, () => {
     if (automatic && index - startRound + 1 >= limit) { onExit(); return; }
     if (onUse && (index + 1) % 4 === 0) onUse(); else another();
-  }, 0, 0, 15, true, true);
+  }, 0, 10000, 15, !timed || waitingForAudio, true);
 
   function remember() {
     if (!round || revealed || answered.current || clock.paused) return;
@@ -149,7 +159,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
         <details className="play-options" onKeyDown={optionsMenu.onKeyDown}>
           <summary ref={optionsMenu.trigger} aria-label="Opciones del repaso">•••</summary>
           <div className="play-options-panel">
-            <small>Sin reloj. Responde y desliza hacia arriba para seguir.</small>
+            <button type="button" className="quiet-action" aria-label="Jugar sin cuenta atrás" aria-pressed={calm} onClick={() => { const next = !calm; writeArcadeCalm(userId, next); setCalm(next); }}>{calm ? 'Sin reloj ✓' : 'Sin reloj'}</button>
             {onGrammar ? <button type="button" className="quiet-action" onClick={onGrammar}>Gramática</button> : null}
             {onOnlyWords ? <button type="button" className="quiet-action" onClick={onOnlyWords}>Solo palabras</button> : onMix ? <button type="button" className="quiet-action" onClick={onMix}>Mixto</button> : null}
           </div>
@@ -173,6 +183,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
       if (!inspection) recordLearningActivity(userId, { unitId: target.unit.id, unitTitle: target.unit.title, contentVersion: target.unit.contentVersion ?? '1', activityId: `micro:${sessionId}:${index}:pair-model:${key}`, skill: key, phase: 'arcade', source: 'authored', modality: 'choice', prompt: target.word.es, response: key, expected: key, correct: null, helped: true });
     }} onComplete={() => { answered.current = true; setRevealed(true); setResult(pairAssistance.current ? 'paired-model' : 'paired'); }} /> : result === 'rescue' ? reminder : <div className="recall-content arcade-challenge">
       <p className="eyebrow">{listening ? 'ESCUCHA Y CONECTA' : writing ? 'SIN OPCIONES' : 'RECUERDA'} · {automatic ? index - startRound + 1 : index % 15 + 1}/{automatic ? limit : 15}</p>
+      {timed && !waitingForAudio ? <ArcadeClock remaining={clock.remaining} durationMs={10000} paused={clock.paused} revealed={revealed} /> : null}
       {round?.pendingModel ? <p role="status">Primero la practicamos sin reloj · sin prisas</p> : null}
       {!writing && !listening && !isAssociationRejected(userId, round.word) ? <SceneVisual word={round.word} hideAnswer /> : null}{!writing ? <h1>{result === 'correct' ? 'Conexión correcta' : listening ? 'Escucha y elige lo que significa.' : <>¿Cómo se dice <em>{round.word.es}</em>?</>}</h1> : null}
       {listening ? <>

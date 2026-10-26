@@ -32,7 +32,7 @@ it('enseñar una pieza no parece una tarea sin controles y enlaza directamente a
     await act(async () => { tree.update(render(step + 1)); });
   }
   expect(heading()).toBe('CONSTRUYE · 1/1');
-  expect(rail()).toContain('¿…?');
+  expect(rail()).toContain('↓');
   expect(tree.root.findAllByProps({ className: 'slot-preparation' })).toHaveLength(0);
   expect(tree.root.findAllByProps({ className: 'slot-options' })).toHaveLength(1);
   expect(attempt).not.toHaveBeenCalled(); expect(pick).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();

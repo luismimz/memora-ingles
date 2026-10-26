@@ -38,7 +38,7 @@ beforeEach(() => {
 it('pide escritura sin imagen ni opciones, acepta minúsculas y registra recuperación independiente', () => {
   render();
   expect(nodes.some((node) => node.props.className === 'recall-choices')).toBe(false);
-  expect(hooks.calm).toBe(true); expect(hooks.duration).toBe(0);
+  expect(hooks.calm).toBe(true); expect(hooks.duration).toBe(10000);
   const expected = previewUnit.words[2].en;
   nodes.find((node) => node.type === 'input')!.props.onChange({ target: { value: expected.toLowerCase() } });
   render(); nodes.find((node) => node.type === 'form')!.props.onSubmit({ preventDefault() {} });
@@ -86,7 +86,7 @@ it('el feed siempre espera el gesto sin borrar la preferencia ni tocar el aprend
   const memories = readWordMemories('learner');
   render();
   expect(hooks.calm).toBe(true);
-  expect(nodes.some((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')).toBe(false);
+  expect(nodes.find((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')?.props['aria-pressed']).toBe(true);
   expect(readArcadeCalm('learner')).toBe(true);
   expect(readWordMemories('learner')).toEqual(memories);
   expect(readLearningActivities('learner')).toEqual([]);
@@ -97,7 +97,7 @@ it('una palabra vista solo con modelo se practica sin reloj y sin alterar la pre
   render(0, true);
   expect(hooks.calm).toBe(true);
   expect(nodes.find((node) => node.props.role === 'status')?.props.children).toContain('Primero la practicamos sin reloj');
-  expect(nodes.some((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')).toBe(false);
+  expect(nodes.find((node) => node.props['aria-label'] === 'Jugar sin cuenta atrás')?.props['aria-pressed']).toBe(false);
   expect(readArcadeCalm('learner')).toBe(false);
   expect(readWordMemories('learner')).toEqual([]);
 });

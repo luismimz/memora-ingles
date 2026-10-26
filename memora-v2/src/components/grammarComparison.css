@@ -20,6 +20,7 @@
   .comparison-source { visibility: hidden; }
   .comparison-joined { opacity: 1; }
   .comparison-lab-model { animation: none; }
+  .coach-comparison .comparison-linked-row button { transition: none; transform: none; }
 }
 .coach-teaching .coach-caption { min-height: 0; font-size: .95rem; line-height: 1.5; max-width: 520px; }
 .coach-teaching .coach-teaching-step { margin: 0; color: var(--muted); font-size: .75rem; }
@@ -34,3 +35,9 @@
 .comparison-lab-model { animation: comparison-enter .3s ease-out both; }
 .comparison-lab-controls { display: flex; align-items: center; justify-content: center; gap: 14px; }
 .comparison-lab-controls .comparison-replay { margin: 0; }
+.coach-comparison .comparison-linked-row { margin-block: 4px; }
+.coach-comparison .comparison-linked-row button { min-height: 52px; margin: 3px; padding: .08em .2em; border: 1px solid currentColor; border-bottom-width: 3px; border-radius: 12px; font: inherit; cursor: pointer; transition: transform .18s, opacity .18s, box-shadow .18s; }
+.coach-comparison [data-link-active="true"] { text-decoration: underline; text-underline-offset: .2em; text-decoration-thickness: 2px; }
+.coach-comparison .comparison-linked-row button[data-link-active="true"] { opacity: 1; transform: translateY(-3px); box-shadow: 0 6px 0 var(--surface-soft); }
+.comparison-piece-link { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: 12px; min-height: 48px; padding: 8px; color: var(--muted); font-size: .75rem; }
+.comparison-piece-link.has-focus { color: var(--ink); font-size: 1rem; }

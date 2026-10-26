@@ -52,3 +52,38 @@ it('otra versión vuelve al modelo expandido y la inspección no guarda explorac
   act(() => tree.unmount()); await mount({ contentVersion: 'other' });
   expect(tree.root.findByProps({ 'aria-label': 'Juntar I y AM' })).toBeDefined();
 });
+it('deslizar junta y separa con movimiento, sin doble click ni evaluar la demostración', async () => {
+  await mount();
+  const currentTarget = { setPointerCapture: vi.fn() };
+  const start = { pointerId: 1, button: 0, clientX: 100, clientY: 100, currentTarget };
+  const left = { ...start, clientX: 60 };
+  const control = () => tree.root.findByProps({ 'aria-label': 'Juntar I y AM' });
+  act(() => control().props.onPointerDown(start));
+  act(() => control().props.onPointerMove(left));
+  expect(readLearningActivities(user)).toEqual([]);
+  await act(async () => control().props.onPointerUp(left));
+  const joined = () => tree.root.findByProps({ 'aria-label': "Separar I'M" });
+  await act(async () => joined().props.onClick({ detail: 1 }));
+  expect(joined().props['aria-pressed']).toBe(true);
+  expect(playEnglish).toHaveBeenCalledOnce();
+  act(() => joined().props.onPointerDown(start));
+  act(() => joined().props.onPointerMove({ ...start, clientX: 140 }));
+  await act(async () => joined().props.onPointerUp({ ...start, clientX: 140 }));
+  expect(control().props['aria-pressed']).toBe(false);
+  expect(readLearningActivities(user)).toHaveLength(1);
+  expect(readGrammarAttempts(user)).toEqual([]);
+});
+it('el gesto vertical, corto, cancelado o secundario no transforma ni reproduce', async () => {
+  await mount();
+  const control = tree.root.findByProps({ 'aria-label': 'Juntar I y AM' });
+  const start = { pointerId: 1, button: 0, clientX: 100, clientY: 100, currentTarget: { setPointerCapture: vi.fn() } };
+  for (const end of [{ ...start, clientY: 160 }, { ...start, clientX: 90 }]) {
+    act(() => control.props.onPointerDown(start)); act(() => control.props.onPointerMove(end)); act(() => control.props.onPointerUp(end));
+    act(() => control.props.onClick({ detail: 1 }));
+  }
+  act(() => control.props.onPointerDown(start)); act(() => control.props.onPointerMove({ ...start, clientX: 40 })); act(() => control.props.onPointerCancel());
+  act(() => control.props.onClick({ detail: 1 }));
+  expect(readLearningActivities(user)).toEqual([]); expect(playEnglish).not.toHaveBeenCalled();
+  await act(async () => control.props.onClick({ detail: 0 }));
+  expect(readLearningActivities(user)).toHaveLength(1);
+});

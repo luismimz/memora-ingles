@@ -66,3 +66,19 @@ it('el laboratorio general revierte las dos caras del ejemplo preparado, sin sum
   expect(readGrammarAttempts('comparison-isolated')).toEqual([]);
   act(() => tree.unmount());
 });
+it('conecta el papel explícito español/inglés al tocar sin inventar equivalencias ni evaluar', async () => {
+  let tree!: ReturnType<typeof create>;
+  await act(async () => { tree = create(<GrammarComparison connectPieces step={next} previous={first} />); });
+  const control = tree.root.findByProps({ 'aria-label': 'Relacionar AM con el español' });
+  await act(async () => control.props.onClick());
+  const link = tree.root.findByProps({ className: 'comparison-piece-link has-focus' });
+  expect(link.findByProps({ lang: 'es' }).children).toEqual(['ESTOY']);
+  expect(link.findByProps({ lang: 'en' }).children).toEqual(['AM']);
+  expect(control.props['aria-pressed']).toBe(true);
+  expect(playEnglish).toHaveBeenLastCalledWith('I AM', undefined, true, expect.any(Function));
+  expect(readGrammarAttempts('comparison-isolated')).toEqual([]);
+  act(() => tree.unmount());
+  act(() => { tree = create(<GrammarComparison connectPieces step={{ ...first, hideEnglish: true }} />); });
+  expect(tree.root.findAllByType('button')).toHaveLength(0);
+  act(() => tree.unmount());
+});

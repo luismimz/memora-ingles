@@ -1,7 +1,10 @@
 .contraction-lab { display: grid; justify-items: center; gap: 16px; width: 100%; padding-block: 12px; }
 .contraction-lab > .coach-row { font-size: clamp(1.5rem, 5vw, 2.2rem); }
 .contraction-lab-message { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: .25em; width: 100%; min-height: 96px; font-size: clamp(1.8rem, 6vw, 3rem); line-height: 1.4; font-weight: 650; }
-.contraction-lab-switch { min-width: 3.5em; min-height: 72px; padding: 8px 12px; border: 2px solid var(--grammar-aux); border-radius: 18px; background: var(--grammar-aux-soft); color: var(--ink); font: inherit; }
+.contraction-lab-switch { min-width: 3.5em; min-height: 86px; padding: 12px 18px; border: 1px solid var(--line); border-bottom: 4px solid var(--grammar-aux); border-radius: 22px; background: var(--surface-soft); color: var(--ink); font: inherit; touch-action: pan-y; user-select: none; -webkit-user-select: none; cursor: grab; }
+.contraction-lab-switch .coach-subject, .contraction-lab-switch .coach-auxiliary { display: inline-block; border-radius: 10px; padding: 0 .12em; }
+.contraction-lab-switch.is-moving { box-shadow: 0 10px 24px #1020301a; cursor: grabbing; }
+.contraction-magnet { font-size: .6em; color: var(--muted); }
 .contraction-lab-switch > span { white-space: pre; }
 .contraction-lab-joined { display: inline-block; animation: contraction-lab-join .25s ease-out; }
 .contraction-lab-cue { min-height: 3em; margin: 0; line-height: 1.5; font-size: 1rem; }

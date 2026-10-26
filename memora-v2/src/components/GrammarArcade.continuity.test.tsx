@@ -19,17 +19,25 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 const option = (text: string) => tree.root.findAllByType('button').find((node) => node.props.children === text)!;
-it('gramática no escénica tampoco caduca; acierto conserva superficie y termina por gesto sin otro menú', async () => {
+it('gramática preparada tiene reloj; el acierto lo detiene y conserva superficie hasta el gesto', async () => {
   act(() => { tree = create(<GrammarArcade userId={user} units={[previewUnit]} inspection={false} automatic onExit={exit} onWords={() => {}} />); });
   const key = tree.root.findByType(GameCard).props.stepKey;
   expect(tree.root.findByType(GameCard).props.vertical).toBe(true);
-  await act(async () => { vi.advanceTimersByTime(30000); });
+  await act(async () => { vi.advanceTimersByTime(2000); });
   expect(readLearningActivities(user)).toEqual([]); expect(exit).not.toHaveBeenCalled();
   await act(async () => option('AM').props.onClick());
   expect(tree.root.findByType(GameCard).props.stepKey).toBe(key); expect(tree.root.findByType(GameCard).props.feedback).toBe('correct');
   await act(async () => { vi.advanceTimersByTime(30000); }); expect(exit).not.toHaveBeenCalled();
   act(() => tree.root.findByType(GameCard).props.onAdvance()); expect(exit).toHaveBeenCalledOnce();
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
+});
+it('agotar la cuenta no es un error ni un acierto, y el modelo no avanza solo', async () => {
+  act(() => { tree = create(<GrammarArcade userId={user} units={[previewUnit]} inspection={false} automatic onExit={exit} onWords={() => {}} />); });
+  await act(async () => { vi.advanceTimersByTime(10050); });
+  expect(readLearningActivities(user)).toMatchObject([{ correct: null, response: '(sin respuesta)' }]);
+  expect(tree.root.findByType(GameCard).props.feedback).toBe('model');
+  await act(async () => { vi.advanceTimersByTime(30000); });
+  expect(readLearningActivities(user)).toHaveLength(1); expect(exit).not.toHaveBeenCalled();
 });
 it('pausa protege la respuesta y el rescate queda debajo de las mismas opciones, sin flip ni acierto inventado', async () => {
   act(() => { tree = create(<GrammarArcade userId={user} units={[previewUnit]} inspection={false} automatic onExit={exit} onWords={() => {}} />); });

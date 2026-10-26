@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import { GameCard } from './GameCard';
 import { SceneVisual } from './SceneVisual';
 import type { AtomicWord, GrammarForm, UnitSentence } from '../domain/unit';
@@ -8,6 +8,7 @@ import { constructionRole } from '../domain/constructionRole';
 import { SpeechModelButton } from './SpeechModelButton';
 import { useSpeechPlayback } from './useSpeechPlayback';
 import { AssociationAudioStatus } from './AssociationAudioStatus';
+import { GrammarText } from './GrammarText';
 import './sentencePreparation.css';
 
 function showProcess(text: string, word: string, stem: string, ending: string): ReactNode {
@@ -39,6 +40,10 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const [preparation, setPreparation] = useState({ slot: filledSlots, step: 0 });
   const wrongTimer = useRef<number | null>(null);
   const answeredSlot = useRef(-1);
+  const board = useRef<HTMLDivElement>(null);
+  const gesture = useRef<{ id: number; choice: string; slot: number; x: number; y: number; left: number; top: number; width: number; moved: boolean }>();
+  const suppressClick = useRef(false);
+  const [drag, setDrag] = useState<{ choice: string; left: number; top: number; width: number; over: boolean }>();
   useEffect(() => () => { if (wrongTimer.current !== null) window.clearTimeout(wrongTimer.current); }, []);
 
   const completed = filledSlots === sentence.slots.length;
@@ -54,6 +59,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const preparationStep = compactPreparation ? undefined : active?.preparation?.[preparationIndex];
   const options = active && (choiceSeed + filledSlots) % 2 ? [...active.choices].reverse() : active?.choices;
   const listenToSentence = () => playback.listen(sentence.en);
+  useEffect(() => { gesture.current = undefined; setDrag(undefined); }, [sentence.en, filledSlots, preparationIndex, needsModel]);
   useEffect(() => {
     playback.reset();
     // Only narrate a completion observed here, never a restored result.
@@ -81,19 +87,50 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
     onPick();
   }
 
+  function overTarget(event: PointerEvent<HTMLButtonElement>) {
+    const hit = event.currentTarget.ownerDocument.elementFromPoint(event.clientX, event.clientY)?.closest('[data-builder-drop]');
+    return Boolean(hit && board.current?.contains(hit));
+  }
+  function beginDrag(event: PointerEvent<HTMLButtonElement>, choice: string) {
+    if (completed || needsModel || preparationStep || event.isPrimary === false || event.button > 0) return;
+    suppressClick.current = false;
+    const rect = event.currentTarget.getBoundingClientRect();
+    const parent = board.current?.getBoundingClientRect();
+    gesture.current = { id: event.pointerId, choice, slot: filledSlots, x: event.clientX, y: event.clientY, left: rect.left - (parent?.left ?? 0), top: rect.top - (parent?.top ?? 0), width: rect.width, moved: false };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  }
+  function moveDrag(event: PointerEvent<HTMLButtonElement>) {
+    const value = gesture.current;
+    if (!value || value.id !== event.pointerId) return;
+    if (Math.hypot(event.clientX - value.x, event.clientY - value.y) < 8 && !value.moved) return;
+    value.moved = true;
+    setDrag({ choice: value.choice, left: value.left + event.clientX - value.x, top: value.top + event.clientY - value.y, width: value.width, over: overTarget(event) });
+  }
+  function cancelDrag() {
+    if (gesture.current?.moved) suppressClick.current = true;
+    gesture.current = undefined; setDrag(undefined);
+  }
+  function endDrag(event: PointerEvent<HTMLButtonElement>) {
+    const value = gesture.current;
+    if (!value || value.id !== event.pointerId) return;
+    const place = value.moved && value.slot === filledSlots && overTarget(event);
+    cancelDrag();
+    if (place) choose(value.choice);
+  }
+
   const advancePreparation = () => { stopSpeech(); setPreparation({ slot: filledSlots, step: preparationIndex + 1 }); onPreparationChange?.(preparationIndex + 1); };
   const preparationAdvanceLabel = preparationIndex === (active?.preparation?.length ?? 0) - 1 ? 'Usar estas piezas →' : 'Ver la siguiente pieza →';
   const sentenceAdvanceLabel = index === total - 1 ? 'Usar mi frase →' : 'Siguiente frase →';
   const continueSentence = () => { playback.reset(); stopSpeech(); onNext(); };
   return <GameCard feedback={completed ? modelUsed ? 'model' : 'correct' : needsModel ? 'model' : errorText ? 'retry' : undefined} key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? continueSentence : undefined : completed ? continueSentence : undefined} advanceLabel={vertical ? preparationStep ? preparationAdvanceLabel : sentenceAdvanceLabel : ''} reserveFooter={!vertical} revealFooter={Boolean(preparationStep && vertical || completed)}>
-    <div className="builder-content">
+    <div ref={board} className={`builder-content builder-workbench${drag ? ' is-dragging' : ''}`}>
       <p className="eyebrow">{completed ? modelUsed ? 'CON APOYO' : '✓ FRASE ARMADA' : preparationStep ? 'DESCUBRE' : needsModel ? 'CON AYUDA' : 'CONSTRUYE'} · {index + 1}/{total}</p>
       {!completed ? <SceneVisual word={sceneWord} compact /> : null}
       <h1>{showProcess(sentence.es, processForm.spanish, processForm.spanishStem, processForm.spanishEnding)}</h1>
       <div className={`sentence-rail ${completed ? 'is-complete' : ''}`} role="group" aria-label="Correspondencia del español con el inglés">
-        {sentence.slots.map((slot, slotIndex) => <div data-piece-role={pieceRole(slot.en, 'en')} className={`sentence-slot ${slotIndex === filledSlots ? 'is-active' : ''} ${slotIndex < filledSlots ? 'is-filled' : ''}`} key={`${slotIndex}-${slot.en}`}>
+        {sentence.slots.map((slot, slotIndex) => <div data-builder-drop={slotIndex === filledSlots && !preparationStep && !needsModel ? '' : undefined} data-piece-role={pieceRole(slot.en, 'en')} className={`sentence-slot ${slotIndex === filledSlots ? 'is-active' : ''} ${slotIndex < filledSlots ? 'is-filled' : ''}${slotIndex === filledSlots && drag?.over ? ' is-drop-over' : ''}`} key={`${slotIndex}-${slot.en}`}>
           <span className="sentence-slot-es">{slot.es}</span>
-          <span className="sentence-slot-en">{slotIndex < filledSlots ? slot.en : slotIndex === filledSlots && !preparationStep && !needsModel ? '¿…?' : '· · ·'}</span>
+          <span className="sentence-slot-en">{slotIndex < filledSlots ? slot.en : slotIndex === filledSlots && !preparationStep && !needsModel ? '↓' : '· · ·'}</span>
         </div>)}
       </div>
       {!completed && preparationStep ? <div className="slot-preparation">
@@ -103,18 +140,16 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         <p className="coach-caption">{preparationStep.explanation}</p>
         <SpeechModelButton key={`${index}:${filledSlots}:${preparationIndex}:prepare`} text={preparationStep.en} label="Escuchar la pieza" />
         {!vertical ? <button type="button" className="primary-action" onClick={advancePreparation}>{preparationAdvanceLabel}</button> : null}
-      </div> : !completed && active && needsModel ? <div className="slot-preparation" role="status"><p>Vamos con ayuda. Para «{active.es}» coloca:</p><p className="coach-row" lang="en">{active.en}</p><p>Queda como modelo consultado, no como acierto.</p><SpeechModelButton key={`${index}:${filledSlots}:repair`} text={active.en} label="Escuchar la pieza" /><button type="button" className="primary-action" onClick={onAcceptModel}>Colocar con ayuda</button></div> : !completed && active ? <div className="slot-picker" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
-        event.preventDefault();
-        const choice = event.dataTransfer.getData('text/plain');
-        if (active.choices.includes(choice)) choose(choice);
-      }}>
-        <div className="builder-target"><small>Coloca en inglés</small><h2 lang="es" data-piece-role={pieceRole(active.es, 'es')}>{active.es}</h2></div>
+      </div> : !completed && active && needsModel ? <div className="slot-preparation" role="status"><p>Vamos con ayuda. Para «{active.es}» coloca:</p><p className="coach-row" lang="en">{active.en}</p><p>Queda como modelo consultado, no como acierto.</p><SpeechModelButton key={`${index}:${filledSlots}:repair`} text={active.en} label="Escuchar la pieza" /><button type="button" className="primary-action" onClick={onAcceptModel}>Colocar con ayuda</button></div> : !completed && active ? <div className="slot-picker">
+        <div className="builder-target"><small>Une español e inglés</small><h2 lang="es" data-piece-role={pieceRole(active.es, 'es')}>{active.es}</h2></div>
         {compactPreparation && active.preparation?.length ? <div className="familiar-piece">
           <details onToggle={(event) => { if (event.currentTarget.open) onPreparationReview?.(); }}><summary>Recordar cómo se forma</summary><p className="familiar-model"><span lang="es">{active.es}</span><span aria-hidden="true">→</span><strong lang="en">{active.en}</strong></p><SpeechModelButton key={`${index}:${filledSlots}:familiar`} text={active.en} label="Escuchar esta pieza" /><ol>{active.preparation.map((step, position) => <li key={position}><p><span lang="es">{step.es}</span><span lang="en">{step.en}</span></p><p>{step.explanation}</p></li>)}</ol></details>
         </div> : active.note ? <p className="builder-note">{active.note}</p> : null}
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
-        <div className="slot-options">{options?.map((choice) => <button type="button" data-piece-role={pieceRole(choice, 'en')} key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>
+        <div className="slot-options" role="group" aria-label={`Piezas para «${active.es}». Toca o arrastra al hueco.`}>{options?.map((choice) => <button type="button" data-piece-role={pieceRole(choice, 'en')} key={choice} lang="en" onPointerDown={(event) => beginDrag(event, choice)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={cancelDrag} onLostPointerCapture={cancelDrag} onClick={(event) => { if (suppressClick.current && event.detail !== 0) { suppressClick.current = false; return; } choose(choice); }} className={`${wrongChoice === choice ? 'is-wrong' : ''}${drag?.choice === choice ? ' is-lifted' : ''}`}>{choice}</button>)}</div>
+        <p className="builder-touch-cue">Toca o arrastra al hueco ↑</p>
       </div> : <div className="builder-finish" aria-live="polite">
+        <h2 className="builder-message" lang="en"><GrammarText text={sentence.en} form={processForm} /></h2>
         <p role="status">{modelUsed ? 'Frase armada con ayuda. Ya puedes usarla.' : 'Frase armada. Ya puedes usarla.'}</p>
         <button type="button" className="quiet-action" aria-label="Escuchar la frase" aria-busy={playback.audio?.status === 'preparing'} onClick={() => void listenToSentence()}>
           🔊 {playback.audio?.status === 'preparing' || playback.audio?.status === 'playing' ? playback.label : 'Escuchar la frase'}
@@ -122,6 +157,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         <AssociationAudioStatus compact state={playback.audio} />
         {!vertical ? <button type="button" className="primary-action" onClick={continueSentence}>{sentenceAdvanceLabel}</button> : null}
       </div>}
+      {drag ? <span aria-hidden="true" className="builder-drag-piece" data-piece-role={pieceRole(drag.choice, 'en')} style={{ left: drag.left, top: drag.top, width: drag.width }}>{drag.choice}</span> : null}
       {grammarHelp ? <div className="builder-grammar-help">{grammarHelp}</div> : null}
     </div>
   </GameCard>;

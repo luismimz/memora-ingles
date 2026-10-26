@@ -176,7 +176,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
       {!needsModel && (!writing || feedback === 'correct') && !situation && !ordering && (actionScene ? <GrammarActionScene lesson={lesson} form={form} stage={step ? 'teach' : finished ? 'finished' : check.kind === 'write' ? 'write' : 'explain'} feedback={feedback} /> : sceneWord ? <SceneVisual word={sceneWord} compact /> : null)}
       {step ? <>
         {contractionLab ? <GrammarContractionLab step={step} lessonId={lesson.id} unitId={unitId} unitTitle={unitTitle} contentVersion={contentVersion} userId={userId} reviewMode={reviewMode} /> : <>
-          <GrammarComparison key={`${lesson.id}:${stage}`} interactive={comparisonLab} caption={caption} step={step} previous={lesson.steps[stage - 1]} />
+          <GrammarComparison key={`${lesson.id}:${stage}`} connectPieces={stream} interactive={comparisonLab} caption={caption} step={step} previous={lesson.steps[stage - 1]} />
           {!comparisonLab ? <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p> : null}
         </>}
         <div className="coach-teaching-actions">{!step.hideEnglish && !contractionLab && !comparisonLab ? <SpeechModelButton key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{explanationOnly ? teachingAdvanceLabel : step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>

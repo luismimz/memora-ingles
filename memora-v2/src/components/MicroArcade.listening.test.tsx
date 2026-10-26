@@ -10,6 +10,8 @@ import { recordActiveWordAttempt } from '../domain/activeRecall';
 import { playEnglish, type PlaybackResult } from '../services/audio';
 import { GameCard } from './GameCard';
 import { ArcadePairs } from './ArcadePairs';
+import { readArcadeCalm } from '../domain/arcadeCadence';
+import { ArcadeClock } from './ArcadeClock';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'played', source: 'browser' })), playSpanish: vi.fn(), playSnap: vi.fn(), stopSpeech: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -45,6 +47,37 @@ beforeEach(() => {
   for (const word of previewUnit.words) recordWordRecall(user, word, 'hesitant', new Date(), 'recognition', undefined, true);
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('cuenta solo tras escuchar; caducar conserva omisión neutral, memoria y modelo hasta deslizar', async () => {
+  let finish!: (result: PlaybackResult) => void;
+  vi.mocked(playEnglish).mockImplementationOnce((_word, _url, _wait, started) => { started?.('kokoro'); return new Promise((resolve) => { finish = resolve; }); });
+  await mount();
+  const memories = readWordMemories(user), attempts = readAttempts(user);
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  await act(async () => { vi.advanceTimersByTime(30000); });
+  expect(readLearningActivities(user)).toEqual([]);
+  expect(tree.root.findAllByType(ArcadeClock)).toHaveLength(0);
+  await act(async () => finish({ status: 'played', source: 'kokoro' }));
+  expect(tree.root.findByType(ArcadeClock).props.remaining).toBe(10000);
+  await act(async () => { vi.advanceTimersByTime(10050); });
+  expect(readLearningActivities(user).filter((entry) => entry.source === 'learner')).toMatchObject([{ correct: null }]);
+  expect(readWordMemories(user)).toEqual(memories); expect(readAttempts(user)).toEqual(attempts);
+  expect(tree.root.findByType(GameCard).props.feedback).toBe('model');
+  await act(async () => { vi.advanceTimersByTime(30000); });
+  expect(readLearningActivities(user).filter((entry) => entry.source === 'learner')).toHaveLength(1);
+  expect(button('Seguir con ayuda')).toBeDefined();
+});
+it('sin reloj se mantiene entre sesiones y nunca caduca una pregunta preparada', async () => {
+  await mount();
+  await act(async () => button('Jugar sin cuenta atrás').props.onClick());
+  expect(readArcadeCalm(user)).toBe(true);
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  await act(async () => { vi.advanceTimersByTime(30000); });
+  expect(readLearningActivities(user)).toEqual([]);
+  act(() => tree.unmount()); await mount();
+  expect(button('Jugar sin cuenta atrás').props['aria-pressed']).toBe(true);
+  expect(tree.root.findAllByType(ArcadeClock)).toHaveLength(0);
+});
 
 it('parejas conserva la respuesta real, error y ayuda, y exige completar el tablero para seguir', async () => {
   await mount(previewUnit, 0);
