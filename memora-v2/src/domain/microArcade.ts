@@ -4,6 +4,7 @@ import { readLearningActivities } from './learningActivity';
 import type { LearningActivity } from './learningActivity';
 import type { WordMemory } from './memory';
 import type { UnitSummary } from '../services/directus';
+import { normalizeSentenceAnswer } from './sentenceAnswer';
 
 export function arcadeCandidateIds(units: readonly UnitSummary[], memories: readonly WordMemory[], activities: readonly LearningActivity[], currentId?: string, now = Date.now()): string[] {
   const byWord = new Map(memories.map((memory) => [memory.key, memory]));
@@ -21,6 +22,20 @@ export function arcadeCandidateIds(units: readonly UnitSummary[], memories: read
 }
 
 export interface MicroRound { unit: AtomicUnit; word: AtomicWord; phrase: { en: string; es: string; key: string }; options: string[]; due: boolean; pendingModel?: boolean }
+/** Only already eligible words with distinct meanings; never import catalogue distractors. */
+export function arcadePairs(candidates: MicroRound[], start: number): MicroRound[] {
+  const selected: MicroRound[] = [];
+  const english = new Set<string>(), meanings = new Set<string>();
+  for (let step = 0; step < candidates.length; step++) {
+    const round = candidates[(start + step) % candidates.length];
+    const en = normalizeSentenceAnswer(round.word.en);
+    const es = normalizeSentenceAnswer(round.word.es);
+    if (round.pendingModel || english.has(en) || meanings.has(es)) continue;
+    selected.push(round); english.add(en); meanings.add(es);
+    if (selected.length === 3) break;
+  }
+  return selected.length >= 2 ? selected : [];
+}
 /** Real prior exposure is required. A catalogue entry/completion flag is not proof. */
 export function microRounds(userId: string, units: AtomicUnit[], now = Date.now()): MicroRound[] {
   const words = readWordMemories(userId);

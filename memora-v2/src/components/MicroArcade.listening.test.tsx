@@ -9,6 +9,7 @@ import { readAttempts } from '../domain/learningProfile';
 import { recordActiveWordAttempt } from '../domain/activeRecall';
 import { playEnglish, type PlaybackResult } from '../services/audio';
 import { GameCard } from './GameCard';
+import { ArcadePairs } from './ArcadePairs';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'played', source: 'browser' })), playSpanish: vi.fn(), playSnap: vi.fn(), stopSpeech: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -17,6 +18,15 @@ let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const button = (label: string) => tree.root.findAllByType('button').find((node) => (node.props['aria-label'] ?? text(node).trim()) === label)!;
 const region = () => tree.root.findByProps({ role: 'region' });
+function pairTile(side: 'en' | 'es', value: string) {
+  return tree.root.findByProps({ 'aria-label': side === 'en' ? 'Palabras inglesas' : 'Significados en español' }).findAllByType('button').find((node) => text(node.findAllByType('span')[0]) === value)!;
+}
+async function connectPairs() {
+  for (const round of tree.root.findByType(ArcadePairs).props.rounds) {
+    await act(async () => pairTile('en', round.word.en).props.onClick());
+    await act(async () => pairTile('es', round.word.es).props.onClick());
+  }
+}
 async function swipe() {
   const event = { target: { closest: () => null }, currentTarget: { scrollTop: 0, scrollHeight: 600, clientHeight: 600 } };
   await act(async () => {
@@ -35,6 +45,28 @@ beforeEach(() => {
   for (const word of previewUnit.words) recordWordRecall(user, word, 'hesitant', new Date(), 'recognition', undefined, true);
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('parejas conserva la respuesta real, error y ayuda, y exige completar el tablero para seguir', async () => {
+  await mount(previewUnit, 0);
+  const rounds = tree.root.findByType(ArcadePairs).props.rounds;
+  const [target, other] = rounds;
+  await act(async () => pairTile('en', target.word.en).props.onClick());
+  await swipe();
+  expect(readLearningActivities(user)).toEqual([]);
+  expect(button('Siguiente reto')).toBeUndefined();
+  await act(async () => pairTile('es', other.word.es).props.onClick());
+  expect(readLearningActivities(user)).toMatchObject([{ prompt: target.word.en, response: other.word.es, expected: target.word.es, correct: false, helped: true, modality: 'choice' }]);
+  const memory = readWordMemories(user).find((item) => item.key === target.word.en.toLowerCase())!;
+  expect(memory.capabilities?.recall).toBeUndefined();
+  await act(async () => button('Ver conexiones').props.onClick());
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(1);
+  expect(readLearningActivities(user).filter((event) => event.source === 'authored')).toHaveLength(rounds.length - 1);
+  expect(button('Siguiente reto')).toBeDefined();
+  const before = readLearningActivities(user);
+  await swipe();
+  expect(button('🔊 Reproducir palabra inglesa')).toBeDefined();
+  expect(readLearningActivities(user)).toEqual(before);
+});
 
 it('el acierto se confirma donde se eligió, sin sustituir el reto ni reiniciar el slide', async () => {
   const target = microRounds(user, [previewUnit])[1].word;
@@ -57,7 +89,7 @@ it('el acierto se confirma donde se eligió, sin sustituir el reto ni reiniciar 
 });
 it.each([0, 2])('opciones y escritura conservan su superficie tras acertar en ronda %s', async (index) => {
   const target = microRounds(user, [previewUnit])[index].word;
-  await mount(previewUnit, index);
+  await mount(index === 0 ? { ...previewUnit, words: [target] } : previewUnit, index);
   const stepKey = tree.root.findByType(GameCard).props.stepKey;
   const control = index === 2 ? tree.root.findByType('input') : button(target.en);
   if (index === 2) {
@@ -264,9 +296,9 @@ it('enlaza elegir, escuchar y escribir deslizando, sin saltar preguntas ni resul
   await swipe();
   expect(readLearningActivities(user)).toHaveLength(0);
   expect(button(rounds[0].word.en)).toBeDefined();
-  await act(async () => button(rounds[0].word.en).props.onClick());
+  await connectPairs();
   await act(async () => { vi.advanceTimersByTime(60000); });
-  expect(text(tree.toJSON())).toContain('Acertaste');
+  expect(text(tree.toJSON())).toContain('Conexiones listas');
   await swipe();
   expect(button('🔊 Reproducir palabra inglesa')).toBeDefined();
   await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
@@ -280,13 +312,15 @@ it('enlaza elegir, escuchar y escribir deslizando, sin saltar preguntas ni resul
   await act(async () => { vi.advanceTimersByTime(10000); });
   expect(exit).toHaveBeenCalledOnce();
   expect(readAttempts(user).slice(-3).map((attempt) => attempt.direction)).toEqual(['recognition', 'auditory', 'recall']);
-  expect(readLearningActivities(user)).toHaveLength(3);
+  expect(readLearningActivities(user)).toHaveLength(5);
 });
 it('el error espera ayuda sin saltar al siguiente reto y conserva el primer intento', async () => {
   const rounds = microRounds(user, [previewUnit]);
-  await mount(previewUnit, 0);
-  const wrong = previewUnit.words.find((word) => word.en !== rounds[0].word.en)!;
-  await act(async () => button(wrong.en).props.onClick());
+  await mount(previewUnit, 1);
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  const target = rounds[1].word;
+  const incorrect = previewUnit.words.find((word) => word.en !== target.en)!;
+  await act(async () => button(incorrect.es).props.onClick());
   const before = readLearningActivities(user);
   await act(async () => { vi.advanceTimersByTime(60000); });
   expect(readLearningActivities(user)).toEqual(before);
@@ -294,7 +328,7 @@ it('el error espera ayuda sin saltar al siguiente reto y conserva el primer inte
   expect(button('Seguir con ayuda')).toBeDefined();
   expect(button('🔊 Reproducir palabra inglesa')).toBeUndefined();
   await swipe();
-  expect(button('🔊 Reproducir palabra inglesa')).toBeDefined();
+  expect(tree.root.findByType('input').props.disabled).toBe(false);
   expect(readLearningActivities(user)).toEqual(before);
 });
 it('una palabra pendiente de preparación conserva la pausa incluso después de acertar', async () => {
@@ -312,14 +346,13 @@ it('una palabra pendiente de preparación conserva la pausa incluso después de 
   expect(exit).toHaveBeenCalledOnce();
 });
 it('pausar retira el avance por gesto sin borrar el acierto y reanudar recupera el mismo resultado', async () => {
-  const rounds = microRounds(user, [previewUnit]);
   await mount(previewUnit, 0);
-  await act(async () => button(rounds[0].word.en).props.onClick());
+  await connectPairs();
   const before = readLearningActivities(user);
   await act(async () => button('Pausar').props.onClick());
   expect(button('Siguiente reto')).toBeUndefined();
   await swipe();
-  expect(text(tree.toJSON())).toContain('Acertaste');
+  expect(text(tree.toJSON())).toContain('Conexiones listas');
   await act(async () => button('Reanudar').props.onClick());
   expect(button('Siguiente reto')).toBeDefined();
   await swipe();

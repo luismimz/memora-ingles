@@ -1,6 +1,7 @@
 import { AnswerStudio } from './AnswerStudio';
 import { useEffect, useRef, useState } from 'react';
-import { microRounds, type MicroRound } from '../domain/microArcade';
+import { arcadePairs, microRounds, type MicroRound } from '../domain/microArcade';
+import { ArcadePairs } from './ArcadePairs';
 import { commitMicroAttempt } from '../domain/microArcadeProgress';
 import { recordLearningActivity } from '../domain/learningActivity';
 import type { AtomicUnit } from '../domain/unit';
@@ -36,11 +37,13 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const auditoryMode = useRef(false);
   const writing = index % 3 === 2 && !showChoices;
   const answered = useRef(false);
-  const [result, setResult] = useState<'correct' | 'rescue' | null>(null);
+  const [result, setResult] = useState<'correct' | 'rescue' | 'paired' | null>(null);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [choiceSeed] = useState(() => Math.floor(Math.random() * 100000));
   const previous = useRef<string>();
   const round: MicroRound | undefined = candidates[index % candidates.length];
+  const pairs = index % 3 === 0 && !showChoices && !round?.pendingModel ? arcadePairs(candidates, index) : [];
+  const paired = useRef(new Set<string>());
   const meanings = new Map<string, MicroRound>();
   const sound = (word: MicroRound['word']) => word.ipa?.replace(/[\/\[\]\sˈˌ]/gu, '').toLocaleLowerCase('en');
   const targetSound = round && sound(round.word);
@@ -112,6 +115,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     stopSpeech();
     audioRequest.current++; setAudioStatus('idle');
     answered.current = false; setResult(null);
+    paired.current.clear();
     setIndex((value) => value + 1);
     setInput(''); setShowChoices(false);
     setRevealed(false);
@@ -145,7 +149,18 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
       </div>
     </header>
     <section className="game-stage"><GameCard vertical stepKey={`${index}:${result === 'rescue' ? 'rescue' : 'challenge'}:${clock.checkpoint}`} onAdvance={clock.checkpoint ? onExit : canContinue ? clock.advanceNow : undefined} advanceLabel={clock.checkpoint ? 'Volver al recorrido' : nextLabel} className="arcade-stream-card recall-calm">
-    {clock.checkpoint ? <ArcadeCheckpoint inFeed onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : result === 'rescue' ? reminder : <div className="recall-content arcade-challenge">
+    {clock.checkpoint ? <ArcadeCheckpoint inFeed onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : pairs.length ? <ArcadePairs key={index} rounds={pairs} seed={choiceSeed + index} paused={clock.paused} onPair={(target, answer, correct) => {
+      const key = target.word.en;
+      if (paired.current.has(key) || clock.paused) return;
+      paired.current.add(key);
+      if (!inspection) commitMicroAttempt(userId, target, 'word', answer.word.en, correct, true, true, crypto.randomUUID(), `${sessionId}:${index}:pair:${key}`, undefined, undefined, { selectedMeaning: answer.word.es });
+      if (correct) playSnap();
+    }} onModel={(target) => {
+      const key = target.word.en;
+      if (paired.current.has(key) || clock.paused) return;
+      paired.current.add(key);
+      if (!inspection) recordLearningActivity(userId, { unitId: target.unit.id, unitTitle: target.unit.title, contentVersion: target.unit.contentVersion ?? '1', activityId: `micro:${sessionId}:${index}:pair-model:${key}`, skill: key, phase: 'arcade', source: 'authored', modality: 'choice', prompt: target.word.es, response: key, expected: key, correct: null, helped: true });
+    }} onComplete={() => { answered.current = true; setRevealed(true); setResult('paired'); }} /> : result === 'rescue' ? reminder : <div className="recall-content arcade-challenge">
       <p className="eyebrow">{listening ? 'ESCUCHA Y CONECTA' : writing ? 'SIN OPCIONES' : 'RECUERDA'} · {automatic ? index - startRound + 1 : index % 15 + 1}/{automatic ? limit : 15}</p>
       {round?.pendingModel ? <p role="status">Primero la practicamos sin reloj · sin prisas</p> : null}
       {!writing && !listening && !isAssociationRejected(userId, round.word) ? <SceneVisual word={round.word} hideAnswer /> : null}{!writing ? <h1>{result === 'correct' ? 'Conexión correcta' : listening ? 'Escucha y elige lo que significa.' : <>¿Cómo se dice <em>{round.word.es}</em>?</>}</h1> : null}
