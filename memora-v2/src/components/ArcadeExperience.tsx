@@ -5,6 +5,7 @@ import { readWordMemories, recordChunkExposure, recordSentenceExposure } from '.
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
 import { MicroArcade } from './MicroArcade';
+import { canReusePiecePreparation, piecePreparationKey } from '../domain/piecePreparation';
 import { SentenceBuilderCard } from './SentenceBuilderCard';
 import { ConversationPractice } from './ConversationPractice';
 import { GameCard } from './GameCard';
@@ -69,6 +70,7 @@ export function ArcadeExperience({ userId, units: sourceUnits, inspection, onExi
   const [mixed, setMixed] = useState(false);
   const [selected, setSelected] = useState<AtomicUnit>(() => (inspection ? units.filter((unit) => unit.communication?.dialogue) : eligibleMixedUnits(userId, units))[0]);
   const [filled, setFilled] = useState(0);
+  const [preparationHelp, setPreparationHelp] = useState(false);
   const [sessionId] = useState(() => crypto.randomUUID());
   const previous = useRef<string>();
   const completedRounds = useRef(0);
@@ -80,13 +82,13 @@ export function ArcadeExperience({ userId, units: sourceUnits, inspection, onExi
     if (completed % 5 || completed % 15 === 0 || !grammarUnits.length || mixed) return;
     setStage((current) => current === 'grammar' ? 'associations' : 'grammar');
   }
-  const anotherRound = () => { const index = available.findIndex((unit) => unit.id === selected?.id); setSelected(available[(index + 1) % available.length]); setFilled(0); previous.current = undefined; setStage('associations'); };
+  const anotherRound = () => { const index = available.findIndex((unit) => unit.id === selected?.id); setSelected(available[(index + 1) % available.length]); setFilled(0); setPreparationHelp(false); previous.current = undefined; setStage('associations'); };
   if (stage === 'grammar') return <ArcadeDialog onExit={onExit}><GrammarArcade units={grammarUnits} userId={userId} inspection={inspection} onExit={onExit} onWords={() => setStage('associations')} initialRound={completedRounds.current} onRoundAdvance={advanceRound} automatic={automatic} /></ArcadeDialog>;
   if (stage === 'associations') return <MicroArcade userId={userId} units={mixed && selected ? [selected] : units} inspection={inspection} onExit={onExit} onUse={mixed && selected ? () => setStage('build') : undefined} onOnlyWords={mixed && selected ? () => setMixed(false) : undefined} onMix={!automatic && !mixed && selected ? () => setMixed(true) : undefined} onGrammar={!automatic && grammarUnits.length ? () => setStage('grammar') : undefined} initialRound={completedRounds.current} onRoundAdvance={advanceRound} automatic={automatic} />;
-  if (stage === 'build' && selected) return <ArcadeDialog onExit={onExit}><SentenceBuilderCard vertical sentence={selected.sentence} sceneWord={selected.words[0]} processForm={getPlayableGrammar(selected)[0]} index={0} total={1} filledSlots={filled} choiceSeed={1} onAttempt={(choice, correct, slotIndex) => {
-    if (!inspection) { const slot = selected.sentence.slots[slotIndex]; const attempt = recordLearningActivity(userId, { unitId: selected.id, unitTitle: selected.title, contentVersion: selected.contentVersion ?? '1', activityId: `micro:${sessionId}:build:${slotIndex}`, skill: selected.grammar[0].id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, parentAttemptId: previous.current, feedback: correct ? 'Pieza recuperada con opciones.' : 'Compara las piezas y prueba otra vez.' }); previous.current = correct ? undefined : attempt.id; }
+  if (stage === 'build' && selected) return <ArcadeDialog onExit={onExit}><SentenceBuilderCard vertical compactPreparation={!inspection && canReusePiecePreparation(readLearningActivities(userId), selected.sentence.slots[filled], getPlayableGrammar(selected)[0])} onPreparationReview={() => setPreparationHelp(true)} sentence={selected.sentence} sceneWord={selected.words[0]} processForm={getPlayableGrammar(selected)[0]} index={0} total={1} filledSlots={filled} choiceSeed={1} onAttempt={(choice, correct, slotIndex) => {
+    if (!inspection) { const slot = selected.sentence.slots[slotIndex]; const attempt = recordLearningActivity(userId, { unitId: selected.id, unitTitle: selected.title, contentVersion: selected.contentVersion ?? '1', activityId: `micro:${sessionId}:build:${slotIndex}`, skill: selected.grammar[0].id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, pieceSignature: piecePreparationKey(slot, getPlayableGrammar(selected)[0]), parentAttemptId: previous.current, feedback: correct ? 'Pieza recuperada con opciones.' : 'Compara las piezas y prueba otra vez.' }); previous.current = correct ? undefined : attempt.id; }
   }} onPick={() => { if (!inspection) { recordChunkExposure(userId, selected.id, selected.sentence, filled); if (filled === selected.sentence.slots.length - 1) recordSentenceExposure(userId, selected.id, selected.sentence); } setFilled((value) => value + 1); }} onNext={() => setStage('chat')} /></ArcadeDialog>;
-  if (stage === 'chat' && selected) return <ArcadeDialog onExit={onExit}><ConversationPractice vertical unit={selected} userId={userId} reviewMode={inspection} checkpointScope={`arcade:${sessionId}`} onContinue={anotherRound} /></ArcadeDialog>;
+  if (stage === 'chat' && selected) return <ArcadeDialog onExit={onExit}><ConversationPractice vertical initialHelped={preparationHelp} unit={selected} userId={userId} reviewMode={inspection} checkpointScope={`arcade:${sessionId}`} onContinue={anotherRound} /></ArcadeDialog>;
   return <ArcadeDialog onExit={onExit}><GameCard vertical onAdvance={onExit} advanceLabel="Volver donde estaba" className="micro-card"><div className="micro-content"><h1>Esta escena no está disponible.</h1>{inspection ? <small>Demostración · no guarda progreso</small> : null}
   </div></GameCard></ArcadeDialog>;
 }

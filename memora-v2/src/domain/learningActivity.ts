@@ -15,6 +15,8 @@ export interface LearningActivity {
   responseLanguage?: 'en' | 'es'; promptLanguage?: 'en' | 'es';
   /** Exact taught association for a neutral model consultation; never a mastery flag. */
   wordSnapshot?: Pick<AtomicWord, 'en' | 'es' | 'bridge' | 'scene' | 'associationId' | 'associationVersion'>;
+  /** Exact prepared correspondence actually selected; never a mastery flag. */
+  pieceSignature?: string;
 }
 export function readLearningActivities(userId: string): LearningActivity[] {
   try { const records = JSON.parse(progressStorage().getItem(`memora-v2.learning.${userId}`) || '[]'); return Array.isArray(records) ? records : []; } catch { return []; }

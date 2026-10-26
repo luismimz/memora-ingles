@@ -8,7 +8,8 @@ import { ConversationPractice } from './ConversationPractice';
 import { GrammarOrder } from './GrammarOrder';
 import { GrammarCoach } from './GrammarCoach';
 import { grammarTricks, trickStop } from '../domain/journeyTricks';
-import { readLearningActivities } from '../domain/learningActivity';
+import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
+import { piecePreparationKey } from '../domain/piecePreparation';
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { readSentenceMemories, readWordMemories, recordWordRecall } from '../domain/memory';
 import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
@@ -68,6 +69,23 @@ beforeEach(() => {
   recordWordRecall(user, unit.words[0], 'hesitant', new Date(), 'recognition', undefined, true);
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('el episodio acepta preparación abreviada solo de pieza exacta y conserva la consulta como ayuda al chat', async () => {
+  const slot = { ...unit.sentence.slots[1], preparation: [{ en: 'am', es: 'estoy', explanation: 'En este mensaje, I AM cuenta lo que estoy haciendo.' }] };
+  const value = { ...unit, sentence: { ...unit.sentence, slots: unit.sentence.slots.map((item, index) => index === 1 ? slot : item) } };
+  await reachBuild(value);
+  recordLearningActivity(user, { unitId: 'prior-isolated', unitTitle: 'Synthetic prior piece', contentVersion: 'test', activityId: 'build-0-1', skill: 'ing', phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: slot.en, expected: slot.en, correct: true, helped: true, pieceSignature: piecePreparationKey(slot, value.grammar[0]) });
+  await act(async () => tree.root.findByProps({ className: 'slot-options' }).findAllByType('button').find((node) => node.props.children === 'I')!.props.onClick());
+  expect(tree.root.findByType(SentenceBuilderCard).props.compactPreparation).toBe(true);
+  const help = tree.root.findByProps({ className: 'familiar-piece' }).findByType('details');
+  await act(async () => help.props.onToggle({ currentTarget: { open: true } }));
+  expect(checkpoint()?.continuation?.modelUsed).toBe(true);
+  await act(async () => tree.root.findByProps({ className: 'slot-options' }).findAllByType('button').find((node) => node.props.children === 'am')!.props.onClick());
+  expect(checkpoint()?.continuation?.filledSlots).toBe(2);
+  await act(async () => tree.root.findByProps({ className: 'slot-options' }).findAllByType('button').find((node) => node.props.children === 'playing.')!.props.onClick());
+  await advance();
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(true);
+});
 
 it('entregar una ficha a escena registra el primer error, reanuda y corrige sin borrar ayuda ni duplicar intento', async () => {
   const boxes = new Map<string, { left: number; top: number; right: number; bottom: number }>();
@@ -377,8 +395,14 @@ it('reanuda la preparación de una pieza y reinicia solo al pasar a la pieza sig
     await mount(value);
     expect(tree.root.findByType(SentenceBuilderCard).props.preparationStep).toBe(0);
     expect(checkpoint()?.continuation?.filledSlots).toBe(1);
-    await advance();
-    expect(checkpoint()?.continuation?.preparationStep).toBe(1);
+    if (preparationStep === undefined) {
+      expect(tree.root.findByType(SentenceBuilderCard).props.compactPreparation).toBe(true);
+      expect(tree.root.findAllByProps({ className: 'slot-preparation' })).toHaveLength(0);
+    } else {
+      expect(tree.root.findByType(SentenceBuilderCard).props.compactPreparation).toBe(false);
+      await advance();
+      expect(checkpoint()?.continuation?.preparationStep).toBe(1);
+    }
     expect(learner()).toEqual(after);
   }
 });

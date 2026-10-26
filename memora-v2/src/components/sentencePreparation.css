@@ -8,3 +8,11 @@
 .builder-finish { gap: 12px; padding-top: 12px; text-align: center; }
 .builder-finish p { margin: 0; font-size: .95rem; font-weight: 600; line-height: 1.5; }
 .builder-finish small { color: var(--muted); font-weight: 450; line-height: 1.45; }
+.familiar-piece { width: 100%; }
+.familiar-model { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; font-size: 1.2rem; }
+.familiar-piece strong { color: var(--accent-ink); }
+.familiar-piece details { width: 100%; font-size: .85rem; color: var(--muted); }
+.familiar-piece summary { min-height: 44px; display: grid; align-items: center; text-align: center; cursor: pointer; }
+.familiar-piece details[open] { padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-soft); }
+.familiar-piece ol { padding-left: 20px; }
+.familiar-piece li > p:first-child { display: flex; flex-wrap: wrap; gap: 12px; color: var(--ink); }

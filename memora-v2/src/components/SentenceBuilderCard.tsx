@@ -15,7 +15,7 @@ function showProcess(text: string, word: string, stem: string, ending: string): 
   return <>{text.slice(0, position)}<span className="builder-process"><span className="morph-root">{stem}</span><span className="morph-intent">{ending}</span></span>{text.slice(position + word.length)}</>;
 }
 
-export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, processForm, index, total, filledSlots, choiceSeed, onPick, onNext, onAttempt, preparationStep: savedPreparationStep, onPreparationChange, needsModel = false, lastIncorrectChoice, onAcceptModel, vertical = false, grammarHelp }: {
+export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, processForm, index, total, filledSlots, choiceSeed, onPick, onNext, onAttempt, preparationStep: savedPreparationStep, onPreparationChange, needsModel = false, lastIncorrectChoice, onAcceptModel, vertical = false, grammarHelp, compactPreparation = false, onPreparationReview }: {
   sentence: UnitSentence;
   vocabulary?: readonly AtomicWord[];
   sceneWord: AtomicWord;
@@ -30,6 +30,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   needsModel?: boolean; lastIncorrectChoice?: string; onAcceptModel?: () => void; vertical?: boolean;
   preparationStep?: number;
   onPreparationChange?: (step: number) => void; grammarHelp?: ReactNode;
+  compactPreparation?: boolean; onPreparationReview?: () => void;
 }) {
   const [wrongChoice, setWrongChoice] = useState<string | null>(null);
   const [lastError, setLastError] = useState<{ slot: number; choice: string } | null>(null);
@@ -47,7 +48,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const preparationIndex = savedPreparationStep !== undefined
     ? Number.isInteger(savedPreparationStep) && savedPreparationStep >= 0 && savedPreparationStep <= (active?.preparation?.length ?? 0) ? savedPreparationStep : 0
     : preparation.slot === filledSlots ? preparation.step : 0;
-  const preparationStep = active?.preparation?.[preparationIndex];
+  const preparationStep = compactPreparation ? undefined : active?.preparation?.[preparationIndex];
   const options = active && (choiceSeed + filledSlots) % 2 ? [...active.choices].reverse() : active?.choices;
   const listenToSentence = () => playback.listen(sentence.en);
   useEffect(() => {
@@ -105,7 +106,9 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         if (active.choices.includes(choice)) choose(choice);
       }}>
         <div className="builder-target"><small>Coloca en inglés</small><h2 lang="es">{active.es}</h2></div>
-        {active.note ? <p className="builder-note">{active.note}</p> : null}
+        {compactPreparation && active.preparation?.length ? <div className="familiar-piece">
+          <details onToggle={(event) => { if (event.currentTarget.open) onPreparationReview?.(); }}><summary>Recordar cómo se forma</summary><p className="familiar-model"><span lang="es">{active.es}</span><span aria-hidden="true">→</span><strong lang="en">{active.en}</strong></p><SpeechModelButton key={`${index}:${filledSlots}:familiar`} text={active.en} label="Escuchar esta pieza" /><ol>{active.preparation.map((step, position) => <li key={position}><p><span lang="es">{step.es}</span><span lang="en">{step.en}</span></p><p>{step.explanation}</p></li>)}</ol></details>
+        </div> : active.note ? <p className="builder-note">{active.note}</p> : null}
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
         <div className="slot-options">{options?.map((choice) => <button type="button" key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>
       </div> : <div className="builder-finish" aria-live="polite">

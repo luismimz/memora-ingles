@@ -2,6 +2,8 @@ import { beforeEach, describe, it, expect, vi } from 'vitest';
 import { appendProgress, initializeJournal, readJournal, writeJournal } from './progressJournal';
 import { recordLearningActivity } from './learningActivity';
 import { restoreProgress } from './restoreProgress';
+import { preparedFixture } from '../test/grammarPracticeFixtures';
+import { canReusePiecePreparation, piecePreparationKey } from './piecePreparation';
 
 describe('diario de intentos sin sobrescrituras', () => {
   beforeEach(() => {
@@ -9,6 +11,16 @@ describe('diario de intentos sin sobrescrituras', () => {
     vi.stubGlobal('localStorage', { getItem: (key: string) => local.get(key) ?? null, setItem: (key: string, value: string) => local.set(key, value), key: (index: number) => [...local.keys()][index] ?? null, get length() { return local.size; } });
     vi.stubGlobal('sessionStorage', { getItem: (key: string) => session.get(key) ?? null, setItem: (key: string, value: string) => session.set(key, value) });
     initializeJournal('learner');
+  });
+  it('reconstruye la correspondencia practicada sin duplicar intentos ni fabricar dominio', () => {
+    const slot = preparedFixture.sentence.slots[1], form = preparedFixture.grammar[0];
+    recordLearningActivity('learner', { unitId: 'synthetic', unitTitle: 'Test', contentVersion: 'test', activityId: 'piece', skill: form.id, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: slot.en, expected: slot.en, correct: true, helped: true, pieceSignature: piecePreparationKey(slot, form) });
+    const events = readJournal('learner')!.events;
+    const restored = restoreProgress('learner', [...events, ...events]);
+    const records = JSON.parse(restored.get('memora-v2.learning.learner')!);
+    expect(records).toHaveLength(1);
+    expect(records[0].helped).toBe(true);
+    expect(canReusePiecePreparation(records, slot, form)).toBe(true);
   });
   it('un guardado antiguo no borra el intento nuevo de otra pestaña', () => {
     const before = readJournal('learner')!;

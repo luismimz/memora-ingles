@@ -17,6 +17,7 @@ import { readWordMemories, recordChunkExposure, recordSentenceExposure } from '.
 import { preparedGrammarContinuation, preparedActionPractice } from '../domain/grammarContinuation';
 import { conversationPracticeAnswers, demonstratedConversationQuestionSkills } from '../domain/conversation';
 import { constructionFeedback } from '../domain/sentenceConstruction';
+import { canReusePiecePreparation, piecePreparationKey } from '../domain/piecePreparation';
 import { SentenceBuilderCard } from './SentenceBuilderCard';
 import { ConversationPractice } from './ConversationPractice';
 import { GrammarOrder } from './GrammarOrder';
@@ -96,7 +97,8 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
   const unavailable = Boolean(!checkpoint && !authoredPractice && (searchKeysLesson(unit, trick.formId) || bedMakingLesson(unit, trick.formId) || meatCookingLesson(unit, trick.formId)) || checkpoint?.episodeId && !episode || continuation && (!episode || !sentence || continuation.filledSlots > sentence.slots.length || continuation.phase === 'conversation' && continuation.filledSlots !== sentence.slots.length || puzzlePieces && continuation.order?.some((index) => index >= puzzlePieces.length)));
   const chatAnswers = episode ? conversationPracticeAnswers(episodeUnit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : [];
   const slotKey = continuation ? `${continuation.phase}:${continuation.sentenceIndex}:${continuation.filledSlots}` : 'coach';
-  const preparationLength = sentence?.slots[continuation?.filledSlots ?? 0]?.preparation?.length ?? 0;
+  const compactPreparation = !inspection && !continuation?.preparationStep && canReusePiecePreparation(readLearningActivities(userId), sentence?.slots[continuation?.filledSlots ?? 0], form);
+  const preparationLength = compactPreparation ? 0 : sentence?.slots[continuation?.filledSlots ?? 0]?.preparation?.length ?? 0;
   const savedPreparation = continuation?.preparationStep ?? 0;
   const preparationStep = Number.isInteger(savedPreparation) && savedPreparation >= 0 && savedPreparation <= preparationLength ? savedPreparation : 0;
   const modelAid = useRef(Boolean(continuation?.modelUsed));
@@ -144,7 +146,7 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
     guard.current.failures = correct ? 0 : guard.current.failures + 1;
     if (!inspection) {
       const slot = sentence.slots[slotIndex];
-      const attempt = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `trick-build:${trick.formId}:${continuation.sentenceIndex}:${slotIndex}`, skill: trick.skill, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, parentAttemptId: previousConstruction.current, feedback: constructionFeedback(sentence, slotIndex, choice, unit.words) });
+      const attempt = recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `trick-build:${trick.formId}:${continuation.sentenceIndex}:${slotIndex}`, skill: trick.skill, phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: choice, expected: slot.en, correct, helped: true, pieceSignature: piecePreparationKey(slot, form), parentAttemptId: previousConstruction.current, feedback: constructionFeedback(sentence, slotIndex, choice, unit.words) });
       previousConstruction.current = correct ? undefined : attempt.id;
     }
     saveContinuation({ ...continuation, failures: guard.current.failures, previousAttempt: previousConstruction.current });
@@ -260,7 +262,7 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
           <div className="builder-grammar-help"><button ref={reminder.trigger} type="button" className="quiet-action" onClick={recallConstructionGrammar}>Recordar el truco</button></div>
         </div>
       </GameCard>
-      : continuation?.phase === 'build' && form ? <SentenceBuilderCard grammarHelp={lesson ? <button ref={reminder.trigger} type="button" className="quiet-action" onClick={recallConstructionGrammar}>Recordar el truco</button> : undefined} vertical key={`build-${continuation.sentenceIndex}`} sentence={sentence} vocabulary={unit.words} sceneWord={sceneWord} processForm={form} index={continuation.sentenceIndex} total={sentences.length} filledSlots={continuation.filledSlots} choiceSeed={continuation.sentenceIndex} preparationStep={preparationStep} onPreparationChange={prepareConstructionStep} needsModel={(continuation.failures ?? 0) >= 2} lastIncorrectChoice={lastError} onAcceptModel={() => placeSlot(true)} onAttempt={constructionAttempt} onPick={() => placeSlot()} onNext={nextBuild} />
+      : continuation?.phase === 'build' && form ? <SentenceBuilderCard compactPreparation={compactPreparation} onPreparationReview={() => { if (continuation?.phase === 'build') { modelAid.current = true; saveContinuation({ ...continuation, modelUsed: true }); } }} grammarHelp={lesson ? <button ref={reminder.trigger} type="button" className="quiet-action" onClick={recallConstructionGrammar}>Recordar el truco</button> : undefined} vertical key={`build-${continuation.sentenceIndex}`} sentence={sentence} vocabulary={unit.words} sceneWord={sceneWord} processForm={form} index={continuation.sentenceIndex} total={sentences.length} filledSlots={continuation.filledSlots} choiceSeed={continuation.sentenceIndex} preparationStep={preparationStep} onPreparationChange={prepareConstructionStep} needsModel={(continuation.failures ?? 0) >= 2} lastIncorrectChoice={lastError} onAcceptModel={() => placeSlot(true)} onAttempt={constructionAttempt} onPick={() => placeSlot()} onNext={nextBuild} />
       : <GrammarCoach lesson={lesson} form={form} sceneWord={sceneWord} startAtPractice={Boolean(practicedPattern)} startAtExample={Boolean(practicedPattern) && stream} reusePreparedSubject={reuseSubject} omitGeneratedExplanation={Boolean(practicedPattern)} conversationAnswers={chatAnswers} constructionAnswers={episode ? sentences.map((item) => item.en) : []} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} reviewMode={inspection} requirePractice schedulePractice repairLimit={2} puzzle={stream} checkpoint={checkpoint} onProgress={(state) => {
         coachState.current = { ...state, ...(episode ? { episodeId: episodeIdentity, episodeStartedAt: started.current } : {}) };
         if (!inspection && !completed.current) writeTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1', coachState.current);
