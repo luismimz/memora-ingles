@@ -1,5 +1,7 @@
 import { AnswerStudio } from './AnswerStudio';
 import { GrammarComparison } from './GrammarComparison';
+import { useSpeechPlayback } from './useSpeechPlayback';
+import { AssociationAudioStatus } from './AssociationAudioStatus';
 import { useEffect, useRef, useState } from 'react';
 import { GameCard } from './GameCard';
 import { grammarChecksForExperience, type GrammarLessonData } from '../domain/grammarLesson';
@@ -27,6 +29,14 @@ import { treeLocationSkill } from '../domain/treeLocationPractice';
 import { meatCookingSkill } from '../domain/meatCookingPractice';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
+/** Keyed to the teaching step: late audio cannot overwrite the next model's status. */
+function TeachingModelAudio({ text }: { text: string }) {
+  const playback = useSpeechPlayback();
+  return <>
+    <button type="button" className="quiet-action" aria-label="Escuchar modelo inglés" aria-busy={playback.audio?.status === 'preparing'} onClick={() => void playback.listen(text)}>🔊 {playback.label} inglés</button>
+    <AssociationAudioStatus state={playback.audio} compact />
+  </>;
+}
 export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false }: {
   lesson: GrammarLessonData; form?: GrammarForm; sceneWord?: AtomicWord; userId: string; unitId: string; unitTitle?: string; contentVersion?: string; conversationAnswers?: string[]; startAtPractice?: boolean; reviewMode: boolean; onReady: () => void; onContinue: () => void;
   checkpoint?: TrickCheckpoint | null; onProgress?: (state: TrickCheckpoint) => void; requirePractice?: boolean; schedulePractice?: boolean; omitGeneratedExplanation?: boolean;
@@ -163,7 +173,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
       {step ? <>
         <GrammarComparison step={step} previous={lesson.steps[stage - 1]} />
         <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p>
-        <div className="coach-teaching-actions">{!step.hideEnglish ? <button type="button" className="quiet-action" onClick={() => void playEnglish(step.en.map((part) => part.text).join(''))}>🔊 Escuchar inglés</button> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
+        <div className="coach-teaching-actions">{!step.hideEnglish ? <TeachingModelAudio key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
         {!stream ? <details className="coach-teaching-options"><summary>Opciones de explicación</summary><div><button type="button" className="quiet-action coach-pause" aria-pressed={paused} onClick={() => { stopSpeech(); setPaused((value) => !value); }}>{paused ? 'Reanudar explicación' : 'Pausar'}</button><button type="button" className="quiet-action" onClick={skipKnownTrick}>{requirePractice ? 'Ya lo entiendo · probarlo' : 'Ya conozco el truco · ir a la frase'}</button></div></details> : null}
       </> : !finished ? <div className={`coach-practice${writing ? ' coach-response-studio' : ''}`}>
         {!writing ? <h2>{streamSolved ? '✓ Acertaste' : situation ? 'Entrega el mensaje' : check.prompt}</h2> : null}

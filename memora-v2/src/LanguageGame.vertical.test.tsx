@@ -217,6 +217,30 @@ it('dos errores en el chat principal mantienen reparación y modelo al reabrir, 
   expect(attempts()).toHaveLength(2);
   expect(attempts().some((event) => event.correct)).toBe(false);
 });
+it('el modelo de enseñanza avisa del audio fallido, permite reintentar y no arrastra fallos al siguiente slide', async () => {
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  await swipe(false);
+  const events = readLearningActivities(user);
+  const speaker = () => tree.root.findByProps({ 'aria-label': 'Escuchar modelo inglés' });
+  let resolve!: (result: { status: 'unavailable'; source: null }) => void;
+  vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  act(() => { speaker().props.onClick(); });
+  expect(speaker().props['aria-busy']).toBe(true);
+  await act(async () => { resolve({ status: 'unavailable', source: null }); });
+  expect(text(tree.toJSON())).toContain('Audio no disponible');
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'played', source: 'kokoro' });
+  await act(async () => { speaker().props.onClick(); });
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
+  act(() => { speaker().props.onClick(); });
+  await swipe(false);
+  await act(async () => { resolve({ status: 'unavailable', source: null }); });
+  expect(speaker().props['aria-busy']).toBe(false);
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  expect(tree.root.findAllByProps({ className: 'comparison-contraction' })).toHaveLength(1);
+  expect(readLearningActivities(user)).toEqual(events);
+});
 it('repetir el cambio gramatical mantiene paso, voz, intentos y continuidad por slide', async () => {
   writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
   await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
