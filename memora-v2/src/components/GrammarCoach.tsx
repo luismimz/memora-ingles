@@ -92,7 +92,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   useEffect(() => {
     if (step || !check || !needsModel || reviewMode || shownModel.current === check.id) return;
     shownModel.current = check.id;
-    if (previousAttempt.current && readLearningActivities(userId).some((event) => event.unitId === unitId && event.contentVersion === contentVersion && event.skill === lesson.id && event.activityId === `model:${check.id}` && event.parentAttemptId === previousAttempt.current)) return;
+    if (readLearningActivities(userId).some((event) => event.unitId === unitId && event.contentVersion === contentVersion && event.skill === lesson.id && event.activityId === `model:${check.id}` && event.parentAttemptId === previousAttempt.current)) return;
     recordLearningActivity(userId, { unitId, unitTitle, contentVersion, activityId: `model:${check.id}`, skill: lesson.id, phase: 'grammar', source: 'authored', modality: 'choice', prompt: check.prompt, response: modelMessage!, expected: '', correct: null, helped: true, parentAttemptId: previousAttempt.current, feedback: 'Modelo mostrado con ayuda; no es un acierto independiente.' });
   }, [step, check, needsModel, reviewMode, modelMessage]);
   useEffect(() => {

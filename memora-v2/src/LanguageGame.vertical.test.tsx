@@ -507,6 +507,32 @@ it.each(['order-message-v1', 'meaning-now-v1', 'use'])('el acierto restaurado de
   await swipe(false);
   expect(readLearningActivities(user)).toEqual(before);
 });
+it('un rescate legado sin parentAttemptId no añade otro modelo neutral cada vez que se abre', async () => {
+  const lesson = lessonForForm(previewUnit.grammar[0], previewUnit.words.find((word) => word.en.toLowerCase() === previewUnit.grammar[0].englishBase)?.es.toLowerCase())!;
+  const check = lesson.checks[0];
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar', coach: { lessonId: lesson.id, position: { stage: lesson.steps.length, checkIndex: 0, checkId: check.id, input: '', feedback: 'help', helped: true, checkFailures: 2 } } });
+  const open = async () => { await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+  await open();
+  const before = readLearningActivities(user);
+  expect(before).toMatchObject([{ activityId: `model:${check.id}`, source: 'authored', correct: null, helped: true }]);
+  expect(before[0].parentAttemptId).toBeUndefined();
+  act(() => tree.unmount()); await open();
+  act(() => tree.unmount()); await open();
+  expect(text(tree.root.findByType('h2'))).toBe('Vamos con ayuda');
+  expect(readLearningActivities(user)).toEqual(before);
+  expect(readGrammarAttempts(user)).toHaveLength(0);
+  // A later, identified episode must not be suppressed by the unlinked legacy model.
+  act(() => tree.unmount());
+  writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await open(); for (let i = 0; i < 3; i++) await swipe(false);
+  act(() => tree.root.findByType(GrammarOrder).props.onAnswer('PLAYING I AM'));
+  act(() => tree.root.findByType(GrammarOrder).props.onAnswer('PLAYING I AM'));
+  const events = readLearningActivities(user);
+  const models = events.filter((event) => event.activityId === `model:${check.id}`);
+  expect(models).toHaveLength(2);
+  expect(models.filter((event) => event.parentAttemptId)).toHaveLength(1);
+  expect(events.filter((event) => event.source === 'learner')).toHaveLength(2);
+});
 it('reanudar la explicación elegida no vuelve a interponer el atajo de una estructura conocida', async () => {
   const value: AtomicUnit = { ...previewUnit, grammarRole: 'review' };
   const lesson = lessonForForm(value.grammar[0], value.words.find((word) => word.en.toLowerCase() === value.grammar[0].englishBase)?.es.toLowerCase())!;
