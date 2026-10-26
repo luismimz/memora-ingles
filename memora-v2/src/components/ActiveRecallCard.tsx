@@ -2,11 +2,13 @@ import { useEffect, useRef, useState } from 'react';
 import type { AtomicUnit, AtomicWord } from '../domain/unit';
 import { matchesWord, recordActiveWordAttempt, wordRecallHint } from '../domain/activeRecall';
 import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
-import { playEnglish, playSnap, stopSpeech } from '../services/audio';
+import { playSnap, stopSpeech } from '../services/audio';
 import { GameCard } from './GameCard';
 import { MnemonicSceneText, SceneVisual } from './SceneVisual';
 import './activeRecall.css';
 import { AnswerStudio } from './AnswerStudio';
+import { useSpeechPlayback } from './useSpeechPlayback';
+import { AssociationAudioStatus } from './AssociationAudioStatus';
 
 function restoreRepairs(userId: string, activityId: string, withTiming = false) {
   return (saved: Record<string, unknown>) => {
@@ -80,25 +82,13 @@ export function ActiveRecallCard({ unit, word, choices, position, userId, inspec
     { input: '', level: 0, helped: false, choosing: false, done: false, independent: false, feedback: '', parent: '', failures: 0, attemptStartedAt: Date.now() }, inspection, restoreRepairs(userId, `active-recall:${word.en}`, true));
   const locked = useRef(false);
   useEffect(() => { if (!state.done) locked.current = false; }, [state]);
-  const [audioStatus, setAudioStatus] = useState('');
+  const playback = useSpeechPlayback();
   const sceneHintLevel = useRef(state.level);
   sceneHintLevel.current = state.level;
   const helped = useRef(state.helped);
-  const audioRequest = useRef(0);
   const continued = useRef(false);
-  useEffect(() => () => { audioRequest.current++; stopSpeech(); }, []);
-  function playModel(result = false) {
-    const request = ++audioRequest.current;
-    setAudioStatus('Preparando audio…');
-    void playEnglish(word.en, word.audioUrl, true, () => {
-      if (request === audioRequest.current) setAudioStatus('Reproduciendo…');
-    }).then((playback) => {
-      if (request !== audioRequest.current) return;
-      setAudioStatus(playback.status === 'played' ? '' : result ? 'Audio no disponible · toca 🔊' : 'No se ha podido reproducir. Puedes seguir o usar otra ayuda.');
-    }).catch(() => {
-      if (request === audioRequest.current) setAudioStatus(result ? 'Audio no disponible · toca 🔊' : 'Audio no disponible. Puedes seguir o usar otra ayuda.');
-    });
-  }
+  useEffect(() => () => { playback.reset(); stopSpeech(); }, []);
+  const playModel = () => { void playback.listen(word.en, 'en', word.audioUrl); };
   function hint(kind: 'scene' | 'audio' | 'options') {
     if (state.done || locked.current || kind === 'scene' && sceneHintLevel.current >= 2) return;
     helped.current = true;
@@ -114,7 +104,7 @@ export function ActiveRecallCard({ unit, word, choices, position, userId, inspec
   function answer(response: string, mode: 'writing' | 'choice' | 'skip') {
     if (locked.current || state.done || mode !== 'skip' && !response.trim()) return;
     locked.current = true;
-    audioRequest.current++; setAudioStatus('');
+    playback.reset();
     const correct = matchesWord(word, response) && mode !== 'skip';
     const independent = correct && !helped.current && mode === 'writing';
     const failures = Math.min(2, state.failures + Number(!correct && mode !== 'skip'));
@@ -126,19 +116,19 @@ export function ActiveRecallCard({ unit, word, choices, position, userId, inspec
     if (model && !inspection) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `recall-model:${word.en}`, skill: word.en, phase: 'arcade', source: 'authored', modality: 'choice', prompt: word.es, response: word.en, expected: '', correct: null, helped: true, parentAttemptId: attempt?.id, feedback: 'Modelo tras una reparación. No cuenta como acierto; continúa y volveremos a practicar.' });
     setState((current) => ({ ...current, done: correct || mode === 'skip' || model, independent, helped: true, parent: attempt?.id ?? current.parent, failures, attemptStartedAt: answeredAt,
       level: correct ? current.level : Math.max(1, current.level), feedback: correct ? independent ? '¡Te has acordado sin pistas!' : '¡Conexión recuperada! La volveremos a probar sin apoyo.' : model ? 'Vamos con el modelo. Puedes seguir; lo practicarás de nuevo más adelante.' : mode === 'skip' ? 'Ahora la ves. Volveremos a ella en el repaso.' : `Aún no. ${wordRecallHint(word, 1)}` }));
-    if (correct || mode === 'skip') { if (correct) playSnap(); playModel(true); }
+    if (correct || mode === 'skip') { if (correct) playSnap(); playModel(); }
   }
-  const continueRecall = () => { if (!state.done || continued.current) return; continued.current = true; audioRequest.current++; stopSpeech(); clear(); onFinish(state.independent); };
+  const continueRecall = () => { if (!state.done || continued.current) return; continued.current = true; playback.reset(); stopSpeech(); clear(); onFinish(state.independent); };
   return <GameCard vertical={vertical} stepKey={state.done ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.done ? continueRecall : undefined} advanceLabel={position < unit.words.length - 1 ? 'Continuar con otra palabra' : 'Ver resultado de la tanda'} className="active-memory-card"><div className="active-memory-content">
     <p className="eyebrow">{state.done ? 'RESULTADO' : 'RECUERDA A TU RITMO'} · {position + 1}/{unit.words.length}</p>
     {state.done ? <h1>{word.es}</h1> : state.level > 0 ? <p>Recupera la palabra con esta pista.</p> : null}
     {state.feedback ? <div className="memory-feedback" role="status">{state.feedback}</div> : null}
     {!state.done && state.level > 0 ? <SceneVisual word={word} compact hideAnswer /> : null}
-    {audioStatus && (!state.done || !['Preparando audio…', 'Reproduciendo…'].includes(audioStatus)) ? <p className="memory-audio-status" role="status">{audioStatus}</p> : null}
-    {state.done ? <><strong className="memory-answer" lang="en">{word.en}</strong><SceneVisual word={word} compact /><button type="button" className="round-audio" aria-label="Escuchar palabra" aria-busy={audioStatus === 'Preparando audio…'} title={audioStatus || 'Escuchar palabra'} onClick={() => playModel(true)}>🔊</button>{!vertical ? <button type="button" className="primary-action" onClick={continueRecall}>Continuar →</button> : null}</> : <>
+    <AssociationAudioStatus compact state={playback.audio} />
+    {state.done ? <><strong className="memory-answer" lang="en">{word.en}</strong><SceneVisual word={word} compact /><button type="button" className="round-audio" aria-label="Escuchar palabra" aria-busy={playback.audio?.status === 'preparing'} title={playback.label} onClick={playModel}>🔊</button>{!vertical ? <button type="button" className="primary-action" onClick={continueRecall}>Continuar →</button> : null}</> : <>
       {state.choosing ? <><h1>{word.es}</h1><div className="memory-options">{choices.map((choice) => <button type="button" key={choice.id} onClick={() => answer(choice.en, 'choice')}>{choice.en}</button>)}</div></> : <AnswerStudio id="word-recall" taskKey={`${unit.id}:${word.id}`} target={word.es} value={state.input} onChange={(input) => setState((current) => ({ ...current, input }))} onAnswer={(value) => answer(value, 'writing')} accepts={(value) => matchesWord(word, value)} />}
       <button type="button" className="quiet-action" onClick={() => answer('', 'skip')}>Ver palabra y pasar</button>
-      <details className="memory-help"><summary>¿Necesitas ayuda?</summary><p>Puedes recuperar la historia, escuchar o elegir. Usar ayuda no es fallar.</p><div className="memory-tools"><button type="button" disabled={state.level >= 2} onClick={() => hint('scene')}>{state.level >= 2 ? 'Pista completa' : state.level === 1 ? 'Ver la inicial' : 'Recordar la historia'}</button><button type="button" onClick={() => hint('audio')}>🔊 Escuchar la palabra</button>{!state.choosing ? <button type="button" onClick={() => hint('options')}>Prefiero elegir</button> : null}</div></details>
+      <details className="memory-help"><summary>¿Necesitas ayuda?</summary><p>Puedes recuperar la historia, escuchar o elegir. Usar ayuda no es fallar.</p><div className="memory-tools"><button type="button" disabled={state.level >= 2} onClick={() => hint('scene')}>{state.level >= 2 ? 'Pista completa' : state.level === 1 ? 'Ver la inicial' : 'Recordar la historia'}</button><button type="button" aria-label="Escuchar la palabra" aria-busy={playback.audio?.status === 'preparing'} onClick={() => hint('audio')}>🔊 {playback.audio?.status === 'preparing' || playback.audio?.status === 'playing' ? playback.label : 'Escuchar la palabra'}</button>{!state.choosing ? <button type="button" onClick={() => hint('options')}>Prefiero elegir</button> : null}</div></details>
     </>}
   </div></GameCard>;
 }

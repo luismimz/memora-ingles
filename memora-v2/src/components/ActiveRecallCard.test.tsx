@@ -18,7 +18,7 @@ const user = 'help-isolated';
 const word = previewUnit.words[0];
 const finish = vi.fn();
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
-const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node) === label)!;
+const button = (label: string) => tree.root.findAllByType('button').find((node) => (node.props['aria-label'] ?? text(node)) === label)!;
 async function mount() {
   await act(async () => { tree = create(<ActiveRecallCard unit={previewUnit} word={word} choices={previewUnit.words} position={0} userId={user} inspection={false} onFinish={finish} vertical />); });
 }
@@ -74,10 +74,24 @@ it('la pista recupera la escena solo después de pedir ayuda y la conserva al vo
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
 });
 
+it.each([false, true])('cancelar audio en resultado=%s no inventa fallo ni cambia evidencia', async (result) => {
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'cancelled', source: null });
+  await mount();
+  if (result) await submit(word.en);
+  else await act(async () => button('Escuchar la palabra').props.onClick());
+  expect(text(tree.toJSON())).not.toContain('No se ha podido reproducir');
+  expect(text(tree.toJSON())).not.toContain('Audio no disponible');
+  const before = readLearningActivities(user);
+  expect(before).toHaveLength(1);
+  expect(before[0]).toMatchObject(result ? { source: 'learner', correct: true, helped: false } : { source: 'authored', correct: null, helped: true });
+  expect(finish).not.toHaveBeenCalled();
+  act(() => tree.unmount()); await mount();
+  expect(readLearningActivities(user)).toEqual(before);
+});
 it('un audio bloqueado no afirma escucha ni bloquea la práctica, y queda registrado como solicitud de ayuda', async () => {
   await mount();
-  await act(async () => { button('🔊 Escuchar la palabra').props.onClick(); });
-  expect(text(tree.toJSON())).toContain('No se ha podido reproducir');
+  await act(async () => { button('Escuchar la palabra').props.onClick(); });
+  expect(text(tree.toJSON())).toContain('Audio no disponible · toca 🔊');
   expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
   const help = readLearningActivities(user)[0];
   expect(help).toMatchObject({ correct: null, helped: true });
@@ -123,7 +137,7 @@ it('la respuesta tardía del audio no pisa un resultado ni crea evidencia al sal
   let resolve!: (result: PlaybackResult) => void;
   vi.mocked(playEnglish).mockImplementationOnce(() => new Promise((done) => { resolve = done; }));
   await mount();
-  await act(async () => { button('🔊 Escuchar la palabra').props.onClick(); });
+  await act(async () => { button('Escuchar la palabra').props.onClick(); });
   await submit(word.en);
   await act(async () => { resolve({ status: 'played', source: 'browser' }); });
   expect(text(tree.toJSON())).not.toContain('Modelo reproducido');
@@ -151,7 +165,7 @@ it('las pistas de escena tienen dos pasos reales y no repiten la misma consulta 
   await act(async () => button('Pista completa').props.onClick());
   expect(readLearningActivities(user)).toEqual(hints);
   expect(button('Ver palabra y pasar')).toBeTruthy();
-  expect(button('🔊 Escuchar la palabra').props.disabled).toBeUndefined();
+  expect(button('Escuchar la palabra').props.disabled).toBeUndefined();
   expect(finish).not.toHaveBeenCalled();
 });
 it('la pista de una expresión no cuenta espacios ni apóstrofos como letras', () => {
