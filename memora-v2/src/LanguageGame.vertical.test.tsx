@@ -67,6 +67,22 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it('rechazar un puente es visible y continúa al montaje sin volver a mostrar su escena ni acreditar práctica', async () => {
+  await mount();
+  const reject = button('Esta asociación no me ayuda');
+  expect(reject.parent!.type).not.toBe('details');
+  await act(async () => reject.props.onClick());
+  expect(tree.root.findAllByProps({ className: 'scene-visual ' })).toHaveLength(0);
+  expect(readLearningActivities(user)).toHaveLength(0);
+  await swipe(false);
+  const assembly = tree.root.findByType(WordAssembly);
+  expect(assembly.props.userId).toBe(user);
+  expect(assembly.findAllByProps({ 'aria-label': 'Recuerda la imagen aprendida' })).toHaveLength(0);
+  const before = readLearningActivities(user);
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType(WordAssembly).findAllByProps({ 'aria-label': 'Recuerda la imagen aprendida' })).toHaveLength(0);
+  expect(readLearningActivities(user)).toEqual(before);
+});
 it('una palabra nueva pasa por piezas y no se arma ni se acredita por deslizar', async () => {
   await mount(); await swipe(false);
   expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);

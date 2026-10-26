@@ -35,6 +35,24 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it('el rescate Arcade respeta el puente rechazado sin inventar un acierto ni perder el primer error', async () => {
+  const target = microRounds(user, [previewUnit])[1].word;
+  localStorage.setItem(`memora-v2.rejected-association.${user}.${target.en.toLowerCase()}`, '1');
+  await mount();
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  await act(async () => button(previewUnit.words.find((word) => word.en !== target.en)!.es).props.onClick());
+  expect(text(tree.toJSON())).not.toContain(target.bridge);
+  expect(text(tree.toJSON())).not.toContain(target.scene);
+  expect(text(tree.toJSON())).toContain(target.en);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toMatchObject([{ correct: false }]);
+  expect(button('Seguir con ayuda')).toBeDefined();
+  const before = readLearningActivities(user);
+  vi.mocked(playEnglish).mockRejectedValueOnce(new Error('offline'));
+  await act(async () => button('Escuchar').props.onClick());
+  expect(playEnglish).toHaveBeenLastCalledWith(target.en, target.audioUrl, true, expect.any(Function));
+  expect(text(tree.toJSON())).toContain('Audio no disponible');
+  expect(readLearningActivities(user)).toEqual(before);
+});
 it('escucha sin revelar la palabra, exige reproducción completada y registra capacidad auditiva con opciones', async () => {
   const target = microRounds(user, [previewUnit])[1].word;
   await mount();

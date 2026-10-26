@@ -35,6 +35,33 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
 
+it('un puente rechazado no vuelve como historia, imagen o pista de error; mantiene ayuda y memoria', async () => {
+  localStorage.setItem(`memora-v2.rejected-association.${user}.${word.en.toLowerCase()}`, '1');
+  await mount();
+  expect(button('Recordar la historia')).toBeUndefined();
+  await act(async () => button('Ver la inicial').props.onClick());
+  expect(text(tree.toJSON())).not.toContain(word.bridge);
+  expect(text(tree.toJSON())).not.toContain(word.scene);
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
+  expect(readLearningActivities(user)).toMatchObject([{ source: 'authored', correct: null, helped: true }]);
+  await submit(word.en);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
+});
+it('reabrir una pista anterior después de rechazar el puente conserva el intento sin mostrar la historia descartada', async () => {
+  await mount();
+  await act(async () => button('Recordar la historia').props.onClick());
+  const before = readLearningActivities(user);
+  act(() => tree.unmount());
+  localStorage.setItem(`memora-v2.rejected-association.${user}.${word.en.toLowerCase()}`, '1');
+  await mount();
+  expect(text(tree.toJSON())).not.toContain(word.scene);
+  expect(text(tree.toJSON())).not.toContain(word.bridge);
+  expect(text(tree.toJSON())).toContain(`Empieza por ${word.en[0]}`);
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
+  expect(readLearningActivities(user)).toEqual(before);
+  expect(finish).not.toHaveBeenCalled();
+});
 it('el menú empieza cerrado y no revela el modelo ni cambia la independencia sin pedir ayuda', async () => {
   await mount();
   expect(tree.root.findByType('summary').children).toEqual(['¿Necesitas ayuda?']);

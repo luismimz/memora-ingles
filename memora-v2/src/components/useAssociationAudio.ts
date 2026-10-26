@@ -8,7 +8,7 @@ export interface AssociationAudioState {
 }
 
 /** Audio accompanies discovery; it never gates visibility, advancement or mastery. */
-export function useAssociationAudio(word: AtomicWord, autoPlay = true) {
+export function useAssociationAudio(word: AtomicWord, autoPlay = true, narrateScene = true) {
   const [audioState, setAudioState] = useState<AssociationAudioState>({ status: 'preparing', source: null });
   const generation = useRef(0);
   const run = useCallback(async (wordOnly: boolean) => {
@@ -28,19 +28,19 @@ export function useAssociationAudio(word: AtomicWord, autoPlay = true) {
     preparing();
     const safe = (playback: Promise<PlaybackResult>) => playback.catch(() => ({ status: 'unavailable' as const, source: null }));
     const first = await safe(playEnglish(word.en.toLowerCase(), word.audioUrl, true, started));
-    if (!accept(first) || wordOnly || word.associationMode === 'cognate') return;
+    if (!accept(first) || wordOnly || !narrateScene || word.associationMode === 'cognate') return;
     preparing();
     if (!accept(await safe(playSpanish(word.scene, true, started)))) return;
     preparing();
     accept(await safe(playEnglish(word.en.toLowerCase(), word.audioUrl, true, started)));
-  }, [word.en, word.audioUrl, word.scene, word.associationMode]);
+  }, [word.en, word.audioUrl, word.scene, word.associationMode, narrateScene]);
 
   useEffect(() => {
     if (!autoPlay) return;
     void run(false);
-    if (word.associationMode !== 'cognate') prefetchSpanish(word.scene);
+    if (narrateScene && word.associationMode !== 'cognate') prefetchSpanish(word.scene);
     return () => { generation.current++; stopSpeech(); };
-  }, [run, word.associationMode, word.scene, autoPlay]);
+  }, [run, word.associationMode, word.scene, autoPlay, narrateScene]);
 
   // AssociationCard stays mounted while its word assembly replaces the scene.
   // Invalidate pending narration at that boundary, not only on unmount.

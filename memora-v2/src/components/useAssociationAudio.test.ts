@@ -21,6 +21,12 @@ beforeEach(() => {
   speech.playEnglish.mockResolvedValue(played); speech.playSpanish.mockResolvedValue(played);
 });
 describe('audio acompañante de la asociación', () => {
+  it('con puente rechazado conserva modelo inglés sin narrar ni precargar la historia', async () => {
+    useAssociationAudio(previewUnit.words[0], true, false); hooks.effects[0](); await flush();
+    expect(speech.playEnglish).toHaveBeenCalledOnce();
+    expect(speech.playSpanish).not.toHaveBeenCalled();
+    expect(speech.prefetchSpanish).not.toHaveBeenCalled();
+  });
   it('restaurar directamente el montaje no inicia ni precarga la narración', async () => {
     useAssociationAudio(previewUnit.words[0], false); hooks.effects[0](); await flush();
     expect(speech.playEnglish).not.toHaveBeenCalled(); expect(speech.playSpanish).not.toHaveBeenCalled(); expect(speech.prefetchSpanish).not.toHaveBeenCalled();

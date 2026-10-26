@@ -32,13 +32,13 @@ import { syncLabels, type SyncStatus } from './services/progressSync';
 import { PlayHeader } from './components/PlayHeader';
 import { WordSceneDelivery } from './components/WordSceneDelivery';
 import { WordAssembly } from './components/WordAssembly';
+import { isAssociationRejected, rememberAssociationPreference } from './domain/associationPreference';
 
 function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false, assemblyPosition, onAssemblyProgress }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean; assemblyPosition?: WordAssemblyPosition; onAssemblyProgress?: (position: WordAssemblyPosition) => void }) {
   const [reconstruct, setReconstruct] = useState(false);
   const [assembling, setAssembling] = useState(Boolean(vertical && !inspection && assemblyPosition));
-  const { audioState, listen, cancel } = useAssociationAudio(word, !assembling && !reconstruct);
-  const rejectionKey = `memora-v2.rejected-association.${userId}.${word.en.toLocaleLowerCase('en-US')}`;
-  const [associationRejected, setAssociationRejected] = useState(() => localStorage.getItem(rejectionKey) === '1');
+  const [associationRejected, setAssociationRejected] = useState(() => isAssociationRejected(userId, word));
+  const { audioState, listen, cancel } = useAssociationAudio(word, !assembling && !reconstruct, !associationRejected);
 
   function connect() {
     cancel();
@@ -46,20 +46,20 @@ function AssociationCard({ unit, inspection, word, index, total, userId, locatio
     else if (word.reconstruction && !associationRejected) setReconstruct(true);
     else onConnect();
   }
-  if (assembling) return <WordAssembly vertical={vertical} word={word} initialPosition={assemblyPosition} onProgress={onAssemblyProgress} onContinue={onConnect} />;
+  if (assembling) return <WordAssembly userId={userId} vertical={vertical} word={word} initialPosition={assemblyPosition} onProgress={onAssemblyProgress} onContinue={onConnect} />;
   if (reconstruct) return <SceneReconstruction vertical={vertical} unit={unit} word={word} userId={userId} inspection={inspection} onContinue={() => { if (vertical && !inspection) setAssembling(true); else onConnect(); }} />;
   if (word.associationMode === 'cognate') return <CognateAssociationCard vertical={vertical} word={word} index={index} total={total} audioState={audioState} onListen={listen} onConnect={connect} />;
 
-  return <GameCard vertical={vertical} onAdvance={connect} advanceControl={!word.reconstruction || associationRejected} advanceLabel={vertical ? 'Armar la palabra' : 'Ya la he imaginado'} back={vertical ? undefined : <div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
+  return <GameCard vertical={vertical} onAdvance={connect} advanceControl={!word.reconstruction || associationRejected} advanceLabel={vertical ? 'Armar la palabra' : 'Ya la he imaginado'} back={vertical || associationRejected ? undefined : <div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
     <div className="association-content is-revealed">
       <p className="eyebrow">PALABRA {index + 1}/{total}</p>
       <div className="association-word-top"><WordHeading en={word.en} es={word.es.toUpperCase()} /><button type="button" className="round-audio" aria-busy={audioState?.status === 'preparing'} title={audioState?.status === 'preparing' ? 'Preparando audio…' : audioState?.status === 'playing' ? 'Reproduciendo…' : 'Escuchar'} onClick={listen} aria-label={`Escuchar ${word.en}`}>🔊</button></div>
       <AssociationAudioStatus state={audioState} compact />
-      <SceneVisual word={word} showMemoryLink={!associationRejected} />
-      {associationRejected ? <p className="scene-copy">Mira, escucha y conecta directamente con <strong>{word.es.toUpperCase()}</strong>.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
+      {!associationRejected ? <SceneVisual word={word} showMemoryLink /> : null}
+      {associationRejected ? <p className="scene-copy">Seguimos con el significado y el sonido inglés.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
       <details className="association-help"><summary>Ayuda</summary>{location ? <p>{location}</p> : null}<p className="ipa">{word.ipa}</p>{audioState?.status === 'ready' ? <AssociationAudioStatus state={audioState} /> : null}{word.bridge && !associationRejected ? <div className="bridge-row"><div><small>RECUERDA CON</small><b>{word.bridge}</b></div></div> : null}{!associationRejected ? <BridgeSoundNote word={word} explain /> : null}
-      {word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; setAssociationRejected(next); if (next) localStorage.setItem(rejectionKey, '1'); else localStorage.removeItem(rejectionKey); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
       </details>
+      {word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; cancel(); rememberAssociationPreference(userId, word, next); setAssociationRejected(next); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
       {word.reconstruction && !vertical ? <button type="button" className="quiet-action" onClick={connect}>Ya lo he imaginado →</button> : null}
     </div>
   </GameCard>;
@@ -339,7 +339,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
         {state.phase === 'recall' && unit.activeRecall ? <ActiveRecallCard vertical={vertical} key={`active-recall-${state.recallIndex}`} unit={unit} word={recallWord} choices={choices} position={state.recallIndex} userId={userId} inspection={reviewMode} onFinish={(independent) => { dispatch({ type: 'answered', correct: independent }); dispatch({ type: 'nextRecall', wordCount: unit.words.length }); }} /> : null}
 
         {state.phase === 'recall' && sceneRecognition ? <GameCard vertical stepKey={state.recallAnswered ? 'scene-result' : 'scene-choice'} onAdvance={state.recallAnswered ? advanceRecall : undefined} advanceLabel={state.recallIndex === unit.words.length - 1 ? 'Ver la tanda practicada' : 'Continuar con otra palabra'} key={`word-scene-${state.recallIndex}`}>
-          <div className="recall-content"><p className="eyebrow">{state.recallAnswered ? 'RESULTADO' : 'CONECTA'} · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} modeled={state.recallOutcome === 'modeled'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} onModel={consultRecognitionModel} /></div>
+          <div className="recall-content"><p className="eyebrow">{state.recallAnswered ? 'RESULTADO' : 'CONECTA'} · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery userId={userId} word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} modeled={state.recallOutcome === 'modeled'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} onModel={consultRecognitionModel} /></div>
         </GameCard> : null}
 
         {state.phase === 'recall' && !unit.activeRecall && !sceneRecognition ? <GameCard vertical={vertical} stepKey={state.recallAnswered ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.recallAnswered ? advanceRecall : undefined} advanceLabel="Continuar con otra palabra" key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>

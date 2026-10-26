@@ -1,9 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { ArcadeWordReminder } from './ArcadeWordReminder';
 import { vocabularyPreviewPacks } from '../preview/vocabularyPacks';
 import { previewUnit } from '../preview/previewUnit';
 describe('recordatorio según la ruta aprendida', () => {
+  it('Arcade no vuelve a imponer el puente descartado y no inventa otra historia', () => {
+    const word = previewUnit.words[0];
+    vi.stubGlobal('localStorage', { getItem: () => '1' });
+    try {
+      const html = renderToStaticMarkup(<ArcadeWordReminder userId="isolated" word={word} paused={false} />);
+      expect(html).not.toContain(word.bridge);
+      expect(html).not.toContain('role="img"');
+      expect(html).toContain(word.en); expect(html).toContain(word.es);
+      expect(html).toContain('Escuchar');
+    } finally { vi.unstubAllGlobals(); }
+  });
   it('no inventa un puente o escena para un cognado', () => {
     const html = renderToStaticMarkup(<ArcadeWordReminder word={vocabularyPreviewPacks[0].words[0]} paused={false} />);
     expect(html).toContain('RECUERDA LA PALABRA');
