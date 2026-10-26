@@ -33,8 +33,15 @@ import { PlayHeader } from './components/PlayHeader';
 import { WordSceneDelivery } from './components/WordSceneDelivery';
 import { WordAssembly } from './components/WordAssembly';
 import { isAssociationRejected, rememberAssociationPreference } from './domain/associationPreference';
+import { hasCausalDiscovery, supportsCausalDiscovery } from './domain/causalDiscovery';
+import { CausalAssociationCard } from './components/CausalAssociationCard';
 
-function AssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false, assemblyPosition, onAssemblyProgress }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean; assemblyPosition?: WordAssemblyPosition; onAssemblyProgress?: (position: WordAssemblyPosition) => void }) {
+function AssociationCard(props: Parameters<typeof StandardAssociationCard>[0]) {
+  const [rejected, setRejected] = useState(() => isAssociationRejected(props.userId, props.word));
+  if (props.vertical && !props.inspection && !rejected && supportsCausalDiscovery(props.word)) return <CausalAssociationCard {...props} onReject={() => { rememberAssociationPreference(props.userId, props.word, true); setRejected(true); }} />;
+  return <StandardAssociationCard {...props} onPreferenceChange={setRejected} />;
+}
+function StandardAssociationCard({ unit, inspection, word, index, total, userId, location, onConnect, vertical = false, assemblyPosition, onAssemblyProgress, onPreferenceChange }: { unit: AtomicUnit; inspection: boolean; word: AtomicWord; index: number; total: number; userId: string; location?: string; onConnect: () => void; vertical?: boolean; assemblyPosition?: WordAssemblyPosition; onAssemblyProgress?: (position: WordAssemblyPosition) => void; onPreferenceChange?: (rejected: boolean) => void }) {
   const [reconstruct, setReconstruct] = useState(false);
   const [assembling, setAssembling] = useState(Boolean(vertical && !inspection && assemblyPosition));
   const [associationRejected, setAssociationRejected] = useState(() => isAssociationRejected(userId, word));
@@ -59,7 +66,7 @@ function AssociationCard({ unit, inspection, word, index, total, userId, locatio
       {associationRejected ? <p className="scene-copy">Seguimos con el significado y el sonido inglés.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
       <details className="association-help"><summary>Ayuda</summary>{location ? <p>{location}</p> : null}<p className="ipa">{word.ipa}</p>{audioState?.status === 'ready' ? <AssociationAudioStatus state={audioState} /> : null}{word.bridge && !associationRejected ? <div className="bridge-row"><div><small>RECUERDA CON</small><b>{word.bridge}</b></div></div> : null}{!associationRejected ? <BridgeSoundNote word={word} explain /> : null}
       </details>
-      {word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; cancel(); rememberAssociationPreference(userId, word, next); setAssociationRejected(next); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
+      {word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; cancel(); rememberAssociationPreference(userId, word, next); setAssociationRejected(next); onPreferenceChange?.(next); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
       {word.reconstruction && !vertical ? <button type="button" className="quiet-action" onClick={connect}>Ya lo he imaginado →</button> : null}
     </div>
   </GameCard>;
@@ -339,7 +346,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
         {state.phase === 'recall' && unit.activeRecall ? <ActiveRecallCard vertical={vertical} key={`active-recall-${state.recallIndex}`} unit={unit} word={recallWord} choices={choices} position={state.recallIndex} userId={userId} inspection={reviewMode} onFinish={(independent) => { dispatch({ type: 'answered', correct: independent }); dispatch({ type: 'nextRecall', wordCount: unit.words.length }); }} /> : null}
 
         {state.phase === 'recall' && sceneRecognition ? <GameCard vertical stepKey={state.recallAnswered ? 'scene-result' : 'scene-choice'} onAdvance={state.recallAnswered ? advanceRecall : undefined} advanceLabel={state.recallIndex === unit.words.length - 1 ? 'Ver la tanda practicada' : 'Continuar con otra palabra'} key={`word-scene-${state.recallIndex}`}>
-          <div className="recall-content"><p className="eyebrow">{state.recallAnswered ? 'RESULTADO' : 'CONECTA'} · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery userId={userId} word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} modeled={state.recallOutcome === 'modeled'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} onModel={consultRecognitionModel} /></div>
+          <div className="recall-content"><p className="eyebrow">{state.recallAnswered ? 'RESULTADO' : 'CONECTA'} · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery faded={hasCausalDiscovery(userId, unit, recallWord)} userId={userId} word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} modeled={state.recallOutcome === 'modeled'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} onModel={consultRecognitionModel} /></div>
         </GameCard> : null}
 
         {state.phase === 'recall' && !unit.activeRecall && !sceneRecognition ? <GameCard vertical={vertical} stepKey={state.recallAnswered ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.recallAnswered ? advanceRecall : undefined} advanceLabel="Continuar con otra palabra" key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>

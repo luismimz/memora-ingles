@@ -1,0 +1,9 @@
+.contraction-lab { display: grid; justify-items: center; gap: 16px; width: 100%; padding-block: 12px; }
+.contraction-lab > .coach-row { font-size: clamp(1.5rem, 5vw, 2.2rem); }
+.contraction-lab-message { display: flex; justify-content: center; align-items: center; flex-wrap: wrap; gap: .25em; width: 100%; min-height: 96px; font-size: clamp(1.8rem, 6vw, 3rem); line-height: 1.4; font-weight: 650; }
+.contraction-lab-switch { min-width: 3.5em; min-height: 72px; padding: 8px 12px; border: 2px solid var(--grammar-aux); border-radius: 18px; background: var(--grammar-aux-soft); color: var(--ink); font: inherit; }
+.contraction-lab-switch > span { white-space: pre; }
+.contraction-lab-joined { display: inline-block; animation: contraction-lab-join .25s ease-out; }
+.contraction-lab-cue { min-height: 3em; margin: 0; line-height: 1.5; font-size: 1rem; }
+@keyframes contraction-lab-join { from { transform: scaleX(1.15); opacity: .65; } to { transform: scaleX(1); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .contraction-lab-joined { animation: none; } }

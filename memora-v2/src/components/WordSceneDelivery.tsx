@@ -7,10 +7,11 @@ import { isAssociationRejected } from '../domain/associationPreference';
 import { wordRecallHint } from '../domain/activeRecall';
 
 /** Meaning recognition with visible options, never independent word retrieval. */
-export function WordSceneDelivery({ word, userId, options, selected, answered, correct, modeled = false, presentationKey, onAnswer, onModel }: {
+export function WordSceneDelivery({ word, userId, options, selected, answered, correct, modeled = false, presentationKey, onAnswer, onModel, faded = false }: {
   word: AtomicWord; options: AtomicWord[]; selected?: string; answered: boolean; correct: boolean;
   modeled?: boolean; presentationKey: string; onAnswer: (answer: string) => void; onModel: () => void;
   userId?: string;
+  faded?: boolean;
 }) {
   const [audioStatus, setAudioStatus] = useState('');
   const request = useRef(0);
@@ -25,7 +26,7 @@ export function WordSceneDelivery({ word, userId, options, selected, answered, c
   }
   const chosen = options.find((item) => item.en === selected);
   const useAssociation = !isAssociationRejected(userId, word);
-  const useScenes = options.every((item) => !isAssociationRejected(userId, item));
+  const useScenes = !faded && options.every((item) => !isAssociationRejected(userId, item));
   if (answered) return <div className="word-scene-delivery">
     <h1 role="status">{modeled ? 'Conexión con modelo' : correct ? '✓ Conectada' : 'Esta es la conexión'}</h1>
     {useAssociation ? <SceneVisual word={word} compact /> : null}

@@ -4,6 +4,8 @@ import { GrammarReminder } from './GrammarReminder';
 import { GrammarCoach } from './GrammarCoach';
 import { GameCard } from './GameCard';
 import { piece, type GrammarLessonData } from '../domain/grammarLesson';
+import { lessonForForm } from '../domain/grammarLesson';
+import { previewUnit } from '../preview/previewUnit';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(), playSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn() }));
 const lesson: GrammarLessonData = {
@@ -22,6 +24,21 @@ beforeEach(() => {
   vi.stubGlobal('window', { setTimeout, clearTimeout, matchMedia: () => ({ matches: true }), getSelection: () => null });
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
+
+it('el recordatorio permite explorar la contracción y vuelve al mensaje sin abrir otro examen', async () => {
+  const form = previewUnit.grammar[0];
+  const generated = lessonForForm(form, 'jugar')!;
+  await act(async () => { tree = create(<GrammarReminder lesson={generated} form={form} userId="reminder-isolated" unitId={previewUnit.id} onClose={close} appearance="light" onToggleAppearance={() => {}} />); });
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Juntar I y AM' }).props.onClick());
+  expect(tree.root.findByProps({ 'aria-label': "Separar I'M" })).toBeDefined();
+  expect(tree.root.findByType(GameCard).props.advanceLabel).toBe('Volver a mi mensaje');
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  expect(close).not.toHaveBeenCalled();
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  expect(close).toHaveBeenCalledOnce();
+});
 
 it('el recordatorio de una lección authored también enlaza slides y vuelve sin abrir sus ejercicios', async () => {
   await act(async () => { tree = create(<GrammarReminder lesson={lesson} userId="reminder-isolated" unitId="unit" onClose={close} appearance="light" onToggleAppearance={() => {}} />); });

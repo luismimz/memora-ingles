@@ -24,6 +24,8 @@ import { AnswerStudio } from './components/AnswerStudio';
 import { SentenceBuilderCard } from './components/SentenceBuilderCard';
 import { ConversationPractice } from './components/ConversationPractice';
 import { TypedChatMessage } from './components/TypedChatMessage';
+import { CausalAssociationCard } from './components/CausalAssociationCard';
+import { WordSceneDelivery } from './components/WordSceneDelivery';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -38,6 +40,9 @@ async function mount(value = unit, continuous = false) {
   await act(async () => { tree = create(<LanguageGame continuous={continuous} unit={value} userId={user} learningMode="vocabulary" onFinished={finished} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
 }
 async function swipe(assemble = true) {
+  // In the new discovery the learner provokes the transformation before leaving.
+  const discovery = tree.root.findAllByProps({ 'aria-label': 'Tocar el disco' })[0];
+  if (discovery) await act(async () => discovery.props.onClick());
   const region = tree.root.findByProps({ role: 'region' });
   const target = { closest: () => null };
   await act(async () => {
@@ -66,6 +71,36 @@ beforeEach(() => {
   initializeJournal(user);
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('disco→escritorio enlaza descubrimiento, montaje y significado con ayudas retiradas sin acreditar por tocar', async () => {
+  writeGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion ?? '1', { ...initialGame, wordIndex: 2, recognitionStyle: 'scene-delivery-v1' });
+  await mount();
+  expect(tree.root.findAllByType(CausalAssociationCard)).toHaveLength(1);
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  expect(tree.root.findAllByType(WordAssembly)).toHaveLength(0);
+  expect(checkpoint()).toMatchObject({ phase: 'associate', wordIndex: 2 });
+  expect(readLearningActivities(user)).toMatchObject([{ source: 'authored', correct: null }]);
+  expect(readWordMemories(user)).toEqual([]);
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  expect(tree.root.findByType(WordAssembly).props.sceneAsHelp).toBe(true);
+  for (const [index, letter] of [...unit.words[2].en].entries()) await act(async () => tree.root.findByProps({ 'aria-label': `Colocar ${letter}, pieza ${index + 1}` }).props.onClick());
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  for (const target of unit.words.slice(0, 2)) {
+    await act(async () => tree.root.findByType(WordSceneDelivery).props.onAnswer(target.en));
+    await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  }
+  expect(tree.root.findByType(WordSceneDelivery).props.faded).toBe(true);
+  expect(text(tree.toJSON())).toContain('¿Qué significa?');
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType(WordSceneDelivery).props.faded).toBe(true);
+  await act(async () => tree.root.findByType(WordSceneDelivery).props.onAnswer(unit.words[2].en));
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  expect(readSessions(user)[0]).toMatchObject({ correct: 3, attempted: 3 });
+  expect(readLearningActivities(user).filter((row) => row.activityId.startsWith('causal-discovery-v1:'))).toHaveLength(1);
+  const memory = readWordMemories(user).find((row) => row.key === 'desk')!;
+  expect(memory.capabilities?.recognition).toMatchObject({ attempts: 1, correct: 1, independentCorrect: 0 });
+  expect(memory.capabilities?.recall).toBeUndefined();
+});
 
 it('rechazar un puente es visible y continúa al montaje sin volver a mostrar su escena ni acreditar práctica', async () => {
   await mount();
@@ -320,7 +355,7 @@ it('el modelo de enseñanza avisa del audio fallido, permite reintentar y no arr
   await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
   await swipe(false);
   const events = readLearningActivities(user);
-  const speaker = () => tree.root.findByProps({ 'aria-label': 'Escuchar modelo inglés' });
+  const speaker = () => tree.root.findAllByType('button').find((node) => ['Escuchar modelo inglés', 'Escuchar este mensaje'].includes(node.props['aria-label']))!;
   let resolve!: (result: { status: 'unavailable'; source: null }) => void;
   vi.mocked(playEnglish).mockReturnValueOnce(new Promise((done) => { resolve = done; }));
   act(() => { speaker().props.onClick(); });
@@ -336,25 +371,28 @@ it('el modelo de enseñanza avisa del audio fallido, permite reintentar y no arr
   await act(async () => { resolve({ status: 'unavailable', source: null }); });
   expect(speaker().props['aria-busy']).toBe(false);
   expect(text(tree.toJSON())).not.toContain('Audio no disponible');
-  expect(tree.root.findAllByProps({ className: 'comparison-contraction' })).toHaveLength(1);
+  expect(tree.root.findAllByProps({ 'aria-label': 'Juntar I y AM' })).toHaveLength(1);
   expect(readLearningActivities(user)).toEqual(events);
 });
-it('repetir el cambio gramatical mantiene paso, voz, intentos y continuidad por slide', async () => {
+it('explorar la contracción mantiene paso, conserva un solo modelo neutral y continúa al montaje', async () => {
   writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
   await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
   await swipe(false); await swipe(false);
-  expect(tree.root.findAllByProps({ className: 'comparison-contraction' })).toHaveLength(1);
+  expect(tree.root.findAllByProps({ 'aria-label': 'Juntar I y AM' })).toHaveLength(1);
   const before = readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1');
   const events = readLearningActivities(user);
   vi.mocked(playSpanish).mockClear(); vi.mocked(playEnglish).mockClear();
-  const replay = tree.root.findAllByType('button').find((node) => text(node).includes('Repetir cambio'))!;
-  await act(async () => { replay.props.onClick({ stopPropagation: vi.fn() }); vi.advanceTimersByTime(2000); });
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Juntar I y AM' }).props.onClick());
+  await act(async () => tree.root.findByProps({ 'aria-label': "Separar I'M" }).props.onClick());
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Juntar I y AM' }).props.onClick());
   expect(readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1')).toEqual(before);
-  expect(readLearningActivities(user)).toEqual(events);
-  expect(playSpanish).not.toHaveBeenCalled(); expect(playEnglish).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();
+  const explored = readLearningActivities(user);
+  expect(explored.slice(0, events.length)).toEqual(events);
+  expect(explored.slice(events.length)).toMatchObject([{ activityId: 'contraction-lab-v1:present-continuous:play', source: 'authored', correct: null, helped: true }]);
+  expect(playSpanish).not.toHaveBeenCalled(); expect(playEnglish).toHaveBeenCalledTimes(3); expect(next).not.toHaveBeenCalled();
   await swipe(false);
   expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
-  expect(readLearningActivities(user)).toEqual(events);
+  expect(readLearningActivities(user)).toEqual(explored);
 });
 it('el coach principal reabre explicación, piezas y acierto sin volver al inicio ni duplicar intentos', async () => {
   const saved = () => readGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1');

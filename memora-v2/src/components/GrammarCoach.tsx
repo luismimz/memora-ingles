@@ -1,5 +1,6 @@
 import { AnswerStudio } from './AnswerStudio';
 import { GrammarComparison } from './GrammarComparison';
+import { GrammarContractionLab } from './GrammarContractionLab';
 import { SpeechModelButton } from './SpeechModelButton';
 import { useEffect, useRef, useState } from 'react';
 import { GameCard } from './GameCard';
@@ -75,6 +76,8 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const continueRef = useRef(onContinue);
   continueRef.current = onContinue;
   const step = lesson.steps[stage];
+  const contractionLab = Boolean(stream && (generatedContinuous || preparedMessage) && !reusePreparedSubject && !startAtExample && step && stage === lesson.steps.length - 1
+    && (step.en[0]?.text.trim().toLowerCase() === "i'm" || step.en[0]?.text.trim().toLowerCase() === 'i' && step.en[1]?.text.trim().toLowerCase() === 'am'));
   const exampleBridge = Boolean(step && startAtExample && generatedContinuous && stage === lesson.steps.length - 1);
   const caption = exampleBridge ? `Misma estructura, nueva acción: «estoy ${form!.spanish}». Mira y escucha cómo queda antes de montarla.` : step?.caption;
   // For a conversational mission the written answer belongs to its live exchange,
@@ -98,14 +101,14 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   useEffect(() => {
     const restored = restoredTeaching.current; restoredTeaching.current = false;
     if (restored) return;
-    if (!step || paused) return;
+    if (!step || paused || contractionLab) return;
     // Spanish TTS expands ING as the abbreviation for «ingeniero». The written
     // suffix stays visible; the English model pronounces it inside the verb.
     void playSpanish(caption!.replace(/\bING\b/gu, 'la terminación inglesa'));
     // Teaching is not a timed Arcade round: keep the example visible until
     // the learner chooses to move on, even when speech ends or fails.
     return () => { stopSpeech(); };
-  }, [step, caption, paused]);
+  }, [step, caption, paused, contractionLab]);
   useEffect(() => { if (finished) readyRef.current(); }, [finished]);
   useEffect(() => () => { clearTimeout(timer.current); stopSpeech(); }, []);
 
@@ -169,9 +172,11 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
       <p className="eyebrow">{finished ? 'AHORA, ÚSALO' : needsModel ? 'MODELO' : streamSolved ? 'RESULTADO' : ordering ? 'MONTA EL MENSAJE' : situation ? 'EL MENSAJE CAMBIA LA ESCENA' : check.id === 'meaning-now-v1' ? 'ENTIENDE EL MENSAJE' : check.kind === 'explain' ? 'AHORA TÚ ENSEÑAS' : check.kind === 'write' ? 'TU PRIMERA RESPUESTA' : 'PRUÉBALO'}</p></>}
       {!needsModel && (!writing || feedback === 'correct') && !situation && !ordering && (actionScene ? <GrammarActionScene lesson={lesson} form={form} stage={step ? 'teach' : finished ? 'finished' : check.kind === 'write' ? 'write' : 'explain'} feedback={feedback} /> : sceneWord ? <SceneVisual word={sceneWord} compact /> : null)}
       {step ? <>
-        <GrammarComparison step={step} previous={lesson.steps[stage - 1]} />
-        <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p>
-        <div className="coach-teaching-actions">{!step.hideEnglish ? <SpeechModelButton key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{explanationOnly ? teachingAdvanceLabel : step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
+        {contractionLab ? <GrammarContractionLab step={step} lessonId={lesson.id} unitId={unitId} unitTitle={unitTitle} contentVersion={contentVersion} userId={userId} reviewMode={reviewMode} /> : <>
+          <GrammarComparison step={step} previous={lesson.steps[stage - 1]} />
+          <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p>
+        </>}
+        <div className="coach-teaching-actions">{!step.hideEnglish && !contractionLab ? <SpeechModelButton key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{explanationOnly ? teachingAdvanceLabel : step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
         {!stream ? <details className="coach-teaching-options"><summary>Opciones de explicación</summary><div><button type="button" className="quiet-action coach-pause" aria-pressed={paused} onClick={() => { stopSpeech(); setPaused((value) => !value); }}>{paused ? 'Reanudar explicación' : 'Pausar'}</button><button type="button" className="quiet-action" onClick={skipKnownTrick}>{requirePractice ? 'Ya lo entiendo · probarlo' : 'Ya conozco el truco · ir a la frase'}</button></div></details> : null}
       </> : !finished ? <div className={`coach-practice${writing ? ' coach-response-studio' : ''}`}>
         {!writing ? <h2>{needsModel ? 'Vamos con ayuda' : streamSolved ? '✓ Acertaste' : situation ? 'Entrega el mensaje' : check.prompt}</h2> : null}

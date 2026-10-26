@@ -41,7 +41,16 @@ afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.un
 it('enseña el bloque, distingue el aparato, retoma piezas y avisa una sola vez sin apagar el ordenador', async () => {
   await mount();
   expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Avisa para que no apaguen tu ordenador');
-  for (let i = 0; i < 6; i++) { expect(tree.root.findAllByType('input')).toHaveLength(0); await advance(); }
+  for (let i = 0; i < 6; i++) {
+    expect(tree.root.findAllByType('input')).toHaveLength(0);
+    if (i === 5) {
+      await act(async () => tree.root.findByProps({ 'aria-label': 'Juntar I y AM' }).props.onClick());
+      expect(playEnglish).toHaveBeenLastCalledWith("I'm playing on my computer", undefined, true, expect.any(Function));
+      expect(readLearningActivities(user).filter((event) => event.activityId.startsWith('contraction-lab-v1:'))).toMatchObject([{ source: 'authored', correct: null }]);
+      expect(readGrammarAttempts(user)).toHaveLength(0);
+    }
+    await advance();
+  }
   expect(learner()).toHaveLength(0);
   await act(async () => button('Está jugando con una consola.').props.onClick());
   expect(visible()).toContain('estausaunaconsola');
