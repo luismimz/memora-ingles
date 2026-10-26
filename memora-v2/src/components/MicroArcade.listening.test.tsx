@@ -8,6 +8,7 @@ import { readLearningActivities } from '../domain/learningActivity';
 import { readAttempts } from '../domain/learningProfile';
 import { recordActiveWordAttempt } from '../domain/activeRecall';
 import { playEnglish, type PlaybackResult } from '../services/audio';
+import { GameCard } from './GameCard';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'played', source: 'browser' })), playSpanish: vi.fn(), playSnap: vi.fn(), stopSpeech: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -34,6 +35,43 @@ beforeEach(() => {
   for (const word of previewUnit.words) recordWordRecall(user, word, 'hesitant', new Date(), 'recognition', undefined, true);
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+
+it('el acierto se confirma donde se eligió, sin sustituir el reto ni reiniciar el slide', async () => {
+  const target = microRounds(user, [previewUnit])[1].word;
+  await mount();
+  const stepKey = tree.root.findByType(GameCard).props.stepKey;
+  const choices = tree.root.findByProps({ 'aria-label': 'Significados preparados' });
+  await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
+  const selected = button(target.es);
+  await act(async () => selected.props.onClick());
+  expect(tree.root.findByProps({ 'aria-label': 'Significados preparados' })).toBe(choices);
+  expect(button(target.es)).toBe(selected);
+  expect(selected.props.className).toBe('is-correct');
+  expect(selected.props.disabled).toBe(true);
+  expect(tree.root.findByType(GameCard).props.stepKey).toBe(stepKey);
+  expect(tree.root.findByType(GameCard).props.onAdvance).toBeTypeOf('function');
+  expect(text(tree.toJSON())).toContain('Acertaste');
+  const before = readLearningActivities(user);
+  await act(async () => selected.props.onClick());
+  expect(readLearningActivities(user)).toEqual(before);
+});
+it.each([0, 2])('opciones y escritura conservan su superficie tras acertar en ronda %s', async (index) => {
+  const target = microRounds(user, [previewUnit])[index].word;
+  await mount(previewUnit, index);
+  const stepKey = tree.root.findByType(GameCard).props.stepKey;
+  const control = index === 2 ? tree.root.findByType('input') : button(target.en);
+  if (index === 2) {
+    await act(async () => control.props.onChange({ target: { value: target.en } }));
+    await act(async () => { vi.advanceTimersByTime(450); });
+  } else await act(async () => control.props.onClick());
+  expect(index === 2 ? tree.root.findByType('input') : button(target.en)).toBe(control);
+  expect(control.props.disabled).toBe(true);
+  if (index === 2) expect(text(tree.root.findByType('label'))).toBe('Tu respuesta');
+  expect(tree.root.findByType(GameCard).props.stepKey).toBe(stepKey);
+  expect(text(tree.toJSON())).toContain('Acertaste');
+  expect(readLearningActivities(user)).toMatchObject([{ correct: true, modality: index === 2 ? 'writing' : 'choice', helped: index !== 2 }]);
+  expect(button('🔊 Escuchar de nuevo')).toBeDefined();
+});
 
 it('el rescate Arcade respeta el puente rechazado sin inventar un acierto ni perder el primer error', async () => {
   const target = microRounds(user, [previewUnit])[1].word;
@@ -165,8 +203,9 @@ it('tras acertar muestra palabra y significado con continuación junto al result
   await mount();
   await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
   await act(async () => button(target.es).props.onClick());
-  expect(tree.root.findAllByProps({ 'aria-label': 'Significados preparados' })).toHaveLength(0);
-  expect(text(tree.root.findByType('h1'))).toBe(target.en);
+  expect(tree.root.findAllByProps({ 'aria-label': 'Significados preparados' })).toHaveLength(1);
+  expect(button(target.es).props.className).toBe('is-correct');
+  expect(text(tree.root.findByType('h1'))).toBe('Conexión correcta');
   expect(text(tree.toJSON())).toContain(target.es);
   expect(text(tree.toJSON())).not.toContain('Escucha y elige lo que significa.');
   expect(button('Seguir →')).toBeUndefined();
@@ -179,7 +218,9 @@ it('tras acertar muestra palabra y significado con continuación junto al result
   expect(button('Siguiente reto').props.disabled).toBe(false);
   expect(readLearningActivities(user)).toEqual(before);
   await swipe();
-  expect(tree.root.findAllByProps({ className: 'micro-content micro-answer-result' })).toHaveLength(0);
+  expect(tree.root.findByType('input').props.disabled).toBe(false);
+  expect(text(tree.toJSON())).not.toContain('Acertaste');
+  expect(readLearningActivities(user)).toEqual(before);
 });
 it('pausar la repetición del resultado no deja su altavoz bloqueado al reanudar', async () => {
   const target = microRounds(user, [previewUnit])[1].word;

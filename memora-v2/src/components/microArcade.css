@@ -29,14 +29,20 @@
 .arcade-stream-tools { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; max-width: 100%; }
 .arcade-stream-screen .game-topbar { flex-wrap: wrap; gap: .5rem; }
 .arcade-stream-screen .game-topbar { flex: 0 0 auto; margin: 0 auto; padding: max(6px, env(safe-area-inset-top)) 12px 6px; border-bottom: 1px solid var(--line); }
-.arcade-stream-screen .micro-answer-result { margin: auto; }
 .arcade-result-status { color: var(--accent-ink); font-weight: 650; }
 .arcade-stream-card .arcade-reminder { padding: 0; }
 .arcade-stream-tools button { font-size: .7rem; min-height: 44px; padding: .5rem; }
 .arcade-stream-card::before { display: none; }
 .arcade-stream-foot { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: .7rem; }
 .arcade-stream-foot small { color: var(--muted); font-size: .65rem; }
-.arcade-stream-card .recall-choices button.is-correct { border-color: #25ba83; background: rgba(54,210,147,.12); }
+.arcade-challenge h1 { min-height: 2.2em; width: 100%; }
+.arcade-audio-cue { min-height: 3em; margin: 0; color: var(--muted); font-size: .9rem; line-height: 1.5; }
+.arcade-feedback-slot { min-height: 72px; display: grid; align-content: center; gap: 4px; width: 100%; }
+.arcade-feedback-slot p { margin: 0; overflow-wrap: anywhere; }
+.arcade-stream-card .recall-choices button { min-width: 0; overflow-wrap: anywhere; transition: border-color .18s ease, background-color .18s ease; }
+.arcade-stream-card .recall-choices button.is-correct { opacity: 1; color: var(--ink); border: 2px solid var(--grammar-subject); background: var(--grammar-subject-soft); animation: arcade-connect .24s ease-out; }
+@keyframes arcade-connect { from { transform: scale(.96); } to { transform: scale(1); } }
+@media (prefers-reduced-motion: reduce) { .arcade-stream-card .recall-choices button { transition: none; } .arcade-stream-card .recall-choices button.is-correct { animation: none; } }
 .arcade-reminder { padding: 30px; }
 .arcade-rescue { display: grid; justify-items: center; gap: 12px; width: 100%; padding-bottom: 24px; }
 .arcade-reminder-chain { display: flex; align-items: center; justify-content: center; gap: .8rem; flex-wrap: wrap; font-size: clamp(1.5rem, 4vw, 2.2rem); }

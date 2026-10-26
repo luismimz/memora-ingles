@@ -29,7 +29,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const [revealed, setRevealed] = useState(false);
   const [usedHint, setUsedHint] = useState(inspection);
   const usedHintRef = useRef(usedHint);
-  const [feedback, setFeedback] = useState('');
   const [input, setInput] = useState('');
   const [showChoices, setShowChoices] = useState(false);
   const [audioStatus, setAudioStatus] = useState<'idle' | 'loading' | 'playing' | PlaybackResult['status']>('idle');
@@ -74,7 +73,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     usedHintRef.current = true; setUsedHint(true);
     setRevealed(true);
     setResult('rescue');
-    setFeedback(isAssociationRejected(userId, round.word) ? 'Conecta palabra y significado.' : 'Recupera tu puente y escucha la palabra.');
     if (!inspection) recordLearningActivity(userId, { unitId: round.unit.id, unitTitle: round.unit.title, contentVersion: round.unit.contentVersion ?? '1', activityId: `micro:${sessionId}:${index}:mnemonic`, skill: round.word.en, phase: 'arcade', source: 'authored', modality: 'choice', prompt: round.word.es, response: isAssociationRejected(userId, round.word) ? `${round.word.en}: ${round.word.es}` : round.word.scene, expected: round.word.en, correct: null, helped: true });
     void playEnglish(round.word.en, round.word.audioUrl);
   }
@@ -96,7 +94,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     const correct = normalizeSentenceAnswer(choice) === normalizeSentenceAnswer(round.word.en);
     if (!inspection) previous.current = commitMicroAttempt(userId, round, 'word', choice, correct, usedHintRef.current, !writing, crypto.randomUUID(), `${sessionId}:${index}`, previous.current, listening ? meaning : undefined).id;
     if (!correct) {
-      setFeedback('Vuelve a la historia y prueba otra vez.');
       usedHintRef.current = true; setUsedHint(true);
       setRevealed(true); setResult('rescue');
       void playEnglish(round.word.en, round.word.audioUrl);
@@ -104,7 +101,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     }
     setRevealed(true);
     setResult('correct');
-    setFeedback(usedHintRef.current ? 'Con ayuda.' : 'Bien.');
     playSnap();
   }
 
@@ -120,7 +116,6 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     setInput(''); setShowChoices(false);
     setRevealed(false);
     usedHintRef.current = inspection; setUsedHint(inspection);
-    setFeedback('');
     previous.current = undefined;
     onRoundAdvance?.(index + 1);
   }
@@ -149,18 +144,26 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
         </details>
       </div>
     </header>
-    <section className="game-stage"><GameCard vertical stepKey={`${index}:${result ?? 'question'}:${clock.checkpoint}`} onAdvance={clock.checkpoint ? onExit : canContinue ? clock.advanceNow : undefined} advanceLabel={clock.checkpoint ? 'Volver al recorrido' : nextLabel} className={`arcade-stream-card ${result === 'correct' ? 'recall-correct' : 'recall-calm'}`}>
-    {clock.checkpoint ? <ArcadeCheckpoint inFeed onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : result === 'correct' ? <div className="micro-content micro-answer-result">
-      <p className="arcade-result-status" role="status"><span aria-hidden="true">✓</span> {usedHint ? 'Acertaste con ayuda' : 'Acertaste'}</p><h1 lang="en">{round.word.en}</h1><p lang="es">{round.word.es}</p>
-      <button type="button" className="quiet-action" disabled={clock.paused} aria-busy={audioStatus === 'loading'} onClick={() => void listen(true)}>🔊 Escuchar de nuevo</button>
-      {audioStatus === 'loading' || audioStatus === 'playing' ? <p role="status">{audioStatus === 'loading' ? 'Preparando sonido…' : 'Reproduciendo…'}</p> : ['blocked', 'unavailable'].includes(audioStatus) ? <p role="status">No se completó el audio. Puedes continuar con la palabra escrita.</p> : null}
-      {clock.paused ? <p role="status">En pausa.</p> : null}
-    </div> : result === 'rescue' ? reminder : <div className="recall-content">
+    <section className="game-stage"><GameCard vertical stepKey={`${index}:${result === 'rescue' ? 'rescue' : 'challenge'}:${clock.checkpoint}`} onAdvance={clock.checkpoint ? onExit : canContinue ? clock.advanceNow : undefined} advanceLabel={clock.checkpoint ? 'Volver al recorrido' : nextLabel} className="arcade-stream-card recall-calm">
+    {clock.checkpoint ? <ArcadeCheckpoint inFeed onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : result === 'rescue' ? reminder : <div className="recall-content arcade-challenge">
       <p className="eyebrow">{listening ? 'ESCUCHA Y CONECTA' : writing ? 'SIN OPCIONES' : 'RECUERDA'} · {automatic ? index - startRound + 1 : index % 15 + 1}/{automatic ? limit : 15}</p>
       {round?.pendingModel ? <p role="status">Primero la practicamos sin reloj · sin prisas</p> : null}
-      {!writing && !listening && !isAssociationRejected(userId, round.word) ? <SceneVisual word={round.word} hideAnswer /> : null}{!writing ? <h1>{listening ? 'Escucha y elige lo que significa.' : <>¿Cómo se dice <em>{round.word.es}</em>?</>}</h1> : null}
-      {listening ? <><button type="button" className="primary-action" disabled={revealed || clock.paused} aria-busy={audioStatus === 'loading'} onClick={() => void listen()}>🔊 Reproducir palabra inglesa</button><p role="status">{audioStatus === 'played' ? 'Reproducción finalizada. Elige el significado.' : audioStatus === 'playing' ? 'Escucha la palabra…' : audioStatus === 'loading' ? 'Preparando el audio. No hay cuenta atrás.' : audioStatus === 'idle' ? 'Primero escucha, después conecta con un significado.' : 'No se completó el audio. Puedes repetirlo o practicar con texto.'}</p><div className="recall-choices" aria-label="Significados preparados">{listeningOptions.map((candidate) => <button type="button" lang="es" disabled={revealed || clock.paused || audioStatus !== 'played'} key={candidate.word.en} onClick={() => choose(candidate.word.en, candidate.word.es)}>{candidate.word.es}</button>)}</div><button type="button" className="quiet-action" disabled={revealed || clock.paused} onClick={useTextOptions}>No se oye · usar texto</button></> : writing ? <><AnswerStudio id="arcade-word-answer" taskKey={`${sessionId}:${index}`} target={round.word.es} value={input} onChange={setInput} onAnswer={(value) => choose(value)} accepts={(value) => normalizeSentenceAnswer(value) === normalizeSentenceAnswer(round.word.en)} disabled={revealed || clock.paused} /><button type="button" className="quiet-action" disabled={revealed || clock.paused} onClick={useTextOptions}>Ayúdame con opciones</button></> : <div className="recall-choices" aria-label={inspection ? 'Palabras de prueba' : 'Palabras aprendidas'}>{options.map((choice) => <button type="button" disabled={revealed || clock.paused} key={choice} onClick={() => choose(choice)}>{choice}</button>)}</div>}
-      <div className="arcade-stream-foot"><button type="button" className="quiet-action" disabled={revealed || clock.paused} onClick={remember}>{isAssociationRejected(userId, round.word) ? 'Ver palabra' : 'Recordar el puente'}</button>{inspection ? <small>Prueba · no guarda</small> : null}<span role="status">{feedback}</span></div>
+      {!writing && !listening && !isAssociationRejected(userId, round.word) ? <SceneVisual word={round.word} hideAnswer /> : null}{!writing ? <h1>{result === 'correct' ? 'Conexión correcta' : listening ? 'Escucha y elige lo que significa.' : <>¿Cómo se dice <em>{round.word.es}</em>?</>}</h1> : null}
+      {listening ? <>
+        <button type="button" className="primary-action" disabled={clock.paused} aria-busy={audioStatus === 'loading'} onClick={() => void listen(result === 'correct')}>{result === 'correct' ? '🔊 Escuchar de nuevo' : '🔊 Reproducir palabra inglesa'}</button>
+        <p className="arcade-audio-cue" role="status">{audioStatus === 'playing' ? 'Escucha la palabra…' : audioStatus === 'loading' ? 'Preparando el audio. No hay cuenta atrás.' : ['blocked', 'unavailable'].includes(audioStatus) ? result === 'correct' ? 'No se completó el audio. Puedes continuar con la palabra escrita.' : 'No se completó el audio. Puedes repetirlo o practicar con texto.' : result === 'correct' ? '' : audioStatus === 'played' ? 'Reproducción finalizada. Elige el significado.' : 'Primero escucha, después conecta con un significado.'}</p>
+        <div className="recall-choices" aria-label="Significados preparados">{listeningOptions.map((candidate) => <button type="button" lang="es" className={result === 'correct' && candidate.word.en === round.word.en ? 'is-correct' : undefined} disabled={revealed || clock.paused || audioStatus !== 'played'} key={candidate.word.en} onClick={() => choose(candidate.word.en, candidate.word.es)}>{candidate.word.es}</button>)}</div>
+        <button type="button" className="quiet-action arcade-challenge-help" style={revealed ? { visibility: 'hidden' } : undefined} disabled={revealed || clock.paused} onClick={useTextOptions}>No se oye · usar texto</button>
+      </> : writing ? <>
+        <AnswerStudio id="arcade-word-answer" taskKey={`${sessionId}:${index}`} instruction={result === 'correct' ? 'Tu respuesta' : 'Escribe en inglés'} target={round.word.es} value={input} onChange={setInput} onAnswer={(value) => choose(value)} accepts={(value) => normalizeSentenceAnswer(value) === normalizeSentenceAnswer(round.word.en)} disabled={revealed || clock.paused} />
+        <button type="button" className="quiet-action arcade-challenge-help" style={revealed ? { visibility: 'hidden' } : undefined} disabled={revealed || clock.paused} onClick={useTextOptions}>Ayúdame con opciones</button>
+      </> : <div className="recall-choices" aria-label={inspection ? 'Palabras de prueba' : 'Palabras aprendidas'}>{options.map((choice) => <button type="button" className={result === 'correct' && choice === round.word.en ? 'is-correct' : undefined} disabled={revealed || clock.paused} key={choice} onClick={() => choose(choice)}>{choice}</button>)}</div>}
+      <div className="arcade-feedback-slot" role="status">{result === 'correct' ? <><p className="arcade-result-status"><span aria-hidden="true">✓</span> {usedHint ? 'Acertaste con ayuda' : 'Acertaste'}</p><p><b lang="en">{round.word.en}</b><span aria-hidden="true"> · </span><span lang="es">{round.word.es}</span></p></> : null}{clock.paused ? <p>En pausa.</p> : null}</div>
+      <div className="arcade-stream-foot">
+        {result === 'correct' && !listening ? <button type="button" className="quiet-action" disabled={clock.paused} aria-busy={audioStatus === 'loading'} onClick={() => void listen(true)}>🔊 Escuchar de nuevo</button> : <button type="button" className="quiet-action" style={revealed ? { visibility: 'hidden' } : undefined} disabled={revealed || clock.paused} onClick={remember}>{isAssociationRejected(userId, round.word) ? 'Ver palabra' : 'Recordar el puente'}</button>}
+        {inspection ? <small>Prueba · no guarda</small> : null}
+        {!listening && (audioStatus === 'loading' || audioStatus === 'playing' || ['blocked', 'unavailable'].includes(audioStatus)) ? <span role="status">{audioStatus === 'loading' ? 'Preparando sonido…' : audioStatus === 'playing' ? 'Reproduciendo…' : 'No se completó el audio. Puedes continuar con la palabra escrita.'}</span> : null}
+      </div>
     </div>}
     </GameCard></section></div></dialog>;
 }
