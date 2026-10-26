@@ -310,6 +310,21 @@ it('el mensaje armado permite repetir audio sin acreditar intentos ni perder la 
   expect(learner()).toEqual(before.filter((event) => event.source === 'learner'));
 });
 
+it('pedir audio tras empezar las piezas conserva la selección más reciente al guardar y reabrir', async () => {
+  await reachBuild(previewUnit);
+  const order = tree.root.findByType(GrammarOrder);
+  const selected = [order.props.pieces.findIndex((piece: { text: string }) => piece.text === 'I')];
+  const listen = tree.root.findByProps({ 'aria-label': 'Escuchar modelo' }).props.onClick;
+  const before = learner();
+  await act(async () => { order.props.onChange(selected); listen(); });
+  expect(readTrickCheckpoint(user, stop.id, previewUnit.contentVersion ?? '1')?.continuation).toMatchObject({ order: selected, filledSlots: 0, modelUsed: true });
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual(selected);
+  expect(learner()).toEqual(before);
+  act(() => tree.unmount()); await mount(previewUnit);
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual(selected);
+  expect(learner()).toEqual(before);
+});
+
 it('consultar audio antes de montar conserva ayuda aunque se coloquen fichas inmediatamente', async () => {
   await reachBuild(previewUnit);
   const listen = tree.root.findByProps({ 'aria-label': 'Escuchar modelo' }).props.onClick;

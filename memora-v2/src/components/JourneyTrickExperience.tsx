@@ -176,7 +176,7 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
     // Save help synchronously; SpeechModelButton starts voice only after this guard accepts.
     if (!continuation || !sentence || continuation.phase !== 'build' || continuation.filledSlots !== 0 || guard.current.key !== slotKey || guard.current.placed) return false;
     modelAid.current = true;
-    saveContinuation({ ...continuation, modelUsed: true });
+    saveContinuation({ ...continuation, order: wholeOrder.current, modelUsed: true });
     if (!inspection) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `trick-build-audio:${trick.formId}:${continuation.sentenceIndex}`, skill: trick.skill, phase: 'construction', source: 'authored', modality: 'choice', prompt: sentence.es, response: 'Modelo solicitado como ayuda; no acredita escucha.', expected: '', correct: null, helped: true, parentAttemptId: previousConstruction.current });
     return true;
   }
