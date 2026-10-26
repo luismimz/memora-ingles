@@ -30,3 +30,4 @@
 .chat-flow-ready { color: var(--muted); font-size: .88rem; text-align: center; }
 @media (max-width: 500px) { .card-vertical-scroll { border-radius: 20px; } .card-vertical .card-vertical-page { border-radius: 20px; } }
 @media (prefers-reduced-motion: reduce) { .card-vertical-scroll { transition: none; } .card-vertical-scroll.is-exiting { opacity: 1; } }
+.card-vertical-scroll.is-following-touch { transition: none; }

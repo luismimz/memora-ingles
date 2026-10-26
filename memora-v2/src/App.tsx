@@ -3,7 +3,7 @@ import { lazy, useEffect, useRef, useState, type FormEvent } from 'react';
 import { DeferredScreen } from './components/DeferredScreen';
 import { LanguageGame } from './LanguageGame';
 import { LearningLibrary, type LibraryBrowseState } from './components/LearningLibrary';
-import { missingGrammarWords } from './domain/learningModes';
+import { journeyEntryMode, missingGrammarWords } from './domain/learningModes';
 import { readWordMemories } from './domain/memory';
 import type { LearningMode } from './domain/game';
 import { JourneyHome } from './components/JourneyHomeV2';
@@ -247,7 +247,7 @@ export default function App() {
       return;
     }
     setActiveTrick(null);
-    const mode = requestedMode ?? (directConversation ? 'adventure' : summary.id === lastOpenedUnitId ? resumeMode : 'vocabulary');
+    const mode = requestedMode ?? (directConversation ? 'adventure' : summary.id === lastOpenedUnitId ? resumeMode : journeyEntryMode(summary));
     setLearningMode(mode); setLibraryMode(null);
     setConversationStart(directConversation);
     setExpansionTest(null);
@@ -259,6 +259,8 @@ export default function App() {
     try {
       const loaded = summary.id === pilot?.id ? pilot : summary.id === mirrorPilot?.id ? mirrorPilot : await loadUnit(summary.id);
       if (request !== lessonRequest.current) return;
+      const enteringScene = mode === 'adventure' && !directConversation && (requestedMode === 'adventure' || summary.id !== lastOpenedUnitId && journeyEntryMode(summary) === 'adventure');
+      if (enteringScene && journeyEntryMode({ ...loaded, hasDialogue: Boolean(loaded.communication?.dialogue), grammarTricks: grammarTricks(loaded) }) !== 'adventure') throw new Error('Esta escena ha cambiado y ya no contiene el recorrido completo. Tu práctica sigue guardada; puedes retomarla.');
       const firstWord = loaded.words.find((word) => word.learningRole !== 'review') ?? loaded.words[0];
       prefetchSpeech(firstWord.en.toLowerCase(), firstWord.audioUrl); rememberUnit(summary.id, mode); setUnit(loaded);
       resumeAutomaticArcade(loaded);
@@ -501,7 +503,7 @@ export default function App() {
     const arcadeMode = unit ? completeArcadeCadence(userId, activeTrick?.id ?? unit.id, unit.contentVersion ?? '1', Boolean(activeTrick) || learningMode === 'grammar') : null;
     if (preparingGrammar) { writeGrammarPosition(userId, preparingGrammar.id); refreshProgress((version) => version + 1); if (arcadeMode && launchArcade) void openArcade(true, arcadeMode); return; }
     const following = libraryMode === 'grammar' ? followingGrammarStop(activeTrick?.id ?? unit?.id ?? '') : !libraryMode ? followingJourneyStop(activeTrick?.id ?? unit?.id ?? '') : nextScene;
-    const nextMode = libraryMode ? learningMode : following && 'routeTrick' in following && following.routeTrick ? 'grammar' : 'vocabulary';
+    const nextMode = libraryMode || !following ? learningMode : journeyEntryMode(following);
     rememberUnit(following?.id ?? activeTrick?.id ?? unit?.id ?? null, nextMode);
     refreshProgress((version) => version + 1);
     if (arcadeMode && launchArcade) void openArcade(true, arcadeMode);
@@ -537,6 +539,6 @@ return <><LanguageGame continuous={!inspectionMode} learningMode={learningMode} 
     ? <DeferredScreen label="el gestor de contenido" onBack={() => setContentOpen(false)}><ContentManager userId={userId} onBack={() => setContentOpen(false)} onReview={reviewManagedUnit} onPublished={refreshPublishedUnits} onTest={testExpansionMission} /></DeferredScreen>
     : profileOpen
     ? <DeferredScreen label="tu perfil" onBack={() => setProfileOpen(false)}><ProfileView key={userId} userId={userId} syncStatus={preview ? undefined : syncStatus} appearance={appearance} onToggleAppearance={toggleAppearance} onBack={() => setProfileOpen(false)} onExit={exit} onEvolution={!preview ? () => { setProfileOpen(false); setEvolutionOpen(true); } : undefined} onManageContent={isAdmin && !preview ? () => { setProfileOpen(false); setContentOpen(true); } : undefined} /></DeferredScreen>
-    : <JourneyHome resumeLearningMode={resumeMode} onWords={() => void openLibrary('vocabulary')} onGrammar={() => void openLibrary('grammar')} units={units} userId={userId} resumeUnitId={lastOpenedUnitId} error={unitError} onOpen={(summary) => void openUnit(summary)} onConverse={(summary) => void openUnit(summary, true)} onArcade={() => void openArcade()} onManageContent={isAdmin && !preview ? () => setContentOpen(true) : undefined} onMirror={preview || isAdmin && mirrorPilot ? openMirrorFromHome : undefined} onGrammarReview={preview || isAdmin ? () => setGrammarOpen(true) : undefined} onFusionDemo={preview || isAdmin ? () => setFusionOpen(true) : undefined} onTryPreview={previewAllowed && !preview ? usePreview : undefined} onExit={exit} onEvolution={!preview ? () => setEvolutionOpen(true) : undefined} onProfile={() => setProfileOpen(true)} appearance={appearance} onToggleAppearance={toggleAppearance} />}{microOverlay}</>;
+    : <JourneyHome onStartScene={(summary) => void openUnit(summary, false, 'adventure')} resumeLearningMode={resumeMode} onWords={() => void openLibrary('vocabulary')} onGrammar={() => void openLibrary('grammar')} units={units} userId={userId} resumeUnitId={lastOpenedUnitId} error={unitError} onOpen={(summary) => void openUnit(summary)} onConverse={(summary) => void openUnit(summary, true)} onArcade={() => void openArcade()} onManageContent={isAdmin && !preview ? () => setContentOpen(true) : undefined} onMirror={preview || isAdmin && mirrorPilot ? openMirrorFromHome : undefined} onGrammarReview={preview || isAdmin ? () => setGrammarOpen(true) : undefined} onFusionDemo={preview || isAdmin ? () => setFusionOpen(true) : undefined} onTryPreview={previewAllowed && !preview ? usePreview : undefined} onExit={exit} onEvolution={!preview ? () => setEvolutionOpen(true) : undefined} onProfile={() => setProfileOpen(true)} appearance={appearance} onToggleAppearance={toggleAppearance} />}{microOverlay}</>;
   return <main className="gate-screen"><form className="gate-card" onSubmit={submit}><div className="gate-card-top"><span className="brand-mark">M</span><button type="button" className="appearance-toggle" onClick={toggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`} title={`Modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button></div><p className="eyebrow">MEMORA · NUEVA EXPERIENCIA</p><h1>Recuerda palabras. Úsalas en frases tuyas.</h1><label>Correo<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label><label>Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>{error ? <p className="gate-error" role="alert">{error}</p> : null}<button type="submit" className="primary-action">Entrar a la unidad →</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Probar diseño sin tocar Directus</button> : null}</form></main>;
 }

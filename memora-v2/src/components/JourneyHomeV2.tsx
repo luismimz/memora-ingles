@@ -1,6 +1,6 @@
 import { ScreenHeading } from './ScreenHeading';
 import { NavigationMenu } from './NavigationMenu';
-import { useState } from 'react';
+import { useState, type CSSProperties } from 'react';
 import { readGameCheckpoint, readMirrorCheckpoint } from '../domain/gameCheckpoint';
 import { isReviewDue, readUnitProgress } from '../domain/journey';
 import { readLearningActivities } from '../domain/learningActivity';
@@ -15,11 +15,13 @@ import type { LearningMode } from '../domain/game';
 import './homeGuided.css';
 import { buildJourneyRoute, completedTrick, missingTrickWords } from '../domain/journeyTricks';
 import { readTrickCheckpoint } from '../domain/trickCheckpoint';
+import { journeyEntryMode } from '../domain/learningModes';
 
 type Props = {
   units: UnitSummary[]; userId: string; resumeUnitId?: string | null; error?: string | null;
   resumeLearningMode?: LearningMode;
   onOpen: (unit: UnitSummary) => void; onConverse: (unit: UnitSummary) => void;
+  onStartScene?: (unit: UnitSummary) => void;
   onWords?: () => void; onGrammar?: () => void;
   onArcade?: () => void; onManageContent?: () => void; onFusionDemo?: () => void;
   onGrammarReview?: () => void; onEvolution?: () => void; onMirror?: () => void;
@@ -75,6 +77,20 @@ export function JourneyHome(props: Props) {
   const methodSteps = featured?.routeTrick ? ['Descubre', 'Monta', 'Conversa'] : ['Descubre', 'Arma', 'Recuerda'];
   const methodStep = featured?.routeTrick ? trickCheckpoint?.continuation?.phase === 'conversation' ? 2 : trickCheckpoint?.continuation?.phase === 'build' ? 1 : 0 : gameCheckpoint?.phase === 'recall' ? 2 : gameCheckpoint?.wordAssembly ? 1 : 0;
 
+  // The default invitation is communication, not an endless vocabulary detour.
+  // Keep an active message and every saved word checkpoint intact.
+  const activeMessage = Boolean(featured?.routeTrick || resume && (mirrorCheckpoint || resumeLearningMode === 'adventure' && journeyEntryMode(resume) === 'adventure') || queued && resumeLearningMode === 'adventure' && journeyEntryMode(queued) === 'adventure');
+  const scene = !activeMessage && props.onStartScene ? units.find((unit) => journeyEntryMode(unit) === 'adventure' && !readUnitProgress(userId, unit.id)) : undefined;
+  const launch = scene ?? featured;
+  const sceneLaunch = Boolean(scene);
+  const communicative = Boolean(launch?.routeTrick || scene || activeMessage);
+  const launchPresentation = launch ? journeyPresentation(launch) : null;
+  const goal = launch?.routeTrick ? launch.routeTrick.title : communicative ? launch?.sentence?.es : undefined;
+  const launchLabel = sceneLaunch ? 'Palabras → estructura → conversación' : missionLabel;
+  const savedWords = Boolean(scene && featured && (scene.id !== featured.id || resumeLearningMode === 'vocabulary'));
+  const launchIndex = launch ? stories.findIndex((unit) => unit.id === launch.id) + 1 : currentIndex;
+  const enter = () => { if (scene && props.onStartScene) props.onStartScene(scene); else if (featured) onOpen(featured); };
+
   return <main className="journey-screen home-v2 home-guided" id="inicio">
     <header className="home-guided-header">
       <a className="journey-brand" href="#inicio" aria-label="Memora, ir al inicio"><span className="brand-mark">M</span><span>MEMORA</span></a>
@@ -88,12 +104,16 @@ export function JourneyHome(props: Props) {
     </header>
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
     <div className="home-guided-body">
-      {featured ? <section className="home-now" aria-labelledby="home-adventure-title">
-        <div className="home-now-context"><span>{resume ? 'Actividad en curso' : completedIds.has(featured.id) ? 'Práctica conocida' : 'Tu siguiente paso'}</span><small aria-label={`Paso ${currentIndex} de ${stories.length}`}>{`${currentIndex} / ${stories.length}`}</small></div>
-        <div className="home-now-main"><ScreenHeading id="home-adventure-title">{missionLabel}</ScreenHeading><p className="home-now-place">{featuredPresentation?.title}</p>
-          <button type="button" className="primary-action home-continue" onClick={() => onOpen(featured)}>{completedIds.has(featured.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">→</span></button>
-          <p className="home-method" aria-label="Tu fase actual">{methodSteps.map((step, index) => <span key={step} aria-current={index === methodStep ? 'step' : undefined}>{index > 0 ? <i aria-hidden="true">→</i> : null}{step}</span>)}</p>
-          <details className="home-about"><summary>Qué voy a hacer</summary><p>{featuredPresentation?.subtitle}</p><p>{resume ? 'Tu actividad y tus ayudas siguen donde las dejaste.' : 'Te enseñamos antes de pedirte una respuesta.'}</p></details>
+      {launch ? <section className="home-now" aria-labelledby="home-adventure-title">
+        <div className="home-now-context"><span>{sceneLaunch ? 'TU PRÓXIMA ESCENA' : resume ? 'Actividad en curso' : 'TU SIGUIENTE PASO'}</span><small className="sr-only" aria-label={`Paso ${launchIndex} de ${stories.length}`}>{`${launchIndex} / ${stories.length}`}</small><span className="home-live-mark" aria-hidden="true">↗</span></div>
+        <div className="home-now-main">
+          <div className="home-word-orbit" aria-hidden="true">{launch.words?.slice(0, 3).map((word, index) => <span key={`${index}:${word.es}`} style={{ '--word-position': index } as CSSProperties}>{word.es}</span>)}<svg viewBox="0 0 320 60" focusable="false"><path d="M55 0v8q0 22 42 22h28q35 0 35 30M160 0v60M265 0v8q0 22-42 22h-28q-35 0-35 30" /></svg></div>
+          <p className="home-goal-label">{launch.routeTrick ? 'TU SIGUIENTE ESTRUCTURA' : goal ? 'TU INGLÉS, EN UNA FRASE' : 'PALABRAS PARA TU INGLÉS'}</p>
+          <ScreenHeading id="home-adventure-title">{goal ?? launchPresentation?.title}</ScreenHeading>
+          <p className="home-now-place">{launchLabel}</p>
+          <button type="button" className="primary-action home-continue" onClick={enter}>{sceneLaunch ? 'Entrar en la escena' : completedIds.has(launch.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">↗</span></button>
+          {sceneLaunch ? <p className="home-scene-promise">Primero te enseñamos. Después lo dices tú.</p> : <p className="home-method" aria-label="Tu fase actual">{methodSteps.map((step, index) => <span key={step} aria-current={index === methodStep ? 'step' : undefined}>{index > 0 ? <i aria-hidden="true">→</i> : null}{step}</span>)}</p>}
+          <details className="home-about"><summary>{savedWords ? 'Tu práctica de palabras sigue guardada' : 'Dentro de esta escena'}</summary><p>{sceneLaunch ? 'Verás las palabras y las piezas de la estructura antes de construir y usar el mensaje.' : featuredPresentation?.subtitle}</p><p>{resume ? 'Tu actividad y tus ayudas siguen donde las dejaste.' : 'Te enseñamos antes de pedirte una respuesta.'}</p>{savedWords && featured ? <button type="button" className="home-saved-words" onClick={() => onOpen(featured)}>Retomar mi práctica de palabras →</button> : null}</details>
         </div>
       </section> : <section className="journey-empty"><ScreenHeading>La aventura está preparándose.</ScreenHeading><p>Aún no hay una misión publicada.</p>{onTryPreview ? <button type="button" className="primary-action" onClick={onTryPreview}>Probar la experiencia →</button> : null}</section>}
         <details className="home-progress"><summary><span>Tu progreso</span><small>{uniqueWords.length ? `${uniqueWords.length} ${uniqueWords.length === 1 ? 'palabra' : 'palabras'} con práctica registrada` : 'Tu primera historia empieza aquí.'}</small></summary><div className="home-evidence-content">

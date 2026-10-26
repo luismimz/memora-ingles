@@ -32,16 +32,19 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   const advancing = useRef(false);
   const isFlipped = showBack ?? flipped;
   const scrollport = useRef<HTMLDivElement>(null);
-  const touchStart = useRef<number>();
-  const wheelGesture = useRef({ at: -Infinity, allowed: false });
+  const touchStart = useRef<{ x: number; y: number }>();
+  const wheelGesture = useRef({ at: -Infinity, allowed: false, distance: 0 });
   const available = useRef({ onAdvance, revealFooter, isFlipped, stepKey });
   available.current = { onAdvance, revealFooter, isFlipped, stepKey };
 
   useEffect(() => {
     touchStart.current = undefined;
+    wheelGesture.current.allowed = false;
+    wheelGesture.current.distance = 0;
+    if (!advancing.current) setDragX(0);
     if (scrollport.current) scrollport.current.scrollTop = 0;
   }, [vertical, stepKey]);
-  useEffect(() => { touchStart.current = undefined; wheelGesture.current.allowed = false; }, [Boolean(onAdvance), revealFooter]);
+  useEffect(() => { touchStart.current = undefined; wheelGesture.current.allowed = false; wheelGesture.current.distance = 0; }, [Boolean(onAdvance), revealFooter]);
 
   useEffect(() => {
     // Only repair a lost entry focus. Narration, feedback and stepKey changes
@@ -120,31 +123,38 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
       return Boolean(onAdvance && revealFooter && (!interactiveCardTarget(target) || sceneSurface) && !window.getSelection?.()?.toString());
     };
     return <div className={`game-card-anchor card-vertical ${className}`} data-feedback={feedback}>
-      <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : ''}`} role="region" aria-label="Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir." tabIndex={0}
+      <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : dragX < 0 ? ' is-following-touch' : ''}`} role="region" aria-label="Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir." tabIndex={0}
         style={{ transform: `translate3d(0, ${dragX}px, 0)` }}
         onPointerDown={() => { touchStart.current = undefined; }}
-        onTouchStart={(event) => { touchStart.current = event.touches.length === 1 && canLeave(event.target) && atEnd(event.currentTarget) ? event.touches[0].clientY : undefined; }}
+        onTouchStart={(event) => { touchStart.current = event.touches.length === 1 && canLeave(event.target) && atEnd(event.currentTarget) ? { x: event.touches[0].clientX ?? 0, y: event.touches[0].clientY } : undefined; }}
         onTouchMove={(event) => {
           if (touchStart.current === undefined || event.touches.length !== 1) return;
-          const distance = touchStart.current - event.touches[0].clientY;
-          if (distance > 75 && canLeave(event.target) && atEnd(event.currentTarget)) advance();
+          const distance = touchStart.current.y - event.touches[0].clientY;
+          const across = Math.abs((event.touches[0].clientX ?? touchStart.current.x) - touchStart.current.x);
+          if (across > Math.max(12, distance)) { touchStart.current = undefined; if (!advancing.current) setDragX(0); return; }
+          if (!canLeave(event.target) || !atEnd(event.currentTarget)) return;
+          if (!advancing.current) setDragX(-Math.min(32, Math.max(0, distance) * .42));
+          if (distance >= 48) advance();
         }}
-        onTouchCancel={() => { touchStart.current = undefined; }}
-        onTouchEnd={() => { touchStart.current = undefined; }}
+        onTouchCancel={() => { touchStart.current = undefined; if (!advancing.current) setDragX(0); }}
+        onTouchEnd={() => { touchStart.current = undefined; if (!advancing.current) setDragX(0); }}
         onWheel={(event) => {
           const now = Date.now();
           const fresh = now - wheelGesture.current.at > 180;
           wheelGesture.current.at = now;
-          if (event.deltaY <= 0) { wheelGesture.current.allowed = false; return; }
+          if (event.ctrlKey || event.deltaY <= 0 || Math.abs(event.deltaX ?? 0) > event.deltaY) { wheelGesture.current.allowed = false; wheelGesture.current.distance = 0; return; }
           // A wheel burst that starts while reading must only scroll, even if
           // inertia reaches the end. A new burst at the end can continue.
-          if (fresh) wheelGesture.current.allowed = canLeave(event.target) && atEnd(event.currentTarget);
+          if (fresh) { wheelGesture.current.allowed = canLeave(event.target) && atEnd(event.currentTarget); wheelGesture.current.distance = 0; }
           if (!wheelGesture.current.allowed) return;
-          if (event.deltaY >= 40 && canLeave(event.target) && atEnd(event.currentTarget)) advance();
+          if (!canLeave(event.target) || !atEnd(event.currentTarget)) { wheelGesture.current.allowed = false; wheelGesture.current.distance = 0; return; }
+          const pixels = event.deltaY * (event.deltaMode === 1 ? 16 : event.deltaMode === 2 ? event.currentTarget.clientHeight : 1);
+          wheelGesture.current.distance += pixels;
+          if (wheelGesture.current.distance >= 60) advance();
         }}
         onScroll={(event) => {
           // Reading, layout changes and programmatic scroll never navigate.
-          if (!atEnd(event.currentTarget)) touchStart.current = undefined;
+          if (!atEnd(event.currentTarget)) { touchStart.current = undefined; if (!advancing.current) setDragX(0); }
         }}>
         <article className="game-card-face card-vertical-page"><div className="game-card-body">{children}{back ? <details className="card-vertical-memory"><summary>Recordar la escena</summary>{back}</details> : null}</div></article>
       </div>

@@ -19,6 +19,45 @@ it('leer hasta el final y la inercia de esa rueda no navegan; una rueda nueva s�
   act(() => { wheel(); vi.advanceTimersByTime(230); });
   expect(advance).toHaveBeenCalledOnce();
 });
+it('acumula un gesto de trackpad suave, no exige un golpe de rueda ni suma gestos separados', () => {
+  const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
+  act(() => { wheel(20); vi.advanceTimersByTime(200); wheel(20); vi.advanceTimersByTime(200); });
+  expect(advance).not.toHaveBeenCalled();
+  act(() => { wheel(10); wheel(10); wheel(10); wheel(10); wheel(20); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+});
+it('cambiar tarea descarta el gesto parcial y su inercia antes de permitir otro nuevo', () => {
+  const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
+  act(() => wheel(20));
+  act(() => tree.update(<GameCard vertical stepKey="two" onAdvance={advance}>Otra tarjeta</GameCard>)); viewport.scrollTop = 200;
+  act(() => { wheel(50); vi.advanceTimersByTime(130); });
+  expect(advance).not.toHaveBeenCalled();
+  act(() => { vi.advanceTimersByTime(200); wheel(60); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+});
+it('respeta unidades de rueda y no convierte zoom o desplazamiento lateral en avance', () => {
+  const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
+  act(() => { region().props.onWheel(event({ deltaY: 100, ctrlKey: true })); vi.advanceTimersByTime(200); region().props.onWheel(event({ deltaY: 100, deltaX: 200 })); vi.advanceTimersByTime(230); });
+  expect(advance).not.toHaveBeenCalled();
+  act(() => { region().props.onWheel(event({ deltaY: 4, deltaMode: 1 })); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+});
+it('acompaña un gesto táctil corto, vuelve si se suelta y no exige arrastrar 75 píxeles', () => {
+  const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
+  act(() => { region().props.onTouchStart(event({ touches: [{ clientY: 300, clientX: 100 }] })); region().props.onTouchMove(event({ touches: [{ clientY: 280, clientX: 100 }] })); });
+  expect(region().props.style.transform).toBe('translate3d(0, -8.4px, 0)');
+  act(() => { region().props.onTouchEnd(); vi.advanceTimersByTime(230); });
+  expect(region().props.style.transform).toBe('translate3d(0, 0px, 0)'); expect(advance).not.toHaveBeenCalled();
+  act(() => { region().props.onTouchStart(event({ touches: [{ clientY: 300, clientX: 100 }] })); region().props.onTouchMove(event({ touches: [{ clientY: 252, clientX: 100 }] })); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+});
+it('un gesto lateral o cancelar el contacto descarta el arrastre sin navegar', () => {
+  const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
+  act(() => { region().props.onTouchStart(event({ touches: [{ clientY: 300, clientX: 100 }] })); region().props.onTouchMove(event({ touches: [{ clientY: 270, clientX: 180 }] })); region().props.onTouchMove(event({ touches: [{ clientY: 100, clientX: 180 }] })); vi.advanceTimersByTime(230); });
+  expect(advance).not.toHaveBeenCalled();
+  act(() => { region().props.onTouchStart(event({ touches: [{ clientY: 300 }] })); region().props.onTouchMove(event({ touches: [{ clientY: 280 }] })); region().props.onTouchCancel(); });
+  expect(region().props.style.transform).toBe('translate3d(0, 0px, 0)');
+});
 it('un puzle, campo, ayuda o selección no navega y una pregunta no ofrece avance', () => {
   const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
   act(() => { region().props.onWheel(event({ deltaY: 100, target: { closest: () => ({}) } })); vi.advanceTimersByTime(230); });

@@ -45,7 +45,7 @@ it.each(['resolved', 'rejected'] as const)('salir de una carga %s no abre la act
   expect(text(tree.toJSON())).not.toContain('casi lista');
   await click('Volver sin esperar');
   expect(text(tree.toJSON())).toContain('Continuar jugando');
-  expect(focused.at(-1)?.label).toBe('Descubre esta historia');
+  expect(focused.at(-1)?.label).toBe(previewUnit.title);
   const focusCount = focused.length;
   await act(async () => { if (outcome === 'resolved') resolve(previewUnit); else reject(new Error('obsolete-error')); });
   expect(tree.root.findAllByType(LanguageGame)).toHaveLength(0);

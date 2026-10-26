@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import keys from '../../content/keys-mission.json';
 import mirror from '../../content/mirror-now.json';
 import { validateUnit } from './unit';
-import { completeLearningMode, missingGrammarWords } from './learningModes';
+import { completeLearningMode, journeyEntryMode, missingGrammarWords } from './learningModes';
 import { recalledWordIndex, recordActiveWordAttempt, summarizeActiveRecall } from './activeRecall';
 import { readWordMemories, recordWordRecall } from './memory';
 import { readUnitProgress } from './journey';
@@ -27,6 +27,14 @@ beforeEach(() => {
   initializeJournal('learner');
 });
 describe('modos conectados con el progreso real', () => {
+  it('una escena con estructura y conversación abre enseñanza completa, no fuerza vocabulario', () => {
+    const scene = { id: 'synthetic-scene', title: 'Test', hasDialogue: true, sentence: { en: 'I am playing.', es: 'Estoy jugando.' }, grammarTricks: [{ sourceId: 'synthetic-scene', formId: 'ing', skill: 'test', title: 'Test', vocabulary: ['play'] }] };
+    expect(journeyEntryMode(scene)).toBe('adventure');
+    expect(journeyEntryMode({ ...scene, kind: 'vocabulary-pack' })).toBe('vocabulary');
+    expect(journeyEntryMode({ ...scene, grammarTricks: [] })).toBe('vocabulary');
+    expect(journeyEntryMode({ ...scene, hasDialogue: false })).toBe('vocabulary');
+    expect(journeyEntryMode({ ...scene, routeTrick: scene.grammarTricks[0] })).toBe('grammar');
+  });
   it('un sentido anterior no habilita gramática que necesita otra equivalencia de la misma palabra', () => {
     for (const word of unit.words) recordWordRecall('learner', word, 'quick');
     const changed = { ...unit, words: unit.words.map((word, index) => index === 0 ? { ...word, es: 'otro sentido' } : word) };

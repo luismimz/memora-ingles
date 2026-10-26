@@ -12,6 +12,17 @@ const known = [{ key: 'play', correct: 1, word: previewUnit.words[0] }] as WordM
 const activity = { unitId: 'u1', contentVersion: '1', source: 'learner', phase: 'completion', activityId: 'trick-completed:ing' } as LearningActivity;
 
 describe('paradas de gramática con vocabulario preparado', () => {
+  it('la escena completa no vuelve inmediatamente a su introducción ni fabrica un completado del truco', () => {
+    const route = buildJourneyRoute(units(2));
+    const completion = { ...activity, activityId: 'adventure-completed', skill: 'adventure' };
+    const before = JSON.stringify([completion]);
+    const stop = route.find((item) => item.routeTrick)!;
+    expect(nextJourneyStop('u1', route, known, [completion])?.id).toBe('u2');
+    expect(completedTrick(stop, [completion])).toBe(false);
+    expect(JSON.stringify([completion])).toBe(before);
+    expect(nextJourneyStop('u1', route, known, [{ ...completion, activityId: 'vocabulary-completed', skill: 'vocabulary' }])?.id).toBe(stop.id);
+    expect(nextJourneyStop('u1', route, known, [{ ...completion, contentVersion: 'old' }])?.id).toBe(stop.id);
+  });
   it('la misma grafía con otro sentido o versión no abre el truco y no modifica su memoria', () => {
     const word = { ...previewUnit.words[0], associationId: 'play-reviewed', associationVersion: 2 };
     const stop = { ...previewUnit, words: [word], routeTrick: grammarTricks(previewUnit)[0] };

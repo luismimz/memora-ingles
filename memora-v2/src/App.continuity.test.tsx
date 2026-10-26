@@ -61,6 +61,27 @@ function game() {
 }
 
 describe('continuidad real desde App', () => {
+  it('Inicio abre la enseñanza completa de una escena aunque la posición anterior fuera vocabulario', async () => {
+    const source = { ...previewUnit, hasDialogue: true, grammarTricks: grammarTricks(previewUnit) };
+    const saved = JSON.stringify({ phase: 'associate', wordAssembly: { selected: [0] } });
+    storage.set(`memora-v2.checkpoint.learner.${source.id}:vocabulary`, saved);
+    hooks.states.set(2, null); hooks.states.set(7, source.id); hooks.states.set(8, 'vocabulary'); hooks.states.set(15, [source]); hooks.states.set(22, false);
+    api.loadUnit.mockResolvedValue(source);
+    await game().props.onStartScene(source);
+    expect(game().props.learningMode).toBe('adventure');
+    expect(game().props.unit.id).toBe(source.id);
+    expect(storage.get(`memora-v2.checkpoint.learner.${source.id}:vocabulary`)).toBe(saved);
+    expect(readLearningActivities('learner')).toEqual([]);
+  });
+  it('una escena que pierde conversación al descargar no promete un recorrido inexistente ni cambia el progreso', async () => {
+    const source = { ...previewUnit, hasDialogue: true, grammarTricks: grammarTricks(previewUnit) };
+    hooks.states.set(2, null); hooks.states.set(15, [source]); hooks.states.set(22, false);
+    api.loadUnit.mockResolvedValue({ ...previewUnit, communication: undefined });
+    await game().props.onStartScene(source);
+    expect(game().props.error).toContain('ya no contiene el recorrido completo');
+    expect(hooks.states.get(2)).toBeNull();
+    expect(readLearningActivities('learner')).toEqual([]);
+  });
   it('revalida el sentido recién descargado y no abre el truco con metadatos antiguos de Inicio', async () => {
     const source = { ...previewUnit, id: 'changing-source' };
     const descriptor = grammarTricks(source)[0];

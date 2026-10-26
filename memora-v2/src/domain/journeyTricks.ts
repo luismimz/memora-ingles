@@ -140,7 +140,11 @@ export function nextJourneyStop(currentId: string, route: readonly UnitSummary[]
   // after a trick continue with pending vocabulary or finish this adventure run.
   // The independent grammar map deliberately uses nextGrammarStop instead.
   const grammarReady = !route[current].routeTrick && readyForAnotherTrick(route, activities);
-  const available = (stop: UnitSummary) => (!stop.routeTrick || grammarReady)
+  const fullSceneJustCompleted = activities.some((activity) => activity.unitId === currentId && activity.contentVersion === (route[current].contentVersion ?? '1') && activity.source === 'learner' && activity.phase === 'completion' && activity.activityId === 'adventure-completed' && activity.skill === 'adventure');
+  // A complete scene has just included its own teaching and message. Do not
+  // follow it immediately with its introductory trick; keep that stop available
+  // for later practice without inventing a separate completion for it.
+  const available = (stop: UnitSummary) => !(fullSceneJustCompleted && stop.routeTrick?.sourceId === currentId) && (!stop.routeTrick || grammarReady)
     && !missingTrickWords(stop, memories).length && (stop.routeTrick ? !completedTrick(stop, activities) : !completedIds.has(stop.id));
   const following = route.slice(current + 1).find(available);
   const scheduled = route.slice(current + 1).find((stop) => stop.routeTrick ? !completedTrick(stop, activities) : !completedIds.has(stop.id));

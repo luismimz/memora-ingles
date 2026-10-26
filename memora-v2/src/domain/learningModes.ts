@@ -6,6 +6,14 @@ import { recordUnitProgress, type UnitProgress } from './journey';
 import { recordSession } from './learningProfile';
 import { recordLearningActivity } from './learningActivity';
 import { getPlayableGrammar } from './unit';
+import type { UnitSummary } from '../services/directus';
+
+/** A published scene with a prepared structure opens the whole teaching loop.
+ * Word-only packs and explicit library choices remain vocabulary practice. */
+export function journeyEntryMode(unit?: UnitSummary): LearningMode {
+  if (unit?.routeTrick) return 'grammar';
+  return unit && unit.kind !== 'vocabulary-pack' && unit.kind !== 'grammar-lesson' && unit.hasDialogue && unit.sentence?.es && unit.grammarTricks?.length ? 'adventure' : 'vocabulary';
+}
 
 /** Readiness means prior successful practice, not a promise of long-term mastery. */
 export function missingGrammarWords(unit: AtomicUnit, memories: WordMemory[]): string[] {
