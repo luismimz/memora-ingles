@@ -47,7 +47,13 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const generatedContinuous = Boolean(form && !form.lesson && lesson.id === `present-continuous:${form.englishBase}` && (form.visualContract === 'present-continuous' || form.id === 'ing'));
   const preparedMessage = [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill, treeLocationSkill, meatCookingSkill].includes(lesson.id);
   const stream = puzzle && (generatedContinuous || preparedMessage);
-  const checks = grammarChecksForExperience(lesson, conversationAnswers, constructionAnswers).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain'));
+  // Keep an already-started ordering task for this mount, even if a newly
+  // connected constructor would otherwise defer it. Do not shift indices as
+  // onProgress writes each new checkpoint back to the parent.
+  const initialConstructionCheck = useRef(checkpoint ? checkpoint.checkId
+    ? lesson.checks.find((check) => check.id === checkpoint.checkId)
+    : !generatedContinuous ? grammarChecksForExperience(lesson, conversationAnswers)[checkpoint.checkIndex] : undefined : undefined);
+  const checks = grammarChecksForExperience(lesson, conversationAnswers, constructionAnswers, initialConstructionCheck.current?.ordering ? initialConstructionCheck.current.id : undefined).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain'));
   const teachingStage = checkpoint && checkpoint.stage <= lesson.steps.length ? checkpoint.stage : undefined;
   // Filtering earlier questions must not discard an identified unfinished response.
   const savedCheckIndex = checkpoint?.checkId !== undefined ? checks.findIndex((check) => check.id === checkpoint.checkId) : checkpoint?.checkIndex ?? -1;

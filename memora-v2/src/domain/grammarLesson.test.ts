@@ -1,9 +1,15 @@
 import { describe, it, expect } from 'vitest';
-import { lessonForForm, validateGrammarLesson } from './grammarLesson';
+import { grammarChecksForExperience, lessonForForm, validateGrammarLesson } from './grammarLesson';
 import { grammarExamples } from '../preview/grammarExamples';
 import { previewUnit } from '../preview/previewUnit';
 
 describe('trucos que se comprueban y se usan', () => {
+  it('difiere solo el montaje coincidente y permite conservar una tarea ya iniciada', () => {
+    const lesson = lessonForForm(previewUnit.grammar[0], 'jugar')!;
+    expect(grammarChecksForExperience(lesson, [], ['I am playing.']).map((check) => check.id)).toEqual(['meaning-now-v1', 'use']);
+    expect(grammarChecksForExperience(lesson, [], ['I am playing.'], 'order-message-v1')).toEqual(lesson.checks);
+    expect(grammarChecksForExperience(lesson, [], ['I am cooking.'])).toEqual(lesson.checks);
+  });
   it('separa el objetivo visible de las instrucciones de mover piezas', () => {
     const lesson = lessonForForm(previewUnit.grammar[0], 'jugar')!;
     expect(lesson.checks[0].prompt).toBe('Estoy jugando.');

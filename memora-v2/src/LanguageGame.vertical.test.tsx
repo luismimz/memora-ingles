@@ -217,6 +217,53 @@ it('dos errores en el chat principal mantienen reparación y modelo al reabrir, 
   expect(attempts()).toHaveLength(2);
   expect(attempts().some((event) => event.correct)).toBe(false);
 });
+const constructionUnit: AtomicUnit = { ...previewUnit, communication: undefined, practiceSentences: undefined,
+  sentence: { ...previewUnit.sentence, en: 'I am playing', es: 'Estoy jugando.', slots: [{ en: 'I am playing', es: 'Estoy jugando.', choices: ['I am playing', 'I playing'] }] } };
+const openConstructionUnit = async (learningMode: 'adventure' | 'grammar' = 'adventure') => { await act(async () => { tree = create(<LanguageGame unit={constructionUnit} userId={user} learningMode={learningMode} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); }); };
+it('si el mismo mensaje se construirá después, conserva comprensión y escritura pero lo monta una sola vez', async () => {
+  writeGameCheckpoint(user, constructionUnit.id, constructionUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
+  await openConstructionUnit();
+  await swipe(false); act(() => tree.unmount()); await openConstructionUnit();
+  for (let index = 0; index < 2; index++) await swipe(false);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(readGameCheckpoint(user, constructionUnit.id, constructionUnit.contentVersion ?? '1')?.coach?.position.checkId).toBe('meaning-now-v1');
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+  await act(async () => { tree.root.findByType(GrammarCoach).findAllByType('button').find((node) => text(node).includes('Estoy jugando ahora.'))!.props.onClick(); });
+  await swipe(false);
+  expect(tree.root.findAllByType(AnswerStudio)).toHaveLength(1);
+  await act(async () => { tree.root.findByType('input').props.onChange({ target: { value: 'I am playing' } }); });
+  await act(async () => { vi.advanceTimersByTime(450); }); await swipe(false);
+  expect(tree.root.findAllByType(SentenceBuilderCard)).toHaveLength(1);
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'order-message-v1')).toHaveLength(0);
+  await act(async () => { tree.root.findByType(SentenceBuilderCard).findAllByType('button').find((node) => text(node) === 'I am playing')!.props.onClick(); });
+  expect(tree.root.findByType(SentenceBuilderCard).props.filledSlots).toBe(1);
+  const built = readLearningActivities(user);
+  expect(built.filter((event) => event.source === 'learner' && event.phase === 'construction')).toMatchObject([{ activityId: 'build-0-0', correct: true, helped: true }, { activityId: 'constructed-0', correct: true, helped: true }]);
+  await swipe(false);
+  expect(tree.root.findAllByType(SentenceBuilderCard)).toHaveLength(0);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner' && event.correct !== null)).toEqual(built.filter((event) => event.source === 'learner' && event.correct !== null));
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'adventure-completed')).toMatchObject([{ correct: null }]);
+});
+it('un montaje identificado a medias se conserva al reabrir, sin desplazar el reto siguiente', async () => {
+  const lesson = lessonForForm(constructionUnit.grammar[0], 'jugar')!;
+  const saved = () => readGameCheckpoint(user, constructionUnit.id, constructionUnit.contentVersion ?? '1');
+  writeGameCheckpoint(user, constructionUnit.id, constructionUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar', coach: { lessonId: lesson.id, position: { stage: lesson.steps.length, checkIndex: 0, checkId: 'order-message-v1', input: '', feedback: 'idle', helped: true, order: [1] } } });
+  await openConstructionUnit();
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([1]);
+  await act(async () => { const order = tree.root.findByType(GrammarOrder); order.props.onChange([1, 2, 0]); order.props.onAnswer('I AM PLAYING'); });
+  await swipe(false);
+  expect(saved()?.coach?.position.checkId).toBe('meaning-now-v1');
+  const events = readLearningActivities(user);
+  act(() => tree.unmount()); await openConstructionUnit();
+  expect(saved()?.coach?.position.checkId).toBe('meaning-now-v1');
+  expect(readLearningActivities(user)).toEqual(events);
+});
+it('el modo gramática conserva su montaje porque no llegará al constructor', async () => {
+  await openConstructionUnit('grammar');
+  for (let index = 0; index < 3; index++) await swipe(false);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+});
 it('el modelo de enseñanza avisa del audio fallido, permite reintentar y no arrastra fallos al siguiente slide', async () => {
   writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
   await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
