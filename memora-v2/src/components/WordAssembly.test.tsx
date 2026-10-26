@@ -23,6 +23,21 @@ it('construye con letras repetidas, ayuda sin castigar y no permite saltar antes
   expect(next).not.toHaveBeenCalled();
   act(() => tree.unmount());
 });
+it('cancelar el audio de la palabra no inventa fallo ni cambia piezas; conserva el audio preparado', async () => {
+  vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'cancelled', source: null });
+  const next = vi.fn(), progress = vi.fn(); let tree!: ReturnType<typeof create>;
+  const word = { ...previewUnit.words[0], en: 'I', es: 'yo', audioUrl: 'isolated-audio-id' };
+  await act(async () => { tree = create(<WordAssembly vertical word={word} onContinue={next} onProgress={progress} />); });
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Colocar I, pieza 1' }).props.onClick());
+  expect(playEnglish).toHaveBeenLastCalledWith('I', word.audioUrl, true, expect.any(Function));
+  expect(tree.root.findAllByProps({ className: 'association-audio-status' })).toHaveLength(0);
+  const saved = progress.mock.calls.slice();
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar palabra' }).props.onClick());
+  expect(progress.mock.calls).toEqual(saved);
+  expect(next).not.toHaveBeenCalled();
+  expect(tree.root.findByType('h2').children).toEqual(['✓ Palabra armada']);
+  act(() => tree.unmount());
+});
 it('el audio fallido no bloquea el resultado, permite repetir y continuar una sola vez', async () => {
   vi.mocked(playEnglish).mockResolvedValueOnce({ status: 'unavailable', source: null });
   const next = vi.fn(); let tree!: ReturnType<typeof create>;

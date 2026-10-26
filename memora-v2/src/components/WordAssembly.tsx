@@ -3,9 +3,9 @@ import type { AtomicWord } from '../domain/unit';
 import type { WordAssemblyPosition } from '../domain/game';
 import { GameCard } from './GameCard';
 import { SceneVisual } from './SceneVisual';
-import { playEnglish, playSnap, stopSpeech } from '../services/audio';
+import { playSnap, stopSpeech } from '../services/audio';
 import { AssociationAudioStatus } from './AssociationAudioStatus';
-import type { AssociationAudioState } from './useAssociationAudio';
+import { useSpeechPlayback } from './useSpeechPlayback';
 import './wordAssembly.css';
 
 /** Guided spelling rehearsal, not an independent recall or a new memory store. */
@@ -23,20 +23,10 @@ export function WordAssembly({ word, onContinue, vertical = false, initialPositi
   const [selected, setSelected] = useState<number[]>(() => initialPosition && initialPosition.selected.length <= parts.length && new Set(initialPosition.selected).size === initialPosition.selected.length && initialPosition.selected.every((id, index) => Number.isInteger(id) && id >= 0 && id < parts.length && parts[id] === parts[index]) ? initialPosition.selected : []), [cue, setCue] = useState('');
   const [helped, setHelped] = useState(initialPosition?.modelUsed ?? false);
   const [hinted, setHinted] = useState(initialPosition?.hinted ?? false);
-  const [audio, setAudio] = useState<AssociationAudioState>();
-  const request = useRef(0);
+  const playback = useSpeechPlayback();
   const continued = useRef(false);
-  useEffect(() => () => { request.current++; stopSpeech(); }, []);
-  async function listen() {
-    const token = ++request.current;
-    setAudio({ status: 'preparing', source: null });
-    try {
-      const result = await playEnglish(word.en, word.audioUrl, true, (source) => {
-        if (token === request.current) setAudio({ status: 'playing', source });
-      });
-      if (token === request.current) setAudio({ status: result.status === 'played' ? 'ready' : result.status === 'unavailable' ? 'unavailable' : 'blocked', source: result.source });
-    } catch { if (token === request.current) setAudio({ status: 'unavailable', source: null }); }
-  }
+  useEffect(() => () => { playback.reset(); stopSpeech(); }, []);
+  const listen = () => playback.listen(word.en, 'en', word.audioUrl);
   const done = selected.length === parts.length;
   function choose(id: number) {
     if (done || selected.includes(id)) return;
@@ -45,8 +35,8 @@ export function WordAssembly({ word, onContinue, vertical = false, initialPositi
     onProgress?.({ selected: next, hinted, modelUsed: helped });
     if (next.length === parts.length) void listen();
   }
-  const advance = () => { if (!done || continued.current) return; continued.current = true; request.current++; stopSpeech(); onContinue(); };
-  const speaker = <button type="button" className="round-audio" aria-busy={audio?.status === 'preparing'} title={audio?.status === 'preparing' ? 'Preparando audio…' : audio?.status === 'playing' ? 'Reproduciendo…' : 'Escuchar'} onClick={() => void listen()} aria-label={done ? 'Escuchar palabra' : 'Escuchar modelo'}>🔊</button>;
+  const advance = () => { if (!done || continued.current) return; continued.current = true; playback.reset(); stopSpeech(); onContinue(); };
+  const speaker = <button type="button" className="round-audio" aria-busy={playback.audio?.status === 'preparing'} title={playback.label} onClick={() => void listen()} aria-label={done ? 'Escuchar palabra' : 'Escuchar modelo'}>🔊</button>;
   return <GameCard vertical={vertical} stepKey={done ? 'assembled' : 'assemble'} onAdvance={done ? advance : undefined} advanceControl revealFooter={done} advanceLabel="Continuar" className="word-assembly-card"><div className="word-assembly">
     <h1>{word.es}</h1>
     <SceneVisual word={word} compact hideAnswer={!done} />
@@ -55,6 +45,6 @@ export function WordAssembly({ word, onContinue, vertical = false, initialPositi
     {!done ? <div className="assembly-bank" aria-label="Piezas de la palabra">{bank.map(({ text, id }) => <button type="button" key={id} lang="en" disabled={selected.includes(id)} onClick={() => choose(id)} aria-label={`Colocar ${text}, pieza ${id + 1}`}>{text}</button>)}</div> : null}
     {cue ? <p className="assembly-cue" role="status">{cue}</p> : null}
     {!done ? <details className="assembly-help" onToggle={(event) => { if (event.currentTarget.open) { setHelped(true); onProgress?.({ selected, hinted, modelUsed: true }); } }}><summary>Una pista</summary><p className="assembly-model"><strong lang="en">{model}</strong>{speaker}</p></details> : speaker}
-    <AssociationAudioStatus state={audio} compact />
+    <AssociationAudioStatus state={playback.audio} compact />
   </div></GameCard>;
 }
