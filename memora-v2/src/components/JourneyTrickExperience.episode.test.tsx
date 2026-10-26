@@ -325,6 +325,50 @@ it('pedir audio tras empezar las piezas conserva la selección más reciente al 
   expect(learner()).toEqual(before);
 });
 
+it('reanuda la preparación de una pieza y reinicia solo al pasar a la pieza siguiente', async () => {
+  const value = { ...unit, sentence: { ...unit.sentence, slots: unit.sentence.slots.map((slot, index) => ({ ...slot, ...(index === 1 ? { preparation: [
+    { en: 'am', es: 'estoy', explanation: 'Con I, AM expresa estoy.' },
+    { en: 'I am', es: 'yo estoy', explanation: 'Las dos piezas forman el inicio del mensaje.' },
+  ] } : index === 2 ? { preparation: [{ en: 'playing', es: 'jugando', explanation: 'La acción está en marcha.' }] } : {}) })) } };
+  await reachBuild(value);
+  await act(async () => button('I').props.onClick());
+  expect(text(tree.root.findByProps({ className: 'slot-preparation' }))).toContain('am');
+  const legacy = checkpoint()!;
+  const previousPreparationChange = tree.root.findByType(SentenceBuilderCard).props.onPreparationChange;
+  const before = learner();
+  await advance();
+  expect(checkpoint()?.continuation).toMatchObject({ filledSlots: 1, preparationStep: 1 });
+  act(() => tree.unmount()); vi.mocked(playEnglish).mockClear(); await mount(value);
+  expect(text(tree.root.findByProps({ className: 'slot-preparation' }))).toContain('I am');
+  expect(tree.root.findByType(SentenceBuilderCard).props.preparationStep).toBe(1);
+  expect(playEnglish).not.toHaveBeenCalled();
+  expect(learner()).toEqual(before);
+  await advance();
+  expect(tree.root.findAllByProps({ className: 'slot-preparation' })).toHaveLength(0);
+  act(() => { previousPreparationChange(1); previousPreparationChange(99); });
+  expect(checkpoint()?.continuation?.preparationStep).toBe(2);
+  expect(learner()).toEqual(before);
+  await act(async () => button('am').props.onClick());
+  expect(checkpoint()?.continuation).toMatchObject({ filledSlots: 2, preparationStep: 0 });
+  expect(text(tree.root.findByProps({ className: 'slot-preparation' }))).toContain('playing');
+  await advance();
+  await act(async () => button('playing.').props.onClick());
+  await advance();
+  expect(tree.root.findByType(ConversationPractice).props.initialHelped).toBe(false);
+  expect(learner().filter((event) => event.phase === 'construction')).toHaveLength(3);
+  const after = learner();
+  for (const preparationStep of [undefined, 99]) {
+    act(() => tree.unmount());
+    writeTrickCheckpoint(user, stop.id, unit.contentVersion ?? '1', { ...legacy, continuation: { ...legacy.continuation!, preparationStep } });
+    await mount(value);
+    expect(tree.root.findByType(SentenceBuilderCard).props.preparationStep).toBe(0);
+    expect(checkpoint()?.continuation?.filledSlots).toBe(1);
+    await advance();
+    expect(checkpoint()?.continuation?.preparationStep).toBe(1);
+    expect(learner()).toEqual(after);
+  }
+});
+
 it('consultar audio antes de montar conserva ayuda aunque se coloquen fichas inmediatamente', async () => {
   await reachBuild(previewUnit);
   const listen = tree.root.findByProps({ 'aria-label': 'Escuchar modelo' }).props.onClick;

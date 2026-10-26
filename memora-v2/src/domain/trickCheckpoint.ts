@@ -1,6 +1,6 @@
 import { progressStorage } from './progressJournal';
 
-export interface TrickContinuationCheckpoint { phase: 'build' | 'conversation'; sentenceIndex: number; filledSlots: number; previousAttempt?: string; failures?: number; modelUsed?: boolean; order?: number[] }
+export interface TrickContinuationCheckpoint { phase: 'build' | 'conversation'; sentenceIndex: number; filledSlots: number; previousAttempt?: string; failures?: number; modelUsed?: boolean; order?: number[]; preparationStep?: number }
 export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string; episodeId?: string; episodeStartedAt?: string; continuation?: TrickContinuationCheckpoint }
 const key = (userId: string, stopId: string) => `memora-v2.trick.${userId}.${stopId}`;
 export function parseTrickCheckpoint(value: unknown): TrickCheckpoint | null {
@@ -18,6 +18,11 @@ export function parseTrickCheckpoint(value: unknown): TrickCheckpoint | null {
     if (continuation?.failures !== undefined && (!Number.isInteger(continuation.failures) || continuation.failures < 0 || continuation.failures > 2)) return null;
     if (continuation?.modelUsed !== undefined && typeof continuation.modelUsed !== 'boolean') return null;
     if (continuation?.order !== undefined && (!Array.isArray(continuation.order) || continuation.order.length > 8 || new Set(continuation.order).size !== continuation.order.length || continuation.order.some((index: number) => !Number.isInteger(index) || index < 0 || index > 7))) return null;
+    if (continuation?.preparationStep !== undefined && (!Number.isSafeInteger(continuation.preparationStep) || continuation.preparationStep < 0)) {
+      const cleaned = { ...continuation };
+      delete cleaned.preparationStep;
+      return { ...saved.state, continuation: cleaned };
+    }
     return saved.state;
   } catch { return null; }
 }

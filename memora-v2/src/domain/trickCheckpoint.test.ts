@@ -1,8 +1,21 @@
 import { beforeEach, expect, it, vi } from 'vitest';
-import { clearTrickCheckpoint, readTrickCheckpoint, writeTrickCheckpoint } from './trickCheckpoint';
+import { clearTrickCheckpoint, parseTrickCheckpoint, readTrickCheckpoint, writeTrickCheckpoint } from './trickCheckpoint';
 beforeEach(() => {
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) });
+});
+it('conserva el paso opcional de preparación y acepta checkpoints anteriores sin ese campo', () => {
+  const legacy = { stage: 3, checkIndex: 1, input: '', feedback: 'correct' as const, helped: false, episodeId: 'ing', continuation: { phase: 'build' as const, sentenceIndex: 0, filledSlots: 1, modelUsed: true } };
+  expect(parseTrickCheckpoint(legacy)).toEqual(legacy);
+  const state = { ...legacy, continuation: { ...legacy.continuation, preparationStep: 1 } };
+  writeTrickCheckpoint('isolated', 'preparation', '1', state);
+  expect(readTrickCheckpoint('isolated', 'preparation', '1')).toEqual(state);
+});
+it.each([-1, 1.5, NaN, Infinity, '1', null])('descarta solo preparationStep inválido %s sin borrar la posición ni modificar la entrada', (preparationStep) => {
+  const legacy = { stage: 3, checkIndex: 1, input: '', feedback: 'correct' as const, helped: false, episodeId: 'ing', continuation: { phase: 'build' as const, sentenceIndex: 0, filledSlots: 1, modelUsed: true } };
+  const raw = { ...legacy, continuation: { ...legacy.continuation, preparationStep } };
+  expect(parseTrickCheckpoint(raw)).toEqual(legacy);
+  expect(raw.continuation.preparationStep).toBe(preparationStep);
 });
 it('reanuda el paso, respuesta y pista solo para el usuario y versión correspondientes', () => {
   const checkpoint = { stage: 2, checkIndex: 1, input: "I'm playing", feedback: 'help' as const, helped: true };

@@ -95,9 +95,12 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
   const unavailable = Boolean(!checkpoint && !authoredPractice && (searchKeysLesson(unit, trick.formId) || bedMakingLesson(unit, trick.formId) || meatCookingLesson(unit, trick.formId)) || checkpoint?.episodeId && !episode || continuation && (!episode || !sentence || continuation.filledSlots > sentence.slots.length || continuation.phase === 'conversation' && continuation.filledSlots !== sentence.slots.length || puzzlePieces && continuation.order?.some((index) => index >= puzzlePieces.length)));
   const chatAnswers = episode ? conversationPracticeAnswers(episodeUnit, demonstratedConversationQuestionSkills(readGrammarAttempts(userId))) : [];
   const slotKey = continuation ? `${continuation.phase}:${continuation.sentenceIndex}:${continuation.filledSlots}` : 'coach';
+  const preparationLength = sentence?.slots[continuation?.filledSlots ?? 0]?.preparation?.length ?? 0;
+  const savedPreparation = continuation?.preparationStep ?? 0;
+  const preparationStep = Number.isInteger(savedPreparation) && savedPreparation >= 0 && savedPreparation <= preparationLength ? savedPreparation : 0;
   const modelAid = useRef(Boolean(continuation?.modelUsed));
-  const guard = useRef({ key: slotKey, failures: continuation?.failures ?? 0, placed: false });
-  if (guard.current.key !== slotKey) { guard.current = { key: slotKey, failures: continuation?.failures ?? 0, placed: false }; modelAid.current = Boolean(continuation?.modelUsed); }
+  const guard = useRef({ key: slotKey, failures: continuation?.failures ?? 0, preparationStep, placed: false });
+  if (guard.current.key !== slotKey) { guard.current = { key: slotKey, failures: continuation?.failures ?? 0, preparationStep, placed: false }; modelAid.current = Boolean(continuation?.modelUsed); }
   const previousConstruction = useRef(continuation?.previousAttempt);
   const buildActivityId = `trick-build:${trick.formId}:${continuation?.sentenceIndex}:${shortPractice ? 'message' : continuation?.filledSlots}`;
   const lastError = continuation?.previousAttempt ? readLearningActivities(userId).find((event) => event.id === continuation.previousAttempt && event.unitId === unit.id && event.contentVersion === (unit.contentVersion ?? '1') && event.activityId === buildActivityId && event.correct === false && event.source === 'learner')?.response : undefined;
@@ -123,8 +126,13 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
     if (episode) saveContinuation({ phase: 'build', sentenceIndex: 0, filledSlots: 0 });
     else finish();
   }
+  function prepareConstructionStep(step: number) {
+    if (!continuation || continuation.phase !== 'build' || guard.current.key !== slotKey || guard.current.placed || !Number.isSafeInteger(step) || step !== guard.current.preparationStep + 1 || step > preparationLength) return;
+    guard.current.preparationStep = step;
+    saveContinuation({ ...continuation, preparationStep: step });
+  }
   function constructionAttempt(choice: string, correct: boolean, slotIndex: number): false | void {
-    if (!continuation || !sentence || guard.current.key !== slotKey || guard.current.placed || guard.current.failures >= 2 || continuation.phase !== 'build' || slotIndex !== continuation.filledSlots || !sentence.slots[slotIndex]?.choices.includes(choice)) return false;
+    if (!continuation || !sentence || guard.current.key !== slotKey || guard.current.placed || guard.current.preparationStep < preparationLength || guard.current.failures >= 2 || continuation.phase !== 'build' || slotIndex !== continuation.filledSlots || !sentence.slots[slotIndex]?.choices.includes(choice)) return false;
     guard.current.failures = correct ? 0 : guard.current.failures + 1;
     if (!inspection) {
       const slot = sentence.slots[slotIndex];
@@ -135,7 +143,7 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
   }
   function placeSlot(withModel = false) {
     if (shortPractice) { placeWholeMessage(withModel); return; }
-    if (!continuation || !sentence || continuation.phase !== 'build' || continuation.filledSlots >= sentence.slots.length || guard.current.key !== slotKey || guard.current.placed || (withModel ? guard.current.failures < 2 : guard.current.failures >= 2)) return;
+    if (!continuation || !sentence || continuation.phase !== 'build' || continuation.filledSlots >= sentence.slots.length || guard.current.key !== slotKey || guard.current.placed || guard.current.preparationStep < preparationLength || (withModel ? guard.current.failures < 2 : guard.current.failures >= 2)) return;
     guard.current.placed = true;
     modelAid.current ||= withModel;
     if (!inspection) {
@@ -145,7 +153,7 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
       if (continuation.filledSlots === sentence.slots.length - 1) recordSentenceExposure(userId, unit.id, sentence);
     }
     previousConstruction.current = undefined;
-    saveContinuation({ ...continuation, filledSlots: continuation.filledSlots + 1, failures: 0, previousAttempt: undefined, modelUsed: modelAid.current });
+    saveContinuation({ ...continuation, filledSlots: continuation.filledSlots + 1, preparationStep: 0, failures: 0, previousAttempt: undefined, modelUsed: modelAid.current });
   }
   function answerWholeMessage(value: string) {
     if (!continuation || !sentence || !puzzlePieces || continuation.phase !== 'build' || continuation.filledSlots !== 0 || guard.current.key !== slotKey || guard.current.placed || guard.current.failures >= 2) return;
@@ -242,7 +250,7 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
           {continuation.filledSlots !== sentence.slots.length && lastError ? <p className="coach-feedback" role="status">{contextualCorrection(lastError, sentence.en, puzzleCheck!.hint)}</p> : null}
         </div>
       </GameCard>
-      : continuation?.phase === 'build' && form ? <SentenceBuilderCard vertical key={`build-${continuation.sentenceIndex}`} sentence={sentence} vocabulary={unit.words} sceneWord={sceneWord} processForm={form} index={continuation.sentenceIndex} total={sentences.length} filledSlots={continuation.filledSlots} choiceSeed={continuation.sentenceIndex} needsModel={(continuation.failures ?? 0) >= 2} lastIncorrectChoice={lastError} onAcceptModel={() => placeSlot(true)} onAttempt={constructionAttempt} onPick={() => placeSlot()} onNext={nextBuild} />
+      : continuation?.phase === 'build' && form ? <SentenceBuilderCard vertical key={`build-${continuation.sentenceIndex}`} sentence={sentence} vocabulary={unit.words} sceneWord={sceneWord} processForm={form} index={continuation.sentenceIndex} total={sentences.length} filledSlots={continuation.filledSlots} choiceSeed={continuation.sentenceIndex} preparationStep={preparationStep} onPreparationChange={prepareConstructionStep} needsModel={(continuation.failures ?? 0) >= 2} lastIncorrectChoice={lastError} onAcceptModel={() => placeSlot(true)} onAttempt={constructionAttempt} onPick={() => placeSlot()} onNext={nextBuild} />
       : <GrammarCoach lesson={lesson} form={form} sceneWord={sceneWord} startAtPractice={Boolean(practicedPattern)} startAtExample={Boolean(practicedPattern) && stream} reusePreparedSubject={reuseSubject} omitGeneratedExplanation={Boolean(practicedPattern)} conversationAnswers={chatAnswers} constructionAnswers={episode ? sentences.map((item) => item.en) : []} userId={userId} unitId={unit.id} unitTitle={unit.title} contentVersion={unit.contentVersion ?? '1'} reviewMode={inspection} requirePractice schedulePractice repairLimit={2} puzzle={stream} checkpoint={checkpoint} onProgress={(state) => {
         coachState.current = { ...state, ...(episode ? { episodeId: episodeIdentity, episodeStartedAt: started.current } : {}) };
         if (!inspection && !completed.current) writeTrickCheckpoint(userId, stop.id, unit.contentVersion ?? '1', coachState.current);
