@@ -4,7 +4,7 @@ import { GrammarText } from './GrammarText';
 import { AssociationAudioStatus } from './AssociationAudioStatus';
 import { useSpeechPlayback } from './useSpeechPlayback';
 
-export interface ChatMessage { id: string; who: 'partner' | 'learner' | 'coach'; text: string; language?: 'en' | 'es'; translation?: string; audioHint?: string; correct?: boolean; instant?: boolean }
+export interface ChatMessage { id: string; who: 'partner' | 'learner' | 'coach'; text: string; language?: 'en' | 'es'; translation?: string; audioHint?: string; correct?: boolean; instant?: boolean; draftValue?: string }
 export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, renderText, audioPlayback }: { message: ChatMessage; partner: string; form: GrammarForm; autoSpeak: boolean; onReady?: () => void; renderText?: (text: string, language: 'en' | 'es') => ReactNode; audioPlayback?: Pick<ReturnType<typeof useSpeechPlayback>, 'audio' | 'listen' | 'label'> }) {
   const [visible, setVisible] = useState(message.instant ? message.text.length : 0);
   const ready = useRef(onReady); ready.current = onReady;

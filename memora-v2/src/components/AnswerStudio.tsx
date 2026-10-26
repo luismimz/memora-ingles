@@ -2,28 +2,41 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import './answerStudio.css';
 
 /** Presentation + exact-answer convenience. The caller still validates and records. */
-export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, accepts, disabled = false, feedback, instruction = 'Escribe en inglés' }: {
+export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, accepts, disabled = false, feedback, instruction = 'Escribe en inglés', draftCue, onDraftCue }: {
   id: string; taskKey: string; target: ReactNode; value: string; onChange: (value: string) => void;
   onAnswer: (value: string) => void; accepts: (value: string) => boolean; disabled?: boolean;
   feedback?: ReactNode;
   instruction?: string;
+  draftCue?: (value: string) => string | undefined;
+  onDraftCue?: (value: string, cue: string) => void;
 }) {
   const composing = useRef(false), timer = useRef<ReturnType<typeof setTimeout>>();
   const fired = useRef('');
   const edited = useRef(false);
-  const current = useRef({ taskKey, value, disabled, accepts, onAnswer });
-  current.current = { taskKey, value, disabled, accepts, onAnswer };
+  const cueSent = useRef(false);
+  const current = useRef({ taskKey, value, disabled, accepts, onAnswer, draftCue, onDraftCue });
+  current.current = { taskKey, value, disabled, accepts, onAnswer, draftCue, onDraftCue };
   function cancel() { clearTimeout(timer.current); }
   function schedule() {
     cancel(); const entry = current.current;
-    if (!edited.current || composing.current || entry.disabled || !entry.value.trim() || !entry.accepts(entry.value)) return;
+    if (!edited.current || composing.current || entry.disabled || !entry.value.trim()) return;
+    if (!entry.accepts(entry.value)) {
+      if (cueSent.current || !entry.onDraftCue || !entry.draftCue?.(entry.value)) return;
+      timer.current = setTimeout(() => {
+        const latest = current.current;
+        if (composing.current || latest.disabled || latest.taskKey !== entry.taskKey || latest.value !== entry.value || cueSent.current || latest.accepts(latest.value)) return;
+        const cue = latest.draftCue?.(latest.value);
+        if (cue && latest.onDraftCue) { cueSent.current = true; latest.onDraftCue(latest.value, cue); }
+      }, 1200);
+      return;
+    }
     timer.current = setTimeout(() => {
       const latest = current.current, signature = `${entry.taskKey}:${entry.value}`;
       if (composing.current || latest.disabled || latest.taskKey !== entry.taskKey || latest.value !== entry.value || fired.current === signature || !latest.accepts(latest.value)) return;
       fired.current = signature; latest.onAnswer(latest.value);
     }, 450);
   }
-  useEffect(() => { edited.current = false; fired.current = ''; cancel(); }, [taskKey]);
+  useEffect(() => { edited.current = false; fired.current = ''; cueSent.current = false; cancel(); }, [taskKey]);
   useEffect(() => { schedule(); return cancel; }, [taskKey, value, disabled]);
   return <section className="answer-studio" aria-label="Tu reto de escritura">
     <label className="answer-studio-instruction" htmlFor={id}>{instruction}</label>

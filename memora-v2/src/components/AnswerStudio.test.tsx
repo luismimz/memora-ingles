@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { AnswerStudio } from './AnswerStudio';
+import { sentenceDraftCue } from '../domain/sentenceAnswer';
 let tree: ReactTestRenderer;
 const answer = vi.fn();
 function Harness({ initial = '', taskKey = 'task' }: { initial?: string; taskKey?: string }) {
@@ -62,4 +63,31 @@ it('no envía un borrador restaurado ni responde durante composición del teclad
   act(() => { vi.advanceTimersByTime(500); }); expect(answer).not.toHaveBeenCalled();
   act(() => tree.root.findByType('input').props.onCompositionEnd()); act(() => { vi.advanceTimersByTime(450); });
   expect(answer).toHaveBeenCalledExactlyOnceWith('I am playing ');
+});
+
+it('orienta una sola vez sobre un borrador cercano sin responder; Enter conserva el texto real', () => {
+  const cue = vi.fn();
+  function Draft({ taskKey = 'draft' }: { taskKey?: string }) {
+    const [value, setValue] = useState('');
+    return <AnswerStudio id="draft" taskKey={taskKey} target="Estoy cocinando carne" value={value} onChange={setValue} onAnswer={answer} accepts={(text) => text === 'I am cooking meat'} draftCue={(text) => sentenceDraftCue(text, 'I am cooking meat')} onDraftCue={cue} />;
+  }
+  act(() => { tree = create(<Draft />); });
+  type('j am cooking meet'); act(() => { vi.advanceTimersByTime(1199); }); expect(cue).not.toHaveBeenCalled();
+  act(() => { vi.advanceTimersByTime(1); }); expect(cue).toHaveBeenCalledExactlyOnceWith('j am cooking meet', 'Revisa «j» y «meet».'); expect(answer).not.toHaveBeenCalled();
+  type('i am cooking meet'); act(() => { vi.advanceTimersByTime(2000); }); expect(cue).toHaveBeenCalledOnce();
+  act(() => tree.root.findByType('form').props.onSubmit({ preventDefault() {} })); expect(answer).toHaveBeenCalledExactlyOnceWith('i am cooking meet');
+});
+
+it('cancelar o componer nunca dispara orientación pendiente y el acierto conserva prioridad', () => {
+  const cue = vi.fn();
+  function Draft({ disabled = false, taskKey = 'draft' }: { disabled?: boolean; taskKey?: string }) {
+    const [value, setValue] = useState('j am cooking meet');
+    return <AnswerStudio id="draft" taskKey={taskKey} target="Estoy cocinando carne" value={value} onChange={setValue} onAnswer={answer} accepts={(text) => text === 'I am cooking meat'} draftCue={(text) => sentenceDraftCue(text, 'I am cooking meat')} onDraftCue={cue} disabled={disabled} />;
+  }
+  act(() => { tree = create(<Draft />); }); act(() => { vi.advanceTimersByTime(2000); }); expect(cue).not.toHaveBeenCalled();
+  act(() => tree.root.findByType('input').props.onCompositionStart()); type('i am cooking meet'); act(() => { vi.advanceTimersByTime(2000); }); expect(cue).not.toHaveBeenCalled();
+  act(() => tree.root.findByType('input').props.onCompositionEnd()); act(() => tree.update(<Draft disabled />)); act(() => { vi.advanceTimersByTime(2000); }); expect(cue).not.toHaveBeenCalled();
+  act(() => tree.update(<Draft />)); type('I am cooking meat'); act(() => { vi.advanceTimersByTime(450); }); expect(answer).toHaveBeenCalledExactlyOnceWith('I am cooking meat'); expect(cue).not.toHaveBeenCalled();
+  type('i am cooking meet'); act(() => tree.update(<Draft taskKey="new" />)); act(() => { vi.advanceTimersByTime(2000); }); expect(cue).not.toHaveBeenCalled();
+  type('j am cooking meet'); act(() => tree.unmount()); act(() => { vi.advanceTimersByTime(2000); }); expect(cue).not.toHaveBeenCalled();
 });

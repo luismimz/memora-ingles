@@ -31,6 +31,27 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it('orientación breve del borrador de Nora→recarga→corrección automática ayudada, sin fallo por pausar', async () => {
+  const meal = { ...unit, id: 'isolated-nora-draft', communication: { ...unit.communication!, dialogue: { ...unit.communication!.dialogue!, partner: 'Nora', partnerLanguage: 'es' as const, roleSwap: false, transfer: undefined, turns: [
+    { role: 'A', en: 'What are you cooking?', es: '¿Qué estás cocinando?', acceptedAnswers: ['What are you cooking?'] },
+    { role: 'B', en: 'I am cooking meat.', es: 'Estoy cocinando carne.', acceptedAnswers: ['I am cooking meat.', "I'm cooking meat."] },
+  ] as [DialogueTurn, DialogueTurn] } } };
+  await mount(true, meal); await type('j am cooking meet'); await act(async () => { vi.advanceTimersByTime(1200); });
+  expect(attempts()).toHaveLength(0); expect(readGrammarAttempts(user)).toHaveLength(0);
+  expect(tree.root.findByType('input').props.value).toBe('j am cooking meet');
+  expect(tree.root.findByType(GameCard).props.feedback).toBe('model');
+  expect(text(tree.root.findByProps({ className: 'answer-studio-feedback' }))).toBe('Revisa «j» y «meet».');
+  const events = readLearningActivities(user);
+  expect(events.filter((event) => event.activityId === 'chat-draft-cue-respond')).toMatchObject([{ correct: null, helped: true, source: 'authored' }]);
+  act(() => tree.unmount()); await mount(true, meal); await act(async () => { vi.advanceTimersByTime(2000); });
+  expect(readLearningActivities(user)).toEqual(events); expect(tree.root.findByType('input').props.value).toBe('j am cooking meet');
+  await type('I am cooking meet'); await act(async () => { vi.advanceTimersByTime(1300); });
+  expect(tree.root.findAllByProps({ className: 'answer-studio-feedback' })).toHaveLength(0); expect(readLearningActivities(user)).toEqual(events);
+  await type('I am cooking meat'); await act(async () => { vi.advanceTimersByTime(450); });
+  expect(attempts()).toMatchObject([{ correct: true, helped: true, response: 'I am cooking meat' }]);
+  expect(tree.root.findAllByType('input')).toHaveLength(0); expect(tree.root.findByType(GameCard).props.onAdvance).toBeTypeOf('function');
+});
+
 it.each([false, true])('Nora: error de la captura→corrección junto al campo→modelo=%s→salida sin perder el intento', async (model) => {
   const meal = { ...unit, id: 'isolated-nora', communication: { ...unit.communication!, dialogue: { ...unit.communication!.dialogue!, partner: 'Nora', partnerLanguage: 'es' as const, roleSwap: false, transfer: undefined, turns: [
     { role: 'A', en: 'What are you cooking?', es: '¿Qué estás cocinando?', acceptedAnswers: ['What are you cooking?'] },
