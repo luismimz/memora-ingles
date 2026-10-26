@@ -1,5 +1,5 @@
 .answer-studio { width: min(100%, 600px); margin: 12px auto; text-align: center; display: grid; justify-items: stretch; gap: 12px; }
-.answer-studio-instruction { margin: 0; font-size: .9rem; color: var(--muted); font-weight: 650; }
+.answer-studio > .answer-studio-instruction { display: block; margin: 0; font-size: .9rem; color: var(--muted); font-weight: 650; text-align: center; }
 .answer-studio-target { font-size: clamp(1.8rem, 5vw, 2.6rem); line-height: 1.25; color: var(--ink); font-weight: 650; letter-spacing: -.035em; text-wrap: balance; }
 .answer-studio-target .coach-row { justify-content: center; margin: 0; font-size: inherit; font-weight: inherit; }
 .answer-studio-target .coach-piece { background: transparent; border-radius: 0; padding: 0; font-weight: 650; }
