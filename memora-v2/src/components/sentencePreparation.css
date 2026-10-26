@@ -16,3 +16,10 @@
 .familiar-piece details[open] { padding: 14px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface-soft); }
 .familiar-piece ol { padding-left: 20px; }
 .familiar-piece li > p:first-child { display: flex; flex-wrap: wrap; gap: 12px; color: var(--ink); }
+.builder-content [data-piece-role="subject"] { --piece-ink: var(--grammar-subject); --piece-soft: var(--grammar-subject-soft); }
+.builder-content [data-piece-role="auxiliary"] { --piece-ink: var(--grammar-aux); --piece-soft: var(--grammar-aux-soft); }
+.builder-content [data-piece-role="verb"] { --piece-ink: var(--grammar-verb); --piece-soft: var(--grammar-verb-soft); }
+.builder-target h2[data-piece-role] { color: var(--piece-ink); }
+.sentence-slot[data-piece-role] { background: var(--piece-soft); border-top: 3px solid var(--piece-ink); }
+.sentence-slot[data-piece-role] .sentence-slot-en { color: var(--piece-ink); }
+.slot-options button[data-piece-role] { color: var(--piece-ink); background: var(--piece-soft); }

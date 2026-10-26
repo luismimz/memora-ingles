@@ -3,6 +3,7 @@ import { beforeEach, expect, it, vi } from 'vitest';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { preparedFixture as deskPreparedUnit } from '../test/grammarPracticeFixtures';
 import { previewUnit } from '../preview/previewUnit';
+import { contextualProcessFixture } from '../test/contextualProcessFixture';
 const hooks = vi.hoisted(() => ({ index: 0, states: new Map<number, unknown>() }));
 vi.mock('react', async (original) => ({ ...await original<typeof import('react')>(),
   useState: (initial: unknown) => { const id = hooks.index++; if (!hooks.states.has(id)) hooks.states.set(id, initial); return [hooks.states.get(id), (value: unknown) => hooks.states.set(id, typeof value === 'function' ? value(hooks.states.get(id)) : value)]; },
@@ -22,6 +23,17 @@ function render(filledSlots = 1, sentence = deskPreparedUnit.sentence, overrides
 }
 const button = (text: string) => nodes.find((node) => node.type === 'button' && node.props.children === text)!;
 beforeEach(() => { hooks.states.clear(); vi.clearAllMocks(); });
+it('mantiene roles preparados entre carril, objetivo español y fichas sin elegir por el alumno', () => {
+  const unit = contextualProcessFixture;
+  render(1, unit.sentence, { processForm: unit.grammar[0], vocabulary: unit.words, sceneWord: unit.words[0] });
+  expect(button('am').props['data-piece-role']).toBe('auxiliary');
+  expect(button('I').props['data-piece-role']).toBe('subject');
+  const target = nodes.find((node) => node.type === 'h2' && node.props.lang === 'es')!;
+  expect(target.props['data-piece-role']).toBe('auxiliary');
+  const slots = nodes.filter((node) => typeof node.props.className === 'string' && node.props.className.startsWith('sentence-slot '));
+  expect(slots.map((node) => node.props['data-piece-role'])).toEqual(['subject', 'auxiliary', 'verb']);
+  expect(pick).not.toHaveBeenCalled(); expect(attempt).not.toHaveBeenCalled();
+});
 it('acerca el objetivo español a las opciones y presenta el modelo antes de explicarlo', () => {
   const preparation = render();
   expect(preparation.indexOf('class="coach-row" lang="es"')).toBeLessThan(preparation.indexOf('class="coach-caption"'));

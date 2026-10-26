@@ -4,6 +4,7 @@ import { SceneVisual } from './SceneVisual';
 import type { AtomicWord, GrammarForm, UnitSentence } from '../domain/unit';
 import { playMiss, playSnap, stopSpeech } from '../services/audio';
 import { constructionFeedback } from '../domain/sentenceConstruction';
+import { constructionRole } from '../domain/constructionRole';
 import { SpeechModelButton } from './SpeechModelButton';
 import { useSpeechPlayback } from './useSpeechPlayback';
 import { AssociationAudioStatus } from './AssociationAudioStatus';
@@ -43,6 +44,8 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const completed = filledSlots === sentence.slots.length;
   const observedResult = useRef({ sentence: sentence.en, completed });
   const active = sentence.slots[filledSlots];
+  const baseSpanish = vocabulary.find((word) => word.en.toLowerCase() === processForm.englishBase?.toLowerCase())?.es ?? (sceneWord.en.toLowerCase() === processForm.englishBase?.toLowerCase() ? sceneWord.es : undefined);
+  const pieceRole = (text: string, language: 'en' | 'es') => constructionRole(text, processForm, language, baseSpanish);
   const errorChoice = lastIncorrectChoice ?? (lastError?.slot === filledSlots ? lastError.choice : undefined);
   const errorText = active && errorChoice !== undefined ? constructionFeedback(sentence, filledSlots, errorChoice, vocabulary) : '';
   const preparationIndex = savedPreparationStep !== undefined
@@ -88,7 +91,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
       {!completed ? <SceneVisual word={sceneWord} compact /> : null}
       <h1>{showProcess(sentence.es, processForm.spanish, processForm.spanishStem, processForm.spanishEnding)}</h1>
       <div className={`sentence-rail ${completed ? 'is-complete' : ''}`} role="group" aria-label="Correspondencia del español con el inglés">
-        {sentence.slots.map((slot, slotIndex) => <div className={`sentence-slot ${slotIndex === filledSlots ? 'is-active' : ''} ${slotIndex < filledSlots ? 'is-filled' : ''}`} key={`${slotIndex}-${slot.en}`}>
+        {sentence.slots.map((slot, slotIndex) => <div data-piece-role={pieceRole(slot.en, 'en')} className={`sentence-slot ${slotIndex === filledSlots ? 'is-active' : ''} ${slotIndex < filledSlots ? 'is-filled' : ''}`} key={`${slotIndex}-${slot.en}`}>
           <span className="sentence-slot-es">{slot.es}</span>
           <span className="sentence-slot-en">{slotIndex < filledSlots ? slot.en : slotIndex === filledSlots && !preparationStep && !needsModel ? '¿…?' : '· · ·'}</span>
         </div>)}
@@ -105,12 +108,12 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         const choice = event.dataTransfer.getData('text/plain');
         if (active.choices.includes(choice)) choose(choice);
       }}>
-        <div className="builder-target"><small>Coloca en inglés</small><h2 lang="es">{active.es}</h2></div>
+        <div className="builder-target"><small>Coloca en inglés</small><h2 lang="es" data-piece-role={pieceRole(active.es, 'es')}>{active.es}</h2></div>
         {compactPreparation && active.preparation?.length ? <div className="familiar-piece">
           <details onToggle={(event) => { if (event.currentTarget.open) onPreparationReview?.(); }}><summary>Recordar cómo se forma</summary><p className="familiar-model"><span lang="es">{active.es}</span><span aria-hidden="true">→</span><strong lang="en">{active.en}</strong></p><SpeechModelButton key={`${index}:${filledSlots}:familiar`} text={active.en} label="Escuchar esta pieza" /><ol>{active.preparation.map((step, position) => <li key={position}><p><span lang="es">{step.es}</span><span lang="en">{step.en}</span></p><p>{step.explanation}</p></li>)}</ol></details>
         </div> : active.note ? <p className="builder-note">{active.note}</p> : null}
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
-        <div className="slot-options">{options?.map((choice) => <button type="button" key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>
+        <div className="slot-options">{options?.map((choice) => <button type="button" data-piece-role={pieceRole(choice, 'en')} key={choice} lang="en" draggable onDragStart={(event) => event.dataTransfer.setData('text/plain', choice)} onClick={() => choose(choice)} className={wrongChoice === choice ? 'is-wrong' : ''}>{choice}</button>)}</div>
       </div> : <div className="builder-finish" aria-live="polite">
         <p role="status">Frase armada. Ya puedes usarla.</p>
         <button type="button" className="quiet-action" aria-label="Escuchar la frase" aria-busy={playback.audio?.status === 'preparing'} onClick={() => void listenToSentence()}>
