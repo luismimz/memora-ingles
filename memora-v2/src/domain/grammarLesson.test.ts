@@ -4,6 +4,12 @@ import { grammarExamples } from '../preview/grammarExamples';
 import { previewUnit } from '../preview/previewUnit';
 
 describe('trucos que se comprueban y se usan', () => {
+  it('separa el objetivo visible de las instrucciones de mover piezas', () => {
+    const lesson = lessonForForm(previewUnit.grammar[0], 'jugar')!;
+    expect(lesson.checks[0].prompt).toBe('Estoy jugando.');
+    expect(lesson.checks[0].answers).toEqual(['I am playing']);
+    expect(lesson.steps).toHaveLength(3);
+  });
   it('separa mensaje español de consigna sin exigir migrar lecciones antiguas', () => {
     const lesson = lessonForForm(previewUnit.grammar[0], 'jugar')!;
     expect(lesson.checks[2].targetEs).toBe('Estoy jugando.');

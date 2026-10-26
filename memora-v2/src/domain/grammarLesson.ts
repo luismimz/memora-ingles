@@ -78,7 +78,7 @@ export function lessonForForm(form: GrammarForm, baseSpanish?: string): GrammarL
       { caption: `I + AM se juntan: I'M. La acción conserva ING, como ${form.spanishEnding} en «${form.spanish}».`, es: [piece('YO ', 'subject'), piece('estoy ', 'auxiliary'), ...spanishVerb], en: [piece("I'm ", 'auxiliary'), ...englishVerb], advanceLabel: 'Probarlo con mis palabras →' },
     ],
     checks: [
-      { id: 'order-message-v1', kind: 'choose', prompt: `Estoy ${form.spanish}. Monta el mensaje en inglés.`,
+      { id: 'order-message-v1', kind: 'choose', prompt: `Estoy ${form.spanish}.`,
         ordering: [piece(form.english.toUpperCase(), 'verb'), piece('I', 'subject'), piece('AM', 'auxiliary')],
         answers: [`I am ${form.english}`], hint: `Primero quién: I. Después estoy: AM. Al final la acción: ${form.english.toUpperCase()}.`, success: 'Mensaje construido. Ahora úsalo sin piezas.' },
       { id: 'meaning-now-v1', kind: 'explain', prompt: `Recibes «I am ${form.english}». ¿Qué te cuenta esa persona?`,

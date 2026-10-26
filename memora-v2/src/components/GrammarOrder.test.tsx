@@ -11,10 +11,20 @@ function mount(puzzle = false, selected: number[] = [], locked = false) {
   return { change, answer, update: (selection: number[]) => act(() => tree.update(<GrammarOrder puzzle={puzzle} pieces={pieces} selected={selection} locked={locked} onChange={change} onAnswer={answer} />)) };
 }
 const bank = () => tree.root.findByProps({ 'aria-label': 'Piezas disponibles' }).findAllByType('button');
+it('deja las instrucciones extensas a petición, sin otra tarea ni envío manual', () => {
+  const { answer, change } = mount(true);
+  const help = tree.root.findByType('details');
+  expect(help.props.open).not.toBe(true);
+  expect(tree.root.findByProps({ className: 'order-instruction' }).children.join('')).toBe('Toca o arrastra. Se comprueba al completar.');
+  expect(tree.root.findByProps({ className: 'order-message' }).findAllByType('p')).toHaveLength(0);
+  expect(help.findByType('summary').children.join('')).toBe('Cómo mover las piezas');
+  expect(answer).not.toHaveBeenCalled(); expect(change).not.toHaveBeenCalled();
+});
 it('coach puede comprobar al completar sin activar arrastre ni enviar un orden restaurado', () => {
   const change = vi.fn(), answer = vi.fn();
   const render = (selected: number[]) => <GrammarOrder autoCheck pieces={pieces} selected={selected} locked={false} onChange={change} onAnswer={answer} />;
   act(() => { tree = create(render([1, 2, 0])); });
+  expect(tree.root.findByProps({ className: 'order-instruction' }).children.join('')).toBe('Toca las piezas. Se comprueba al completar.');
   expect(answer).not.toHaveBeenCalled();
   expect(tree.root.findAllByProps({ className: 'primary-action' })).toHaveLength(0);
   act(() => tree.update(render([1, 2])));

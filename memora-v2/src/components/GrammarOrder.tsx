@@ -1,4 +1,4 @@
-import { useRef, useState, type PointerEvent } from 'react';
+import { useId, useRef, useState, type PointerEvent } from 'react';
 import type { LessonPiece } from '../domain/grammarLesson';
 import './grammarOrder.css';
 
@@ -8,6 +8,7 @@ export function GrammarOrder({ pieces, selected, locked, onChange, onAnswer, puz
   puzzle?: boolean; autoCheck?: boolean;
 }) {
   const root = useRef<HTMLDivElement>(null);
+  const controlsId = useId();
   const gesture = useRef<{ id: number; piece: number; x: number; y: number; left: number; top: number; width: number; moved: boolean }>();
   const suppressClick = useRef(false);
   const submitted = useRef<string>();
@@ -78,20 +79,20 @@ export function GrammarOrder({ pieces, selected, locked, onChange, onAnswer, puz
   const visibleLine = selected.filter((id) => id !== dragging);
   const marker = (position: number) => puzzle && gap === position ? <span key={`gap-${position}`} className="order-insert" aria-hidden="true" /> : null;
   return <div ref={root} className={`grammar-order${puzzle ? ' is-puzzle' : ''}`}>
-    {puzzle ? <p className="order-instruction">Monta el mensaje: arrastra o toca las piezas.</p> : null}
+    {puzzle || autoCheck ? <p className="order-instruction">{puzzle ? autoCheck ? 'Toca o arrastra. Se comprueba al completar.' : 'Toca o arrastra las piezas.' : 'Toca las piezas. Se comprueba al completar.'}</p> : null}
     <div data-order-target className={`order-message${dragging !== undefined ? ' is-drop-ready' : ''}`} role="group" aria-label="Tu mensaje ordenado">
-      {selected.length ? selected.map((id, position) => <span key={id} className="order-line-piece">{id !== dragging ? marker(visibleLine.indexOf(id)) : null}<button data-order-piece={id} type="button" disabled={locked} className={`coach-piece coach-${pieces[id].role}${dragging === id ? ' is-dragging' : ''}`} style={dragStyle(id)} aria-label={`Quitar ${pieces[id].text}, posición ${position + 1}`} aria-describedby={puzzle ? 'order-controls' : undefined} onPointerDown={(event) => begin(event, id)} onPointerMove={move} onPointerUp={end} onPointerCancel={cancel} onClick={(event) => click(event, () => select(selected.filter((_, index) => index !== position)))} onKeyDown={(event) => {
+      {selected.length ? selected.map((id, position) => <span key={id} className="order-line-piece">{id !== dragging ? marker(visibleLine.indexOf(id)) : null}<button data-order-piece={id} type="button" disabled={locked} className={`coach-piece coach-${pieces[id].role}${dragging === id ? ' is-dragging' : ''}`} style={dragStyle(id)} aria-label={`Quitar ${pieces[id].text}, posición ${position + 1}`} aria-describedby={puzzle ? controlsId : undefined} onPointerDown={(event) => begin(event, id)} onPointerMove={move} onPointerUp={end} onPointerCancel={cancel} onClick={(event) => click(event, () => select(selected.filter((_, index) => index !== position)))} onKeyDown={(event) => {
         if (!puzzle || locked || !['ArrowLeft', 'ArrowRight'].includes(event.key) || event.repeat) return;
         event.preventDefault(); event.stopPropagation();
         place(id, Math.max(0, Math.min(selected.length - 1, position + (event.key === 'ArrowLeft' ? -1 : 1))));
-      }}>{pieces[id].text}</button></span>) : <p>{puzzle ? 'Tu mensaje va aquí' : 'Toca las piezas para construir tu mensaje.'}</p>}
+      }}>{pieces[id].text}</button></span>) : !puzzle && !autoCheck ? <p>Toca las piezas para construir tu mensaje.</p> : null}
       {marker(visibleLine.length)}
       {puzzle ? Array.from({ length: pieces.length - selected.length }, (_, index) => <span key={`empty-${index}`} className="order-empty" aria-hidden="true">·</span>) : null}
     </div>
     <div className="order-bank" role="group" aria-label="Piezas disponibles">
       {pieces.map((part, index) => <button type="button" key={index} disabled={locked || selected.includes(index)} className={`coach-piece coach-${part.role}${dragging === index ? ' is-dragging' : ''}`} style={selected.includes(index) ? undefined : dragStyle(index)} onPointerDown={(event) => begin(event, index)} onPointerMove={move} onPointerUp={end} onPointerCancel={cancel} onClick={(event) => click(event, () => add(index))}>{part.text}</button>)}
     </div>
-    {!autoCheck ? <button type="button" className="primary-action" disabled={locked || selected.length !== pieces.length} onClick={() => onAnswer(selected.map((id) => pieces[id].text).join(' '))}>Enviar mensaje →</button> : <small id="order-controls">{puzzle ? 'La última pieza comprueba tu mensaje. Arrastra para cambiar el orden o toca para quitar. Con teclado: ← y → en una pieza.' : 'La última pieza comprueba el mensaje. Toca una pieza colocada para quitarla.'}</small>}
-    <small className={puzzle ? 'sr-only' : undefined}>Con piezas es práctica con apoyo, no escritura sin pistas.</small>
+    {!autoCheck ? <button type="button" className="primary-action" disabled={locked || selected.length !== pieces.length} onClick={() => onAnswer(selected.map((id) => pieces[id].text).join(' '))}>Enviar mensaje →</button> : <details className="order-help"><summary>Cómo mover las piezas</summary><small id={controlsId}>{puzzle ? 'Arrastra para cambiar el orden o toca una pieza colocada para quitarla. Con teclado: ← y → en una pieza.' : 'La última pieza comprueba el mensaje. Toca una pieza colocada para quitarla.'}</small><small>Con piezas es práctica con apoyo, no escritura sin pistas.</small></details>}
+    {!autoCheck ? <small className={puzzle ? 'sr-only' : undefined}>Con piezas es práctica con apoyo, no escritura sin pistas.</small> : null}
   </div>;
 }

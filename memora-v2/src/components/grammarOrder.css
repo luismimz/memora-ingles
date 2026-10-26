@@ -6,7 +6,11 @@
 .order-bank button:disabled { opacity: .4; cursor: default; }
 .grammar-order button:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 .grammar-order small { color: var(--muted); }
-.is-puzzle .order-instruction { margin: 0; font-size: 1rem; }
+.order-help { color: var(--muted); font-size: .8rem; }
+.order-help summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; }
+.order-help small { display: block; margin-top: 8px; line-height: 1.5; }
+.order-help summary:focus-visible { outline: 2px solid var(--accent-ink); outline-offset: 3px; border-radius: 6px; }
+.order-instruction { margin: 0; font-size: .9rem; color: var(--muted); }
 .is-puzzle .order-message { border: 2px dashed var(--line); min-height: 100px; transition: border-color .15s, background .15s; }
 .is-puzzle .order-message.is-drop-ready { border-color: var(--accent-ink); background: var(--surface-soft); }
 .is-puzzle .order-empty { display: grid; place-items: center; width: 46px; min-height: 48px; border-radius: 12px; background: var(--surface-soft); color: var(--muted); }
