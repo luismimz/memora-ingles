@@ -9,6 +9,7 @@ import { ConversationPractice } from './ConversationChat';
 import { playEnglish, stopSpeech, type PlaybackResult } from '../services/audio';
 import { AnswerStudio } from './AnswerStudio';
 import { GameCard } from './GameCard';
+import { EchoPractice } from './EchoPractice';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
 let tree: ReactTestRenderer;
@@ -208,6 +209,8 @@ it('la práctica oral muestra qué decir y conserva el borrador y la ayuda al vo
   act(() => button('Prefiero hablar').props.onClick());
   const expected = conversationTurns(unit)[0].expected;
   const oral = tree.root.findByProps({ className: 'chat-oral' });
+  expect(tree.root.findByType(EchoPractice).props.parts).toEqual(unit.sentence.slots.map((slot) => slot.en));
+  expect(tree.root.findAllByProps({ 'aria-label': 'Escuchar piezas y frase completa' })).toHaveLength(1);
   expect(text(oral).replace(/\s/gu, '')).toContain(expected.en.replace(/\s/gu, ''));
   expect(text(oral).replace(/\s/gu, '')).toContain(expected.es.replace(/\s/gu, ''));
   expect(attempts()).toHaveLength(0);

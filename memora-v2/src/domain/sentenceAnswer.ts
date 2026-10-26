@@ -9,3 +9,10 @@ export function normalizeSentenceAnswer(value: string): string {
     .replace(/\s+/g, ' ')
     .trim();
 }
+
+/** Reuse prepared spoken chunks only when they reconstruct this exact message.
+ * Morphological fragments are visual pieces, not standalone pronunciation models. */
+export function sentenceSpeechParts(phrase: string, parts: readonly string[]): string[] {
+  if (parts.length < 2 || parts.some((part) => !part.trim() || /^(?:['’]?(?:m|re|ve|ll|d|s)|ing|ed)[.!?]?$/iu.test(part.trim()))) return [];
+  return normalizeSentenceAnswer(parts.join(' ')) === normalizeSentenceAnswer(phrase) ? [...parts] : [];
+}

@@ -400,6 +400,8 @@ body { background: var(--page); }
 .echo-parts > div { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; }
 .echo-parts button { min-height: 42px; border: 1px solid var(--line); border-radius: 999px; padding: 8px 13px; background: var(--surface-soft); color: var(--ink); font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
 .echo-parts button:disabled { opacity: .5; }
+.echo-parts button.is-speaking, .echo-practice > .echo-listen.is-speaking { border-color: var(--accent-ink); box-shadow: inset 0 -2px 0 var(--accent-ink); }
+.echo-parts .echo-sequence { border-color: transparent; background: transparent; color: var(--accent-ink); font-weight: 600; }
 .echo-practice small { color: var(--muted); font-size: .72rem; }
 .next-review { color: var(--muted); font-size: .9rem; }
 

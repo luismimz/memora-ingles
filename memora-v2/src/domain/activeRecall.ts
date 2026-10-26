@@ -20,7 +20,13 @@ export function summarizeActiveRecall(activities: LearningActivity[], unit: Atom
     models: attempts.filter((row) => row.correct === null).length };
 }
 
-export function wordRecallHint(word: AtomicWord, level: number, useAssociation = true): string {
+export function wordRecallHint(word: AtomicWord, level: number, useAssociation = true, partialFirst = false): string {
+  if (partialFirst && useAssociation && word.associationMode !== 'cognate' && word.bridge.trim()) {
+    // Reconstruct from the familiar cue before consulting the complete story.
+    // Both remain real help, never a new or independent learner response.
+    if (level <= 1) return `Recuerda ${word.bridge} → …`;
+    return `${word.scene} Empieza por ${word.en.trim()[0]}.`;
+  }
   if (level <= 1 && useAssociation) return word.scene;
   const words = word.en.trim().split(/\s+/u);
   const letters = [...word.en].filter((letter) => /\p{L}/u.test(letter)).length;

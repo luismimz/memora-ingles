@@ -72,6 +72,21 @@ it('el menú empieza cerrado y no revela el modelo ni cambia la independencia si
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: false }]);
 });
 
+it('descartar el puente desde el recuerdo conserva borrador, primer intento y ayuda sin salir del reto', async () => {
+  await mount(); await submit('not-the-word');
+  const before = readLearningActivities(user);
+  await act(async () => button('Esta asociación no me ayuda').props.onClick());
+  expect(text(tree.toJSON())).not.toContain(word.bridge);
+  expect(text(tree.toJSON())).not.toContain(word.scene);
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
+  expect(tree.root.findByType('input').props.value).toBe('not-the-word');
+  expect(readLearningActivities(user)).toEqual(before);
+  act(() => tree.unmount()); await mount();
+  expect(text(tree.toJSON())).not.toContain(word.bridge);
+  await submit(word.en);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: false, helped: false }, { correct: true, helped: true }]);
+});
+
 it('historia y opciones son ayudas reales: se conservan al reanudar sin duplicar intentos', async () => {
   await mount();
   await act(async () => { button('Recordar la historia').props.onClick(); button('Prefiero elegir').props.onClick(); });
@@ -85,18 +100,27 @@ it('historia y opciones son ayudas reales: se conservan al reanudar sin duplicar
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(1);
 });
 
-it('la pista recupera la escena solo después de pedir ayuda y la conserva al volver, sin regalar un acierto', async () => {
+it('la primera pista da el puente incompleto y la segunda recupera la escena, sin regalar un acierto', async () => {
   await mount();
   expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
   await act(async () => { button('Recordar la historia').props.onClick(); });
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
+  expect(tree.root.findByProps({ className: 'memory-partial-cue' }).props['aria-label']).toContain(word.bridge);
+  expect(text(tree.toJSON())).not.toContain(word.scene);
+  const first = readLearningActivities(user);
+  expect(first).toMatchObject([{ source: 'authored', correct: null, helped: true, response: `Recuerda ${word.bridge} → …` }]);
+  act(() => tree.unmount()); await mount();
+  expect(readLearningActivities(user)).toEqual(first);
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
+  await act(async () => button('Ver la escena').props.onClick());
   expect(tree.root.findByType(SceneVisual).props).toMatchObject({ word, compact: true, hideAnswer: true });
-  expect(text(tree.toJSON())).toContain('Recupera la palabra con esta pista.');
+  expect(text(tree.toJSON())).toContain(word.scene);
   expect(text(tree.toJSON())).not.toContain('Ahora sin la imagen');
   expect(tree.root.findAllByProps({ className: 'scene-memory-link' })).toHaveLength(0);
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
   act(() => tree.unmount()); await mount();
   expect(tree.root.findByType(SceneVisual).props.hideAnswer).toBe(true);
-  expect(readLearningActivities(user)).toHaveLength(1);
+  expect(readLearningActivities(user)).toHaveLength(2);
   await submit(word.en);
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: true }]);
 });
@@ -180,7 +204,7 @@ it('las pistas de escena tienen dos pasos reales y no repiten la misma consulta 
   await mount();
   const ask = button('Recordar la historia').props.onClick;
   await act(async () => ask());
-  expect(button('Ver la inicial')).toBeTruthy();
+  expect(button('Ver la escena')).toBeTruthy();
   await act(async () => { for (let index = 0; index < 10; index++) ask(); });
   expect(button('Pista completa').props.disabled).toBe(true);
   expect(text(tree.toJSON())).toContain(`Empieza por ${word.en[0]}`);
@@ -203,7 +227,8 @@ it('la pista de una expresión no cuenta espacios ni apóstrofos como letras', (
 it('primer error y reparación llevan al modelo: ráfagas/reload/continuación no inventan acierto', async () => {
   await mount();
   await submit('not-the-word');
-  expect(tree.root.findByType(SceneVisual).props.hideAnswer).toBe(true);
+  expect(tree.root.findAllByType(SceneVisual)).toHaveLength(0);
+  expect(tree.root.findByProps({ className: 'memory-partial-cue' })).toBeTruthy();
   const first = readLearningActivities(user).filter((row) => row.source === 'learner')[0];
   expect(first).toMatchObject({ correct: false, helped: false });
   const key = `memora-v2.recall.${user}.${previewUnit.id}.${previewUnit.contentVersion}.${word.id}`;

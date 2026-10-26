@@ -16,6 +16,10 @@
 .memory-help > p { color: var(--muted); font-size: .9rem; line-height: 1.5; }
 .memory-help summary:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 .memory-answer { font-size: 2.6rem; color: var(--accent-ink); }
+.memory-partial-cue { display: flex; align-items: center; justify-content: center; gap: 16px; min-height: 76px; }
+.memory-partial-cue span:first-child { padding: 12px 18px; border-radius: 14px; color: var(--warm); background: var(--warm-soft); font-size: clamp(1.2rem, 4vw, 1.8rem); font-weight: 650; }
+.memory-partial-cue i { color: var(--muted); font-style: normal; }
+.memory-partial-cue span:last-child { color: var(--accent-ink); font-size: 2rem; }
 .active-memory-content > .round-audio { align-self: center; flex-shrink: 0; }
 .active-memory-content button:focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 3px; }
 .active-memory-content .scene-visual { max-height: 170px; }

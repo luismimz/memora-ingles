@@ -3,7 +3,8 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { GameCard } from './GameCard';
 import { EchoPractice } from './EchoPractice';
 import { TypedChatMessage, type ChatMessage } from './TypedChatMessage';
-import type { AtomicUnit } from '../domain/unit';
+import { getUnitSentences, type AtomicUnit } from '../domain/unit';
+import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 import { acceptedConversationAnswer, conversationTurns, demonstratedConversationQuestionSkills, followingConversationTurn, restoredConversationRound, writtenConversationCorrection, type ChatTurn } from '../domain/conversation';
 import { readGrammarAttempts, recordGrammarAttempt } from '../domain/grammarMemory';
 import { readLearningActivities, recordLearningActivity as persistLearningActivity } from '../domain/learningActivity';
@@ -251,7 +252,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   const oralPractice = <div className="chat-oral">
     <p lang="es">{unit.mirror ? <MirrorText text={turn.expected.es} lesson={unit.mirror} language="es" /> : <GrammarText text={turn.expected.es} form={form} language="es" />}</p>
     <p className="coach-row" lang="en">{unit.mirror ? <MirrorText text={turn.expected.en} lesson={unit.mirror} language="en" /> : <GrammarText text={turn.expected.en} form={form} language="en" />}</p>
-    <EchoPractice phrase={turn.expected.en} />
+    <EchoPractice phrase={turn.expected.en} parts={getUnitSentences(unit).find((sentence) => normalizeSentenceAnswer(sentence.en) === normalizeSentenceAnswer(turn.expected.en) && normalizeSentenceAnswer(sentence.slots.map((slot) => slot.en).join(' ')) === normalizeSentenceAnswer(turn.expected.en))?.slots.map((slot) => slot.en)} />
     <button type="button" onClick={oralReply}>Seguir sin evaluación oral →</button>
     <button type="button" className="quiet-action" onClick={() => chooseOral(false)}>Prefiero escribir</button>
   </div>;
