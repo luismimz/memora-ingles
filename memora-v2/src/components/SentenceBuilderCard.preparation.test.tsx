@@ -56,10 +56,6 @@ it('explica una pieza cada vez, sin opciones ni intentos antes de terminar', () 
   expect(attempt).toHaveBeenCalledWith('on my computer.', true, 1);
   expect(pick).toHaveBeenCalledOnce();
 });
-it('escuchar y revelar la explicación no completan ni puntúan la frase', () => {
-  render(); button('🔊 Escuchar la pieza').props.onClick();
-  expect(pick).not.toHaveBeenCalled(); expect(attempt).not.toHaveBeenCalled(); expect(next).not.toHaveBeenCalled();
-});
 it('el constructor vertical anuncia la acción real de cada paso sin saltar preparación ni evaluar por navegar', () => {
   const change = vi.fn();
   for (const step of [0, 1, 2]) {

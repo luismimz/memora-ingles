@@ -4,6 +4,7 @@ import { SceneVisual } from './SceneVisual';
 import type { AtomicWord, GrammarForm, UnitSentence } from '../domain/unit';
 import { playEnglish, playMiss, playSnap, stopSpeech, type PlaybackResult } from '../services/audio';
 import { constructionFeedback } from '../domain/sentenceConstruction';
+import { SpeechModelButton } from './SpeechModelButton';
 import './sentencePreparation.css';
 
 function showProcess(text: string, word: string, stem: string, ending: string): ReactNode {
@@ -62,7 +63,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
     observedResult.current = { sentence: sentence.en, completed };
     if (completed && previous.sentence === sentence.en && !previous.completed) void listenToSentence();
     return () => { audioRequest.current++; stopSpeech(); };
-  }, [completed, sentence.en]);
+  }, [completed, sentence.en, filledSlots, preparationIndex, needsModel]);
 
   function choose(choice: string) {
     if (!active || completed || needsModel || preparationStep || answeredSlot.current === filledSlots || !active.choices.includes(choice)) return;
@@ -102,9 +103,9 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         <p className="coach-row" lang="es">{preparationStep.es}</p>
         <p className="coach-row" lang="en">{preparationStep.en}</p>
         <p className="coach-caption">{preparationStep.explanation}</p>
-        <button type="button" className="quiet-action" onClick={() => void playEnglish(preparationStep.en)}>🔊 Escuchar la pieza</button>
+        <SpeechModelButton key={`${index}:${filledSlots}:${preparationIndex}:prepare`} text={preparationStep.en} label="Escuchar la pieza" />
         {!vertical ? <button type="button" className="primary-action" onClick={advancePreparation}>{preparationAdvanceLabel}</button> : null}
-      </div> : !completed && active && needsModel ? <div className="slot-preparation" role="status"><p>Vamos con ayuda. Para «{active.es}» coloca:</p><p className="coach-row" lang="en">{active.en}</p><p>Queda como modelo consultado, no como acierto.</p><button type="button" className="quiet-action" onClick={() => void playEnglish(active.en)}>🔊 Escuchar la pieza</button><button type="button" className="primary-action" onClick={onAcceptModel}>Colocar con ayuda</button></div> : !completed && active ? <div className="slot-picker" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
+      </div> : !completed && active && needsModel ? <div className="slot-preparation" role="status"><p>Vamos con ayuda. Para «{active.es}» coloca:</p><p className="coach-row" lang="en">{active.en}</p><p>Queda como modelo consultado, no como acierto.</p><SpeechModelButton key={`${index}:${filledSlots}:repair`} text={active.en} label="Escuchar la pieza" /><button type="button" className="primary-action" onClick={onAcceptModel}>Colocar con ayuda</button></div> : !completed && active ? <div className="slot-picker" onDragOver={(event) => event.preventDefault()} onDrop={(event) => {
         event.preventDefault();
         const choice = event.dataTransfer.getData('text/plain');
         if (active.choices.includes(choice)) choose(choice);
