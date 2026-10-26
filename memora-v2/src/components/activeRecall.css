@@ -9,6 +9,8 @@
 .memory-options, .memory-tools { display: flex; gap: .7rem; flex-wrap: wrap; justify-content: center; }
 .memory-options button { flex: 1 1 140px; padding: 1rem; border: 1px solid var(--line); border-radius: 16px; background: var(--surface-soft); color: var(--ink); }
 .memory-tools button { min-height: 44px; padding: .6rem; border-radius: 12px; }
+.memory-options button.is-correct { border: 2px solid var(--task-success); color: var(--task-success); font-weight: 650; }
+.memory-options button:disabled { opacity: 1; cursor: default; }
 .memory-help { margin-top: auto; border-top: 1px solid var(--line); padding-top: .5rem; }
 .memory-help summary { min-height: 48px; padding: .7rem; cursor: pointer; font-weight: 700; }
 .memory-help > p { color: var(--muted); font-size: .9rem; line-height: 1.5; }

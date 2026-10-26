@@ -61,6 +61,7 @@ it('parejas conserva la respuesta real, error y ayuda, y exige completar el tabl
   await act(async () => button('Ver conexiones').props.onClick());
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(1);
   expect(readLearningActivities(user).filter((event) => event.source === 'authored')).toHaveLength(rounds.length - 1);
+  expect(tree.root.findByType(GameCard).props.feedback).toBe('model');
   expect(button('Siguiente reto')).toBeDefined();
   const before = readLearningActivities(user);
   await swipe();
@@ -162,8 +163,13 @@ it.each([false, true])('reintentar audio pendiente en resultado=%s ignora su fin
   await act(async () => button(label).props.onClick());
   await act(async () => old({ status: 'played', source: 'kokoro' }));
   expect(text(tree.toJSON())).toContain('No se completó el audio');
-  if (!result) expect(button(target.es).props.disabled).toBe(true);
   expect(readLearningActivities(user)).toEqual(before);
+  if (!result) {
+    expect(button(target.es)).toBeUndefined();
+    expect(button(target.en).props.disabled).toBe(false);
+    expect(text(tree.toJSON())).not.toContain('ESCUCHA Y CONECTA');
+    return;
+  }
   await act(async () => button(label).props.onClick());
   expect(text(tree.toJSON())).not.toContain('No se completó el audio');
   if (!result) expect(button(target.es).props.disabled).toBe(false);
@@ -189,9 +195,9 @@ it('audio bloqueado permite texto sin fallo ni acierto auditivo ficticio', async
   await mount();
   await act(async () => button('🔊 Reproducir palabra inglesa').props.onClick());
   expect(text(tree.toJSON())).toContain('No se completó el audio');
-  expect(button(target.es).props.disabled).toBe(true);
+  expect(button(target.es)).toBeUndefined();
   expect(readLearningActivities(user)).toHaveLength(0);
-  await act(async () => button('No se oye · usar texto').props.onClick());
+  expect(button(target.en).props.disabled).toBe(false);
   await act(async () => button(target.en).props.onClick());
   expect(readAttempts(user).at(-1)?.direction).toBe('recognition');
   expect(readWordMemories(user).find((item) => item.key === target.en.toLowerCase())?.capabilities?.auditory).toBeUndefined();
@@ -290,7 +296,7 @@ it('enlaza elegir, escuchar y escribir deslizando, sin saltar preguntas ni resul
   const header = tree.root.findByType('header');
   expect(header.findAllByType('details')).toHaveLength(1);
   const primaryHeader = header.findAllByType('button').filter((node) => node.parent?.props.className !== 'play-options-panel');
-  expect(primaryHeader.map((node) => text(node))).toEqual(['← Salir', 'Pausar']);
+  expect(primaryHeader.map((node) => text(node))).toEqual(['← Volver', 'Pausar']);
   await act(async () => { vi.advanceTimersByTime(60000); });
   expect(readLearningActivities(user)).toHaveLength(0);
   await swipe();
@@ -369,7 +375,9 @@ it('deslizar con audio pendiente no responde, ni cambia la palabra, ni registra 
   expect(readLearningActivities(user)).toHaveLength(0);
   await act(async () => resolve({ status: 'unavailable', source: null }));
   await swipe();
-  expect(button('No se oye · usar texto')).toBeDefined();
+  expect(button('No se oye · usar texto')).toBeUndefined();
+  expect(text(tree.toJSON())).not.toContain('ESCUCHA Y CONECTA');
+  expect(tree.root.findByProps({ 'aria-label': 'Palabras aprendidas' }).findAllByType('button').every((node) => !node.props.disabled)).toBe(true);
   expect(readLearningActivities(user)).toHaveLength(0);
 });
 it('el cierre de quince rondas conserva el pie vertical y no fabrica intentos al volver', async () => {

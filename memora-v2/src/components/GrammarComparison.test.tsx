@@ -3,6 +3,9 @@ import { act, create } from 'react-test-renderer';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { GrammarComparison } from './GrammarComparison';
 import { piece, type LessonStep } from '../domain/grammarLesson';
+import { playEnglish } from '../services/audio';
+import { readGrammarAttempts } from '../domain/grammarMemory';
+vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'unavailable', source: null })), stopSpeech: vi.fn() }));
 
 const first: LessonStep = { caption: 'Yo.', es: [piece('YO', 'subject')], en: [piece('I', 'subject')] };
 const next: LessonStep = { caption: 'Yo estoy.', es: [piece('YO ', 'subject'), piece('ESTOY', 'auxiliary')], en: [piece('I ', 'subject'), piece('AM', 'auxiliary')] };
@@ -42,4 +45,24 @@ it('no revela inglés ni compara contra un modelo que todavía estaba oculto', (
   expect(renderToStaticMarkup(<GrammarComparison step={hidden} />)).not.toContain('INGLÉS');
   expect(renderToStaticMarkup(<GrammarComparison step={next} previous={hidden} />)).not.toContain('comparison-changed');
   expect(renderToStaticMarkup(<GrammarComparison step={next} previous={next} />)).not.toContain('Cambia aquí:');
+});
+
+it('el laboratorio general revierte las dos caras del ejemplo preparado, sin sumar respuestas ni bloquear por voz', async () => {
+  const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
+  let tree!: ReturnType<typeof create>;
+  await act(async () => { tree = create(<GrammarComparison interactive step={next} previous={first} />); });
+  expect(text(tree.toJSON())).toContain('ESTOY');
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  await act(async () => tree.root.findByProps({ 'aria-pressed': false }).props.onClick());
+  expect(text(tree.toJSON())).not.toContain('ESTOY');
+  expect(text(tree.toJSON()).replace(/\s+\./g, '.')).toContain('Yo.');
+  expect(playEnglish).toHaveBeenLastCalledWith('I', undefined, true, expect.any(Function));
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar el ejemplo visible' }).props.onClick());
+  expect(playEnglish).toHaveBeenLastCalledWith('I', undefined, true, expect.any(Function));
+  expect(text(tree.toJSON())).toContain('Audio no disponible');
+  await act(async () => tree.root.findByProps({ 'aria-pressed': true }).props.onClick());
+  expect(text(tree.toJSON())).toContain('ESTOY');
+  expect(playEnglish).toHaveBeenLastCalledWith('I AM', undefined, true, expect.any(Function));
+  expect(readGrammarAttempts('comparison-isolated')).toEqual([]);
+  act(() => tree.unmount());
 });

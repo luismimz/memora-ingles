@@ -24,14 +24,14 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
           <p>{inspection ? 'Revisión' : position ?? 'MEMORA · EN JUEGO'}</p>
           <p role="status">{saved}</p>
           {progress !== undefined && Number.isFinite(progress) ? <small>Avance de esta tanda: {Math.max(0, Math.min(100, progress))} %. No mide dominio.</small> : null}
-          {currentTrail ? <ol className="play-route" aria-label="Pasos de esta práctica: posición, no dominio">
-            {currentTrail.steps.map((step, index) => <li key={step} aria-current={index === currentTrail.current ? 'step' : undefined}><span aria-hidden="true">{index + 1}</span>{step}</li>)}
-          </ol> : null}
           <button type="button" className="quiet-action" onClick={onToggleAppearance}>Activar modo {appearance === 'light' ? 'oscuro' : 'claro'}</button>
           <small>Puedes salir y retomar la actividad. Deslizar nunca responde por ti.</small>
         </div>
       </details>
     </header>
+    {currentTrail ? <ol className="play-trail" aria-label="Dónde estoy en esta práctica">
+      {currentTrail.steps.map((step, index) => <li key={step} aria-current={index === currentTrail.current ? 'step' : undefined}>{step}</li>)}
+    </ol> : null}
     {warning ? <p className="play-save-warning" role={syncStatus === 'storage-full' ? 'alert' : 'status'}>{saved}</p> : null}
   </>;
 }

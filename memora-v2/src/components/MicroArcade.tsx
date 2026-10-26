@@ -37,13 +37,14 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const auditoryMode = useRef(false);
   const writing = index % 3 === 2 && !showChoices;
   const answered = useRef(false);
-  const [result, setResult] = useState<'correct' | 'rescue' | 'paired' | null>(null);
+  const [result, setResult] = useState<'correct' | 'rescue' | 'paired' | 'paired-model' | null>(null);
   const [sessionId] = useState(() => crypto.randomUUID());
   const [choiceSeed] = useState(() => Math.floor(Math.random() * 100000));
   const previous = useRef<string>();
   const round: MicroRound | undefined = candidates[index % candidates.length];
   const pairs = index % 3 === 0 && !showChoices && !round?.pendingModel ? arcadePairs(candidates, index) : [];
   const paired = useRef(new Set<string>());
+  const pairAssistance = useRef(false);
   const meanings = new Map<string, MicroRound>();
   const sound = (word: MicroRound['word']) => word.ipa?.replace(/[\/\[\]\sˈˌ]/gu, '').toLocaleLowerCase('en');
   const targetSound = round && sound(round.word);
@@ -87,7 +88,12 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     const result = await Promise.resolve(playEnglish(round.word.en, round.word.audioUrl, true, () => {
       if (request === audioRequest.current) setAudioStatus('playing');
     })).catch(() => ({ status: 'unavailable' as const, source: null }));
-    if (request === audioRequest.current && (replayResult || !answered.current)) setAudioStatus(result?.status === 'cancelled' ? 'idle' : result?.status ?? 'unavailable');
+    if (request === audioRequest.current && (replayResult || !answered.current)) {
+      setAudioStatus(result?.status === 'cancelled' ? 'idle' : result?.status ?? 'unavailable');
+      // An unavailable channel changes the presentation, never traps the learner
+      // behind disabled auditory options or pretends they heard the word.
+      if (!replayResult && auditoryMode.current && ['blocked', 'unavailable'].includes(result?.status ?? 'unavailable')) useTextOptions();
+    }
   }
 
   function choose(choice: string, meaning?: string) {
@@ -116,6 +122,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
     audioRequest.current++; setAudioStatus('idle');
     answered.current = false; setResult(null);
     paired.current.clear();
+    pairAssistance.current = false;
     setIndex((value) => value + 1);
     setInput(''); setShowChoices(false);
     setRevealed(false);
@@ -134,8 +141,8 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const canContinue = Boolean(round && result && !clock.checkpoint && !clock.paused);
   const nextLabel = result === 'rescue' ? 'Seguir con ayuda' : automatic && index - startRound + 1 >= limit ? 'Terminar el repaso' : 'Siguiente reto';
   return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen play-flow micro-screen arcade-stream-screen">
-    <header className="game-topbar">
-      <button type="button" className="activity-back" onClick={onExit}>← Salir</button><span>Arcade</span>
+    <header className="game-topbar play-header arcade-header">
+      <button type="button" className="activity-back" onClick={onExit}>← Volver</button><span className="play-intention">Arcade</span>
       <div className="arcade-stream-tools">
         <button type="button" className="quiet-action" aria-pressed={clock.paused} onClick={togglePause}>{clock.paused ? 'Reanudar' : 'Pausar'}</button>
         <details className="play-options" onKeyDown={optionsMenu.onKeyDown}>
@@ -148,19 +155,21 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
         </details>
       </div>
     </header>
-    <section className="game-stage"><GameCard vertical stepKey={`${index}:${result === 'rescue' ? 'rescue' : 'challenge'}:${clock.checkpoint}`} onAdvance={clock.checkpoint ? onExit : canContinue ? clock.advanceNow : undefined} advanceLabel={clock.checkpoint ? 'Volver al recorrido' : nextLabel} className="arcade-stream-card recall-calm">
+    <section className="game-stage"><GameCard feedback={result === 'correct' || result === 'paired' ? 'correct' : result === 'rescue' || result === 'paired-model' ? 'model' : undefined} vertical stepKey={`${index}:${result === 'rescue' ? 'rescue' : 'challenge'}:${clock.checkpoint}`} onAdvance={clock.checkpoint ? onExit : canContinue ? clock.advanceNow : undefined} advanceLabel={clock.checkpoint ? 'Volver al recorrido' : nextLabel} className="arcade-stream-card recall-calm">
     {clock.checkpoint ? <ArcadeCheckpoint inFeed onContinue={clock.continuePlaying} onExit={onExit} /> : !round ? <div className="micro-content"><h1>Primero, una asociación.</h1><button type="button" className="primary-action" onClick={onExit}>Aprender palabras →</button></div> : pairs.length ? <ArcadePairs key={index} rounds={pairs} seed={choiceSeed + index} paused={clock.paused} onPair={(target, answer, correct) => {
       const key = target.word.en;
       if (paired.current.has(key) || clock.paused) return;
       paired.current.add(key);
+      if (!correct) pairAssistance.current = true;
       if (!inspection) commitMicroAttempt(userId, target, 'word', answer.word.en, correct, true, true, crypto.randomUUID(), `${sessionId}:${index}:pair:${key}`, undefined, undefined, { selectedMeaning: answer.word.es });
       if (correct) playSnap();
     }} onModel={(target) => {
       const key = target.word.en;
       if (paired.current.has(key) || clock.paused) return;
       paired.current.add(key);
+      pairAssistance.current = true;
       if (!inspection) recordLearningActivity(userId, { unitId: target.unit.id, unitTitle: target.unit.title, contentVersion: target.unit.contentVersion ?? '1', activityId: `micro:${sessionId}:${index}:pair-model:${key}`, skill: key, phase: 'arcade', source: 'authored', modality: 'choice', prompt: target.word.es, response: key, expected: key, correct: null, helped: true });
-    }} onComplete={() => { answered.current = true; setRevealed(true); setResult('paired'); }} /> : result === 'rescue' ? reminder : <div className="recall-content arcade-challenge">
+    }} onComplete={() => { answered.current = true; setRevealed(true); setResult(pairAssistance.current ? 'paired-model' : 'paired'); }} /> : result === 'rescue' ? reminder : <div className="recall-content arcade-challenge">
       <p className="eyebrow">{listening ? 'ESCUCHA Y CONECTA' : writing ? 'SIN OPCIONES' : 'RECUERDA'} · {automatic ? index - startRound + 1 : index % 15 + 1}/{automatic ? limit : 15}</p>
       {round?.pendingModel ? <p role="status">Primero la practicamos sin reloj · sin prisas</p> : null}
       {!writing && !listening && !isAssociationRejected(userId, round.word) ? <SceneVisual word={round.word} hideAnswer /> : null}{!writing ? <h1>{result === 'correct' ? 'Conexión correcta' : listening ? 'Escucha y elige lo que significa.' : <>¿Cómo se dice <em>{round.word.es}</em>?</>}</h1> : null}

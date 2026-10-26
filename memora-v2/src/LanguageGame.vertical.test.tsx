@@ -26,6 +26,7 @@ import { ConversationPractice } from './components/ConversationPractice';
 import { TypedChatMessage } from './components/TypedChatMessage';
 import { CausalAssociationCard } from './components/CausalAssociationCard';
 import { WordSceneDelivery } from './components/WordSceneDelivery';
+import { ActiveRecallCard } from './components/ActiveRecallCard';
 
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
 vi.mock('./services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
@@ -899,10 +900,10 @@ it('el recuerdo escrito ofrece salida visible, reanuda su modelo y termina la ta
   const attempts = readLearningActivities(user).filter((row) => row.source === 'learner');
   expect(attempts).toMatchObject([{ correct: null, helped: true, responseDelayMs: 15_000 }]);
   expect(readWordMemories(user)).toHaveLength(0);
-  expect(tree.root.findByProps({ 'aria-label': 'Ver resultado de la tanda' })).toBeTruthy();
+  expect(tree.root.findByProps({ 'aria-label': 'Seguir con mis palabras' })).toBeTruthy();
   act(() => tree.unmount()); await mount(active);
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toEqual(attempts);
-  await act(async () => { tree.root.findByProps({ 'aria-label': 'Ver resultado de la tanda' }).props.onClick(); vi.advanceTimersByTime(230); });
+  await act(async () => { tree.root.findByProps({ 'aria-label': 'Seguir con mis palabras' }).props.onClick(); vi.advanceTimersByTime(230); });
   expect(text(tree.toJSON())).toMatch(/Respuestas registradas:\s*0/);
   expect(text(tree.toJSON())).toMatch(/modelos consultados:\s*1/);
   expect(readSessions(user)).toMatchObject([{ correct: 0, attempted: 0 }]);
@@ -985,12 +986,16 @@ it('el recuerdo sin ayudas no admite scroll como respuesta y conserva el intento
 });
 
 const sceneButtons = () => tree.root.findAllByType('button').filter((node) => node.props['data-drop-choice']);
+async function mountSceneSession(value = unit) {
+  writeGameCheckpoint(user, `${value.id}:vocabulary`, value.contentVersion ?? '1', { ...initialGame, recognitionStyle: 'scene-delivery-v1' });
+  await mount(value);
+}
 
-it('tanda nueva enseña primero y conecta inglés con dos escenas conocidas sin responder al desplazar', async () => {
-  await mount();
+it('la tanda de escenas guardada conserva sus dos significados conocidos y retira las imágenes ya enseñadas', async () => {
+  await mountSceneSession();
   expect(checkpoint()?.recognitionStyle).toBe('scene-delivery-v1');
   for (const _word of unit.words) await swipe();
-  expect(text(tree.toJSON())).toContain('¿A qué escena va?');
+  expect(text(tree.toJSON())).toContain('¿Qué significa?');
   const targets = sceneButtons();
   expect(targets).toHaveLength(2);
   expect(targets.map((node) => node.props['data-drop-choice'])).toContain(unit.words[0].en);
@@ -1003,8 +1008,8 @@ it('tanda nueva enseña primero y conecta inglés con dos escenas conocidas sin 
   expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(0);
 });
 
-it.each([true, false])('entrega nueva acierto=%s espera, reanuda elección y registra exactamente un reconocimiento ayudado', async (correct) => {
-  await mount();
+it.each([true, false])('entrega de escenas guardada acierto=%s espera, reanuda elección y registra exactamente un reconocimiento ayudado', async (correct) => {
+  await mountSceneSession();
   for (const _word of unit.words) await swipe();
   const before = sceneButtons().map((node) => node.props['data-drop-choice']);
   expect(before).toHaveLength(2);
@@ -1039,13 +1044,13 @@ it('la tanda anterior conserva sus opciones escritas aunque estuviese todavía e
 
 it('sin dos significados distintos no inventa una escena ni un distractor externo', async () => {
   const single: AtomicUnit = { ...unit, words: [unit.words[0]] };
-  await mount(single); await swipe();
+  await mountSceneSession(single); await swipe();
   expect(sceneButtons()).toHaveLength(0);
   expect(tree.root.findByProps({ className: 'recall-choices' }).findAllByType('button')).toHaveLength(1);
 });
 
 it('consultar la conexión antes de responder no inventa fallo, acierto ni memoria y se reanuda sin duplicarse', async () => {
-  await mount();
+  await mountSceneSession();
   for (const _word of unit.words) await swipe();
   const before = readWordMemories(user);
   const model = button('No me sale: ver la conexión');
@@ -1069,7 +1074,7 @@ it('consultar la conexión antes de responder no inventa fallo, acierto ni memor
 });
 
 it('el cierre excluye también las consultas de modelo del denominador de intentos de sesión', async () => {
-  await mount();
+  await mountSceneSession();
   for (const _word of unit.words) await swipe();
   for (let index = 0; index < unit.words.length; index++) {
     await act(async () => button('No me sale: ver la conexión').props.onClick());
@@ -1086,5 +1091,55 @@ it('el cierre excluye también las consultas de modelo del denominador de intent
   expect(readSessions(user)[0]).toMatchObject({ correct: 0, attempted: 0 });
   expect(readAttempts(user)).toHaveLength(0);
   expect(readWordMemories(user)).toHaveLength(0);
+  expect(finished).toHaveBeenCalledOnce();
+});
+
+it('el método general enseña, retira modelos y alterna significado y escritura sin cambiar la partida al reabrir', async () => {
+  await mount();
+  expect(checkpoint()?.recognitionStyle).toBe('faded-recall-v2');
+  for (const _word of unit.words) {
+    await swipe(false);
+    expect(tree.root.findByType(WordAssembly).props.sceneAsHelp).toBe(true);
+    await swipe();
+  }
+  expect(tree.root.findAllByType(WordSceneDelivery)).toHaveLength(0);
+  const first = tree.root.findByType(ActiveRecallCard);
+  expect(first.props.word.en).toBe(unit.words.at(-1)!.en);
+  expect(first.props.initialMode).toBe('choice');
+  expect(tree.root.findAllByProps({ className: 'scene-visual ' })).toHaveLength(0);
+  const selectedWord = first.props.word;
+  const choiceControl = button(selectedWord.en);
+  const questionKey = tree.root.findByType(GameCard).props.stepKey;
+  await act(async () => choiceControl.props.onClick());
+  expect(button(selectedWord.en)).toBe(choiceControl);
+  expect(choiceControl.props.disabled).toBe(true);
+  expect(choiceControl.props.className).toBe('is-correct');
+  expect(tree.root.findByType(GameCard).props.feedback).toBe('correct');
+  expect(tree.root.findByType(GameCard).props.stepKey).toBe(questionKey);
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ correct: true, helped: true, modality: 'choice' }]);
+  await swipe(false);
+  const second = tree.root.findByType(ActiveRecallCard);
+  expect(second.props.initialMode).toBe('writing');
+  const expected = second.props.word.en;
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: expected.slice(0, 1) } }));
+  await act(async () => { vi.advanceTimersByTime(1000); });
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toHaveLength(1);
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType('input').props.value).toBe(expected.slice(0, 1));
+  const writingControl = tree.root.findByType('input');
+  await act(async () => tree.root.findByType('input').props.onChange({ target: { value: expected } }));
+  await act(async () => { vi.advanceTimersByTime(450); });
+  expect(tree.root.findByType('input')).toBe(writingControl);
+  expect(writingControl.props.disabled).toBe(true);
+  expect(text(tree.root.findByType('label'))).toBe('Tu respuesta');
+  expect(readLearningActivities(user).filter((row) => row.source === 'learner')).toMatchObject([{ helped: true }, { correct: true, helped: false, modality: 'writing', responseDelayMs: expect.any(Number) }]);
+  const count = readLearningActivities(user).length;
+  act(() => tree.unmount()); await mount();
+  expect(readLearningActivities(user)).toHaveLength(count);
+  expect(text(tree.toJSON())).toContain('¡Te has acordado sin pistas!');
+  await swipe(false);
+  await act(async () => button(tree.root.findByType(ActiveRecallCard).props.word.en).props.onClick());
+  await swipe(false);
+  expect(readSessions(user)[0]).toMatchObject({ correct: 3, attempted: 3 });
   expect(finished).toHaveBeenCalledOnce();
 });

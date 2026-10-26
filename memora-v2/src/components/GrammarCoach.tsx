@@ -1,6 +1,7 @@
 import { AnswerStudio } from './AnswerStudio';
 import { GrammarComparison } from './GrammarComparison';
 import { GrammarContractionLab } from './GrammarContractionLab';
+import { grammarTransition } from '../domain/grammarPresentation';
 import { SpeechModelButton } from './SpeechModelButton';
 import { useEffect, useRef, useState } from 'react';
 import { GameCard } from './GameCard';
@@ -80,6 +81,8 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
     && (step.en[0]?.text.trim().toLowerCase() === "i'm" || step.en[0]?.text.trim().toLowerCase() === 'i' && step.en[1]?.text.trim().toLowerCase() === 'am'));
   const exampleBridge = Boolean(step && startAtExample && generatedContinuous && stage === lesson.steps.length - 1);
   const caption = exampleBridge ? `Misma estructura, nueva acción: «estoy ${form!.spanish}». Mira y escucha cómo queda antes de montarla.` : step?.caption;
+  const transition = step ? grammarTransition(step, lesson.steps[stage - 1]) : undefined;
+  const comparisonLab = Boolean(stream && !contractionLab && transition && (transition.changed.length || transition.contraction));
   // For a conversational mission the written answer belongs to its live exchange,
   // not an identical translation form immediately before it.
   const check = checks[checkIndex];
@@ -165,7 +168,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const advanceTeaching = () => { stopSpeech(); if (explanationOnly && stage === lesson.steps.length - 1) { continueRef.current(); return; } setStage((value) => value + 1); };
   const streamAdvance = step ? advanceTeaching : finished ? onContinue : needsModel || feedback === 'correct' ? nextCheck : undefined;
   const teachingAdvanceLabel = explanationOnly && stage === lesson.steps.length - 1 ? 'Volver a mi mensaje' : step?.advanceLabel ?? (stage === lesson.steps.length - 1 ? 'Practicar el mensaje' : 'Ver la siguiente pieza');
-  return <GameCard vertical={stream} stepKey={`${stage}:${check?.id ?? ''}:${needsModel ? 'model' : streamSolved ? 'result' : 'task'}`} className={`coach-card${stream ? ' coach-stream' : ''}${actionScene ? ' coach-action-card' : ''}${situation || ordering ? ' coach-situation-card' : ''}`} reserveFooter={!stream && !actionScene && !situation && !ordering} revealFooter={stream ? Boolean(streamAdvance) : finished} onAdvance={stream ? streamAdvance : finished ? onContinue : undefined} advanceControl={!stream && finished} advanceLabel={!stream ? 'Construir frase' : step ? teachingAdvanceLabel : needsModel ? 'Continuar con el modelo' : 'Continuar al siguiente reto'}>
+  return <GameCard feedback={!step && feedback === 'correct' ? 'correct' : needsModel ? 'model' : !step && feedback === 'help' ? 'retry' : undefined} vertical={stream} stepKey={`${stage}:${check?.id ?? ''}:${needsModel ? 'model' : streamSolved ? 'result' : 'task'}`} className={`coach-card${stream ? ' coach-stream' : ''}${actionScene ? ' coach-action-card' : ''}${situation || ordering ? ' coach-situation-card' : ''}`} reserveFooter={!stream && !actionScene && !situation && !ordering} revealFooter={stream ? Boolean(streamAdvance) : finished} onAdvance={stream ? streamAdvance : finished ? onContinue : undefined} advanceControl={!stream && finished} advanceLabel={!stream ? 'Construir frase' : step ? teachingAdvanceLabel : needsModel ? 'Continuar con el modelo' : 'Continuar al siguiente reto'}>
     <div className={`coach-content${step ? ' coach-teaching' : ''}`}>
       {step ? <p className="coach-teaching-step">{exampleBridge ? 'UNA ACCIÓN NUEVA' : 'Mira las piezas'} · {stage + 1}/{lesson.steps.length}</p> : <>
       {stream ? <p className="coach-language">{finished ? 'Preparación terminada · vamos a usarla' : `Práctica · reto ${checkIndex + 1} de ${checks.length}`}</p> : null}
@@ -173,10 +176,10 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
       {!needsModel && (!writing || feedback === 'correct') && !situation && !ordering && (actionScene ? <GrammarActionScene lesson={lesson} form={form} stage={step ? 'teach' : finished ? 'finished' : check.kind === 'write' ? 'write' : 'explain'} feedback={feedback} /> : sceneWord ? <SceneVisual word={sceneWord} compact /> : null)}
       {step ? <>
         {contractionLab ? <GrammarContractionLab step={step} lessonId={lesson.id} unitId={unitId} unitTitle={unitTitle} contentVersion={contentVersion} userId={userId} reviewMode={reviewMode} /> : <>
-          <GrammarComparison step={step} previous={lesson.steps[stage - 1]} />
-          <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p>
+          <GrammarComparison key={`${lesson.id}:${stage}`} interactive={comparisonLab} caption={caption} step={step} previous={lesson.steps[stage - 1]} />
+          {!comparisonLab ? <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p> : null}
         </>}
-        <div className="coach-teaching-actions">{!step.hideEnglish && !contractionLab ? <SpeechModelButton key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{explanationOnly ? teachingAdvanceLabel : step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
+        <div className="coach-teaching-actions">{!step.hideEnglish && !contractionLab && !comparisonLab ? <SpeechModelButton key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{explanationOnly ? teachingAdvanceLabel : step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
         {!stream ? <details className="coach-teaching-options"><summary>Opciones de explicación</summary><div><button type="button" className="quiet-action coach-pause" aria-pressed={paused} onClick={() => { stopSpeech(); setPaused((value) => !value); }}>{paused ? 'Reanudar explicación' : 'Pausar'}</button><button type="button" className="quiet-action" onClick={skipKnownTrick}>{requirePractice ? 'Ya lo entiendo · probarlo' : 'Ya conozco el truco · ir a la frase'}</button></div></details> : null}
       </> : !finished ? <div className={`coach-practice${writing ? ' coach-response-studio' : ''}`}>
         {!writing ? <h2>{needsModel ? 'Vamos con ayuda' : streamSolved ? '✓ Acertaste' : situation ? 'Entrega el mensaje' : check.prompt}</h2> : null}

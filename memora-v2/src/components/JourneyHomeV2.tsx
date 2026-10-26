@@ -88,6 +88,7 @@ export function JourneyHome(props: Props) {
         <div className="home-now-context"><span>{resume ? 'Actividad en curso' : completedIds.has(featured.id) ? 'Práctica conocida' : 'Tu siguiente paso'}</span><small aria-label={`Paso ${currentIndex} de ${stories.length}`}>{`${currentIndex} / ${stories.length}`}</small></div>
         <div className="home-now-main"><ScreenHeading id="home-adventure-title">{missionLabel}</ScreenHeading><p className="home-now-place">{featuredPresentation?.title}</p>
           <button type="button" className="primary-action home-continue" onClick={() => onOpen(featured)}>{completedIds.has(featured.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">→</span></button>
+          <p className="home-method" aria-label="El recorrido: descubre, arma y recuerda"><span>Descubre</span><i aria-hidden="true">→</i><span>Arma</span><i aria-hidden="true">→</i><span>Recuerda</span></p>
           <details className="home-about"><summary>Qué voy a hacer</summary><p>{featuredPresentation?.subtitle}</p><p>{resume ? 'Tu actividad y tus ayudas siguen donde las dejaste.' : 'Te enseñamos antes de pedirte una respuesta.'}</p></details>
         </div>
       </section> : <section className="journey-empty"><ScreenHeading>La aventura está preparándose.</ScreenHeading><p>Aún no hay una misión publicada.</p>{onTryPreview ? <button type="button" className="primary-action" onClick={onTryPreview}>Probar la experiencia →</button> : null}</section>}

@@ -81,7 +81,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const preparationAdvanceLabel = preparationIndex === (active?.preparation?.length ?? 0) - 1 ? 'Usar estas piezas →' : 'Ver la siguiente pieza →';
   const sentenceAdvanceLabel = index === total - 1 ? 'Usar mi frase →' : 'Siguiente frase →';
   const continueSentence = () => { playback.reset(); stopSpeech(); onNext(); };
-  return <GameCard key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? continueSentence : undefined : completed ? continueSentence : undefined} advanceLabel={vertical ? preparationStep ? preparationAdvanceLabel : sentenceAdvanceLabel : ''} reserveFooter={!vertical} revealFooter={Boolean(preparationStep && vertical || completed)}>
+  return <GameCard feedback={completed ? 'correct' : needsModel ? 'model' : errorText ? 'retry' : undefined} key={index} vertical={vertical} stepKey={`${index}:${filledSlots}:${preparationIndex}:${needsModel ? 'model' : 'task'}`} onAdvance={vertical ? preparationStep ? advancePreparation : completed ? continueSentence : undefined : completed ? continueSentence : undefined} advanceLabel={vertical ? preparationStep ? preparationAdvanceLabel : sentenceAdvanceLabel : ''} reserveFooter={!vertical} revealFooter={Boolean(preparationStep && vertical || completed)}>
     <div className="builder-content">
       <p className="eyebrow">{completed ? '✓ FRASE ARMADA' : preparationStep ? 'DESCUBRE' : needsModel ? 'CON AYUDA' : 'CONSTRUYE'} · {index + 1}/{total}</p>
       {!completed ? <SceneVisual word={sceneWord} compact /> : null}

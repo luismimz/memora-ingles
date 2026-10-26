@@ -53,14 +53,14 @@ it('el hilo indica solo posición, sin botones, checks de dominio ni estado de a
   let tree: ReturnType<typeof create>;
   act(() => { tree = create(<PlayHeader title="Monta tu mensaje" onExit={() => {}} appearance="light" onToggleAppearance={() => {}} trail={{ steps, current: 1 }} />); });
   const trail = tree!.root.findByType('ol');
-  expect(trail.parent!.props.className).toBe('play-options-panel');
+  expect(trail.props.className).toBe('play-trail');
   expect(tree!.root.findAllByProps({ className: 'play-step-position' })).toHaveLength(0);
   expect(tree!.root.findAllByProps({ className: 'play-location-label' })).toHaveLength(0);
-  expect(trail.props['aria-label']).toContain('posición, no dominio');
+  expect(trail.props['aria-label']).toBe('Dónde estoy en esta práctica');
   expect(trail.findAllByType('button')).toHaveLength(0);
   expect(trail.findAllByType('li')).toHaveLength(4);
-  expect(trail.findByProps({ 'aria-current': 'step' }).children[1]).toBe('Monta');
+  expect(trail.findByProps({ 'aria-current': 'step' }).children).toEqual(['Monta']);
   act(() => tree!.update(<PlayHeader title="Responde al personaje" onExit={() => {}} appearance="light" onToggleAppearance={() => {}} trail={{ steps, current: 2 }} />));
-  expect(tree!.root.findByProps({ 'aria-current': 'step' }).children[1]).toBe('Conversa');
+  expect(tree!.root.findByProps({ 'aria-current': 'step' }).children).toEqual(['Conversa']);
   act(() => tree!.unmount());
 });

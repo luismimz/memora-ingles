@@ -17,10 +17,12 @@ interface GameCardProps {
   /** Vertical feed: reading scrolls normally; a fresh upward gesture at the end continues only when ready. */
   vertical?: boolean;
   stepKey?: string;
+  /** Observed task state only. Color accompanies the existing textual feedback. */
+  feedback?: 'correct' | 'retry' | 'model';
 }
 
 /** La misma superficie y física para asociaciones, recompensas y gramática. */
-export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', reserveFooter = false, revealFooter = true, className = '', showBack, advanceControl = false, vertical = false, stepKey = '' }: GameCardProps) {
+export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', reserveFooter = false, revealFooter = true, className = '', showBack, advanceControl = false, vertical = false, stepKey = '', feedback }: GameCardProps) {
   const verticalAdvanceLabel = advanceLabel.replace(/\s*→\s*$/u, '');
   const [dragX, setDragX] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -111,7 +113,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   if (vertical) {
     const atEnd = (node: HTMLElement) => node.scrollTop >= node.scrollHeight - node.clientHeight - 2;
     const canLeave = (target: EventTarget) => Boolean(onAdvance && revealFooter && !interactiveCardTarget(target) && !window.getSelection?.()?.toString());
-    return <div className={`game-card-anchor card-vertical ${className}`}>
+    return <div className={`game-card-anchor card-vertical ${className}`} data-feedback={feedback}>
       <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : ''}`} role="region" aria-label="Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir." tabIndex={0}
         style={{ transform: `translate3d(0, ${dragX}px, 0)` }}
         onPointerDown={() => { touchStart.current = undefined; }}
@@ -145,7 +147,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   }
 
   return (
-    <div className={`game-card-anchor ${className}`}>
+    <div className={`game-card-anchor ${className}`} data-feedback={feedback}>
       <div
         ref={scrollport}
         className={`game-card-swipe ${exiting ? 'is-exiting' : ''}`}

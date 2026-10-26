@@ -12,7 +12,7 @@ export interface GameState {
   /** Restores the visible feedback, not a new attempt or memory score. */
   recallOutcome?: 'correct' | 'wrong' | 'modeled';
   /** Opt-in for fresh vocabulary sessions; absent means keep the legacy task. */
-  recognitionStyle?: 'scene-delivery-v1';
+  recognitionStyle?: 'scene-delivery-v1' | 'faded-recall-v2';
   /** Neutral consultations excluded from session attempts; not a memory score. */
   recognitionModels?: number;
   recallChoice?: string;

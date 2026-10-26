@@ -1,4 +1,13 @@
 .game-card-anchor.card-vertical::before { display: none; }
+.game-card-anchor { --task-success: #18734d; --task-retry: #b53838; --task-model: #995126; }
+:root[data-appearance='dark'] .game-card-anchor { --task-success: #73d5a6; --task-retry: #ff9e99; --task-model: #edbf96; }
+.game-card-anchor[data-feedback='correct'] { --task-state: var(--task-success); }
+.game-card-anchor[data-feedback='retry'] { --task-state: var(--task-retry); }
+.game-card-anchor[data-feedback='model'] { --task-state: var(--task-model); }
+.game-card-anchor[data-feedback] .card-vertical-scroll { box-shadow: inset 0 0 0 2px var(--task-state); }
+.game-card-anchor[data-feedback] .card-vertical-page { background: transparent; }
+.game-card-anchor[data-feedback] .card-vertical-next button { background: var(--task-state); color: var(--surface-strong); }
+:root[data-appearance='dark'] .game-card-anchor[data-feedback] .card-vertical-next button { color: #131923; }
 .game-card-anchor.card-vertical { display: flex; flex-direction: column; height: max(360px, calc(100svh - 150px)); min-height: 0; }
 .card-vertical-scroll { flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior-y: contain; touch-action: pan-y; scrollbar-width: thin; border-radius: 28px; background: var(--surface-strong); box-shadow: var(--shadow); transition: transform .23s cubic-bezier(.22,.68,0,1), opacity .23s ease; }
 .card-vertical-scroll.is-exiting { opacity: 0; }

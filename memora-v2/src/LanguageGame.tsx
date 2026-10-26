@@ -33,7 +33,8 @@ import { PlayHeader } from './components/PlayHeader';
 import { WordSceneDelivery } from './components/WordSceneDelivery';
 import { WordAssembly } from './components/WordAssembly';
 import { isAssociationRejected, rememberAssociationPreference } from './domain/associationPreference';
-import { hasCausalDiscovery, supportsCausalDiscovery } from './domain/causalDiscovery';
+import { supportsCausalDiscovery } from './domain/causalDiscovery';
+import { hasWordDemonstration, recordWordDemonstration } from './domain/wordDemonstration';
 import { CausalAssociationCard } from './components/CausalAssociationCard';
 
 function AssociationCard(props: Parameters<typeof StandardAssociationCard>[0]) {
@@ -49,11 +50,11 @@ function StandardAssociationCard({ unit, inspection, word, index, total, userId,
 
   function connect() {
     cancel();
-    if (vertical && !inspection) { onAssemblyProgress?.({ selected: [], hinted: false, modelUsed: false }); setAssembling(true); }
+    if (vertical && !inspection) { recordWordDemonstration(userId, unit, word); onAssemblyProgress?.({ selected: [], hinted: false, modelUsed: false }); setAssembling(true); }
     else if (word.reconstruction && !associationRejected) setReconstruct(true);
     else onConnect();
   }
-  if (assembling) return <WordAssembly userId={userId} vertical={vertical} word={word} initialPosition={assemblyPosition} onProgress={onAssemblyProgress} onContinue={onConnect} />;
+  if (assembling) return <WordAssembly userId={userId} vertical={vertical} sceneAsHelp={vertical} word={word} initialPosition={assemblyPosition} onProgress={onAssemblyProgress} onContinue={onConnect} />;
   if (reconstruct) return <SceneReconstruction vertical={vertical} unit={unit} word={word} userId={userId} inspection={inspection} onContinue={() => { if (vertical && !inspection) setAssembling(true); else onConnect(); }} />;
   if (word.associationMode === 'cognate') return <CognateAssociationCard vertical={vertical} word={word} index={index} total={total} audioState={audioState} onListen={listen} onConnect={connect} />;
 
@@ -88,7 +89,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   const [state, dispatch] = useReducer((previous: GameState, action: GameAction) => advanceReviewedGrammar(gameReducer(previous, action), reviewedGrammar, grammarForms.length), initialGame, () => {
     const restore = () => {
       const start = learningMode === 'grammar' ? { ...initialGame, phase: 'grammar' as const } : vertical && !unit.activeRecall
-        ? { ...initialGame, recognitionStyle: 'scene-delivery-v1' as const } : initialGame;
+        ? { ...initialGame, recognitionStyle: 'faded-recall-v2' as const } : initialGame;
       if (reviewMode) return start;
       if (startInConversation && unit.communication?.dialogue) return { ...initialGame, phase: 'conversation' as const };
       const saved = readGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1');
@@ -156,9 +157,11 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   const continuedCompletion = useRef(false);
   const sessionStarted = useRef(state.sessionStartedAt ?? new Date().toISOString());
   // Capture before the completion effect appends its neutral closure event.
-  const recallSummary = useMemo(() => unit.activeRecall && learningMode !== 'grammar'
+  const activeRecall = unit.activeRecall || state.recognitionStyle === 'faded-recall-v2';
+  const recallUnit = useMemo(() => activeRecall && !unit.activeRecall ? { ...unit, activeRecall: true } : unit, [unit, activeRecall]);
+  const recallSummary = useMemo(() => activeRecall && learningMode !== 'grammar'
     ? summarizeActiveRecall(readLearningActivities(userId), unit, learningMode) : undefined,
-  [unit, userId, learningMode, state.phase, state.recallIndex]);
+  [unit, userId, learningMode, state.phase, state.recallIndex, activeRecall]);
   const previousConstructionAttempt = useRef<string | undefined>(state.buildRepair?.previousAttemptId);
   const constructionKey = `${state.sentenceIndex}:${state.filledSlots}`;
   const constructionGuard = useRef({ key: constructionKey, failures: state.buildRepair?.failures ?? 0, placed: false });
@@ -166,8 +169,8 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   const usedReviewJump = useRef(false);
   const word = unit.words[state.wordIndex];
   const acquisitionIndexes = unit.words.map((item, index) => item.learningRole === 'review' ? -1 : index).filter((index) => index >= 0);
-  const recallWord = unit.words[recalledWordIndex(unit, state.recallIndex)];
-  const choices = useMemo(() => makeRecallChoices(unit, recalledWordIndex(unit, state.recallIndex), sessionSeed), [unit, state.recallIndex, sessionSeed]);
+  const recallWord = unit.words[recalledWordIndex(recallUnit, state.recallIndex)];
+  const choices = useMemo(() => makeRecallChoices(unit, recalledWordIndex(recallUnit, state.recallIndex), sessionSeed), [unit, recallUnit, state.recallIndex, sessionSeed]);
   const sceneChoices = useMemo(() => {
     const seed = [...`${unit.id}:${unit.contentVersion ?? '1'}`].reduce((hash, char) => Math.imul(hash ^ char.charCodeAt(0), 16777619), 2166136261);
     const candidates = makeRecallChoices(unit, recalledWordIndex(unit, state.recallIndex), seed);
@@ -328,13 +331,13 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       : state.phase === 'reward' ? 60 : state.phase === 'grammar' ? 60 + Math.round(state.grammarIndex * 12 / grammarForms.length)
         : state.phase === 'build' ? 72 + Math.round((state.sentenceIndex + state.filledSlots / sentence.slots.length) * 18 / sentences.length) : state.phase === 'conversation' ? 94 : 100;
   const progress = learningMode === 'vocabulary' ? Math.min(100, Math.round(adventureProgress / 60 * 100)) : learningMode === 'grammar' ? Math.min(100, Math.max(0, Math.round((adventureProgress - 60) / 40 * 100))) : adventureProgress;
-  const intention = { associate: 'Palabras', recall: vertical ? 'Palabras' : unit.activeRecall ? 'Recuerda sin mirar el modelo' : sceneRecognition ? 'Lleva la palabra a su escena' : 'Encuentra la palabra', reward: 'Tanda practicada', grammar: 'Descubre cómo decirlo', build: state.filledSlots === sentence.slots.length ? 'Mensaje armado' : 'Monta tu mensaje', conversation: 'Conversación', complete: 'Tu mensaje ya tiene sentido' }[state.phase];
+  const intention = { associate: state.wordAssembly ? 'Arma la palabra' : 'Descubre la conexión', recall: activeRecall ? 'Recuerda lo aprendido' : sceneRecognition ? 'Conecta con su significado' : 'Encuentra la palabra', reward: 'Tanda practicada', grammar: 'Descubre cómo decirlo', build: state.filledSlots === sentence.slots.length ? 'Mensaje armado' : 'Monta tu mensaje', conversation: 'Conversación', complete: 'Tu mensaje ya tiene sentido' }[state.phase];
 
   if (reminderOpen && reminderForm) return <GrammarReminder lesson={reminderLesson} form={reminderForm} baseSpanish={reminderBaseSpanish} userId={userId} unitId={unit.id} onClose={closeReminder} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} />;
 
   return (
     <main className={`game-screen${!reviewMode ? ' play-flow' : ''}`}>
-      {!reviewMode ? <PlayHeader title={intention} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} progress={progress} position={positionLabel} trail={vertical ? { steps: ['Imagina', unit.activeRecall ? 'Recuerda' : 'Conecta', 'Tu tanda'], current: state.phase === 'associate' ? 0 : state.phase === 'recall' ? 1 : state.phase === 'reward' ? 2 : -1 } : undefined} /> : <>
+      {!reviewMode ? <PlayHeader title={intention} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} progress={progress} position={positionLabel} trail={vertical ? { steps: ['Descubre', 'Arma', 'Recuerda'], current: state.phase === 'associate' ? state.wordAssembly ? 1 : 0 : state.phase === 'recall' || state.phase === 'reward' ? 2 : -1 } : undefined} /> : <>
       <header className="game-topbar"><button type="button" className="activity-back" onClick={onExit}>← Recorrido</button><span>MEMORA <small>· {reviewMode ? 'REVISIÓN' : preview ? 'VISTA PREVIA' : positionLabel}</small></span><div className="game-topbar-actions"><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`} title={`Modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button><span>{progress}%</span></div></header>
       <div className="game-progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progress}%` }} /></div>
       <p className="game-save-status" role="status">{reviewMode ? 'Vista de revisión · no guarda progreso' : syncStatus ? syncLabels[syncStatus] : 'Progreso en este dispositivo'}</p>
@@ -343,13 +346,13 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       <section className="game-stage" aria-live="off">
         {state.phase === 'associate' ? <AssociationCard vertical={vertical} key={`associate-${state.wordIndex}`} unit={unit} inspection={reviewMode} word={word} assemblyPosition={state.wordAssembly} onAssemblyProgress={(position) => dispatch({ type: 'assemblyProgress', wordIndex: state.wordIndex, position })} index={acquisitionPosition} total={acquisitionIndexes.length} userId={userId} location={unit.location?.label} onConnect={() => { const next = acquisitionIndexes[acquisitionPosition + 1]; playSnap(); dispatch({ type: 'connected', isLast: next === undefined, nextWordIndex: next, wordCount: unit.words.length }); }} /> : null}
 
-        {state.phase === 'recall' && unit.activeRecall ? <ActiveRecallCard vertical={vertical} key={`active-recall-${state.recallIndex}`} unit={unit} word={recallWord} choices={choices} position={state.recallIndex} userId={userId} inspection={reviewMode} onFinish={(independent) => { dispatch({ type: 'answered', correct: independent }); dispatch({ type: 'nextRecall', wordCount: unit.words.length }); }} /> : null}
+        {state.phase === 'recall' && activeRecall ? <ActiveRecallCard vertical={vertical} initialMode={state.recognitionStyle === 'faded-recall-v2' && state.recallIndex % 2 === 0 && unit.words.length > 1 ? 'choice' : 'writing'} key={`active-recall-${state.recallIndex}`} unit={unit} word={recallWord} choices={choices} position={state.recallIndex} userId={userId} inspection={reviewMode} onFinish={(independent) => { dispatch({ type: 'answered', correct: independent }); dispatch({ type: 'nextRecall', wordCount: unit.words.length }); }} /> : null}
 
         {state.phase === 'recall' && sceneRecognition ? <GameCard vertical stepKey={state.recallAnswered ? 'scene-result' : 'scene-choice'} onAdvance={state.recallAnswered ? advanceRecall : undefined} advanceLabel={state.recallIndex === unit.words.length - 1 ? 'Ver la tanda practicada' : 'Continuar con otra palabra'} key={`word-scene-${state.recallIndex}`}>
-          <div className="recall-content"><p className="eyebrow">{state.recallAnswered ? 'RESULTADO' : 'CONECTA'} · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery faded={hasCausalDiscovery(userId, unit, recallWord)} userId={userId} word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} modeled={state.recallOutcome === 'modeled'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} onModel={consultRecognitionModel} /></div>
+          <div className="recall-content"><p className="eyebrow">{state.recallAnswered ? 'RESULTADO' : 'CONECTA'} · {state.recallIndex + 1}/{unit.words.length}</p><WordSceneDelivery faded={hasWordDemonstration(userId, unit, recallWord)} userId={userId} word={recallWord} options={sceneChoices} selected={state.recallChoice} answered={state.recallAnswered} correct={state.recallOutcome === 'correct'} modeled={state.recallOutcome === 'modeled'} presentationKey={`${unit.id}:${unit.contentVersion ?? '1'}:${state.recallIndex}`} onAnswer={answerRecall} onModel={consultRecognitionModel} /></div>
         </GameCard> : null}
 
-        {state.phase === 'recall' && !unit.activeRecall && !sceneRecognition ? <GameCard vertical={vertical} stepKey={state.recallAnswered ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.recallAnswered ? advanceRecall : undefined} advanceLabel="Continuar con otra palabra" key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>
+        {state.phase === 'recall' && !activeRecall && !sceneRecognition ? <GameCard vertical={vertical} stepKey={state.recallAnswered ? 'recall-result' : 'recall-question'} onAdvance={vertical && state.recallAnswered ? advanceRecall : undefined} advanceLabel="Continuar con otra palabra" key={`recall-${state.recallIndex}`} className={recallFeedback === 'wrong' ? 'recall-wrong' : recallFeedback === 'correct' ? 'recall-correct' : 'recall-calm'}>
           <div className="recall-content"><p className="eyebrow">RECUERDA · {state.recallIndex + 1}/{unit.words.length}</p><SceneVisual hideAnswer={recallFeedback === 'idle'} word={recallWord} showMemoryLink={recallFeedback === 'wrong' || recallFeedback === 'missed'} />{recallFeedback === 'correct' ? <><h1 lang="en">{recallWord.en}</h1><p lang="es">{recallWord.es}</p></> : <h1>¿Cómo se dice <em>{recallWord.es}</em>?</h1>}<div className="recall-answer-slot" aria-live="polite">{recallFeedback === 'wrong' || recallFeedback === 'missed' ? <div className="recall-hint"><p>Vuelve a la escena:</p><strong>{recallWord.bridge ? `${recallWord.bridge} → ` : ''}{recallWord.en}</strong><small>{recallWord.es.toUpperCase()}</small><p className="recall-memory-scene"><MnemonicSceneText word={recallWord} /></p></div> : recallFeedback === 'correct' ? <p className="success-copy">✓ Acertaste</p> : <div className="recall-choices">{choices.map((choice) => <button type="button" disabled={recallFeedback !== 'idle'} onClick={() => answerRecall(choice.en)} key={choice.id}>{choice.en}</button>)}</div>}</div></div>
         </GameCard> : null}
 

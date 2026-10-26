@@ -38,7 +38,6 @@
 .association-help > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
 .association-help .bridge-row { margin: 10px 0; }
 @media (max-width: 500px) { .play-intention { font-size: .8rem; } .play-flow .card-vertical-scroll { border-radius: 0; box-shadow: none; } .play-flow .card-vertical .card-vertical-page { border-radius: 0; border-left: 0; border-right: 0; } }
-.play-route { list-style: none; display: grid; gap: 10px; margin: 0; padding: 0; color: var(--muted); }
-.play-route li { display: flex; gap: 10px; align-items: center; }
-.play-route li > span { font-variant-numeric: tabular-nums; }
-.play-route li[aria-current='step'] { color: var(--ink); font-weight: 600; }
+.play-trail { flex: 0 0 auto; display: flex; gap: 6px; list-style: none; width: min(100%, 680px); padding: 8px 16px; margin: 0 auto; color: var(--muted); font-size: .72rem; }
+.play-trail li { flex: 1; min-width: 0; text-align: center; border-top: 2px solid var(--line); padding-top: 6px; }
+.play-trail li[aria-current='step'] { color: var(--accent-ink); border-color: currentColor; font-weight: 650; }
