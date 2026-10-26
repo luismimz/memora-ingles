@@ -10,17 +10,21 @@
 .answer-studio input:disabled { opacity: .75; }
 .answer-studio-status { margin: 0; font-size: .76rem; color: var(--muted); opacity: 0; }
 .answer-studio:focus-within .answer-studio-status { opacity: 1; }
+.answer-studio-feedback { margin: 0; padding: 12px 14px; border-left: 3px solid var(--warm); border-radius: 0 12px 12px 0; background: var(--surface-soft); color: var(--ink); font-size: .92rem; line-height: 1.5; text-align: left; overflow-wrap: anywhere; }
 .coach-response-studio { width: min(100%, 680px); margin-inline: auto; }
 .coach-response-studio .answer-studio form { display: block; }
 .coach-content:has(.coach-response-studio) { gap: 10px; }
 .coach-content:has(.coach-response-studio) > .eyebrow, .coach-content:has(.coach-response-studio) > .coach-language { display: none; }
 .coach-response-studio { gap: 10px; }
 .coach-response-studio > .coach-feedback:empty { display: none; }
-.chat-card:has(.answer-studio) .chat-log { min-height: 0; max-height: 160px; flex: 0 1 auto; }
+.chat-card:not(.card-vertical):has(.answer-studio) .chat-log { min-height: 0; max-height: 160px; flex: 0 1 auto; }
 .chat-card:has(.answer-studio) .chat-header { font-size: .82rem; }
 .chat-history { border-top: 1px solid var(--line); font-size: .85rem; }
 .chat-history > summary { cursor: pointer; color: var(--muted); padding-block: 14px; }
 .chat-history > div { display: grid; gap: 12px; max-height: 240px; overflow-y: auto; overscroll-behavior: contain; }
+.chat-context { flex: 1; min-width: 0; }
+.chat-context > summary { min-height: 44px; padding: 12px 0; cursor: pointer; color: var(--muted); font-size: .85rem; }
+.chat-repair-exit { min-height: 48px; align-self: center; }
 .coach-response-studio > .coach-feedback { min-height: 0; margin: 8px 0; }
 .coach-response-studio > details { border-top: 1px solid var(--line); margin-top: 24px; text-align: left; }
 .coach-response-studio > details > summary { min-height: 48px; padding: 14px 0; cursor: pointer; font-size: .85rem; color: var(--muted); }

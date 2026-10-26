@@ -24,3 +24,7 @@ it('la consigna no hereda separación/alineación de formularios de otros juegos
   expect(label['text-align']).toBe('center');
   expect(label.color).toBe('var(--muted)');
 });
+it('el chat vertical no combina altura limitada con mensajes que desbordan sobre el campo', () => {
+  expect(declarations('.chat-card:has(.answer-studio) .chat-log')['max-height']).toBeUndefined();
+  expect(declarations('.chat-card:not(.card-vertical):has(.answer-studio) .chat-log')['max-height']).toBe('160px');
+});

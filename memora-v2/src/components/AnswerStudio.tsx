@@ -2,9 +2,10 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import './answerStudio.css';
 
 /** Presentation + exact-answer convenience. The caller still validates and records. */
-export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, accepts, disabled = false }: {
+export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, accepts, disabled = false, feedback }: {
   id: string; taskKey: string; target: ReactNode; value: string; onChange: (value: string) => void;
   onAnswer: (value: string) => void; accepts: (value: string) => boolean; disabled?: boolean;
+  feedback?: ReactNode;
 }) {
   const composing = useRef(false), timer = useRef<ReturnType<typeof setTimeout>>();
   const fired = useRef('');
@@ -27,8 +28,9 @@ export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, a
     <label className="answer-studio-instruction" htmlFor={id}>Escribe en inglés</label>
     <div className="answer-studio-target" id={`${id}-target`} lang="es">{target}</div>
     <form onSubmit={(event) => { event.preventDefault(); cancel(); if (!disabled && !composing.current && value.trim()) onAnswer(value); }}>
-      <input id={id} aria-describedby={`${id}-target ${id}-status`} lang="en" value={value} onChange={(event) => { edited.current = true; onChange(event.target.value); }} onCompositionStart={() => { composing.current = true; cancel(); }} onCompositionEnd={() => { composing.current = false; schedule(); }} autoComplete="off" autoCapitalize="none" enterKeyHint="send" spellCheck={false} disabled={disabled} placeholder="Tu respuesta" />
+      <input id={id} aria-describedby={`${id}-target ${id}-status${feedback ? ` ${id}-feedback` : ''}`} lang="en" value={value} onChange={(event) => { edited.current = true; onChange(event.target.value); }} onCompositionStart={() => { composing.current = true; cancel(); }} onCompositionEnd={() => { composing.current = false; schedule(); }} autoComplete="off" autoCapitalize="none" enterKeyHint="send" spellCheck={false} disabled={disabled} placeholder="Tu respuesta" />
     </form>
+    {feedback ? <p id={`${id}-feedback`} className="answer-studio-feedback" role="status">{feedback}</p> : null}
     <p id={`${id}-status`} className="answer-studio-status">Se reconoce al acertar. <kbd aria-label="Enter">↵</kbd> para revisar.</p>
   </section>;
 }

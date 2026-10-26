@@ -23,6 +23,13 @@ it.each(['jugar', 'Estoy jugando en mi ordenador.'])('una sola consigna visible 
   expect(tree.root.findByType('input').props.placeholder).toBe('Tu respuesta');
   expect(answer).not.toHaveBeenCalled();
 });
+it('la corrección queda junto al campo y en su descripción sin responder ni revelar un modelo', () => {
+  act(() => { tree = create(<AnswerStudio id="repair" taskKey="repair" target="Estoy cocinando carne." value="j am cooking meet" onChange={() => {}} onAnswer={answer} accepts={() => false} feedback="Revisa la primera pieza." />); });
+  expect(tree.root.findByProps({ id: 'repair-feedback' }).props.role).toBe('status');
+  expect(tree.root.findByType('input').props['aria-describedby']).toContain('repair-feedback');
+  act(() => { vi.advanceTimersByTime(1000); });
+  expect(answer).not.toHaveBeenCalled();
+});
 it('reconoce respuesta completa una vez, sin botón y sin evaluar borradores incompletos', () => {
   act(() => { tree = create(<Harness />); });
   expect(tree.root.findAllByType('button')).toHaveLength(0);

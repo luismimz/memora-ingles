@@ -1,12 +1,14 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import raw from '../../content/keys-mission.json';
-import { validateUnit } from '../domain/unit';
+import { validateUnit, type DialogueTurn } from '../domain/unit';
 import { conversationTurns } from '../domain/conversation';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { ConversationPractice } from './ConversationChat';
 import { playEnglish, stopSpeech, type PlaybackResult } from '../services/audio';
+import { AnswerStudio } from './AnswerStudio';
+import { GameCard } from './GameCard';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), playSnap: vi.fn(), stopSpeech: vi.fn() }));
 let tree: ReactTestRenderer;
@@ -28,6 +30,44 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 
+it.each([false, true])('Nora: error de la captura→corrección junto al campo→modelo=%s→salida sin perder el intento', async (model) => {
+  const meal = { ...unit, id: 'isolated-nora', communication: { ...unit.communication!, dialogue: { ...unit.communication!.dialogue!, partner: 'Nora', partnerLanguage: 'es' as const, roleSwap: false, transfer: undefined, turns: [
+    { role: 'A', en: 'What are you cooking?', es: '¿Qué estás cocinando?', acceptedAnswers: ['What are you cooking?'] },
+    { role: 'B', en: 'I am cooking meat.', es: 'Estoy cocinando carne.', acceptedAnswers: ['I am cooking meat.', "I'm cooking meat."] },
+  ] as [DialogueTurn, DialogueTurn] } } };
+  await mount(true, meal); await type('j am cooking meet'); await submit();
+  expect(tree.root.findByProps({ className: 'chat-context' }).props.open).toBeUndefined();
+  expect(text(tree.root.findByProps({ className: 'chat-header' }))).not.toContain('1/1');
+  const first = attempts()[0];
+  expect(first).toMatchObject({ correct: false, response: 'j am cooking meet' });
+  expect(tree.root.findByType(AnswerStudio).findByProps({ className: 'answer-studio-feedback' }).children.join('')).toContain('Revisa');
+  expect(text(tree.root.findByProps({ role: 'log' }))).not.toContain('j am cooking meet');
+  expect(button('Seguir con el modelo')).toBeDefined();
+  const events = readLearningActivities(user);
+  act(() => tree.unmount()); await mount(true, meal);
+  expect(tree.root.findByType('input').props.value).toBe('j am cooking meet');
+  expect(readLearningActivities(user)).toEqual(events);
+  if (model) await act(async () => button('Seguir con el modelo').props.onClick());
+  else { await type('I am cooking meat'); await act(async () => { vi.advanceTimersByTime(450); }); }
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  expect(tree.root.findByType(GameCard).props.onAdvance).toBeTypeOf('function');
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  expect(next).toHaveBeenCalledOnce();
+  expect(attempts()).toMatchObject(model ? [{ correct: false }] : [{ correct: false }, { correct: true, helped: true, parentAttemptId: first.id }]);
+  if (model) expect(readLearningActivities(user).find((event) => event.activityId === 'chat-skip-respond')).toMatchObject({ correct: null, helped: true, parentAttemptId: first.id });
+});
+it('mientras llega la respuesta tras usar modelo no vuelve a mostrar un campo ni otra tarea', async () => {
+  await mount(true); await type('I looking'); await submit();
+  vi.stubGlobal('window', { setTimeout, clearTimeout, matchMedia: () => ({ matches: false }), dispatchEvent: vi.fn(), getSelection: () => null });
+  await act(async () => button('Seguir con el modelo').props.onClick());
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  expect(text(tree.root.findByProps({ className: 'chat-reply-pending' }))).toContain('respondiendo');
+  expect(tree.root.findByType(GameCard).props.onAdvance).toBeUndefined();
+  await act(async () => { vi.advanceTimersByTime(2500); });
+  expect(tree.root.findByType(GameCard).props.onAdvance).toBeTypeOf('function');
+  expect(attempts()).toHaveLength(1);
+  expect(attempts()[0].correct).toBe(false);
+});
 it('dos errores llevan al modelo, sobreviven a reload legacy y seguir no duplica ni inventa aciertos', async () => {
   await mount();
   await type('I looking'); await submit();
