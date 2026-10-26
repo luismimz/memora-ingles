@@ -264,6 +264,14 @@ it('el modo gramática conserva su montaje porque no llegará al constructor', a
   expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
 });
+it('no difiere una frase anterior al punto de construcción guardado', async () => {
+  const value: AtomicUnit = { ...constructionUnit, practiceSentences: [previewUnit.sentence] };
+  writeGameCheckpoint(user, value.id, value.contentVersion ?? '1', { ...initialGame, phase: 'grammar', sentenceIndex: 1 });
+  await act(async () => { tree = create(<LanguageGame unit={value} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
+  for (let index = 0; index < 3; index++) await swipe(false);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(0);
+});
 it('el modelo de enseñanza avisa del audio fallido, permite reintentar y no arrastra fallos al siguiente slide', async () => {
   writeGameCheckpoint(user, previewUnit.id, previewUnit.contentVersion ?? '1', { ...initialGame, phase: 'grammar' });
   await act(async () => { tree = create(<LanguageGame unit={previewUnit} userId={user} onNext={next} onExit={() => {}} appearance="light" onToggleAppearance={() => {}} />); });
