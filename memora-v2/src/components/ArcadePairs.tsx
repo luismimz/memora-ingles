@@ -1,16 +1,18 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { MicroRound } from '../domain/microArcade';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 
 /** A small recognition board. Selecting one tile is not an attempt or recall. */
-export function ArcadePairs({ rounds, seed, paused, onPair, onModel, onComplete }: {
+export function ArcadePairs({ rounds, seed, paused, onPair, onModel, onComplete, initialClosed = {} }: {
   rounds: MicroRound[]; seed: number; paused: boolean;
   onPair: (target: MicroRound, answer: MicroRound, correct: boolean) => void;
   onModel: (target: MicroRound) => void; onComplete: () => void;
+  initialClosed?: Record<string, 'correct' | 'model'>;
 }) {
   const [selection, setSelection] = useState<{ en?: string; es?: string }>({});
-  const [closed, setClosed] = useState<Record<string, 'correct' | 'model'>>({});
-  const committed = useRef<Record<string, 'correct' | 'model'>>({});
+  const validClosed = Object.fromEntries(Object.entries(initialClosed).filter(([id, value]) => rounds.some((round) => normalizeSentenceAnswer(round.word.en) === id) && ['correct', 'model'].includes(value)));
+  const [closed, setClosed] = useState<Record<string, 'correct' | 'model'>>(validClosed);
+  const committed = useRef<Record<string, 'correct' | 'model'>>(validClosed);
   const finished = useRef(false);
   const [feedback, setFeedback] = useState('');
   const key = (round: MicroRound) => normalizeSentenceAnswer(round.word.en);
@@ -20,6 +22,7 @@ export function ArcadePairs({ rounds, seed, paused, onPair, onModel, onComplete 
     if (Object.keys(committed.current).length !== rounds.length || finished.current) return;
     finished.current = true; onComplete();
   }
+  useEffect(() => { finish(); }, []);
   function pick(side: 'en' | 'es', id: string) {
     if (paused || finished.current || committed.current[id]) return;
     const next = { ...selection, [side]: selection[side] === id ? undefined : id };

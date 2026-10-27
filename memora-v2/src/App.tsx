@@ -27,12 +27,14 @@ import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { loadLearningLibrary } from './services/directus';
 import { GrammarJourney } from './components/GrammarJourney';
 import { grammarJourney, grammarPreparationCandidate, missingGrammarStop, nextGrammarStop, readGrammarPosition, writeGrammarPosition } from './domain/grammarJourney';
+import { prepareKeysSituation } from './domain/keysSituation';
 
 const ContentManager = lazy(() => import('./components/ContentManager').then((module) => ({ default: module.ContentManager })));
 const PhrasalFusionDemo = lazy(() => import('./components/PhrasalFusionDemo').then((module) => ({ default: module.PhrasalFusionDemo })));
 const GrammarWorkshop = lazy(() => import('./components/GrammarWorkshop').then((module) => ({ default: module.GrammarWorkshop })));
 const ProfileView = lazy(() => import('./components/ProfileView').then((module) => ({ default: module.ProfileView })));
 const EvolutionView = lazy(() => import('./components/EvolutionView').then((module) => ({ default: module.EvolutionView })));
+const KeysSituationExperience = lazy(() => import('./components/KeysSituationExperience').then((module) => ({ default: module.KeysSituationExperience })));
 
 const previewAllowed = import.meta.env.DEV;
 const previewRequested = previewAllowed && new URLSearchParams(window.location.search).has('preview');
@@ -74,6 +76,7 @@ export default function App() {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
   const [, refreshProgress] = useState(0);
   const [activeTrick, setActiveTrick] = useState<UnitSummary | null>(null);
+  const [situationUnit, setSituationUnit] = useState<AtomicUnit | null>(null);
   const [libraryNotice, setLibraryNotice] = useState<string | null>(null);
   const [preparingGrammar, setPreparingGrammar] = useState<UnitSummary | null>(null);
   const [loadingActivity, setLoadingActivity] = useState<string | null>(null);
@@ -91,7 +94,7 @@ export default function App() {
   function leaveLesson() {
     lessonRequest.current++;
     cancelArcadeLaunch();
-    stopSpeech(); setMicroSession(null); setUnit(null); setActiveTrick(null);
+    stopSpeech(); setMicroSession(null); setUnit(null); setActiveTrick(null); setSituationUnit(null);
     setReviewMode(false); setExpansionTest(null); setPreparingGrammar(null); setLoading(false);
     setLoadingActivity(null);
   }
@@ -99,7 +102,7 @@ export default function App() {
   useEffect(() => () => { lessonRequest.current++; cancelArcadeLaunch(); }, []);
 
   // A delayed clip belongs to the screen that requested it, not the next one.
-  useEffect(() => () => stopSpeech(), [unit?.id, libraryMode, grammarOpen, fusionOpen, Boolean(microSession)]);
+  useEffect(() => () => stopSpeech(), [unit?.id, situationUnit?.id, libraryMode, grammarOpen, fusionOpen, Boolean(microSession)]);
 
   useEffect(() => {
     try { setLastOpenedUnitId(localStorage.getItem(`memora-v2.resume.${userId}`)); const mode = localStorage.getItem(`memora-v2.resume-mode.${userId}`); setResumeMode(mode === 'vocabulary' || mode === 'grammar' ? mode : 'adventure'); }
@@ -207,6 +210,7 @@ export default function App() {
     lessonRequest.current++; cancelArcadeLaunch();
     setPreparingGrammar(null);
     setActiveTrick(null);
+    setSituationUnit(null);
     setMicroSession(null);
     setLibraryMode(null); setLearningMode('adventure');
     stopSpeech();
@@ -267,6 +271,30 @@ export default function App() {
     }
     catch (reason) { if (request === lessonRequest.current) setUnitError(reason instanceof Error ? reason.message : 'No se pudo abrir esta escena.'); }
     finally { if (request === lessonRequest.current) setLoading(false); }
+  }
+
+  async function openSituation(summary: UnitSummary) {
+    const request = ++lessonRequest.current;
+    cancelArcadeLaunch(); stopSpeech(); setUnitError(null); setUnit(null); setActiveTrick(null); setLibraryMode(null);
+    beginActivityLoad('Entrando en la historia…');
+    try {
+      // Published catalogue only. No pilot, local review pack or permission fallback.
+      const loaded = preview ? reviewUnits.find((candidate) => candidate.id === summary.id) : await loadUnit(summary.id);
+      if (request !== lessonRequest.current) return;
+      if (!loaded || !prepareKeysSituation(loaded)) throw new Error('Esta historia necesita actualizar sus modelos. Tu actividad anterior sigue guardada.');
+      setSituationUnit(loaded);
+    } catch (reason) { if (request === lessonRequest.current) setUnitError(reason instanceof Error ? reason.message : 'No se pudo abrir la historia.'); }
+    finally { if (request === lessonRequest.current) setLoading(false); }
+  }
+
+  function continueSituation() {
+    if (!situationUnit) return;
+    const source = situationUnit;
+    setSituationUnit(null);
+    const next = units.find((candidate) => candidate.id !== source.id && journeyEntryMode(candidate) === 'adventure' && !readUnitProgress(userId, candidate.id))
+      ?? journeyRoute.find((candidate) => candidate.id !== source.id && !candidate.routeTrick && !readUnitProgress(userId, candidate.id))
+      ?? units.find((candidate) => candidate.id === source.id);
+    if (next) void openUnit(next, false, journeyEntryMode(next));
   }
 
   function prepareFoodSource(target: MeatPreparationTarget) {
@@ -521,6 +549,7 @@ export default function App() {
   }} /> : arcadeLoading ? <aside className="lesson-notice" aria-label="Preparación de Arcade"><p role="status">Preparando una ronda con tus palabras practicadas…</p><button type="button" onClick={cancelArcadeLaunch}>Cancelar preparación</button></aside> : null;
   const lessonNotice = unitError ? <aside className="lesson-notice" role="alert"><p>{unitError}</p><button type="button" onClick={() => setUnitError(null)}>Entendido</button></aside> : null;
   const offerArcade = unit && (preview || shouldOfferMicroArcade(userId, unit.id));
+  if (situationUnit) return <DeferredScreen label="la historia" onBack={leaveLesson}><KeysSituationExperience key={`${situationUnit.id}:${userId}`} unit={situationUnit} userId={userId} inspection={preview} onExit={leaveLesson} onNext={continueSituation} appearance={appearance} onToggleAppearance={toggleAppearance} syncStatus={syncStatus} /></DeferredScreen>;
   if (unit) {
     // Admins playing from Home are learners too. Only explicit editorial review is read-only.
     const inspectionMode = reviewMode || preview;
@@ -539,6 +568,6 @@ return <><LanguageGame continuous={!inspectionMode} learningMode={learningMode} 
     ? <DeferredScreen label="el gestor de contenido" onBack={() => setContentOpen(false)}><ContentManager userId={userId} onBack={() => setContentOpen(false)} onReview={reviewManagedUnit} onPublished={refreshPublishedUnits} onTest={testExpansionMission} /></DeferredScreen>
     : profileOpen
     ? <DeferredScreen label="tu perfil" onBack={() => setProfileOpen(false)}><ProfileView key={userId} userId={userId} syncStatus={preview ? undefined : syncStatus} appearance={appearance} onToggleAppearance={toggleAppearance} onBack={() => setProfileOpen(false)} onExit={exit} onEvolution={!preview ? () => { setProfileOpen(false); setEvolutionOpen(true); } : undefined} onManageContent={isAdmin && !preview ? () => { setProfileOpen(false); setContentOpen(true); } : undefined} /></DeferredScreen>
-    : <JourneyHome onStartScene={(summary) => void openUnit(summary, false, 'adventure')} resumeLearningMode={resumeMode} onWords={() => void openLibrary('vocabulary')} onGrammar={() => void openLibrary('grammar')} units={units} userId={userId} resumeUnitId={lastOpenedUnitId} error={unitError} onOpen={(summary) => void openUnit(summary)} onConverse={(summary) => void openUnit(summary, true)} onArcade={() => void openArcade()} onManageContent={isAdmin && !preview ? () => setContentOpen(true) : undefined} onMirror={preview || isAdmin && mirrorPilot ? openMirrorFromHome : undefined} onGrammarReview={preview || isAdmin ? () => setGrammarOpen(true) : undefined} onFusionDemo={preview || isAdmin ? () => setFusionOpen(true) : undefined} onTryPreview={previewAllowed && !preview ? usePreview : undefined} onExit={exit} onEvolution={!preview ? () => setEvolutionOpen(true) : undefined} onProfile={() => setProfileOpen(true)} appearance={appearance} onToggleAppearance={toggleAppearance} />}{microOverlay}</>;
+    : <JourneyHome onSituation={(summary) => void openSituation(summary)} onStartScene={(summary) => void openUnit(summary, false, 'adventure')} resumeLearningMode={resumeMode} onWords={() => void openLibrary('vocabulary')} onGrammar={() => void openLibrary('grammar')} units={units} userId={userId} resumeUnitId={lastOpenedUnitId} error={unitError} onOpen={(summary) => void openUnit(summary)} onConverse={(summary) => void openUnit(summary, true)} onArcade={() => void openArcade()} onManageContent={isAdmin && !preview ? () => setContentOpen(true) : undefined} onMirror={preview || isAdmin && mirrorPilot ? openMirrorFromHome : undefined} onGrammarReview={preview || isAdmin ? () => setGrammarOpen(true) : undefined} onFusionDemo={preview || isAdmin ? () => setFusionOpen(true) : undefined} onTryPreview={previewAllowed && !preview ? usePreview : undefined} onExit={exit} onEvolution={!preview ? () => setEvolutionOpen(true) : undefined} onProfile={() => setProfileOpen(true)} appearance={appearance} onToggleAppearance={toggleAppearance} />}{microOverlay}</>;
   return <main className="gate-screen"><form className="gate-card" onSubmit={submit}><div className="gate-card-top"><span className="brand-mark">M</span><button type="button" className="appearance-toggle" onClick={toggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`} title={`Modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button></div><p className="eyebrow">MEMORA · NUEVA EXPERIENCIA</p><h1>Recuerda palabras. Úsalas en frases tuyas.</h1><label>Correo<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label><label>Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>{error ? <p className="gate-error" role="alert">{error}</p> : null}<button type="submit" className="primary-action">Entrar a la unidad →</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Probar diseño sin tocar Directus</button> : null}</form></main>;
 }

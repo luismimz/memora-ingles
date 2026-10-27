@@ -1,5 +1,19 @@
 # Acciones docentes y orientación dentro de la actividad
 
+## Situación primero · 27/10/2026
+
+Nueva petición humana: ejecutar la propuesta de situación continua completa, con autorización de reset si fuera necesario. No se ha borrado progreso. La nueva entrada «Nora espera. Tus llaves no aparecen.» usa dos sentidos del catálogo PUBLICADO (KEY/llave y PHONE/móvil), con preferencia por la fuente identificada y alternativa a una tanda publicada que contenga ambos. Se validan de nuevo los sentidos al cargar. No se importa el piloto local, no se edita Directus ni se activa contenido privado; si faltan los sentidos preparados se conserva el recorrido disponible, sin inventar disponibilidad.
+
+La historia conecta dos asociaciones con audio desde el principio, tres modelos explícitos I AM / LOOKING FOR / MY KEYS, comprensión, montaje con GrammarOrder, cambio de objeto manteniendo el resto del mensaje, parejas y escucha de Arcade y dos respuestas en la conversación existente (móvil→llaves). El plural KEYS no añade una nueva palabra básica. El mismo escenario se mantiene hasta el chat y corresponde al mensaje de cada turno. No se pide escribir la misma frase entre coach y chat. La escritura llega después de acciones intermedias; esto no demuestra retención a días ni habla espontánea.
+
+Los modelos nuevos se han redactado y revisado en código para esta aplicación, sin heredar reglas de una lección ajena. Se mantiene el unitId real de las palabras para los eventos y NO se completa la unidad/catálogo original por practicar esta historia. Las asociaciones son las del contenido cargado: movimiento causal exacto KIWI→KEY y FONDO→PHONE solo si coincide la historia; rechazo persistente respetado y alternativa visual/sonido disponibles. Una animación no registra acierto.
+
+Reutiliza GameCard, GrammarComparison, GrammarOrder, ArcadePairs, useArcadeClock, ConversationPractice, audio, memoria/journal y TrickCheckpoint. Sin otro scheduler o almacén de dominio. Checkpoint por fuente/versión y ejecución; parejas restauradas desde eventos sin repetir intentos, ayudas/primer error/parent/demora real conservados. Dos fallos o consulta dejan modelo neutral y salida. Audio no reproducido no habilita adivinanza ni consume reloj; alternativa textual explícita y modo tranquilo persistente. El reloj de10s solo sigue a audio realmente terminado en una elección preparada, nunca a enseñanza/lectura/montaje.
+
+«Reiniciar solo esta historia» cambia navegación y ámbito del chat, sin borrar intentos, memorias o recorrido anterior. La cabecera conserva salida y guardado. Tras los dos turnos se continúa a contenido publicado disponible, no a un cierre de cuota diaria; no se fabrica un catálogo infinito. La nueva experiencia se carga bajo demanda.
+
+Verificación de código y versión enviada/servida en MEMORA-IMPLEMENTACION-01.md. La inspección visual/táctil, voz física y eficacia siguen pendientes por las puertas de control cerradas; no se declara curso30d completo ni superioridad a otras aplicaciones.
+
 ## Referencia humana y escenario continuo · 27/10/2026
 
 Diez capturas aportadas por el usuario de mem-ora son la referencia visual concreta de esta revisión: vocabulario/historia juntos, un escenario reconocible entre enseñanza y juego, bloques claros, controles grandes y resultado en el mismo lugar. No son aprobación de Memora ni autorización para editar/publicar/copiar el otro proyecto.

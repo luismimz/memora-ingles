@@ -1,7 +1,7 @@
 import { progressStorage } from './progressJournal';
 
 export interface TrickContinuationCheckpoint { phase: 'build' | 'conversation'; sentenceIndex: number; filledSlots: number; previousAttempt?: string; failures?: number; modelUsed?: boolean; order?: number[]; preparationStep?: number }
-export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string; episodeId?: string; episodeStartedAt?: string; continuation?: TrickContinuationCheckpoint }
+export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string; episodeId?: string; episodeStartedAt?: string; promptStartedAt?: string; continuation?: TrickContinuationCheckpoint }
 const key = (userId: string, stopId: string) => `memora-v2.trick.${userId}.${stopId}`;
 export function parseTrickCheckpoint(value: unknown): TrickCheckpoint | null {
   try {
@@ -13,6 +13,7 @@ export function parseTrickCheckpoint(value: unknown): TrickCheckpoint | null {
     if (saved.state.previousAttemptId !== undefined && typeof saved.state.previousAttemptId !== 'string') return null;
     if (saved.state.episodeId !== undefined && typeof saved.state.episodeId !== 'string') return null;
     if (saved.state.episodeStartedAt !== undefined && !Number.isFinite(Date.parse(saved.state.episodeStartedAt))) return null;
+    if (saved.state.promptStartedAt !== undefined && (typeof saved.state.promptStartedAt !== 'string' || !Number.isFinite(Date.parse(saved.state.promptStartedAt)) || Date.parse(saved.state.promptStartedAt) > Date.now())) delete saved.state.promptStartedAt;
     const continuation = saved.state.continuation;
     if (continuation && (!saved.state.episodeId || !['build', 'conversation'].includes(continuation.phase) || !Number.isInteger(continuation.sentenceIndex) || continuation.sentenceIndex < 0 || !Number.isInteger(continuation.filledSlots) || continuation.filledSlots < 0 || continuation.previousAttempt !== undefined && typeof continuation.previousAttempt !== 'string')) return null;
     if (continuation?.failures !== undefined && (!Number.isInteger(continuation.failures) || continuation.failures < 0 || continuation.failures > 2)) return null;

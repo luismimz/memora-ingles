@@ -1,0 +1,46 @@
+.situation-experience { --situation-gold: #dec28d; }
+.situation-causal-control { width: 100%; max-width: 440px; padding: 0; border: 1px solid var(--line); border-radius: 28px; color: var(--muted); background: var(--surface-soft); overflow: hidden; }
+.situation-causal-control > svg { display: block; width: 100%; max-height: 240px; }
+.situation-causal-control > span { display: block; padding: 8px 12px; font-size: .85rem; }
+.causal-key-object, .causal-key-fruit { transform-box: fill-box; transform-origin: center; }
+.causal-key.is-active .causal-key-object { opacity: 0; animation: key-swallow .9s ease-in both; }
+.causal-key.is-active .causal-key-fruit { animation: kiwi-roll .9s ease-out both; }
+.causal-key-trail { opacity: 0; }
+.causal-key.is-active .causal-key-trail { opacity: 1; }
+@keyframes key-swallow { 0% { opacity: 1; translate: 0; } 70% { opacity: 1; translate: 95px 0; scale: .6; } 100% { opacity: 0; translate: 125px 0; scale: .3; } }
+@keyframes kiwi-roll { 0%, 65% { translate: 0; rotate: 0deg; } 100% { translate: 30px 0; rotate: 15deg; } }
+.situation-episode-content { display: grid; align-content: center; justify-items: center; gap: 18px; width: 100%; max-width: 620px; margin: auto; text-align: center; }
+.situation-episode-content h1 { margin: 0; font-size: clamp(1.6rem, 6vw, 2.55rem); line-height: 1.15; letter-spacing: -.04em; text-wrap: balance; }
+.situation-episode-content > .scene-visual { width: 100%; max-height: 260px; aspect-ratio: 16/9; }
+.situation-word { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 14px; }
+.situation-word h1 { font-size: clamp(2.7rem, 12vw, 5rem); }
+.situation-word > span { font-size: 1.3rem; color: var(--muted); }
+.situation-story { margin: 0; max-width: 30ch; font-size: 1.3rem; line-height: 1.4; text-wrap: balance; }
+.situation-narrator { max-width: 35ch; margin: 0; color: var(--muted); line-height: 1.45; }
+.situation-room { display: block; width: 100%; max-width: 440px; max-height: 210px; border-radius: 24px; }
+.situation-room-object { transition: opacity .3s, transform .3s; }
+.situation-room.is-found .situation-room-object { animation: situation-arrival .35s ease-out both; }
+.situation-episode-content .coach-comparison { width: 100%; }
+.situation-episode-content .coach-comparison .comparison-piece-link { min-height: 36px; }
+.situation-trick { max-width: 39ch; margin: 0; line-height: 1.45; font-size: 1.05rem; }
+.situation-episode-content .situation-options svg { max-height: 100px; }
+.situation-episode-content .situation-options > button > span[aria-hidden] { font-size: 3rem; }
+.situation-object-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; width: 100%; }
+.situation-object-choices button, .situation-pairs button { min-height: 68px; border: 1px solid var(--line); border-bottom-width: 3px; border-radius: 18px; background: var(--surface-strong); color: var(--ink); font-size: 1.15rem; font-weight: 700; }
+.situation-scaffold { margin: 0; font-size: clamp(1.35rem, 5vw, 2rem); line-height: 1.5; }
+.situation-scaffold strong { display: inline-block; min-width: 90px; border-bottom: 2px solid var(--accent); color: var(--accent-ink); }
+.situation-pairs { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; width: 100%; }
+.situation-pairs > div { display: grid; gap: 12px; }
+.situation-pairs button[aria-pressed='true'] { outline: 3px solid var(--accent); outline-offset: 3px; }
+.situation-inline-help { width: 100%; font-size: .95rem; }
+.situation-inline-help summary { min-height: 44px; padding: 12px; cursor: pointer; color: var(--muted); }
+.situation-inline-help[open] { border: 1px solid var(--line); border-radius: 18px; padding: 8px 16px; background: var(--surface-soft); }
+.situation-listen { display: grid; place-items: center; gap: 8px; width: 120px; min-height: 120px; border-radius: 40px; border: 1px solid var(--line); background: var(--surface-strong); color: var(--ink); font-size: 2.2rem; }
+.situation-listen span { font-size: .85rem; }
+.situation-clock-options { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+.situation-clock-options button { min-height: 44px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 30px; background: transparent; color: var(--muted); }
+.situation-reaction { margin: 0; font-weight: 650; line-height: 1.5; text-wrap: balance; }
+.situation-experience .grammar-order { width: 100%; }
+@keyframes situation-arrival { from { opacity: .2; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+@media (max-height: 720px) { .situation-episode-content { gap: 12px; } .situation-room { max-height: 140px; } }
+@media (prefers-reduced-motion: reduce) { .situation-room-object, .situation-room.is-found .situation-room-object, .causal-key.is-active .causal-key-object, .causal-key.is-active .causal-key-fruit { animation: none; transition: none; } }

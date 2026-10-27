@@ -1,5 +1,5 @@
 import { AnswerStudio } from './AnswerStudio';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { GameCard } from './GameCard';
 import { EchoPractice } from './EchoPractice';
 import { TypedChatMessage, type ChatMessage } from './TypedChatMessage';
@@ -42,7 +42,7 @@ function readChatCheckpoint(userId: string, unitId: string, version: string, tur
 }
 
 /** Incoming message → learner's answer → reply. A feed gesture only advances a ready reply. */
-export function ConversationPractice({ unit, userId, reviewMode, checkpointScope = 'story', skillId, initialHelped = false, vertical = false, onContinue }: { unit: AtomicUnit; userId: string; reviewMode: boolean; checkpointScope?: string; skillId?: string; initialHelped?: boolean; vertical?: boolean; onContinue: () => void }) {
+export function ConversationPractice({ unit, userId, reviewMode, checkpointScope = 'story', skillId, initialHelped = false, vertical = false, renderScene, onContinue }: { unit: AtomicUnit; userId: string; reviewMode: boolean; checkpointScope?: string; skillId?: string; initialHelped?: boolean; vertical?: boolean; renderScene?: (turn: ChatTurn) => ReactNode; onContinue: () => void }) {
   const checkpointUnitId = checkpointScope === 'story' ? unit.id : `${unit.id}:${checkpointScope}`;
   const dialogue = unit.communication!.dialogue!;
   const partnerMessage = (id: string, pair: { en: string; es?: string }): ChatMessage => dialogue.partnerLanguage === 'es'
@@ -266,7 +266,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
   return <GameCard feedback={awaitingNext ? !revealedAnswer && turnMessages.some((message) => message.who === 'learner' && message.correct === true) ? 'correct' : 'model' : needsModel ? 'model' : inlineCue ? lastMessage?.draftValue !== undefined ? 'model' : 'retry' : undefined} vertical={vertical} stepKey={`chat:${round}:${awaitingNext ? 'reply' : 'answer'}`} onAdvance={vertical && awaitingNext ? following : undefined} advanceLabel={followingLabel} className={`conversation-card chat-card ${turns.length === 1 ? 'chat-single-turn' : ''}`}>
     <div className="conversation-content chat-content">
       <header className="chat-header"><span className="chat-avatar" aria-hidden="true">{partner[0]}</span><div><strong>{partner}</strong>{!vertical || turns.length > 1 ? <small>{turn.id === 'ask' ? 'Ahora preguntas tú' : turn.id === 'transfer' ? 'Otra situación' : 'Una conversación en casa'}</small> : null}</div>{!vertical || turns.length > 1 ? <span>{round + 1}/{turns.length}</span> : null}</header>
-      <div className="chat-scene">{unit.id === 'm1-entry-keys' ? <KeysScene found={round >= 1} focus={turn.id === 'transfer' ? 'phone' : 'key'} /> : null}{vertical ? <details className="chat-context"><summary>Situación</summary><p>{turn.context}</p></details> : <p>{turn.context}</p>}</div>
+      <div className="chat-scene">{renderScene ? renderScene(turn) : unit.id === 'm1-entry-keys' ? <KeysScene found={round >= 1} focus={turn.id === 'transfer' ? 'phone' : 'key'} /> : null}{vertical ? <details className="chat-context"><summary>Situación</summary><p>{turn.context}</p></details> : <p>{turn.context}</p>}</div>
       {restored.recovery?.input ? <details className="chat-recovered-draft"><summary>Borrador anterior guardado</summary><p>El recorrido cambió y no podemos asignar este borrador con seguridad. Lo conservamos sin enviarlo a otro turno.</p><p lang="en">{restored.recovery.input}</p></details> : null}
       <div className="chat-log" ref={log} role="log" aria-label={`Conversación con ${partner}`} aria-live="polite" aria-relevant="additions">
         {visibleMessages.map((message) => messageView(message))}

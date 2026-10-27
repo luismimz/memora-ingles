@@ -1,0 +1,53 @@
+import { afterEach, expect, it, vi } from 'vitest';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import keys from '../content/keys-mission.json';
+import { validateUnit } from './domain/unit';
+import { grammarTricks } from './domain/journeyTricks';
+import { KeysSituationExperience } from './components/KeysSituationExperience';
+import { LanguageGame } from './LanguageGame';
+import { initialGame } from './domain/game';
+import { readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
+import { readLearningActivities } from './domain/learningActivity';
+const unit = validateUnit(keys);
+const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>) }));
+vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
+vi.mock('./services/progressSync', () => ({ syncLabels: { saved: 'Guardado' }, startProgressSync: (_id: string, report: (status: string) => void) => { report('saved'); return { stop() {} }; } }));
+vi.mock('./services/directus', async (original) => ({ ...await original<typeof import('./services/directus')>(), hasSession: () => true, loadIdentity: async () => ({ id: 'situation-app-isolated', isAdmin: false }), loadPublishedUnitSummaries: async () => [{ ...unit, hasDialogue: true, grammarTricks: grammarTricks(unit) }], loadUnit: async () => source.load ? source.load() : unit, loadKeysPilot: async () => null, loadMirrorPilot: async () => null, loadAsset: async () => '' }));
+let tree: ReactTestRenderer;
+const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
+const click = async (label: string) => { await act(async () => tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick()); };
+async function mount() {
+  const values = new Map<string, string>();
+  const local = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
+  vi.stubGlobal('localStorage', local);
+  vi.stubGlobal('window', { localStorage: local, location: { search: '' }, addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(), setTimeout, clearTimeout, setInterval, clearInterval, matchMedia: () => ({ matches: true }), getSelection: () => null });
+  vi.stubGlobal('document', { documentElement: { dataset: {}, style: {} } });
+  writeGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!, { ...initialGame, phase: 'build', filledSlots: 1 });
+  local.setItem('memora-v2.resume.situation-app-isolated', unit.id);
+  local.setItem('memora-v2.resume-mode.situation-app-isolated', 'adventure');
+  const App = (await import('./App')).default;
+  await act(async () => { tree = create(<App />); });
+}
+afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; vi.unstubAllGlobals(); });
+it('la portada abre la historia nueva sin resetear el montaje anterior ni inventar aprendizaje', async () => {
+  await mount();
+  expect(text(tree.toJSON())).toContain('Nora espera. Tus llaves no aparecen.');
+  await click('Entrar en la historia');
+  expect(tree.root.findByType(KeysSituationExperience).props.unit.id).toBe(unit.id);
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+  expect(readLearningActivities('situation-app-isolated').filter((event) => event.source === 'learner')).toEqual([]);
+  await click('← Recorrido');
+  await click('Retomar mi actividad anterior');
+  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe(unit.id);
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+});
+it('cancelar una carga no abre después una historia tardía ni cambia la posición antigua', async () => {
+  await mount();
+  let resolve!: (value: unknown) => void;
+  source.load = () => new Promise((done) => { resolve = done; });
+  await click('Entrar en la historia');
+  await click('Volver sin esperar');
+  await act(async () => resolve(unit));
+  expect(tree.root.findAllByType(KeysSituationExperience)).toHaveLength(0);
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+});

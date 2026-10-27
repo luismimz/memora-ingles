@@ -1,12 +1,14 @@
 import type { Appearance } from '../useAppearance';
+import type { ReactNode } from 'react';
 import { syncLabels, type SyncStatus } from '../services/progressSync';
 import './playFlow.css';
 import { useDisclosureDismissal } from './useDisclosureDismissal';
 
 /** A shared play surface, not a new learning flow or progress store. */
-export function PlayHeader({ title, onExit, appearance, onToggleAppearance, syncStatus, inspection = false, progress, position, trail, backLabel = '← Recorrido' }: {
+export function PlayHeader({ title, onExit, appearance, onToggleAppearance, syncStatus, inspection = false, progress, position, trail, additionalControls, backLabel = '← Recorrido' }: {
   title: string; onExit: () => void; appearance: Appearance; onToggleAppearance: () => void;
   syncStatus?: SyncStatus; inspection?: boolean; progress?: number; position?: string; backLabel?: string;
+  additionalControls?: ReactNode;
   /** Location only, never inferred completion, prerequisites or a navigation control. */
   trail?: { steps: string[]; current: number };
 }) {
@@ -27,6 +29,7 @@ export function PlayHeader({ title, onExit, appearance, onToggleAppearance, sync
           <p role="status">{saved}</p>
           {progress !== undefined && Number.isFinite(progress) ? <small>Avance de esta tanda: {Math.max(0, Math.min(100, progress))} %. No mide dominio.</small> : null}
           <button type="button" className="quiet-action" onClick={onToggleAppearance}>Activar modo {appearance === 'light' ? 'oscuro' : 'claro'}</button>
+          {additionalControls}
           <small>Puedes salir y retomar la actividad. Deslizar nunca responde por ti.</small>
           {currentTrail ? <ol className="play-trail" aria-label="Dónde estoy en esta práctica">
             {currentTrail.steps.map((step, index) => <li key={step} aria-current={index === currentTrail.current ? 'step' : undefined}>{step}</li>)}

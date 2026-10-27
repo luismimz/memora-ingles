@@ -1,0 +1,165 @@
+import { afterEach, beforeEach, expect, it, vi } from 'vitest';
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import keys from '../../content/keys-mission.json';
+import { validateUnit } from '../domain/unit';
+import { keysSituationId, prepareKeysSituation } from '../domain/keysSituation';
+import { readLearningActivities } from '../domain/learningActivity';
+import { readWordMemories } from '../domain/memory';
+import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
+import { KeysSituationExperience } from './KeysSituationExperience';
+import { GrammarOrder } from './GrammarOrder';
+import { SceneDelivery } from './GrammarSituation';
+import { ConversationPractice } from './ConversationPractice';
+import { GameCard } from './GameCard';
+import { playEnglish } from '../services/audio';
+
+vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
+vi.mock('../services/directus', () => ({ loadAsset: vi.fn(async () => '') }));
+const unit = validateUnit(keys), user = 'situation-isolated';
+const prepared = prepareKeysSituation(unit)!;
+const version = `${unit.id}:${unit.contentVersion}:${keysSituationId}`;
+const next = vi.fn(), exit = vi.fn();
+let tree: ReactTestRenderer;
+const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
+const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).replace(/\s+/gu, ' ').trim() === label)!;
+const checkpoint = () => readTrickCheckpoint(user, keysSituationId, version)!;
+const mount = async (inspection = false) => { await act(async () => { tree = create(<KeysSituationExperience unit={unit} userId={user} inspection={inspection} onNext={next} onExit={exit} appearance="light" onToggleAppearance={() => {}} />); }); };
+const advance = async () => { await act(async () => tree.root.findByType(GameCard).props.onAdvance()); };
+const jump = (stage: number, extra = {}) => writeTrickCheckpoint(user, keysSituationId, version, { stage, checkIndex: 0, checkId: ['key','phone','who','action','object','meaning','build','change','pairs','sound','use'][stage], input: '', feedback: 'idle', helped: false, promptStartedAt: new Date(Date.now() - 5000).toISOString(), episodeStartedAt: new Date(Date.now() - 10000).toISOString(), ...extra });
+beforeEach(() => {
+  vi.useFakeTimers(); vi.clearAllMocks();
+  vi.mocked(playEnglish).mockResolvedValue({ status: 'blocked', source: null });
+  const values = new Map<string, string>();
+  vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) });
+  vi.stubGlobal('window', { setTimeout, clearTimeout, setInterval, clearInterval, dispatchEvent: vi.fn(), matchMedia: () => ({ matches: true }), getSelection: () => null });
+});
+afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+it('desde cero enseña antes de pedir, conserva los bloques y cambia el objeto sin otra lección', async () => {
+  await mount();
+  expect(text(tree.toJSON())).toContain('NO SALIMOS SIN LAS LLAVES');
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  for (let index = 0; index < 5; index++) await advance();
+  expect(checkpoint().stage).toBe(5);
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toEqual([]);
+  expect(readWordMemories(user)).toEqual([]);
+  await act(async () => tree.root.findByType(SceneDelivery).props.onAnswer('Sus llaves'));
+  expect(readLearningActivities(user)).toMatchObject([{ correct: true, helped: true }]);
+  await advance();
+  const order = tree.root.findByType(GrammarOrder);
+  await act(async () => order.props.onChange([3,4,2]));
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([3,4,2]);
+  await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer(prepared.keys.en));
+  await advance();
+  expect(text(tree.toJSON())).toContain('Ahora buscas tu móvil.');
+  await act(async () => button('📱 PHONE').props.onClick());
+  expect(readLearningActivities(user).filter((event) => event.phase === 'transfer')).toMatchObject([{ response: 'PHONE', correct: true, helped: true }]);
+  expect(next).not.toHaveBeenCalled();
+});
+it('Arcade conserva cada pareja y sus intentos al recargar; una sola pareja no termina el tablero', async () => {
+  jump(8); await mount();
+  const pair = async (en: string, es: string) => {
+    await act(async () => tree.root.findByProps({ 'aria-label': 'Palabras inglesas' }).findAllByType('button').find((node) => text(node).trim() === en)!.props.onClick());
+    await act(async () => tree.root.findByProps({ 'aria-label': 'Significados en español' }).findAllByType('button').find((node) => text(node).trim() === es)!.props.onClick());
+  };
+  await pair('KEY', 'llave');
+  expect(tree.root.findByType(GameCard).props.onAdvance).toBeUndefined();
+  const memories = readWordMemories(user);
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByProps({ 'aria-label': 'Palabras inglesas' }).findAllByType('button')[0].props.disabled).toBe(true);
+  expect(readWordMemories(user)).toEqual(memories);
+  await pair('PHONE', 'móvil');
+  expect(checkpoint().feedback).toBe('correct');
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(2);
+  await advance(); expect(checkpoint().stage).toBe(9);
+});
+it('un audio bloqueado no abre una adivinanza: hay alternativa de texto y no consume tiempo', async () => {
+  jump(9); await mount();
+  const options = () => tree.root.findByProps({ className: 'situation-object-choices' }).findAllByType('button');
+  expect(options().every((node) => node.props.disabled)).toBe(true);
+  await act(async () => tree.root.findByProps({ className: 'situation-listen' }).props.onClick());
+  await act(async () => { vi.advanceTimersByTime(20000); });
+  expect(readLearningActivities(user)).toEqual([]);
+  expect(tree.root.findAllByProps({ 'aria-label': 'Tiempo de esta ronda' })).toHaveLength(0);
+  await act(async () => button('Jugar con texto').props.onClick());
+  act(() => tree.unmount()); await mount();
+  expect(text(tree.toJSON())).toContain('PHONE significa');
+  await act(async () => options()[1].props.onClick());
+  expect(readWordMemories(user)[0].capabilities?.auditory?.attempts ?? 0).toBe(0);
+  expect(readLearningActivities(user)).toMatchObject([{ correct: true, helped: true }]);
+});
+it('el reloj empieza después del audio; caducar conserva omisión neutral y no cambia memoria', async () => {
+  vi.mocked(playEnglish).mockResolvedValue({ status: 'played', source: 'kokoro' });
+  jump(9); await mount();
+  await act(async () => { vi.advanceTimersByTime(20000); });
+  expect(readLearningActivities(user)).toEqual([]);
+  await act(async () => tree.root.findByProps({ className: 'situation-listen' }).props.onClick());
+  await act(async () => { vi.advanceTimersByTime(11000); });
+  expect(readLearningActivities(user)).toMatchObject([{ source: 'authored', correct: null }]);
+  expect(readWordMemories(user)).toEqual([]);
+  expect(checkpoint().checkFailures).toBe(2);
+});
+it('acota reparación, conserva demora real y primer error al recargar, sin aciertos por ver modelo', async () => {
+  jump(6); await mount();
+  await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('I looking for keys am my'));
+  const first = readLearningActivities(user)[0];
+  expect(first.responseDelayMs).toBeGreaterThanOrEqual(5000);
+  act(() => tree.unmount()); await mount();
+  await act(async () => { tree.root.findByType(GrammarOrder).props.onAnswer('my keys I looking for am'); tree.root.findByType(GrammarOrder).props.onAnswer('my keys I looking for am'); });
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(2);
+  expect(readLearningActivities(user)[1].parentAttemptId).toBe(first.id);
+  expect(checkpoint().checkFailures).toBe(2);
+  expect(readLearningActivities(user).some((event) => event.correct === true)).toBe(false);
+  await advance(); expect(checkpoint().stage).toBe(7);
+});
+it('la conversación retira modelo y piezas, usa móvil y luego llaves, y no completa al abrirla', async () => {
+  jump(10); await mount();
+  const chat = tree.root.findByType(ConversationPractice);
+  expect(chat.props.unit.communication.dialogue.transfer.en).toBe(prepared.keys.en);
+  expect(chat.props.unit.communication.dialogue.turns[1].en).toBe(prepared.phone.en);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(readLearningActivities(user).some((event) => event.phase === 'completion')).toBe(false);
+  await act(async () => chat.props.onContinue());
+  expect(next).toHaveBeenCalledOnce();
+  expect(readLearningActivities(user).filter((event) => event.phase === 'completion')).toMatchObject([{ correct: null }]);
+});
+it('puede escribir los dos mensajes reales y salir a la siguiente actividad sin un botón Comprobar', async () => {
+  jump(10); await mount();
+  for (const message of [prepared.phone.en, prepared.keys.en]) {
+    const scene = tree.root.findByProps({ className: 'chat-scene' }).findByType('svg');
+    expect(scene.props['aria-label']).toContain(message.includes('phone') ? 'móvil' : 'llaves');
+    await act(async () => { vi.advanceTimersByTime(15000); });
+    await act(async () => tree.root.findByType('input').props.onChange({ target: { value: message } }));
+    await act(async () => { vi.advanceTimersByTime(500); });
+    await act(async () => { vi.advanceTimersByTime(15000); });
+    await advance();
+  }
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner' && event.modality === 'writing' && event.correct === true)).toHaveLength(2);
+  expect(next).toHaveBeenCalledOnce();
+});
+it('inspección y preferencia de asociación no escriben intentos ni memorias', async () => {
+  await mount(true);
+  await act(async () => button('Esta asociación no me ayuda').props.onClick());
+  await advance();
+  expect(readWordMemories(user)).toEqual([]); expect(readLearningActivities(user)).toEqual([]);
+  expect(readTrickCheckpoint(user, keysSituationId, version)).toBeNull();
+});
+it('reiniciar solo la historia cambia su navegación y chat, nunca borra intentos o memoria', async () => {
+  jump(8); await mount();
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Palabras inglesas' }).findAllByType('button')[0].props.onClick());
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Significados en español' }).findAllByType('button')[1].props.onClick());
+  const memories = readWordMemories(user), events = readLearningActivities(user);
+  await act(async () => button('Reiniciar solo esta historia').props.onClick());
+  expect(checkpoint().stage).toBe(0); expect(checkpoint().episodeId).toBeTruthy();
+  expect(readWordMemories(user)).toEqual(memories); expect(readLearningActivities(user)).toEqual(events);
+  expect(next).not.toHaveBeenCalled();
+});
+it('reiniciar durante un gesto pendiente cancela ese avance en lugar de saltarse el principio nuevo', async () => {
+  await mount();
+  const footer = tree.root.findByProps({ className: 'card-vertical-next' }).findByType('button');
+  act(() => footer.props.onClick());
+  await act(async () => button('Reiniciar solo esta historia').props.onClick());
+  await act(async () => { vi.advanceTimersByTime(1000); });
+  expect(checkpoint().stage).toBe(0);
+  expect(readLearningActivities(user)).toEqual([]);
+});
