@@ -3,7 +3,7 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import keys from '../../content/keys-mission.json';
 import mirror from '../../content/mirror-now.json';
 import { validateUnit } from './unit';
-import { completeLearningMode, journeyEntryMode, missingGrammarWords } from './learningModes';
+import { completeLearningMode, journeyEntryMode, missingGrammarWords, sceneAcquisitionIndexes } from './learningModes';
 import { recalledWordIndex, recordActiveWordAttempt, summarizeActiveRecall } from './activeRecall';
 import { readWordMemories, recordWordRecall } from './memory';
 import { readUnitProgress } from './journey';
@@ -27,6 +27,19 @@ beforeEach(() => {
   initializeJournal('learner');
 });
 describe('modos conectados con el progreso real', () => {
+  it('prepara solo los sentidos/modelos nuevos; un fallo o consulta no habilita reutilización', () => {
+    for (const [index, word] of unit.words.entries()) recordWordRecall('learner', word, index === 1 ? 'missed' : 'hesitant');
+    const memories = readWordMemories('learner');
+    expect(sceneAcquisitionIndexes(unit, memories)).toEqual([1]);
+    const first = unit.words[0];
+    for (const change of [{ es: 'otro sentido' }, { scene: 'otra escena' }, { bridge: 'otra pista' }, { associationMode: 'cognate' as const }, { associationId: 'new-sense' }, { associationVersion: 999 }]) {
+      expect(sceneAcquisitionIndexes({ ...unit, words: [{ ...first, ...change }, ...unit.words.slice(1)] }, memories)).toEqual([0, 1]);
+    }
+    expect(sceneAcquisitionIndexes({ ...unit, communication: undefined }, memories)).toBeNull();
+    expect(sceneAcquisitionIndexes(unit, [])).toEqual(unit.words.map((_, index) => index));
+    // An author's review label is not evidence that this learner knows it.
+    expect(sceneAcquisitionIndexes({ ...unit, words: unit.words.map((word) => ({ ...word, learningRole: 'review' })) }, [])).toEqual(unit.words.map((_, index) => index));
+  });
   it('una escena con estructura y conversación abre enseñanza completa, no fuerza vocabulario', () => {
     const scene = { id: 'synthetic-scene', title: 'Test', hasDialogue: true, sentence: { en: 'I am playing.', es: 'Estoy jugando.' }, grammarTricks: [{ sourceId: 'synthetic-scene', formId: 'ing', skill: 'test', title: 'Test', vocabulary: ['play'] }] };
     expect(journeyEntryMode(scene)).toBe('adventure');

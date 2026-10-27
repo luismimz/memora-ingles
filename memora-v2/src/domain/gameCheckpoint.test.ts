@@ -13,6 +13,18 @@ beforeEach(() => {
 });
 
 describe('navigation checkpoints', () => {
+  it('conserva el plan de navegación por usuario/versión y descarta solo metadatos de plan corruptos', () => {
+    const state = { ...initialGame, wordIndex: 1, acquisitionIndexes: [1, 3], wordAssembly: { selected: [], hinted: true, modelUsed: false } };
+    writeGameCheckpoint('learner', 'mixed', '1', state);
+    expect(readGameCheckpoint('learner', 'mixed', '1')).toEqual(state);
+    expect(readGameCheckpoint('other', 'mixed', '1')).toBeNull();
+    expect(readGameCheckpoint('learner', 'mixed', '2')).toBeNull();
+    for (const acquisitionIndexes of [[1, 1], [2, 1], [-1], [1.5], 'bad']) {
+      data.set('memora-v2.checkpoint.learner.mixed', JSON.stringify({ version: '1', state: { ...state, acquisitionIndexes } }));
+      expect(readGameCheckpoint('learner', 'mixed', '1')).toMatchObject({ wordIndex: 1, wordAssembly: state.wordAssembly });
+      expect(readGameCheckpoint('learner', 'mixed', '1')?.acquisitionIndexes).toBeUndefined();
+    }
+  });
   it('conserva consulta de gramática sin migrar posiciones antiguas ni perder fase por una marca inválida', () => {
     const state = { ...initialGame, phase: 'build' as const, filledSlots: 1, grammarHelpUsed: true };
     writeGameCheckpoint('learner', 'help', '1', state);

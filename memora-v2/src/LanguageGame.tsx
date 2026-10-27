@@ -21,7 +21,7 @@ import { BridgeSoundNote } from './components/BridgeSoundNote';
 import { advanceReviewedGrammar, gameReducer, initialGame, type GameAction, type GameState, type LearningMode, type WordAssemblyPosition } from './domain/game';
 import { clearGameCheckpoint, readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
 import { recordAttempt } from './domain/learningProfile';
-import { canReuseSceneVocabulary, completeLearningMode } from './domain/learningModes';
+import { sceneAcquisitionIndexes, completeLearningMode } from './domain/learningModes';
 import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
 import { readGrammarAttempts } from './domain/grammarMemory';
 import { readWordMemories, recordChunkExposure, recordSentenceExposure, recordWordRecall } from './domain/memory';
@@ -96,8 +96,14 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
       if (reviewMode) return start;
       if (startInConversation && unit.communication?.dialogue) return { ...initialGame, phase: 'conversation' as const };
       const saved = readGameCheckpoint(userId, checkpointId, unit.contentVersion ?? '1');
-      if (!saved) return vertical && learningMode === 'adventure' && canReuseSceneVocabulary(unit, readWordMemories(userId))
-        ? { ...start, phase: 'recall' as const } : start;
+      if (!saved) {
+        const acquisitionIndexes = vertical && learningMode === 'adventure' ? sceneAcquisitionIndexes(unit, readWordMemories(userId)) : null;
+        return acquisitionIndexes === null ? start : { ...start, acquisitionIndexes, wordIndex: acquisitionIndexes[0] ?? 0, phase: acquisitionIndexes.length ? 'associate' as const : 'recall' as const };
+      }
+      // Started scenes keep their original plan and current rehearsal, even if
+      // practice elsewhere has since changed the learner's memory. Invalid new
+      // metadata falls back to the old full teaching path, not a lost position.
+      if (saved.acquisitionIndexes?.some((index) => index >= unit.words.length) || saved.acquisitionIndexes && saved.phase === 'associate' && !saved.acquisitionIndexes.includes(saved.wordIndex)) delete saved.acquisitionIndexes;
       // Legacy positions already carrying a model consultation retain it in
       // later conversation. Do not infer lost history from unrelated sessions.
       if (saved.buildModelUsed) saved.grammarHelpUsed = true;
@@ -173,7 +179,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   if (constructionGuard.current.key !== constructionKey) constructionGuard.current = { key: constructionKey, failures: state.buildRepair?.failures ?? 0, placed: false };
   const usedReviewJump = useRef(false);
   const word = unit.words[state.wordIndex];
-  const acquisitionIndexes = unit.words.map((item, index) => item.learningRole === 'review' ? -1 : index).filter((index) => index >= 0);
+  const acquisitionIndexes = state.acquisitionIndexes ?? unit.words.map((item, index) => item.learningRole === 'review' ? -1 : index).filter((index) => index >= 0);
   const recallWord = unit.words[recalledWordIndex(recallUnit, state.recallIndex)];
   const choices = useMemo(() => makeRecallChoices(unit, recalledWordIndex(recallUnit, state.recallIndex), sessionSeed), [unit, recallUnit, state.recallIndex, sessionSeed]);
   const sceneChoices = useMemo(() => {

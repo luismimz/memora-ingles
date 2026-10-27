@@ -15,13 +15,18 @@ export function journeyEntryMode(unit?: UnitSummary): LearningMode {
   return unit && unit.kind !== 'vocabulary-pack' && unit.kind !== 'grammar-lesson' && unit.hasDialogue && unit.sentence?.es && unit.grammarTricks?.length ? 'adventure' : 'vocabulary';
 }
 
-/** Reuse previously practiced, unchanged word models; still ask for retrieval.
- * This removes repeated spelling setup, never establishes mastery or a score. */
+/** Freeze only the models this new scene needs to teach. Every word still enters
+ * retrieval and use. null keeps explicit word packs on their existing path. */
+export function sceneAcquisitionIndexes(unit: AtomicUnit, memories: WordMemory[]): number[] | null {
+  if (!unit.communication?.dialogue || !getPlayableGrammar(unit).length || !unit.words.length) return null;
+  return unit.words.flatMap((word, index) => memories.some((memory) => practicedWordMeaning(memory, word)
+    && memory.word.scene === word.scene && memory.word.bridge === word.bridge
+    && memory.word.associationMode === word.associationMode) ? [] : [index]);
+}
+
+/** Reusing a model never establishes mastery or a score. */
 export function canReuseSceneVocabulary(unit: AtomicUnit, memories: WordMemory[]): boolean {
-  return Boolean(unit.communication?.dialogue && getPlayableGrammar(unit).length && unit.words.length
-    && unit.words.every((word) => memories.some((memory) => practicedWordMeaning(memory, word)
-      && memory.word.scene === word.scene && memory.word.bridge === word.bridge
-      && memory.word.associationMode === word.associationMode)));
+  return sceneAcquisitionIndexes(unit, memories)?.length === 0;
 }
 
 /** Readiness means prior successful practice, not a promise of long-term mastery. */

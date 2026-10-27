@@ -16,6 +16,8 @@ Base recuperada limpia desde main8f359be en /private/tmp/memora-design-jASUnR/re
 
 Para revisar: recargar sin borrar datos → Continuar. El escenario y cabecera cambian ya en la tarea guardada; no es necesario empezar de cero. Ver asociación con historia/ejemplo disponible, responder una recuperación y montar/usar una frase preparada. La prueba humana debe valorar conjunto y continuidad, no solo una captura o número de tests. Versión enviada/realmente servida en el único checkpoint del proyecto.
 
+Segunda mejora de esta revisión: una escena nueva con vocabulario mixto enseña únicamente los modelos nuevos, en vez de repetir todo o saltarlo todo. Sentido, versión/identidad de asociación, historia, puente y modo deben seguir coincidiendo con práctica previa; un fallo, una consulta o una etiqueta editorial «repaso» no bastan. El plan de navegación se congela en el checkpoint existente, no es un registro de aprendizaje. Las posiciones anteriores sin plan y los montajes empezados se conservan; un plan corrupto se descarta sin borrar las piezas. Toda palabra, conocida o nueva, sigue en recuperación y después en el mensaje preparado: ninguna se da por recordada al omitir una presentación. Biblioteca explícita y escenas sin estructura/diálogo mantienen su recorrido. Sin nuevo store/scheduler, contenido o puntuación por navegar. Integración926/154, pruebas enfocadas del recorrido/checkpoint/modos y build correctos; no prueba física ni retención acreditadas.
+
 ## Revisión jugable · 26/10/2026
 
 La petición humana vuelve a priorizar el método jugado, no otra capa de portada. Cambios sobre los componentes existentes:

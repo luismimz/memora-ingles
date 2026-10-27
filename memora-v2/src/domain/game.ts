@@ -7,6 +7,8 @@ export interface GrammarFallbackPosition { step: number; subjectIndex: number; c
 export interface GameState {
   phase: Phase;
   wordIndex: number;
+  /** Frozen teaching navigation for a new scene, not evidence of learning. */
+  acquisitionIndexes?: number[];
   recallIndex: number;
   recallAnswered: boolean;
   /** Restores the visible feedback, not a new attempt or memory score. */

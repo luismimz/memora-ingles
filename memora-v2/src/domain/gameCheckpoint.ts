@@ -12,6 +12,7 @@ export function readGameCheckpoint(userId: string, unitId: string, version: stri
     const saved = value as { version?: string; state?: Partial<GameState> };
     if (saved.version !== version || !saved.state) return null;
     const state = saved.state;
+    if (state.acquisitionIndexes !== undefined && (!Array.isArray(state.acquisitionIndexes) || state.acquisitionIndexes.length > 200 || !state.acquisitionIndexes.every((index, position, indexes) => Number.isInteger(index) && index >= 0 && (position === 0 || index > indexes[position - 1])))) delete state.acquisitionIndexes;
     if (state.sessionStartedAt !== undefined && (typeof state.sessionStartedAt !== 'string' || !Number.isFinite(Date.parse(state.sessionStartedAt)) || Date.parse(state.sessionStartedAt) > Date.now())) delete state.sessionStartedAt;
     if (state.coach !== undefined && (!state.coach || typeof state.coach.lessonId !== 'string' || !state.coach.lessonId.trim() || !parseTrickCheckpoint(state.coach.position))) delete state.coach;
     if (state.recognitionStyle !== undefined && !['scene-delivery-v1', 'faded-recall-v2'].includes(state.recognitionStyle)) return null;
