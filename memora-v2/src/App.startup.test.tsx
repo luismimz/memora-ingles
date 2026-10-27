@@ -30,7 +30,7 @@ it.each(['pending', 'rejected'] as const)('abre el recorrido publicado con carga
   auxiliary.mirror.mockImplementation(() => state === 'rejected' ? Promise.reject(new Error('optional')) : new Promise((resolve) => { resolveMirror = resolve; }));
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
-  expect(text(tree.toJSON())).toContain('Continuar jugando');
+  expect(text(tree.toJSON())).toContain('Byte tiene sed.');
   expect(text(tree.toJSON())).not.toContain('Preparando tu escena');
   expect(text(tree.toJSON())).not.toContain('Herramientas y pruebas');
   expect([...values.keys()].some((key) => /learning|memory|progress|resume/.test(key))).toBe(false);

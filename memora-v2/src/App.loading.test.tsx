@@ -21,7 +21,7 @@ let values: Map<string, string>;
 let focused: { label: string; options: unknown }[];
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => { tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick(); }); };
-async function mount() { const App = (await import('./App')).default; await act(async () => { tree = create(<App />, { createNodeMock: (node) => node.type === 'h1' ? { focus: (options: unknown) => focused.push({ label: text(tree.root.findByType('h1').props.children), options }) } : null }); }); }
+async function mount() { const App = (await import('./App')).default; await act(async () => { tree = create(<App />, { createNodeMock: (node) => node.type === 'h1' ? { focus: (options: unknown) => focused.push({ label: text(tree.root.findByType('h1').props.children), options }) } : null }); }); const legacy = tree.root.findAllByType('button').find((node) => text(node).trim() === 'Recorrido anterior'); if (legacy) await act(async () => legacy.props.onClick()); }
 beforeEach(() => {
   vi.clearAllMocks(); api.unit.mockReset(); api.library.mockReset(); api.identity.mockReset(); api.published.mockReset(); values = new Map(); focused = [];
   const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
@@ -113,8 +113,10 @@ it.each([false, true])('permite reintentar el catálogo sin cerrar sesión, con 
   expect(text(tree.toJSON()).includes('technical-catalogue-error')).toBe(admin);
   expect(text(tree.toJSON()).includes('Detalles para administración')).toBe(admin);
   await click('Volver a intentar');
-  expect(text(tree.toJSON())).toContain('Continuar jugando');
+  expect(text(tree.toJSON())).toContain('Byte tiene sed.');
   expect(api.identity).toHaveBeenCalledTimes(2);
   expect(api.published).toHaveBeenCalledTimes(2);
-  expect([...values.entries()]).toEqual(before);
+  const zeroPosition = 'memora-v2.trick.loading-isolated.memora:zero-cafe-v1';
+  expect(JSON.parse(values.get(zeroPosition)!)).toMatchObject({ state: { stage: 0, checkId: 'water', feedback: 'idle' } });
+  expect([...values.entries()].filter(([key]) => key !== zeroPosition)).toEqual(before);
 });

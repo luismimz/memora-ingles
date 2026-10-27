@@ -28,6 +28,7 @@ type Props = {
   onOpen: (unit: UnitSummary) => void; onConverse: (unit: UnitSummary) => void;
   onStartScene?: (unit: UnitSummary) => void;
   onSituation?: (unit: UnitSummary, recallOnly?: boolean) => void;
+  onNewJourney?: () => void;
   onWords?: () => void; onGrammar?: () => void;
   onArcade?: () => void; onManageContent?: () => void; onFusionDemo?: () => void;
   onGrammarReview?: () => void; onEvolution?: () => void; onMirror?: () => void;
@@ -111,6 +112,7 @@ export function JourneyHome(props: Props) {
     <header className="home-guided-header">
       <a className="journey-brand" href="#inicio" aria-label="Memora, ir al inicio"><span className="brand-mark">M</span><span>MEMORA</span></a>
       <NavigationMenu label="Navegación principal">
+        {props.onNewJourney ? <button type="button" onClick={props.onNewJourney}>Memora Play · recorrido nuevo</button> : null}
         <button type="button" onClick={onProfile}>Perfil y ajustes</button>
         <button type="button" onClick={onEvolution} disabled={!onEvolution}>Mi evolución</button>
 {onManageContent || onFusionDemo || onGrammarReview || onMirror ? <details className="home-tools"><summary>Herramientas y pruebas</summary><div>{onManageContent ? <button type="button" onClick={onManageContent}>Gestionar contenido</button> : null}{onMirror ? <button type="button" onClick={onMirror}>Ficha Espejo</button> : null}{onGrammarReview ? <button type="button" onClick={onGrammarReview}>Revisar trucos</button> : null}{onFusionDemo ? <button type="button" onClick={onFusionDemo}>Laboratorio TURN</button> : null}</div></details> : null}

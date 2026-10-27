@@ -56,7 +56,12 @@ beforeEach(() => {
 function game() {
   hooks.cursor = 0;
   hooks.refCursor = 0;
-  const root = App() as ReactElement<{ children: ReactElement[] }>;
+  let root = App() as ReactElement<any>;
+  // These are compatibility tests for the retained course; explicitly choose it.
+  if (root.props.label === 'Memora Play') {
+    root.props.onBack(); hooks.cursor = 0; hooks.refCursor = 0;
+    root = App() as ReactElement<any>;
+  }
   return (root.props.children?.[0] ?? root) as ReactElement<Record<string, any>>;
 }
 

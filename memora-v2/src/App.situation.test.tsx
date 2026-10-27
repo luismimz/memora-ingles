@@ -16,6 +16,7 @@ import { initializeJournal, readJournal } from './domain/progressJournal';
 import { completeLearningMode } from './domain/learningModes';
 import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { GrammarCoach } from './components/GrammarCoach';
+import { ZeroJourney } from './components/ZeroJourney';
 const unit = validateUnit(keys);
 const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>), followup: null as null | ReturnType<typeof validateUnit> }));
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
@@ -24,7 +25,7 @@ vi.mock('./services/directus', async (original) => ({ ...await original<typeof i
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick()); };
-async function mount(seed?: () => void) {
+async function mount(seed?: () => void, legacy = true) {
   const values = new Map<string, string>();
   const local = { get length() { return values.size; }, key: (index: number) => [...values.keys()][index] ?? null, getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
   vi.stubGlobal('localStorage', local);
@@ -39,8 +40,28 @@ async function mount(seed?: () => void) {
   seed?.();
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
+  if (legacy) await click('Recorrido anterior');
 }
 afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; source.followup = null; vi.unstubAllGlobals(); });
+it('el nuevo comienzo es la entrada principal; salir conserva la actividad anterior y puede retomarse Play', async () => {
+  await mount(undefined, false);
+  expect(text(tree.toJSON())).toContain('Byte tiene sed.');
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+  expect(readLearningActivities('situation-app-isolated')).toEqual([]);
+  await click('Recorrido anterior');
+  await click('Memora Play · recorrido nuevo');
+  expect(text(tree.toJSON())).toContain('Byte tiene sed.');
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+});
+it('terminar Play enlaza preparación publicada, sin completar ni resetear esa misión por navegar', async () => {
+  source.followup = validateUnit(examples[0]);
+  await mount(undefined, false);
+  await act(async () => tree.root.findByType(ZeroJourney).props.onNext());
+  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
+  expect(tree.root.findByType(LanguageGame).props.learningMode).toBe('vocabulary');
+  expect(readLearningActivities('situation-app-isolated')).toEqual([]);
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+});
 it('Nora prepara las palabras del ordenador y enlaza al coach contextual con Detective, sin enseñar piezas desconocidas', async () => {
   source.followup = validateUnit(examples[0]);
   await mount();

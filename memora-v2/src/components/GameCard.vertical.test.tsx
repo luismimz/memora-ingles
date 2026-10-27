@@ -12,6 +12,17 @@ function mount(advance?: () => void, stepKey = 'one') {
 }
 beforeEach(() => { viewport.scrollTop = 0; vi.useFakeTimers(); vi.stubGlobal('window', { setTimeout, clearTimeout, matchMedia: () => ({ matches: false }), getSelection: () => null }); });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+it('el modo sin botón conserva teclado/gesto y nunca permite saltarse una tarea pendiente', () => {
+  const advance = vi.fn(), preventDefault = vi.fn();
+  act(() => { tree = create(<GameCard vertical showAdvanceButton={false}>Pendiente</GameCard>); });
+  viewport.scrollTop = 200;
+  act(() => region().props.onKeyDown(event({ key: 'ArrowDown', preventDefault })));
+  expect(preventDefault).not.toHaveBeenCalled();
+  act(() => tree.update(<GameCard vertical showAdvanceButton={false} onAdvance={advance}>Preparado</GameCard>));
+  expect(tree.root.findAllByProps({ className: 'card-vertical-next' })).toHaveLength(0);
+  act(() => { region().props.onKeyDown(event({ key: 'ArrowDown', preventDefault })); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+});
 it('leer hasta el final y la inercia de esa rueda no navegan; una rueda nueva sí', () => {
   const advance = vi.fn(); mount(advance);
   act(() => { wheel(); viewport.scrollTop = 200; region().props.onScroll(event()); wheel(70); vi.advanceTimersByTime(230); });
