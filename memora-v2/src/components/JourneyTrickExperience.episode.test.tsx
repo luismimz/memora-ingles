@@ -77,7 +77,7 @@ it('el episodio acepta preparación abreviada solo de pieza exacta y conserva la
   recordLearningActivity(user, { unitId: 'prior-isolated', unitTitle: 'Synthetic prior piece', contentVersion: 'test', activityId: 'build-0-1', skill: 'ing', phase: 'construction', source: 'learner', modality: 'choice', prompt: slot.es, response: slot.en, expected: slot.en, correct: true, helped: true, pieceSignature: piecePreparationKey(slot, value.grammar[0]) });
   await act(async () => tree.root.findByProps({ className: 'slot-options' }).findAllByType('button').find((node) => node.props.children === 'I')!.props.onClick());
   expect(tree.root.findByType(SentenceBuilderCard).props.compactPreparation).toBe(true);
-  const help = tree.root.findByProps({ className: 'familiar-piece' }).findByType('details');
+  const help = tree.root.findByProps({ className: 'familiar-piece' }).findAllByType('details')[0];
   await act(async () => help.props.onToggle({ currentTarget: { open: true } }));
   expect(checkpoint()?.continuation?.modelUsed).toBe(true);
   await act(async () => tree.root.findByProps({ className: 'slot-options' }).findAllByType('button').find((node) => node.props.children === 'am')!.props.onClick());

@@ -24,7 +24,7 @@ it('reutiliza la pieza practicada, no salta el montaje y conserva ayuda y firma 
   writeGameCheckpoint(user, unit.id, unit.contentVersion!, { ...initialGame, phase: 'build', filledSlots: 1 });
   await mount(); expect(tree.root.findByType(SentenceBuilderCard).props.compactPreparation).toBe(true);
   expect(tree.root.findAllByProps({ className: 'slot-preparation' })).toHaveLength(0);
-  const details = tree.root.findByProps({ className: 'familiar-piece' }).findByType('details');
+  const details = tree.root.findByProps({ className: 'familiar-piece' }).findAllByType('details')[0];
   await act(async () => details.props.onToggle({ currentTarget: { open: true } }));
   expect(readGameCheckpoint(user, unit.id, unit.contentVersion!)?.grammarHelpUsed).toBe(true);
   expect(readLearningActivities(user)).toHaveLength(1);

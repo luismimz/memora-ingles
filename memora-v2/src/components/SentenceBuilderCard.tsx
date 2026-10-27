@@ -38,6 +38,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const [lastError, setLastError] = useState<{ slot: number; choice: string } | null>(null);
   const playback = useSpeechPlayback();
   const [preparation, setPreparation] = useState({ slot: filledSlots, step: 0 });
+  const [connection, setConnection] = useState<string>();
   const wrongTimer = useRef<number | null>(null);
   const answeredSlot = useRef(-1);
   const board = useRef<HTMLDivElement>(null);
@@ -49,6 +50,10 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const completed = filledSlots === sentence.slots.length;
   const observedResult = useRef({ sentence: sentence.en, completed });
   const active = sentence.slots[filledSlots];
+  const connectionKey = `${index}:${filledSlots}`;
+  const connectionOpen = connection === connectionKey;
+  const literal = (text: string) => text.trim().replace(/[.!?,;:]+$/, '').toLocaleLowerCase();
+  const connectionExplanation = active?.note ?? active?.preparation?.find((step) => literal(step.en) === literal(active.en))?.explanation;
   const baseSpanish = vocabulary.find((word) => word.en.toLowerCase() === processForm.englishBase?.toLowerCase())?.es ?? (sceneWord.en.toLowerCase() === processForm.englishBase?.toLowerCase() ? sceneWord.es : undefined);
   const pieceRole = (text: string, language: 'en' | 'es') => constructionRole(text, processForm, language, baseSpanish);
   const errorChoice = lastIncorrectChoice ?? (lastError?.slot === filledSlots ? lastError.choice : undefined);
@@ -59,6 +64,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
   const preparationStep = compactPreparation ? undefined : active?.preparation?.[preparationIndex];
   const options = active && (choiceSeed + filledSlots) % 2 ? [...active.choices].reverse() : active?.choices;
   const listenToSentence = () => playback.listen(sentence.en);
+  useEffect(() => { setConnection(undefined); }, [sentence.en, filledSlots]);
   useEffect(() => { gesture.current = undefined; setDrag(undefined); }, [sentence.en, filledSlots, preparationIndex, needsModel]);
   useEffect(() => {
     playback.reset();
@@ -128,7 +134,7 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
       {!completed ? <SceneVisual word={sceneWord} compact /> : null}
       <h1>{showProcess(sentence.es, processForm.spanish, processForm.spanishStem, processForm.spanishEnding)}</h1>
       <div className={`sentence-rail ${completed ? 'is-complete' : ''}`} role="group" aria-label="Correspondencia del español con el inglés">
-        {sentence.slots.map((slot, slotIndex) => <div data-builder-drop={slotIndex === filledSlots && !preparationStep && !needsModel ? '' : undefined} data-piece-role={pieceRole(slot.en, 'en')} className={`sentence-slot ${slotIndex === filledSlots ? 'is-active' : ''} ${slotIndex < filledSlots ? 'is-filled' : ''}${slotIndex === filledSlots && drag?.over ? ' is-drop-over' : ''}`} key={`${slotIndex}-${slot.en}`}>
+        {sentence.slots.map((slot, slotIndex) => <div data-builder-drop={slotIndex === filledSlots && !preparationStep && !needsModel ? '' : undefined} data-connection-active={connectionOpen && slotIndex === filledSlots} data-piece-role={pieceRole(slot.en, 'en')} className={`sentence-slot ${slotIndex === filledSlots ? 'is-active' : ''} ${slotIndex < filledSlots ? 'is-filled' : ''}${slotIndex === filledSlots && drag?.over ? ' is-drop-over' : ''}`} key={`${slotIndex}-${slot.en}`}>
           <span className="sentence-slot-es">{slot.es}</span>
           <span className="sentence-slot-en">{slotIndex < filledSlots ? slot.en : slotIndex === filledSlots && !preparationStep && !needsModel ? '↓' : '· · ·'}</span>
         </div>)}
@@ -142,12 +148,18 @@ export function SentenceBuilderCard({ sentence, vocabulary = [], sceneWord, proc
         {!vertical ? <button type="button" className="primary-action" onClick={advancePreparation}>{preparationAdvanceLabel}</button> : null}
       </div> : !completed && active && needsModel ? <div className="slot-preparation" role="status"><p>Vamos con ayuda. Para «{active.es}» coloca:</p><p className="coach-row" lang="en">{active.en}</p><p>Queda como modelo consultado, no como acierto.</p><SpeechModelButton key={`${index}:${filledSlots}:repair`} text={active.en} label="Escuchar la pieza" /><button type="button" className="primary-action" onClick={onAcceptModel}>Colocar con ayuda</button></div> : !completed && active ? <div className="slot-picker">
         <div className="builder-target"><small>Une español e inglés</small><h2 lang="es" data-piece-role={pieceRole(active.es, 'es')}>{active.es}</h2></div>
-        {compactPreparation && active.preparation?.length ? <div className="familiar-piece">
-          <details onToggle={(event) => { if (event.currentTarget.open) onPreparationReview?.(); }}><summary>Recordar cómo se forma</summary><p className="familiar-model"><span lang="es">{active.es}</span><span aria-hidden="true">→</span><strong lang="en">{active.en}</strong></p><SpeechModelButton key={`${index}:${filledSlots}:familiar`} text={active.en} label="Escuchar esta pieza" /><ol>{active.preparation.map((step, position) => <li key={position}><p><span lang="es">{step.es}</span><span lang="en">{step.en}</span></p><p>{step.explanation}</p></li>)}</ol></details>
-        </div> : active.note ? <p className="builder-note">{active.note}</p> : null}
+        {!(compactPreparation && active.preparation?.length) && active.note ? <p className="builder-note">{active.note}</p> : null}
         {errorText ? <p className="slot-feedback" role="status">{errorText}</p> : null}
         <div className="slot-options" role="group" aria-label={`Piezas para «${active.es}». Toca o arrastra al hueco.`}>{options?.map((choice) => <button type="button" data-piece-role={pieceRole(choice, 'en')} key={choice} lang="en" onPointerDown={(event) => beginDrag(event, choice)} onPointerMove={moveDrag} onPointerUp={endDrag} onPointerCancel={cancelDrag} onLostPointerCapture={cancelDrag} onClick={(event) => { if (suppressClick.current && event.detail !== 0) { suppressClick.current = false; return; } choose(choice); }} className={`${wrongChoice === choice ? 'is-wrong' : ''}${drag?.choice === choice ? ' is-lifted' : ''}`}>{choice}</button>)}</div>
         <p className="builder-touch-cue">Toca o arrastra al hueco ↑</p>
+        {compactPreparation && active.preparation?.length ? <div className="familiar-piece">
+          <details key={connectionKey} onToggle={(event) => { const open = event.currentTarget.open; setConnection(open ? connectionKey : undefined); if (open) onPreparationReview?.(); }}><summary>Cómo encaja esta pieza</summary>
+            <div className="familiar-model" role="group" aria-label="Conexión de la pieza activa" data-piece-role={pieceRole(active.en, 'en')}><span lang="es">{active.es}</span><span aria-hidden="true">→</span><strong lang="en">{active.en}</strong></div>
+            {connectionExplanation ? <p className="builder-note">{connectionExplanation}</p> : null}
+            <SpeechModelButton key={`${index}:${filledSlots}:familiar`} text={sentence.en} label="Escuchar esta pieza en la frase" idleLabel="Escuchar en la frase" />
+            {active.preparation?.length ? <details className="piece-teaching-detail"><summary>Ver todas las piezas</summary><ol>{active.preparation.map((step, position) => <li key={position}><p><span lang="es">{step.es}</span><span lang="en">{step.en}</span></p><p>{step.explanation}</p></li>)}</ol></details> : null}
+          </details>
+        </div> : null}
       </div> : <div className="builder-finish" aria-live="polite">
         <h2 className="builder-message" lang="en"><GrammarText text={sentence.en} form={processForm} /></h2>
         <p role="status">{modelUsed ? 'Frase armada con ayuda. Ya puedes usarla.' : 'Frase armada. Ya puedes usarla.'}</p>
