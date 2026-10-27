@@ -1,0 +1,7 @@
+.explain-back { width: 100%; max-width: 560px; text-align: left; }
+.explain-back summary { display: flex; justify-content: space-between; gap: 14px; padding: 14px 0; min-height: 44px; align-items: center; cursor: pointer; }
+.explain-back summary small { color: var(--muted); font-size: .8rem; }
+.explain-back label { display: block; margin: 8px 0 12px; }
+.explain-back textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 80px; border: 1px solid var(--line); border-radius: 16px; padding: 14px; font: inherit; color: var(--ink); background: var(--surface-soft); }
+.explain-back-model { margin-top: 12px; padding: 16px; border-left: 3px solid var(--accent); line-height: 1.5; }
+.explain-back-model small { display: block; color: var(--muted); margin-top: 8px; }

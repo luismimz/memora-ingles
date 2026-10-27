@@ -28,6 +28,7 @@ import { mirrorLocationSkill } from '../domain/mirrorLocationPractice';
 import { dogWalkingSkill } from '../domain/dogWalkingPractice';
 import { treeLocationSkill } from '../domain/treeLocationPractice';
 import { meatCookingSkill } from '../domain/meatCookingPractice';
+import { ExplainBack } from './ExplainBack';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
 export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false, explanationOnly = false, headingLevel = 1 }: {
@@ -66,6 +67,8 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const [order, setOrder] = useState<number[]>(validCheckpoint?.order ?? []);
   const [correctionResponse, setCorrectionResponse] = useState<string | undefined>(validCheckpoint?.correctionResponse);
   const [checkFailures, setCheckFailures] = useState(validCheckpoint?.checkFailures ?? 0);
+  const [reflection, setReflection] = useState(validCheckpoint?.reflection);
+  const reflectionCompared = useRef(reflection?.compared ?? false);
   const failureCount = useRef(checkFailures);
   const correctSubmission = useRef<string>();
   const advancedCheck = useRef<string>();
@@ -87,6 +90,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   // For a conversational mission the written answer belongs to its live exchange,
   // not an identical translation form immediately before it.
   const check = checks[checkIndex];
+  const reflectionTask = useRef(check?.id); reflectionTask.current = check?.id;
   // Limit only the known generated contract; authored lessons need their own review.
   const bounded = repairLimit === 2 && (generatedContinuous || preparedMessage);
   const needsModel = bounded && checkFailures >= 2 && feedback !== 'correct';
@@ -95,7 +99,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const finished = !step && !check;
   const progressRef = useRef(onProgress);
   progressRef.current = onProgress;
-  useEffect(() => { progressRef.current?.({ stage, checkIndex, checkId: check?.id, input, feedback, helped, order, correctionResponse, checkFailures, previousAttemptId: previousAttempt.current }); }, [stage, checkIndex, check?.id, input, feedback, helped, order, correctionResponse, checkFailures]);
+  useEffect(() => { progressRef.current?.({ stage, checkIndex, checkId: check?.id, input, feedback, helped, order, correctionResponse, checkFailures, reflection, previousAttemptId: previousAttempt.current }); }, [stage, checkIndex, check?.id, input, feedback, helped, order, correctionResponse, checkFailures, reflection]);
   useEffect(() => {
     if (step || !check || !needsModel || reviewMode || shownModel.current === check.id) return;
     shownModel.current = check.id;
@@ -148,6 +152,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
     if (!check || bounded && advancedCheck.current === check.id) return;
     advancedCheck.current = check.id;
     stopSpeech();
+    reflectionCompared.current = false; setReflection(undefined);
       if (checkIndex === checks.length - 1) {
         readyRef.current();
         continueRef.current();
@@ -189,6 +194,17 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
         {!needsModel ? <p className="coach-feedback" role="status">{feedback === 'correct' ? check.success : feedback === 'help' ? helpText : ''}</p> : null}
         {!stream && needsModel ? <button type="button" className="primary-action" onClick={nextCheck}>Seguir con el modelo →</button> : null}
         {!stream && feedback === 'correct' ? <button type="button" className="primary-action" onClick={nextCheck}>Seguir →</button> : null}
+        {feedback === 'correct' || needsModel ? <ExplainBack key={`${lesson.id}:${check.id}`} prompt="¿Cómo le explicarías este truco a otra persona?" model={check.hint} draft={reflection?.draft ?? ''} compared={reflection?.compared ?? false} onDraft={(draft) => { if (reflectionTask.current !== check.id) return; reflectionCompared.current = false; setReflection({ draft, compared: false }); }} onCompare={() => {
+          if (reflectionTask.current !== check.id || reflectionCompared.current) return;
+          reflectionCompared.current = true;
+          const response = reflection?.draft.trim() ?? '';
+          if (!reviewMode) {
+            const context = { unitId, unitTitle, contentVersion, skill: lesson.id, phase: 'grammar' as const, prompt: 'Explica el truco con tus palabras.', expected: '', correct: null, helped: true };
+            if (response) recordLearningActivity(userId, { ...context, activityId: `explain-back:${check.id}`, source: 'learner', modality: 'writing', response, feedback: 'Explicación libre; no se evalúa automáticamente.' });
+            recordLearningActivity(userId, { ...context, activityId: `explain-back:${check.id}:model`, source: 'authored', modality: 'choice', response: check.hint, feedback: 'Modelo para comparar la explicación; no es un acierto.' });
+          }
+          setReflection({ draft: response, compared: true });
+        }} /> : null}
         {streamSolved ? null : writing ? <details onToggle={(event) => { if (event.currentTarget.open) markHelped(); }}><summary>Ver cómo se arma</summary><div className="response-model">{writingPair ? <><GrammarRow parts={writingPair.es} language="es" /><GrammarRow parts={writingPair.en} language="en" /></> : <p lang="en">{check.answers[0]}</p>}<p>{check.hint}</p><SpeechModelButton key={`${lesson.id}:${check.id}:writing`} text={check.answers[0]} label="Escuchar modelo" /></div></details> : stream ? !needsModel && feedback !== 'correct' ? <details onToggle={(event) => { if (event.currentTarget.open) { markHelped(); setFeedback('help'); } }}><summary>Una ayuda</summary><p>{check.hint}</p></details> : null : <>{feedback === 'idle' ? <button type="button" className="quiet-action" onClick={() => { markHelped(); setFeedback('help'); }}>Dame una pista</button> : null}{!requirePractice ? <button type="button" className="quiet-action" onClick={skipKnownTrick}>Pasar este repaso · ir a la frase</button> : null}</>}
       </div> : <div className="coach-finished">
         {subject ? <>{hasAuthoredPair ? <><GrammarRow parts={finalStep.es} language="es" /><GrammarRow parts={finalStep.en} language="en" /></> : <><p className="coach-caption"><GrammarText text={`${subject.reducedEs || subject.es} ${form!.spanish}`} form={form!} language="es" /></p><p className="coach-row" lang="en"><GrammarText text={subject.phrase} form={form!} /></p></>}<button type="button" className="quiet-action" onClick={() => void playEnglish(subject.phrase)}>🔊 Escuchar</button>{form!.subjects.length > 1 ? <div className="subject-list">{form!.subjects.map((item, index) => <button type="button" className={index === person ? 'is-active' : ''} key={index} onClick={() => { setPerson(index); void playEnglish(item.phrase); }}>{item.es}</button>)}</div> : null}</>

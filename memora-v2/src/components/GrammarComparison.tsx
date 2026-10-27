@@ -17,13 +17,13 @@ export function GrammarComparison({ step, previous, interactive = false, connect
   const { changed, contraction } = grammarTransition(step, previous);
   const shown = before && interactive && previous && !previous.hideEnglish ? previous : step;
   const connected = connectPieces && !shown.hideEnglish;
-  const canConnect = (part: LessonPiece) => part.role !== 'context' && shown.es.some((piece) => piece.role === part.role) && shown.en.some((piece) => piece.role === part.role);
+  const canConnect = (part: LessonPiece) => shown.es.some((piece) => piece.role === part.role) && shown.en.some((piece) => piece.role === part.role);
   const focused = focus && shown.es.some((part) => part.role === focus) && shown.en.some((part) => part.role === focus) ? focus : undefined;
   const phrase = (parts: LessonPiece[]) => parts.map((part) => part.text).join('').trim();
-  const row = (parts: LessonPiece[], language: 'es' | 'en') => connected ? <p className="coach-row comparison-linked-row" lang={language}>{parts.map((part, index) => language === 'en' && canConnect(part)
-    ? <button type="button" key={index} className={`coach-piece coach-${part.role}`} data-link-role={part.role} data-link-active={focused === part.role} aria-label={`Relacionar ${part.text.trim()} con el español`} aria-pressed={focused === part.role} onClick={() => { setFocus(part.role); void playback.listen(phrase(shown.en)); }}>{part.text}</button>
+  const row = (parts: LessonPiece[], language: 'es' | 'en') => connected ? <p className="coach-row comparison-linked-row" lang={language}>{parts.map((part, index) => canConnect(part)
+    ? <button type="button" key={index} className={`coach-piece coach-${part.role}`} data-link-role={part.role} data-link-active={focused === part.role} aria-label={`Relacionar ${part.text.trim()} con el ${language === 'en' ? 'español' : 'inglés'}`} aria-pressed={focused === part.role} onClick={() => setFocus(part.role)}>{part.text}</button>
     : <span key={index} className={`coach-piece coach-${part.role}`} data-link-role={part.role} data-link-active={focused === part.role}>{part.text}</span>)}</p> : <GrammarRow parts={parts} language={language} />;
-  const bridge = connected ? <div className={`comparison-piece-link${focused ? ' has-focus' : ''}`} role="status">{focused ? <><span lang="es">{phrase(shown.es.filter((part) => part.role === focused))}</span><span aria-hidden="true">↔</span><strong lang="en">{phrase(shown.en.filter((part) => part.role === focused))}</strong></> : <span>Toca el inglés y conecta con el español.</span>}</div> : null;
+  const bridge = connected ? <div className={`comparison-piece-link${focused ? ' has-focus' : ''}`} role="status">{focused ? <><span lang="es">{phrase(shown.es.filter((part) => part.role === focused))}</span><span aria-hidden="true">↔</span><strong lang="en">{phrase(shown.en.filter((part) => part.role === focused))}</strong></> : <span>Toca una pieza y encuentra su pareja.</span>}</div> : null;
   if (interactive && previous && !previous.hideEnglish && !step.hideEnglish && (changed.length || contraction)) {
     const english = shown.en.map((part) => part.text).join('');
     return <div className={`coach-demonstration coach-comparison comparison-lab${focused ? ' is-piece-focused' : ''}`}>
@@ -34,7 +34,6 @@ export function GrammarComparison({ step, previous, interactive = false, connect
       <p className="coach-caption" role="status"><GrammarCaption text={before ? previous.caption : caption} marks={shown.captionMarks ?? [...shown.es, ...shown.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p>
       <div className="comparison-lab-controls"><button type="button" className="comparison-replay" aria-pressed={before} onClick={() => {
         playback.reset(); stopSpeech(); setBefore(!before); setFocus(undefined);
-        void playback.listen((before ? step : previous).en.map((part) => part.text).join(''));
       }}>{before ? 'Ver la transformación →' : '↔ Comparar con antes'}</button>
       <button type="button" className="round-audio" aria-label="Escuchar el ejemplo visible" aria-busy={playback.audio?.status === 'preparing'} onClick={() => void playback.listen(english)}>🔊</button></div>
       <AssociationAudioStatus compact state={playback.audio} />

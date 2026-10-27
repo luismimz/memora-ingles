@@ -1,12 +1,27 @@
 import { expect, it, vi } from 'vitest';
 import keys from '../../content/keys-mission.json';
 import { validateUnit } from './unit';
-import { hasPreparedSituationSubject, keysSituationSkill, keysSituationSource, prepareKeysSituation, situationReviewDue } from './keysSituation';
+import { computerSituationSource, hasPreparedSituationSubject, keysSituationSkill, keysSituationSource, keysSituationStages, prepareKeysSituation, resumeKeysSituation, situationReviewDue } from './keysSituation';
 import { recordSentenceExposure, recordSentenceRecall, sentenceKey } from './memory';
 import type { LearningActivity } from './learningActivity';
 import { conversationTurns } from './conversation';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 const unit = validateUnit(keys);
+it('inserta Detective sin mover una escucha o conversación empezada a otro reto', () => {
+  const base = { checkIndex: 0, input: 'borrador', feedback: 'idle' as const, helped: false };
+  expect(resumeKeysSituation({ ...base, stage: 9, checkId: 'sound' })).toMatchObject({ stage: keysSituationStages.indexOf('sound'), checkId: 'sound', input: 'borrador' });
+  expect(resumeKeysSituation({ ...base, stage: 10, checkId: 'use' })).toMatchObject({ stage: keysSituationStages.indexOf('use'), checkId: 'use' });
+  expect(resumeKeysSituation({ ...base, stage: 6, checkId: 'build', order: [3, 4] })?.order).toEqual([3, 4]);
+  expect(resumeKeysSituation({ ...base, stage: 9, checkId: 'repair', order: [1, 3] })).toBeNull();
+});
+it('solo propone el siguiente contexto con los tres sentidos y el mensaje preparado publicados', () => {
+  const desk = { ...unit, id: 'm1-test-desk', sentence: { ...unit.sentence, en: "I'm playing on my computer." }, words: [{ en: 'PLAY', es: 'jugar' }, { en: 'COMPUTER', es: 'ordenador' }, { en: 'DESK', es: 'escritorio' }] };
+  expect(computerSituationSource([unit, desk])?.id).toBe(desk.id);
+  expect(computerSituationSource([{ ...desk, kind: 'vocabulary-pack' }])).toBeUndefined();
+  expect(computerSituationSource([{ ...desk, words: desk.words.slice(0, 2) }])).toBeUndefined();
+  expect(computerSituationSource([{ ...desk, sentence: { ...desk.sentence, en: 'Another message.' } }])).toBeUndefined();
+  expect(computerSituationSource([unit])).toBeUndefined();
+});
 it('el repaso usa las fechas SRS existentes y deja de estar pendiente tras una recuperación real', () => {
   const values = new Map<string, string>();
   vi.stubGlobal('localStorage', { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value) });

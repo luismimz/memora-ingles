@@ -1,7 +1,7 @@
 import { progressStorage } from './progressJournal';
 
 export interface TrickContinuationCheckpoint { phase: 'build' | 'conversation'; sentenceIndex: number; filledSlots: number; previousAttempt?: string; failures?: number; modelUsed?: boolean; order?: number[]; preparationStep?: number }
-export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string; episodeId?: string; episodeStartedAt?: string; promptStartedAt?: string; continuation?: TrickContinuationCheckpoint }
+export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string; episodeId?: string; episodeStartedAt?: string; promptStartedAt?: string; reflection?: { draft: string; compared: boolean }; continuation?: TrickContinuationCheckpoint }
 const key = (userId: string, stopId: string) => `memora-v2.trick.${userId}.${stopId}`;
 export function parseTrickCheckpoint(value: unknown): TrickCheckpoint | null {
   try {
@@ -11,6 +11,9 @@ export function parseTrickCheckpoint(value: unknown): TrickCheckpoint | null {
     if (saved.state.correctionResponse !== undefined && typeof saved.state.correctionResponse !== 'string') return null;
     if (saved.state.checkFailures !== undefined && (!Number.isInteger(saved.state.checkFailures) || saved.state.checkFailures < 0 || saved.state.checkFailures > 2)) return null;
     if (saved.state.previousAttemptId !== undefined && typeof saved.state.previousAttemptId !== 'string') return null;
+    if (saved.state.reflection !== undefined && (!saved.state.reflection || typeof saved.state.reflection.draft !== 'string' || saved.state.reflection.draft.length > 500 || typeof saved.state.reflection.compared !== 'boolean')) {
+      delete saved.state.reflection;
+    }
     if (saved.state.episodeId !== undefined && typeof saved.state.episodeId !== 'string') return null;
     if (saved.state.episodeStartedAt !== undefined && !Number.isFinite(Date.parse(saved.state.episodeStartedAt))) return null;
     if (saved.state.promptStartedAt !== undefined && (typeof saved.state.promptStartedAt !== 'string' || !Number.isFinite(Date.parse(saved.state.promptStartedAt)) || Date.parse(saved.state.promptStartedAt) > Date.now())) delete saved.state.promptStartedAt;

@@ -64,3 +64,13 @@ it('reanuda episodio y piezas parciales con ayuda sin aceptar índices duplicado
   }
   expect(readTrickCheckpoint('isolated', 'valid', '1')).toEqual(state);
 });
+it('conserva la reflexión libre sin dar dominio y descarta solo un borrador inválido', () => {
+  const state = { stage: 9, checkIndex: 0, checkId: 'repair', input: 'reparado', feedback: 'correct' as const, helped: true, reflection: { draft: 'FOR va con LOOKING.', compared: false } };
+  writeTrickCheckpoint('reflection-isolated', 'valid', '1', state);
+  expect(readTrickCheckpoint('reflection-isolated', 'valid', '1')).toEqual(state);
+  for (const reflection of [{ draft: 'a'.repeat(501), compared: false }, { draft: 'x', compared: 'yes' }, null]) {
+    localStorage.setItem('memora-v2.trick.reflection-isolated.invalid', JSON.stringify({ version: '1', state: { ...state, reflection } }));
+    expect(readTrickCheckpoint('reflection-isolated', 'invalid', '1')).toMatchObject({ stage: 9, input: 'reparado', feedback: 'correct' });
+    expect(readTrickCheckpoint('reflection-isolated', 'invalid', '1')?.reflection).toBeUndefined();
+  }
+});

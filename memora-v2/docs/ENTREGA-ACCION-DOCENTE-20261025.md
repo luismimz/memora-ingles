@@ -1,5 +1,17 @@
 # Acciones docentes y orientación dentro de la actividad
 
+## Inicio de las mejoras de Kimi · 27/10/2026
+
+El documento maestro v2 se adopta como dirección de producto, con las correcciones ya comunicadas sobre dominio/fechas/voz. Primera entrega funcional, no curso completo:
+
+- Detective de mensajes integrado en la historia Nora, después de parejas y antes de escucha/uso. Con un mensaje ya enseñado («Estoy buscando mis llaves»), el alumno elige el sitio y añade una pieza para reparar LOOKING FOR. Elegir sitio no responde; insertar sí. No se pronuncia el borrador incorrecto. Respuestas completas, primer error, vínculo, demora y dos fallos/modelo conservados en los mecanismos existentes; elección asistida no se acredita como escritura libre o dominio. Modelo animado con movimiento reducido y altavoz a demanda.
+- Explica-ya opcional después de reparar y también tras los retos de GrammarCoach. Borrador de hasta500caracteres guardado en checkpoint, comparación con explicación revisada, sin corrección automática/ASR ni acierto inventado. Modelo sin escribir permitido y continuidad sin hacer la reflexión. Intentos/modelos neutrales diferenciados; no nueva fecha SRS por una explicación. Inspección no registra aprendizaje.
+- Fichas espejo bidireccionales: tocar español o inglés enlaza el bloque correspondiente, incluido contexto completo. La relación se presenta como bloque, no como equivalencia universal de una preposición. Tocar/comparar ya no dispara TTS de toda la frase; altavoz explícito conservado. No nuevas palabras, ejemplos o dominio por pulsar colores.
+- Continuidad Nora→situación preparada del ordenador (PLAY/COMPUTER/DESK), solo cuando la fuente compatible está en el catálogo publicado y pendiente. Usa LanguageGame/coach/constructor/chat y piezas ON MY COMPUTER / AT MY DESK ya existentes, no otro motor ni escenario duplicado. No afirmar que se reconstruyó esa escena entera ni que hay150patrones. Fuente ausente/incompatible conserva el recorrido disponible.
+- Compatibilidad: los checkpoints de la historia se resuelven por checkId, no por índice anterior. Una escucha o conversación empezada sigue en esa actividad después de insertar Detective; no resetea progreso. Reinicio voluntario previo intacto.
+
+Integración980/162 y build correctos, /private/tmp/memora-kimi-method-integration.log y release-build.log. Regresiones enfocadas del recorrido y reflejo libre, con datos aislados. Chunk principal657,96kB: aviso>500kB pendiente. Sin nueva partida visual/táctil, escucha física o retención humana verificada por las puertas cerradas. Referencia y familias restantes (PAO revisado, serie ampliada, biblioteca de fichas/patrones, doblaje/yo futuro, recursos e ilustraciones) no se declaran realizadas. Publicación y siguiente paso en el estado único.
+
 ## Audio esencial y reinicio solicitado · 27/10/2026
 
 Petición humana nueva: menos Kokoro, solo donde aporta sonido inglés o es necesario para el reto; reiniciar su progreso para recorrer desde el principio. Asociación: un modelo inglés, sin historia española automática/precargada ni repetición final. Coach: solo modelo inglés completo al enseñarlo por primera vez; explicaciones españolas a demanda. Correcciones/pistas y contexto español del chat ya no se narran automáticamente; altavoces conservados. Reto de escucha y su manejo de fallo/reloj intactos. No se reparó ni escuchó el servidor Kokoro físico por estas pruebas.

@@ -1,0 +1,19 @@
+.message-repair { display: grid; justify-items: center; gap: 18px; width: 100%; max-width: 560px; }
+.message-repair p { margin: 0; }
+.repair-target { font-size: 1.05rem; color: var(--muted); }
+.repair-note { width: 100%; padding: clamp(18px, 5vw, 30px); border: 1px solid var(--line); border-radius: 26px; background: var(--surface-soft); text-align: left; box-sizing: border-box; }
+.repair-note-author { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 22px; font-weight: 700; }
+.repair-note-author small { color: var(--muted); font-size: .8rem; font-weight: 500; }
+.repair-message { display: flex; flex-wrap: wrap; align-items: center; gap: 3px; font-size: clamp(1.25rem, 5vw, 1.8rem); line-height: 1.7; }
+.repair-seam { display: inline-grid; place-items: center; min-width: 36px; min-height: 44px; padding: 0; border: 1px dashed var(--line); border-radius: 12px; background: transparent; color: var(--muted); font: inherit; }
+.repair-seam[aria-pressed='true'] { border-style: solid; border-color: var(--accent); background: var(--surface-strong); color: var(--accent-ink); box-shadow: 0 0 0 2px var(--accent); }
+.repair-instruction { min-height: 24px; font-size: .95rem; color: var(--muted); }
+.repair-bank { display: flex; flex-wrap: wrap; justify-content: center; gap: 14px; }
+.repair-bank button { min-width: 76px; min-height: 60px; padding: 12px 18px; border: 1px solid var(--line); border-bottom-width: 4px; border-radius: 17px; background: var(--surface-strong); font: inherit; font-size: 1.35rem; font-weight: 750; }
+.repair-bank button:disabled { opacity: .45; }
+.repair-solution { font-size: clamp(1.4rem, 5vw, 2rem); line-height: 1.6; }
+.repair-linked { display: inline-block; border-bottom: 2px solid var(--accent); color: var(--accent-ink); }
+.repair-arrived { display: inline-block; animation: repair-arrival .4s cubic-bezier(.2,.8,.2,1) both; }
+.repair-insight { max-width: 33ch; line-height: 1.5; }
+@keyframes repair-arrival { from { opacity: 0; transform: translateY(18px) scale(.9); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) { .repair-arrived { animation: none; } }

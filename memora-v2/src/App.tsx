@@ -27,7 +27,7 @@ import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { loadLearningLibrary } from './services/directus';
 import { GrammarJourney } from './components/GrammarJourney';
 import { grammarJourney, grammarPreparationCandidate, missingGrammarStop, nextGrammarStop, readGrammarPosition, writeGrammarPosition } from './domain/grammarJourney';
-import { prepareKeysSituation } from './domain/keysSituation';
+import { computerSituationSource, prepareKeysSituation } from './domain/keysSituation';
 
 const ContentManager = lazy(() => import('./components/ContentManager').then((module) => ({ default: module.ContentManager })));
 const PhrasalFusionDemo = lazy(() => import('./components/PhrasalFusionDemo').then((module) => ({ default: module.PhrasalFusionDemo })));
@@ -301,7 +301,8 @@ export default function App() {
     if (!situationUnit) return;
     const source = situationUnit;
     setSituationUnit(null);
-    const next = units.find((candidate) => candidate.id !== source.id && journeyEntryMode(candidate) === 'adventure' && !readUnitProgress(userId, candidate.id))
+    const computer = computerSituationSource(units);
+    const next = computer && !readUnitProgress(userId, computer.id) ? computer : units.find((candidate) => candidate.id !== source.id && journeyEntryMode(candidate) === 'adventure' && !readUnitProgress(userId, candidate.id))
       ?? journeyRoute.find((candidate) => candidate.id !== source.id && !candidate.routeTrick && !readUnitProgress(userId, candidate.id))
       ?? units.find((candidate) => candidate.id === source.id);
     if (next) void openUnit(next, false, journeyEntryMode(next));

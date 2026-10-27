@@ -1,6 +1,7 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import keys from '../content/keys-mission.json';
+import examples from '../content/review-examples.json';
 import { validateUnit } from './domain/unit';
 import { grammarTricks } from './domain/journeyTricks';
 import { KeysSituationExperience } from './components/KeysSituationExperience';
@@ -13,10 +14,10 @@ import { recordSentenceExposure, recordSentenceRecall, sentenceKey } from './dom
 import { ConversationPractice } from './components/ConversationPractice';
 import { initializeJournal, readJournal } from './domain/progressJournal';
 const unit = validateUnit(keys);
-const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>) }));
+const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>), followup: null as null | ReturnType<typeof validateUnit> }));
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('./services/progressSync', async (original) => ({ ...await original<typeof import('./services/progressSync')>(), startProgressSync: (_id: string, report: (status: string) => void) => { report('saved'); return { stop() {} }; } }));
-vi.mock('./services/directus', async (original) => ({ ...await original<typeof import('./services/directus')>(), hasSession: () => true, loadIdentity: async () => ({ id: 'situation-app-isolated', isAdmin: false }), loadPublishedUnitSummaries: async () => [{ ...unit, hasDialogue: true, grammarTricks: grammarTricks(unit) }], loadUnit: async () => source.load ? source.load() : unit, loadKeysPilot: async () => null, loadMirrorPilot: async () => null, loadAsset: async () => '' }));
+vi.mock('./services/directus', async (original) => ({ ...await original<typeof import('./services/directus')>(), hasSession: () => true, loadIdentity: async () => ({ id: 'situation-app-isolated', isAdmin: false }), loadPublishedUnitSummaries: async () => [unit, ...(source.followup ? [source.followup] : [])].map((item) => ({ ...item, hasDialogue: true, grammarTricks: grammarTricks(item) })), loadUnit: async (id: string) => source.load ? source.load() : source.followup?.id === id ? source.followup : unit, loadKeysPilot: async () => null, loadMirrorPilot: async () => null, loadAsset: async () => '' }));
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick()); };
@@ -36,7 +37,17 @@ async function mount(seed?: () => void) {
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
 }
-afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; vi.unstubAllGlobals(); });
+afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; source.followup = null; vi.unstubAllGlobals(); });
+it('al terminar Nora abre la situación del ordenador publicada, sin regresar a una tanda arbitraria', async () => {
+  source.followup = validateUnit(examples[0]);
+  await mount();
+  await click('Entrar en la historia');
+  await act(async () => tree.root.findByType(KeysSituationExperience).props.onNext());
+  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
+  expect(tree.root.findByType(LanguageGame).props.learningMode).toBe('adventure');
+  expect(localStorage.getItem('memora-v2.resume.situation-app-isolated')).toBe('m1-test-desk');
+  expect(readLearningActivities('situation-app-isolated').filter((event) => event.source === 'learner')).toEqual([]);
+});
 it('la portada abre la historia nueva sin resetear el montaje anterior ni inventar aprendizaje', async () => {
   await mount();
   expect(text(tree.toJSON())).toContain('Nora espera. Tus llaves no aparecen.');

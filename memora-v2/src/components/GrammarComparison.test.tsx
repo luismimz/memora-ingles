@@ -48,6 +48,7 @@ it('no revela inglés ni compara contra un modelo que todavía estaba oculto', (
 });
 
 it('el laboratorio general revierte las dos caras del ejemplo preparado, sin sumar respuestas ni bloquear por voz', async () => {
+  vi.mocked(playEnglish).mockClear();
   const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
   let tree!: ReturnType<typeof create>;
   await act(async () => { tree = create(<GrammarComparison interactive step={next} previous={first} />); });
@@ -56,17 +57,20 @@ it('el laboratorio general revierte las dos caras del ejemplo preparado, sin sum
   await act(async () => tree.root.findByProps({ 'aria-pressed': false }).props.onClick());
   expect(text(tree.toJSON())).not.toContain('ESTOY');
   expect(text(tree.toJSON()).replace(/\s+\./g, '.')).toContain('Yo.');
-  expect(playEnglish).toHaveBeenLastCalledWith('I', undefined, true, expect.any(Function));
+  expect(playEnglish).not.toHaveBeenCalled();
   await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar el ejemplo visible' }).props.onClick());
-  expect(playEnglish).toHaveBeenLastCalledWith('I', undefined, true, expect.any(Function), true);
+  expect(playEnglish).toHaveBeenLastCalledWith('I', undefined, true, expect.any(Function));
   expect(text(tree.toJSON())).toContain('Audio no disponible');
   await act(async () => tree.root.findByProps({ 'aria-pressed': true }).props.onClick());
   expect(text(tree.toJSON())).toContain('ESTOY');
+  expect(playEnglish).toHaveBeenCalledOnce();
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Escuchar el ejemplo visible' }).props.onClick());
   expect(playEnglish).toHaveBeenLastCalledWith('I AM', undefined, true, expect.any(Function));
   expect(readGrammarAttempts('comparison-isolated')).toEqual([]);
   act(() => tree.unmount());
 });
 it('conecta el papel explícito español/inglés al tocar sin inventar equivalencias ni evaluar', async () => {
+  vi.mocked(playEnglish).mockClear();
   let tree!: ReturnType<typeof create>;
   await act(async () => { tree = create(<GrammarComparison connectPieces step={next} previous={first} />); });
   const control = tree.root.findByProps({ 'aria-label': 'Relacionar AM con el español' });
@@ -75,10 +79,23 @@ it('conecta el papel explícito español/inglés al tocar sin inventar equivalen
   expect(link.findByProps({ lang: 'es' }).children).toEqual(['ESTOY']);
   expect(link.findByProps({ lang: 'en' }).children).toEqual(['AM']);
   expect(control.props['aria-pressed']).toBe(true);
-  expect(playEnglish).toHaveBeenLastCalledWith('I AM', undefined, true, expect.any(Function));
+  expect(playEnglish).not.toHaveBeenCalled();
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Relacionar YO con el inglés' }).props.onClick());
+  expect(tree.root.findByProps({ 'aria-label': 'Relacionar I con el español' }).props['aria-pressed']).toBe(true);
+  expect(playEnglish).not.toHaveBeenCalled();
   expect(readGrammarAttempts('comparison-isolated')).toEqual([]);
   act(() => tree.unmount());
   act(() => { tree = create(<GrammarComparison connectPieces step={{ ...first, hideEnglish: true }} />); });
   expect(tree.root.findAllByType('button')).toHaveLength(0);
+  act(() => tree.unmount());
+});
+it('conecta también el bloque de contexto completo, sin equiparar una preposición aislada con todo el español', async () => {
+  const step = { caption: 'Indica el lugar.', es: [piece('en mi escritorio', 'context')], en: [piece('at my desk', 'context')] };
+  let tree!: ReturnType<typeof create>;
+  await act(async () => { tree = create(<GrammarComparison connectPieces step={step} />); });
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Relacionar en mi escritorio con el inglés' }).props.onClick());
+  const bridge = tree.root.findByProps({ className: 'comparison-piece-link has-focus' });
+  expect(bridge.findByProps({ lang: 'en' }).children).toEqual(['at my desk']);
+  expect(bridge.findByProps({ lang: 'es' }).children).toEqual(['en mi escritorio']);
   act(() => tree.unmount());
 });
