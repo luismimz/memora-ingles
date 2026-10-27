@@ -1,13 +1,37 @@
-.game-screen.play-flow { height: 100dvh; min-height: 0; padding: 0; overflow: hidden; background: var(--surface-strong); }
-:root[data-appearance='dark'] .game-screen.play-flow { background: var(--surface-strong); }
+.game-screen.play-flow {
+  --page: #e6efec; --ink: #142d32; --muted: #405e62;
+  --accent: #185e58; --accent-ink: #185e58;
+  --surface: #f5faf8; --surface-strong: #f5faf8; --surface-soft: #dceae5; --line: #a8c3ba;
+  --play-glow: #b5e2d0; --play-glow-secondary: #c3d8ec;
+  height: 100dvh; min-height: 0; padding: 0; overflow: hidden; color: var(--ink);
+  background: radial-gradient(ellipse at 30% -12%, var(--play-glow), transparent 67%), radial-gradient(ellipse at 110% 30%, var(--play-glow-secondary), transparent 64%), var(--page);
+}
+.game-screen.play-flow[data-play-tone='grammar'] { --play-glow: #c8d7ee; --play-glow-secondary: #d8d2ea; }
+.game-screen.play-flow[data-play-tone='build'] { --play-glow: #badfd8; --play-glow-secondary: #c6dbf1; }
+.game-screen.play-flow[data-play-tone='conversation'] { --play-glow: #b9ded5; --play-glow-secondary: #c5d9e4; }
+.game-screen.play-flow[data-play-tone='arcade'] { --play-glow: #d4cbef; --play-glow-secondary: #badfdc; }
+:root[data-appearance='dark'] .game-screen.play-flow {
+  --page: #08191f; --ink: #f1f8f5; --muted: #b9d0cb;
+  --accent: #a4e4ca; --accent-ink: #b7efd8;
+  --surface: #123139; --surface-strong: #123139; --surface-soft: #1d3c43; --line: #4c6c71;
+  --play-glow: #205c50; --play-glow-secondary: #253c58;
+}
+:root[data-appearance='dark'] .play-flow[data-play-tone='grammar'] { --play-glow: #344776; --play-glow-secondary: #49345c; }
+:root[data-appearance='dark'] .play-flow[data-play-tone='build'] { --play-glow: #1b554e; --play-glow-secondary: #2a416a; }
+:root[data-appearance='dark'] .play-flow[data-play-tone='conversation'] { --play-glow: #24544d; --play-glow-secondary: #263d5a; }
+:root[data-appearance='dark'] .play-flow[data-play-tone='arcade'] { --play-glow: #49306c; --play-glow-secondary: #1b5757; }
 .play-flow .game-card-anchor::before { display: none; }
-.play-flow .game-card-face { border: 0; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; }
+.play-flow .game-card-anchor { --task-success: #126044; --task-retry: #a42d36; --task-model: #774320; }
+:root[data-appearance='dark'] .play-flow .game-card-anchor { --task-success: #9ae3bd; --task-retry: #ffb4ae; --task-model: #f6c99c; }
+.play-flow .game-card-face { border: 0; box-shadow: none; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
 .play-flow :is(.quiet-action, .slot-options button, .coach-options button, .card-vertical-next button) { font-weight: 600; }
-.play-header { flex: 0 0 auto; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 10px; width: min(100%, 960px); padding: max(6px, env(safe-area-inset-top)) 12px 6px; color: var(--ink); }
+.play-header { flex: 0 0 auto; display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: 14px; width: min(100%, 760px); padding: max(10px, env(safe-area-inset-top)) 18px 10px; color: var(--ink); }
 .play-header .activity-back { min-height: 44px; font: inherit; font-size: .8rem; padding: 8px 0; }
 .play-intention { margin: 0; font-size: .9rem; font-weight: 750; line-height: 1.25; text-align: center; text-wrap: balance; }
-.play-header-context { display: grid; gap: 4px; min-width: 0; text-align: center; }
-.play-header { border-bottom: 1px solid var(--line); background: var(--surface-strong); }
+.play-header-context { display: grid; gap: 9px; min-width: 0; text-align: center; }
+.play-header { border-bottom: 0; background: transparent; }
+.play-position-track { height: 5px; border-radius: 99px; background: color-mix(in srgb, var(--ink) 15%, transparent); overflow: hidden; }
+.play-position-track > span { display: block; height: 100%; border-radius: inherit; background: var(--accent-ink); transition: width .3s ease; }
 .play-options { position: relative; }
 .play-options > summary { position: relative; list-style: none; min-width: 44px; min-height: 44px; display: grid; place-items: center; cursor: pointer; font-size: 1rem; letter-spacing: .05em; border-radius: 12px; }
 .play-options > summary::-webkit-details-marker { display: none; }
@@ -20,12 +44,16 @@
 .play-flow > .game-stage { flex: 1 1 auto; min-height: 0; padding: 0; align-items: stretch; }
 .play-flow .game-card-anchor.card-vertical { width: min(100%, 680px); height: 100%; margin: 0 auto; }
 .play-flow .game-card-anchor:not(.card-vertical) { height: 100%; margin: 0 auto; overflow-y: auto; overscroll-behavior-y: contain; }
-.play-flow .card-vertical-scroll { height: auto; border-radius: 22px 22px 0 0; }
-.play-flow .card-vertical .game-card-body { padding: clamp(16px, 4vw, 28px); }
+.play-flow .card-vertical-scroll { height: auto; border-radius: 28px; background: transparent; box-shadow: none; }
+.play-flow .card-vertical .game-card-body { padding: clamp(20px, 4.5vw, 36px); }
 .play-flow .card-vertical.chat-card .card-vertical-page { height: auto; min-height: 100%; }
-.play-flow .card-vertical-next { padding-bottom: max(12px, env(safe-area-inset-bottom)); }
-.play-flow .card-vertical-next { border-top: 0; }
-.play-flow .card-vertical-next button { min-height: 48px; padding: 12px 20px; }
+.play-flow .card-vertical-next, .play-flow .card-vertical-rest { min-height: calc(58px + env(safe-area-inset-bottom)); background: transparent; }
+.play-flow .card-vertical-next { border-top: 0; padding: 4px 24px max(8px, env(safe-area-inset-bottom)); }
+.play-flow .card-vertical-next button { width: fit-content; max-width: 100%; margin-inline: auto; justify-content: center; gap: 12px; min-height: 48px; padding: 8px 18px; border: 1px solid var(--line); border-radius: 99px; background: transparent; color: var(--ink); font-size: .85rem; }
+.play-flow .game-card-anchor[data-feedback] .card-vertical-next button { background: transparent; color: var(--task-state); border-color: currentColor; }
+.play-flow .feed-next-arrow { font-size: 1.2rem; }
+.play-flow .game-card-anchor[data-feedback]::after { content: ''; position: absolute; inset: 3px; z-index: 10; border: 3px solid var(--task-state); border-radius: 28px; pointer-events: none; animation: play-result-enter .28s ease-out; }
+.play-flow .game-card-anchor[data-feedback] .card-vertical-scroll { box-shadow: none; }
 .play-header :focus-visible { outline: 3px solid var(--accent-ink); outline-offset: 2px; }
 .play-flow .association-word-top { display: flex; align-items: center; gap: 12px; width: 100%; }
 .play-flow .association-word-top .word-heading { flex: 1; min-width: 0; }
@@ -41,3 +69,53 @@
 .play-trail { flex: 0 0 auto; display: flex; gap: 6px; list-style: none; width: min(100%, 680px); padding: 8px 16px; margin: 0 auto; color: var(--muted); font-size: .72rem; }
 .play-trail li { flex: 1; min-width: 0; text-align: center; border-top: 2px solid var(--line); padding-top: 6px; }
 .play-trail li[aria-current='step'] { color: var(--accent-ink); border-color: currentColor; font-weight: 650; }
+
+/* One stage and response language, instead of a different form for every task. */
+.play-flow .eyebrow, .play-flow .coach-teaching-step { color: var(--muted); font-size: .68rem; font-weight: 750; letter-spacing: .14em; }
+.play-flow .association-content { justify-content: center; align-items: center; gap: 14px; text-align: center; }
+.play-flow .association-word-top { justify-content: center; }
+.play-flow .association-word-top .word-heading { flex: 0 1 auto; width: min(100%, 480px); flex-direction: column; align-items: center; gap: 4px; }
+.play-flow .association-word-top .word-heading strong { font-size: 1.15rem; font-weight: 650; }
+.play-flow .association-content > .scene-visual { height: clamp(120px, 22svh, 200px); max-width: 460px; }
+.play-flow .association-content > .scene-visual:has(.scene-fallback) { background: transparent; overflow: visible; }
+.play-flow .association-content .scene-copy { margin: 0; max-width: 32ch; font-size: clamp(1.2rem, 4.8vw, 1.6rem); font-weight: 650; line-height: 1.35; text-wrap: balance; }
+.play-flow .word-usage-example { display: grid; gap: 7px; width: 100%; max-width: 520px; margin-top: 4px; padding: 18px 20px; border: 1px solid var(--line); border-radius: 24px; background: color-mix(in srgb, var(--surface-strong) 75%, transparent); text-align: left; }
+.word-usage-example > small { color: var(--accent-ink); letter-spacing: .14em; font-size: .65rem; font-weight: 750; }
+.word-usage-example > p { margin: 0; line-height: 1.4; }
+.word-usage-example > p[lang='en'] { color: var(--ink); font-size: 1.15rem; font-weight: 650; }
+.word-usage-example > p[lang='es'] { color: var(--muted); font-size: .9rem; }
+.word-usage-example > button { justify-self: start; min-height: 44px; padding: 4px 0; }
+.play-flow .association-help, .play-flow .association-reject { max-width: 520px; }
+.play-flow .association-help > summary { justify-content: center; }
+.play-flow .round-audio { border: 1px solid var(--line); background: var(--surface-soft); color: var(--ink); box-shadow: none; }
+.play-flow .coach-trick-title { max-width: 24ch; margin: 0 auto 8px; font-size: clamp(1.65rem, 5.8vw, 2.5rem); line-height: 1.12; letter-spacing: -.035em; text-wrap: balance; }
+.play-flow .coach-teaching .coach-comparison { padding: 18px; border: 1px solid var(--line); border-radius: 28px; background: color-mix(in srgb, var(--surface-strong) 65%, transparent); }
+.play-flow .coach-teaching .coach-row { font-weight: 750; }
+.play-flow .coach-teaching .coach-caption { font-size: 1.05rem; line-height: 1.45; }
+.play-flow .contraction-lab { padding: 20px 12px; border: 1px solid var(--line); border-radius: 28px; background: color-mix(in srgb, var(--surface-strong) 65%, transparent); }
+.play-flow .recall-content { justify-content: center; gap: 22px; }
+.play-flow .recall-content h1 { font-size: clamp(1.8rem, 6.5vw, 2.8rem); line-height: 1.12; letter-spacing: -.035em; }
+.play-flow .recall-choices, .play-flow .memory-options { display: grid; grid-template-columns: minmax(0, 1fr); gap: 12px; width: 100%; }
+.play-flow :is(.recall-choices, .memory-options, .coach-options) button { min-height: 68px; padding: 16px 22px; border: 1px solid var(--line); border-radius: 21px; color: var(--ink); background: var(--surface-soft); font-size: clamp(1.1rem, 4.2vw, 1.4rem); font-weight: 700; }
+.play-flow :is(.recall-choices, .memory-options, .coach-options) button.is-correct { border: 2px solid var(--task-success); color: var(--task-success); }
+.play-flow .active-memory-content { min-height: 100%; gap: 20px; }
+.play-flow .active-memory-content > .eyebrow { margin-bottom: 0; }
+.play-flow .memory-feedback:empty { display: none; }
+.play-flow .memory-help { width: fit-content; max-width: 100%; align-self: center; margin-top: 0; border-top: 0; padding-top: 0; }
+.play-flow .memory-help > summary { min-height: 44px; display: grid; align-items: center; padding: 8px 16px; color: var(--muted); font-size: .82rem; cursor: pointer; }
+.play-flow .active-memory-content > .quiet-action { min-height: 48px; align-self: center; padding: 10px 20px; border: 1px solid var(--line); border-radius: 99px; }
+.play-flow .scene-memory-link { background: var(--surface-strong); border-color: var(--line); }
+.play-flow :is(.slot-options, .assembly-bank, .order-bank) button { box-shadow: 0 5px 0 color-mix(in srgb, var(--ink) 12%, transparent); transition: transform .16s, box-shadow .16s; }
+.play-flow :is(.slot-options, .assembly-bank, .order-bank) button:active { transform: translateY(3px); box-shadow: 0 2px 0 color-mix(in srgb, var(--ink) 12%, transparent); }
+.play-flow .sentence-slot { border-radius: 18px; }
+.play-flow .builder-workbench > h1 { font-size: clamp(1.4rem, 5.5vw, 2rem); font-weight: 650; }
+.play-flow .word-assembly > h1 { font-size: clamp(1.6rem, 6vw, 2.4rem); letter-spacing: -.035em; }
+.play-flow .chat-bubble { border-radius: 24px; background: var(--surface-soft); }
+.play-flow .chat-coach { background: var(--surface-strong); }
+.play-flow .chat-learner { background: var(--grammar-aux-soft); }
+.play-flow .play-options-panel .play-trail { padding: 8px 0; font-size: .68rem; }
+@keyframes play-result-enter { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .play-position-track > span, .play-flow :is(.slot-options, .assembly-bank, .order-bank) button { transition: none; }
+  .play-flow .game-card-anchor[data-feedback]::after { animation: none; }
+}

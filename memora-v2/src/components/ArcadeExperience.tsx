@@ -59,7 +59,7 @@ export const eligibleMixedUnits = (userId: string, units: AtomicUnit[]) => {
 function ArcadeDialog({ children, onExit }: { children: React.ReactNode; onExit: () => void }) {
   const dialog = useRef<HTMLDialogElement>(null);
   useEffect(() => { const current = dialog.current; current?.showModal(); return () => { current?.close(); stopSpeech(); }; }, []);
-  return <dialog ref={dialog} className="micro-dialog" aria-label="Memora Arcade" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen play-flow micro-screen arcade-stream-screen"><header className="game-topbar play-header arcade-header"><button type="button" className="activity-back" onClick={onExit}>← Recorrido</button><span className="play-intention">Arcade</span></header><section className="game-stage">{children}</section></div></dialog>;
+  return <dialog ref={dialog} className="micro-dialog" aria-label="Memora Arcade" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen play-flow micro-screen arcade-stream-screen" data-play-tone="arcade"><header className="game-topbar play-header arcade-header"><button type="button" className="activity-back" onClick={onExit}>← Recorrido</button><span className="play-intention">Arcade</span></header><section className="game-stage">{children}</section></div></dialog>;
 }
 
 /** Optional modes share the same attempts, SRS and conversation history. */

@@ -7,6 +7,7 @@ import { WordHeading } from './WordHeading';
 import { AssociationAudioStatus } from './AssociationAudioStatus';
 import type { AssociationAudioState } from './useAssociationAudio';
 import { CognateConnection } from './CognateConnection';
+import { WordUsageExample } from './WordUsageExample';
 
 /** Same visual card as PLAY; a transparent cognate is not a made-up acoustic bridge. */
 export function CognateAssociationCard({ word, index, total, audioState, onListen, onConnect, vertical = false }: {
@@ -20,7 +21,7 @@ export function CognateAssociationCard({ word, index, total, audioState, onListe
       <AssociationAudioStatus state={audioState} compact />
       {vertical ? <CognateConnection word={word} /> : <SceneVisual word={visual} showMemoryLink />}
             <details className="association-help"><summary>Ayuda</summary>{vertical ? <SceneVisual word={visual} showMemoryLink /> : null}<p>Se parece al español y comparte este significado.</p><p className="ipa">{word.ipa}</p>{audioState?.status === 'ready' ? <AssociationAudioStatus state={audioState} /> : null}</details>
-      {word.usageExample ? <details className="cognate-example"><summary>Ver un ejemplo</summary><p lang="en">{word.usageExample.en}</p><p>{word.usageExample.es}</p><button type="button" className="quiet-action" onClick={() => void playEnglish(word.usageExample!.en)}>🔊 Escuchar el ejemplo</button></details> : null}
+      <WordUsageExample word={word} />
     </div>
   </GameCard>;
 }

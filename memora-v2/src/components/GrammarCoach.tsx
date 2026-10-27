@@ -30,10 +30,11 @@ import { treeLocationSkill } from '../domain/treeLocationPractice';
 import { meatCookingSkill } from '../domain/meatCookingPractice';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
-export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false, explanationOnly = false }: {
+export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitle = lesson.title, contentVersion = '1', conversationAnswers = [], constructionAnswers = [], startAtPractice = false, startAtExample = false, reusePreparedSubject = false, omitGeneratedExplanation = false, reviewMode, onReady, onContinue, checkpoint, onProgress, requirePractice = false, schedulePractice = false, repairLimit, puzzle = false, explanationOnly = false, headingLevel = 1 }: {
   lesson: GrammarLessonData; form?: GrammarForm; sceneWord?: AtomicWord; userId: string; unitId: string; unitTitle?: string; contentVersion?: string; conversationAnswers?: string[]; startAtPractice?: boolean; reviewMode: boolean; onReady: () => void; onContinue: () => void;
   checkpoint?: TrickCheckpoint | null; onProgress?: (state: TrickCheckpoint) => void; requirePractice?: boolean; schedulePractice?: boolean; omitGeneratedExplanation?: boolean;
   repairLimit?: 2; puzzle?: boolean; startAtExample?: boolean; constructionAnswers?: string[]; reusePreparedSubject?: boolean; explanationOnly?: boolean;
+  headingLevel?: 1 | 2;
 }) {
   // Resume the task that is actually shown, not the unfiltered lesson index.
   // A conversational exchange may take over one of the written checks.
@@ -168,9 +169,10 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const advanceTeaching = () => { stopSpeech(); if (explanationOnly && stage === lesson.steps.length - 1) { continueRef.current(); return; } setStage((value) => value + 1); };
   const streamAdvance = step ? advanceTeaching : finished ? onContinue : needsModel || feedback === 'correct' ? nextCheck : undefined;
   const teachingAdvanceLabel = explanationOnly && stage === lesson.steps.length - 1 ? 'Volver a mi mensaje' : step?.advanceLabel ?? (stage === lesson.steps.length - 1 ? 'Practicar el mensaje' : 'Ver la siguiente pieza');
+  const TeachingHeading = explanationOnly || headingLevel === 2 ? 'h2' : 'h1';
   return <GameCard feedback={!step && feedback === 'correct' ? 'correct' : needsModel ? 'model' : !step && feedback === 'help' ? 'retry' : undefined} vertical={stream} stepKey={`${stage}:${check?.id ?? ''}:${needsModel ? 'model' : streamSolved ? 'result' : 'task'}`} className={`coach-card${stream ? ' coach-stream' : ''}${actionScene ? ' coach-action-card' : ''}${situation || ordering ? ' coach-situation-card' : ''}`} reserveFooter={!stream && !actionScene && !situation && !ordering} revealFooter={stream ? Boolean(streamAdvance) : finished} onAdvance={stream ? streamAdvance : finished ? onContinue : undefined} advanceControl={!stream && finished} advanceLabel={!stream ? 'Construir frase' : step ? teachingAdvanceLabel : needsModel ? 'Continuar con el modelo' : 'Continuar al siguiente reto'}>
     <div className={`coach-content${step ? ' coach-teaching' : ''}`}>
-      {step ? <p className="coach-teaching-step">{exampleBridge ? 'UNA ACCIÓN NUEVA' : 'Mira las piezas'} · {stage + 1}/{lesson.steps.length}</p> : <>
+      {step ? <><p className="coach-teaching-step">{exampleBridge ? 'UNA ACCIÓN NUEVA' : 'TRUCO DE GRAMÁTICA'} · {stage + 1}/{lesson.steps.length}</p><TeachingHeading className="coach-trick-title">{lesson.title}</TeachingHeading></> : <>
       {stream ? <p className="coach-language">{finished ? 'Preparación terminada · vamos a usarla' : `Práctica · reto ${checkIndex + 1} de ${checks.length}`}</p> : null}
       <p className="eyebrow">{finished ? 'AHORA, ÚSALO' : needsModel ? 'MODELO' : streamSolved ? 'RESULTADO' : ordering ? 'MONTA EL MENSAJE' : situation ? 'EL MENSAJE CAMBIA LA ESCENA' : check.id === 'meaning-now-v1' ? 'ENTIENDE EL MENSAJE' : check.kind === 'explain' ? 'AHORA TÚ ENSEÑAS' : check.kind === 'write' ? 'TU PRIMERA RESPUESTA' : 'PRUÉBALO'}</p></>}
       {!needsModel && (!writing || feedback === 'correct') && !situation && !ordering && (actionScene ? <GrammarActionScene lesson={lesson} form={form} stage={step ? 'teach' : finished ? 'finished' : check.kind === 'write' ? 'write' : 'explain'} feedback={feedback} /> : sceneWord ? <SceneVisual word={sceneWord} compact /> : null)}

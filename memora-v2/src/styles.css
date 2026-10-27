@@ -239,10 +239,6 @@ body { background: var(--page); }
 .primary-action:hover { filter: brightness(1.08); }
 .association-content { position: relative; gap: 10px; }
 .association-audio-status { min-height: 1.3em; margin: 0; color: var(--muted); font-size: .75rem; line-height: 1.3; }
-.cognate-example { color: var(--muted); font-size: .85rem; line-height: 1.4; }
-.cognate-example summary { display: flex; align-items: center; min-height: 44px; cursor: pointer; color: var(--accent-ink); font-weight: 750; }
-.cognate-example p { margin: 6px 0; }
-.cognate-example button { min-height: 44px; }
 @keyframes audio-pulse { from { opacity: .35; transform: scale(.9); } to { opacity: .85; transform: scale(1.08); } }
 .word-heading { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; width: 100%; min-width: 0; container-type: inline-size; }
 .word-heading > * { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }

@@ -37,6 +37,7 @@ import { canReusePiecePreparation, piecePreparationKey } from './domain/piecePre
 import { supportsCausalDiscovery } from './domain/causalDiscovery';
 import { hasWordDemonstration, recordWordDemonstration } from './domain/wordDemonstration';
 import { CausalAssociationCard } from './components/CausalAssociationCard';
+import { WordUsageExample } from './components/WordUsageExample';
 
 function AssociationCard(props: Parameters<typeof StandardAssociationCard>[0]) {
   const [rejected, setRejected] = useState(() => isAssociationRejected(props.userId, props.word));
@@ -62,10 +63,11 @@ function StandardAssociationCard({ unit, inspection, word, index, total, userId,
   return <GameCard vertical={vertical} onAdvance={connect} advanceControl={!word.reconstruction || associationRejected} advanceLabel={vertical ? 'Armar la palabra' : 'Ya la he imaginado'} back={vertical || associationRejected ? undefined : <div className="hint-face"><SceneVisual word={word} showMemoryLink />{word.bridge ? <><p className="eyebrow">PUENTE SONORO</p><strong>{word.bridge}</strong></> : null}<p><MnemonicSceneText word={word} /></p></div>}>
     <div className="association-content is-revealed">
       <p className="eyebrow">PALABRA {index + 1}/{total}</p>
+      {!associationRejected ? <SceneVisual word={word} /> : null}
       <div className="association-word-top"><WordHeading en={word.en} es={word.es.toUpperCase()} /><button type="button" className="round-audio" aria-busy={audioState?.status === 'preparing'} title={audioState?.status === 'preparing' ? 'Preparando audio…' : audioState?.status === 'playing' ? 'Reproduciendo…' : 'Escuchar'} onClick={listen} aria-label={`Escuchar ${word.en}`}>🔊</button></div>
       <AssociationAudioStatus state={audioState} compact />
-      {!associationRejected ? <SceneVisual word={word} showMemoryLink /> : null}
       {associationRejected ? <p className="scene-copy">Seguimos con el significado y el sonido inglés.</p> : <p className="scene-copy"><MnemonicSceneText word={word} /></p>}
+      <WordUsageExample word={word} />
       <details className="association-help"><summary>Ayuda</summary>{location ? <p>{location}</p> : null}<p className="ipa">{word.ipa}</p>{audioState?.status === 'ready' ? <AssociationAudioStatus state={audioState} /> : null}{word.bridge && !associationRejected ? <div className="bridge-row"><div><small>RECUERDA CON</small><b>{word.bridge}</b></div></div> : null}{!associationRejected ? <BridgeSoundNote word={word} explain /> : null}
       </details>
       {word.bridge ? <button type="button" className="association-reject" onClick={() => { const next = !associationRejected; cancel(); rememberAssociationPreference(userId, word, next); setAssociationRejected(next); onPreferenceChange?.(next); }}>{associationRejected ? 'Volver a usar el puente' : 'Esta asociación no me ayuda'}</button> : null}
@@ -342,7 +344,7 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
   if (reminderOpen && reminderForm) return <GrammarReminder lesson={reminderLesson} form={reminderForm} baseSpanish={reminderBaseSpanish} userId={userId} unitId={unit.id} onClose={closeReminder} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} />;
 
   return (
-    <main className={`game-screen${!reviewMode ? ' play-flow' : ''}`}>
+    <main className={`game-screen${!reviewMode ? ' play-flow' : ''}`} data-play-tone={state.phase}>
       {!reviewMode ? <PlayHeader title={intention} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} progress={progress} position={positionLabel} trail={vertical && ['associate', 'recall', 'reward'].includes(state.phase) ? { steps: ['Descubre', 'Arma', 'Recuerda'], current: state.phase === 'associate' ? state.wordAssembly ? 1 : 0 : state.phase === 'recall' || state.phase === 'reward' ? 2 : -1 } : undefined} /> : <>
       <header className="game-topbar"><button type="button" className="activity-back" onClick={onExit}>← Recorrido</button><span>MEMORA <small>· {reviewMode ? 'REVISIÓN' : preview ? 'VISTA PREVIA' : positionLabel}</small></span><div className="game-topbar-actions"><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`} title={`Modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button><span>{progress}%</span></div></header>
       <div className="game-progress" role="progressbar" aria-valuenow={progress} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${progress}%` }} /></div>

@@ -38,7 +38,8 @@ it('enseña con el modelo antes de la explicación y una sola continuación prin
   hooks.state.clear(); hooks.refs.clear();
   const html = render();
   expect(html.indexOf('coach-comparison')).toBeLessThan(html.indexOf('class="coach-caption"'));
-  expect(html).toContain('Mira las piezas');
+  expect(html).toContain('TRUCO DE GRAMÁTICA');
+  expect(html).toContain('coach-trick-title');
   expect(html).not.toContain('DESPIERTA EL ESCRITORIO');
   expect(html).not.toContain('Tu respuesta mueve la escena');
   const actions = nodes.find((node) => node.props.className === 'coach-teaching-actions')!;
@@ -163,10 +164,10 @@ it('revela primero la persona y nunca muestra una traducción inglesa sin sujeto
 });
 it('el recorrido vertical demuestra la persona y orienta hasta la práctica sin una pregunta sin respuesta', () => {
   const props = { lesson: generatedLesson, puzzle: true };
-  expect(render(props)).toContain('Mira las piezas · 1/3');
+  expect(render(props)).toContain('TRUCO DE GRAMÁTICA · 1/3');
   expect(nodes[0].props.advanceLabel).toBe('Verlo en inglés');
   nodes[0].props.onAdvance();
-  expect(render(props)).toContain('Mira las piezas · 2/3');
+  expect(render(props)).toContain('TRUCO DE GRAMÁTICA · 2/3');
   expect(nodes[0].props.advanceLabel).toBe('Ver cómo encajan las piezas →');
   nodes[0].props.onAdvance(); render(props);
   expect(nodes[0].props.advanceLabel).toBe('Probarlo con mis palabras →');

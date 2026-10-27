@@ -27,7 +27,7 @@ export function GrammarReminder({ lesson, form, baseSpanish, userId, unitId, onC
 } & ({ lesson: GrammarLessonData; form?: GrammarForm; baseSpanish?: string } | { lesson?: null; form: GrammarForm; baseSpanish?: string })) {
   const heading = useRef<HTMLHeadingElement>(null);
   useEffect(() => { heading.current?.focus(); }, []);
-  return <main className="game-screen play-flow" onKeyDown={(event) => {
+  return <main className="game-screen play-flow" data-play-tone="grammar" onKeyDown={(event) => {
     if (event.key === 'Escape' && !event.defaultPrevented) { event.preventDefault(); onClose(); }
   }}>
     <h1 ref={heading} tabIndex={-1} className="sr-only">Recordar el truco</h1>

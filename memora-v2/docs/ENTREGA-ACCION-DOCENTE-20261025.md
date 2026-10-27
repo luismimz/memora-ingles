@@ -1,5 +1,21 @@
 # Acciones docentes y orientación dentro de la actividad
 
+## Referencia humana y escenario continuo · 27/10/2026
+
+Diez capturas aportadas por el usuario de mem-ora son la referencia visual concreta de esta revisión: vocabulario/historia juntos, un escenario reconocible entre enseñanza y juego, bloques claros, controles grandes y resultado en el mismo lugar. No son aprobación de Memora ni autorización para editar/publicar/copiar el otro proyecto.
+
+Sustituida la superficie plana con tarjetas/formularios aislados por un escenario atmosférico compartido de práctica, con paletas propias clara y oscura, tono por actividad y capas transparentes. Mismo soporte para palabra, recuerdo, gramática, montaje, conversación y Arcade. Los estados correct/retry/model conservan significado, texto y color; borde de resultado alrededor de la misma superficie, sin fabricar XP/rachas o cambiar las reglas de ayuda. Gesto/teclado/lectura, pausa y salida no se sustituyen por animaciones.
+
+PlayHeader muestra la posición ya calculada en una barra identificada como posición, no dominio. Los tres pasos de vocabulario pasan a opciones, sin desaparecer su acceso ni causar un salto de altura al entrar en gramática. La salida y los avisos de guardado siguen visibles. El avance usa la misma franja y mantiene espacio cuando la tarea aún no está lista.
+
+La asociación estándar presenta imagen → palabra/significado → historia causal. Se elimina la repetición de la cadena escrita sobre la imagen principal, no su ayuda. Un ejemplo autoral traducido, cuando existe, aparece en una tarjeta común para asociación y cognado con audio por el componente existente: no se inventan ejemplos, historias o requisitos. No se copian NECK/GET ni las reglas universales de las capturas al catálogo. GrammarCoach da título al truco existente y en el recordatorio usa nivel de encabezado subordinado para conservar foco y semántica.
+
+Comprobación: integración920/154, regresión de recorrido81/81 y después79/79 tras ajustar jerarquía de encabezados y posición de episodio; build TypeScript/Vite correcto. Contraste de texto/apoyo/acción/estados en extremos de fondos de ambas apariencias y respeto por movimiento reducido comprobados automáticamente. Retirado el CSS sin referencias del ejemplo desplegable anterior. No inspección visual nueva, partida móvil, audio escuchado, diversión, eficacia o aceptación humana acreditadas. Controles UI/catálogo bloqueados no reintentados ni eludidos. No se declara igualado o superado el referente por cambiar estilos.
+
+Base recuperada limpia desde main8f359be en /private/tmp/memora-design-jASUnR/repo/memora-v2: la copia temporal anterior conservaba componentes, pero faltaban HEAD/config de Git, package.json/lock y tsconfig. Queda intacta, incluidas dos pruebas Echo ajenas que no se copiaron ni publicaron. Instalación desde lock con scripts ignorados. Auditoría prod:0 avisos; herramientas de desarrollo:5 heredados (incluidos críticos), pendientes de actualización compatible separada, sin audit fix --force. Docker sirve dist en Nginx, no el servidor de desarrollo. Chunk inicial639,77kB mantiene aviso >500kB.
+
+Para revisar: recargar sin borrar datos → Continuar. El escenario y cabecera cambian ya en la tarea guardada; no es necesario empezar de cero. Ver asociación con historia/ejemplo disponible, responder una recuperación y montar/usar una frase preparada. La prueba humana debe valorar conjunto y continuidad, no solo una captura o número de tests. Versión enviada/realmente servida en el único checkpoint del proyecto.
+
 ## Revisión jugable · 26/10/2026
 
 La petición humana vuelve a priorizar el método jugado, no otra capa de portada. Cambios sobre los componentes existentes:

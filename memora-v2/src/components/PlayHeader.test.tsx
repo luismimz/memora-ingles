@@ -53,6 +53,8 @@ it('el hilo indica solo posición, sin botones, checks de dominio ni estado de a
   let tree: ReturnType<typeof create>;
   act(() => { tree = create(<PlayHeader title="Monta tu mensaje" onExit={() => {}} appearance="light" onToggleAppearance={() => {}} trail={{ steps, current: 1 }} />); });
   const trail = tree!.root.findByType('ol');
+  expect(trail.parent!.props.className).toBe('play-options-panel');
+  expect(tree!.root.findByProps({ role: 'progressbar' }).props['aria-valuenow']).toBeCloseTo(100 / 3);
   expect(trail.props.className).toBe('play-trail');
   expect(tree!.root.findAllByProps({ className: 'play-step-position' })).toHaveLength(0);
   expect(tree!.root.findAllByProps({ className: 'play-location-label' })).toHaveLength(0);
@@ -63,4 +65,20 @@ it('el hilo indica solo posición, sin botones, checks de dominio ni estado de a
   act(() => tree!.update(<PlayHeader title="Responde al personaje" onExit={() => {}} appearance="light" onToggleAppearance={() => {}} trail={{ steps, current: 2 }} />));
   expect(tree!.root.findByProps({ 'aria-current': 'step' }).children).toEqual(['Conversa']);
   act(() => tree!.unmount());
+});
+it('la posición se ve sin abrir opciones, se acota y no representa respuestas o dominio', () => {
+  const exit = vi.fn(); let tree!: ReturnType<typeof create>;
+  const render = (progress: number) => <PlayHeader title="Monta tu mensaje" onExit={exit} appearance="light" onToggleAppearance={() => {}} progress={progress} />;
+  act(() => { tree = create(render(37)); });
+  const track = tree.root.findByProps({ role: 'progressbar' });
+  expect(track.props['aria-label']).toContain('no mide dominio');
+  expect(track.props['aria-valuenow']).toBe(37);
+  expect(track.findByType('span').props.style).toEqual({ width: '37%' });
+  expect(track.parent!.props.className).toBe('play-header-context');
+  act(() => tree.update(render(130)));
+  expect(tree.root.findByProps({ role: 'progressbar' }).props['aria-valuenow']).toBe(100);
+  act(() => tree.update(render(Number.NaN)));
+  expect(tree.root.findAllByProps({ role: 'progressbar' })).toHaveLength(0);
+  expect(exit).not.toHaveBeenCalled();
+  act(() => tree.unmount());
 });

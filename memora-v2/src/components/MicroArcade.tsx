@@ -151,7 +151,7 @@ export function MicroArcade({ userId, units, inspection, onExit, onUse, onOnlyWo
   const reminder = round ? <div className="arcade-rescue"><ArcadeWordReminder userId={userId} word={round.word} paused={clock.paused} manual vertical /></div> : undefined;
   const canContinue = Boolean(round && result && !clock.checkpoint && !clock.paused);
   const nextLabel = result === 'rescue' ? 'Seguir con ayuda' : automatic && index - startRound + 1 >= limit ? 'Seguir la aventura' : 'Siguiente reto';
-  return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen play-flow micro-screen arcade-stream-screen">
+  return <dialog ref={dialog} className="micro-dialog" aria-label="Arcade de asociaciones" onCancel={(event) => { event.preventDefault(); onExit(); }}><div className="game-screen play-flow micro-screen arcade-stream-screen" data-play-tone="arcade">
     <header className="game-topbar play-header arcade-header">
       <button type="button" className="activity-back" onClick={onExit}>← Volver</button><span className="play-intention">Arcade</span>
       <div className="arcade-stream-tools">
