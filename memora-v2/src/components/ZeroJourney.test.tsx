@@ -70,6 +70,18 @@ it('un doble toque no duplica el modelo ni convierte la exploración en acierto'
   expect(events()).toHaveLength(1); expect(events()[0].correct).toBeNull();
   expect(readWordMemories(user)).toEqual([]);
 });
+it('el menú no queda tapando el reto tras una acción y Escape lo cierra sin registrar aprendizaje', async () => {
+  await mount();
+  const menu = tree.root.findByProps({ className: 'zero-menu' });
+  const currentTarget = { open: true };
+  act(() => menu.props.onClick({ target: { closest: () => ({ tagName: 'BUTTON' }) }, currentTarget }));
+  expect(currentTarget.open).toBe(false);
+  currentTarget.open = true;
+  const preventDefault = vi.fn(), stopPropagation = vi.fn();
+  act(() => menu.props.onKeyDown({ key: 'Escape', currentTarget, preventDefault, stopPropagation }));
+  expect(currentTarget.open).toBe(false); expect(preventDefault).toHaveBeenCalledOnce();
+  expect(events()).toEqual([]);
+});
 it('recorre dos intenciones y produce sin piezas tras actividades intermedias, sin prometer dominio', async () => {
   await reachWriting();
   expect(readGrammarAttempts(user)).toEqual([]);

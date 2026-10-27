@@ -13,6 +13,7 @@ import { SpeechModelButton } from './SpeechModelButton';
 import { ArcadeClock } from './ArcadeClock';
 import { useArcadeClock } from './useArcadeClock';
 import { ZeroJourneyScene } from './ZeroJourneyScene';
+import { useDisclosureDismissal } from './useDisclosureDismissal';
 import './zeroJourney.css';
 
 /** New presentation/sequence, using the existing journal, checkpoint, SRS and controls. */
@@ -21,6 +22,7 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
   const live = useRef(state); live.current = state;
   const [calm, setCalm] = useState(() => readArcadeCalm(userId));
   const handedOff = useRef(false);
+  const menu = useDisclosureDismissal();
   const step = zeroSteps[state.stage];
   const revealed = state.input === 'revealed';
   const discovery = ['water', 'coffee', 'cold'].includes(step);
@@ -116,7 +118,7 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
   }
   const word = zeroWords[step === 'coffee' ? 1 : step === 'cold' ? 2 : 0];
   return <main className={`zero-journey${step === 'arcade-water' ? ' zero-arcade' : ''}${coldScene ? ' zero-winter' : ''}`}>
-    <header className="zero-header"><span className="zero-brand">M<span>MEMORA / PLAY</span></span><div className="zero-position" aria-label="Posición en este episodio; no mide dominio"><span style={{ width: `${state.stage / (zeroSteps.length - 1) * 100}%` }} /></div><details className="zero-menu"><summary aria-label="Pausa, ayuda y recorrido anterior">•••</summary><nav>
+    <header className="zero-header"><span className="zero-brand">M<span>MEMORA / PLAY</span></span><div className="zero-position" aria-label="Posición en este episodio; no mide dominio"><span style={{ width: `${state.stage / (zeroSteps.length - 1) * 100}%` }} /></div><details className="zero-menu" onKeyDown={menu.onKeyDown} onClick={(event) => { if ((event.target as HTMLElement).closest?.('button')) event.currentTarget.open = false; }}><summary ref={menu.trigger} aria-label="Pausa, ayuda y recorrido anterior">•••</summary><nav>
       <button type="button" onClick={clock.togglePause}>{clock.paused ? 'Reanudar' : 'Pausar'}</button>
       <button type="button" aria-pressed={calm} onClick={() => { setCalm(!calm); if (!inspection) writeArcadeCalm(userId, !calm); }}>Modo tranquilo</button>
       {!teaching ? <button type="button" onClick={() => showModel()}>Ver una ayuda</button> : null}
