@@ -10,9 +10,12 @@ import { initialGame } from './domain/game';
 import { readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
 import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
 import { keysSituationId, prepareKeysSituation } from './domain/keysSituation';
-import { recordSentenceExposure, recordSentenceRecall, sentenceKey } from './domain/memory';
+import { recordSentenceExposure, recordSentenceRecall, recordWordRecall, sentenceKey } from './domain/memory';
 import { ConversationPractice } from './components/ConversationPractice';
 import { initializeJournal, readJournal } from './domain/progressJournal';
+import { completeLearningMode } from './domain/learningModes';
+import { JourneyTrickExperience } from './components/JourneyTrickExperience';
+import { GrammarCoach } from './components/GrammarCoach';
 const unit = validateUnit(keys);
 const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>), followup: null as null | ReturnType<typeof validateUnit> }));
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
@@ -38,15 +41,24 @@ async function mount(seed?: () => void) {
   await act(async () => { tree = create(<App />); });
 }
 afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; source.followup = null; vi.unstubAllGlobals(); });
-it('al terminar Nora abre la situación del ordenador publicada, sin regresar a una tanda arbitraria', async () => {
+it('Nora prepara las palabras del ordenador y enlaza al coach contextual con Detective, sin enseñar piezas desconocidas', async () => {
   source.followup = validateUnit(examples[0]);
   await mount();
   await click('Entrar en la historia');
   await act(async () => tree.root.findByType(KeysSituationExperience).props.onNext());
   expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
-  expect(tree.root.findByType(LanguageGame).props.learningMode).toBe('adventure');
+  expect(tree.root.findByType(LanguageGame).props.learningMode).toBe('vocabulary');
   expect(localStorage.getItem('memora-v2.resume.situation-app-isolated')).toBe('m1-test-desk');
   expect(readLearningActivities('situation-app-isolated').filter((event) => event.source === 'learner')).toEqual([]);
+  // Routing contract after the real preparation functions; the complete lexical
+  // and coach interactions have their own component tests with isolated data.
+  recordLearningActivity('situation-app-isolated', { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion!, activityId: `${keysSituationId}:completed:test-run`, skill: 'looking-for', phase: 'completion', source: 'learner', modality: 'choice', prompt: 'Historia practicada', response: 'Terminado', expected: '', correct: null, helped: false });
+  for (const word of source.followup.words) recordWordRecall('situation-app-isolated', word, 'hesitant');
+  completeLearningMode('situation-app-isolated', source.followup, 'vocabulary', { correct: 3, attempted: 3, completedAt: new Date().toISOString(), nextReviewAt: new Date(Date.now() + 3600000).toISOString() });
+  await act(async () => tree.root.findByType(LanguageGame).props.onFinished());
+  await act(async () => tree.root.findByType(LanguageGame).props.onNext());
+  expect(tree.root.findByType(JourneyTrickExperience).props.unit.id).toBe('m1-test-desk');
+  expect(tree.root.findByType(GrammarCoach).props.lesson.checks.some((check: { id: string }) => check.id === 'computer-repair-am-v1')).toBe(true);
 });
 it('la portada abre la historia nueva sin resetear el montaje anterior ni inventar aprendizaje', async () => {
   await mount();

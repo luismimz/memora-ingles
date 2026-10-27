@@ -1,5 +1,6 @@
 import type { GrammarForm } from './unit';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
+import { validateMessageRepair, type MessageRepairData } from './messageRepair';
 
 export interface LessonPiece { text: string; role: 'subject' | 'auxiliary' | 'verb' | 'change' | 'context' }
 export interface LessonStep { caption: string; es: LessonPiece[]; en: LessonPiece[]; captionMarks?: LessonPiece[]; hideEnglish?: boolean; advanceLabel?: string }
@@ -17,6 +18,7 @@ export interface LessonCheck {
   situation?: { message: string; scenes: { choice: string; state: SituationState }[] };
   /** Authored shuffled pieces; reconstruction remains assisted practice. */
   ordering?: LessonPiece[];
+  repair?: MessageRepairData;
 }
 export interface GrammarLessonData { id: string; title: string; language: 'en'; steps: LessonStep[]; checks: LessonCheck[]; advanceMode?: 'manual' | 'automatic' }
 export const piece = (text: string, role: LessonPiece['role'] = 'context'): LessonPiece => ({ text, role });
@@ -41,7 +43,11 @@ export function validateGrammarLesson(value: GrammarLessonData): void {
   for (const check of value.checks) {
     if (check.targetEs !== undefined && (check.kind !== 'write' || typeof check.targetEs !== 'string' || !check.targetEs.trim())) throw new Error('El objetivo escrito necesita un mensaje español explícito.');
     if (!check.id || !['choose', 'explain', 'write'].includes(check.kind) || !check.prompt?.trim() || !check.hint?.trim() || !check.success?.trim() || !Array.isArray(check.answers) || !check.answers.length || check.answers.some((answer) => !answer?.trim())) throw new Error('Cada reto necesita respuestas y una ayuda revisadas.');
-    if (check.kind !== 'write' && !check.ordering && (!Array.isArray(check.choices) || check.choices.length < 2 || new Set(check.choices).size !== check.choices.length || check.answers.some((answer) => !check.choices!.includes(answer)))) throw new Error('Las opciones del truco deben incluir la respuesta y ser distintas.');
+    if (check.kind !== 'write' && !check.ordering && !check.repair && (!Array.isArray(check.choices) || check.choices.length < 2 || new Set(check.choices).size !== check.choices.length || check.answers.some((answer) => !check.choices!.includes(answer)))) throw new Error('Las opciones del truco deben incluir la respuesta y ser distintas.');
+    if (check.repair) {
+      if (check.kind !== 'choose' || check.ordering || check.situation || check.choices) throw new Error('La reparación tiene una sola interacción, no otras opciones mezcladas.');
+      validateMessageRepair(check.repair, value.steps, check.answers);
+    }
     if (check.ordering) {
       const parts = check.ordering;
       if (check.kind !== 'choose' || check.situation || check.choices || !Array.isArray(parts) || parts.length < 2 || parts.length > 8 || parts.some((part) => !part.text?.trim() || !['subject', 'auxiliary', 'verb', 'change', 'context'].includes(part.role))) throw new Error('Ordenar necesita entre dos y ocho piezas explícitas, sin otra modalidad mezclada.');

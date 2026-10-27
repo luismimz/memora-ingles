@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { previewUnit as source } from '../preview/previewUnit';
 import { JourneyTrickExperience } from './JourneyTrickExperience';
 import { GrammarOrder } from './GrammarOrder';
+import { MessageRepair } from './MessageRepair';
 import { grammarTricks, trickStop } from '../domain/journeyTricks';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readGrammarAttempts, recordGrammarAttempt } from '../domain/grammarMemory';
@@ -29,6 +30,11 @@ async function mount() { await act(async () => { tree = create(<JourneyTrickExpe
 async function advance() {
   const region = tree.root.findByProps({ role: 'region' }); const target = { closest: () => null }; const currentTarget = { scrollTop: 100, scrollHeight: 700, clientHeight: 600 };
   await act(async () => { region.props.onTouchStart({ target, currentTarget, touches: [{ clientY: 350 }] }); region.props.onTouchMove({ target, currentTarget, touches: [{ clientY: 250 }] }); vi.advanceTimersByTime(230); });
+}
+async function solveDetective() {
+  await act(async () => tree.root.findByType(MessageRepair).props.onPosition(1));
+  await act(async () => button('AM').props.onClick());
+  await advance();
 }
 beforeEach(() => {
   vi.useFakeTimers(); finished.mockClear(); vi.mocked(playEnglish).mockClear();
@@ -60,6 +66,7 @@ it('enseña el bloque, distingue el aparato, retoma piezas y avisa una sola vez 
   await act(async () => button('Está jugando en su ordenador.').props.onClick());
   expect(learner()).toMatchObject([{ id: error.id, correct: false }, { correct: true, parentAttemptId: error.id, helped: true }]);
   await advance();
+  await solveDetective();
   for (const part of ['I', 'AM']) await act(async () => button(part).props.onClick());
   act(() => tree.unmount()); await mount();
   expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([2, 3]);
@@ -83,9 +90,34 @@ it('un episodio corto guardado sigue corto, aunque ahora COMPUTER esté preparad
   expect(visible()).not.toContain('Estájugandoensuordenador.');
   expect(learner()).toHaveLength(0);
 });
+it('Detective del ordenador conserva sitio, error y demora al reanudar; dos errores muestran modelo sin crédito de escritura', async () => {
+  await mount(); for (let index = 0; index < 6; index++) await advance();
+  await act(async () => button('Está jugando en su ordenador.').props.onClick()); await advance();
+  expect(tree.root.findAllByType(MessageRepair)).toHaveLength(1);
+  const oldCount = learner().length;
+  await act(async () => tree.root.findByType(MessageRepair).props.onPosition(0));
+  expect(learner()).toHaveLength(oldCount);
+  await act(async () => { vi.advanceTimersByTime(5000); });
+  await act(async () => button('AM').props.onClick());
+  const first = learner().at(-1)!;
+  expect(first).toMatchObject({ response: 'AM I playing on my computer', correct: false, modality: 'choice', helped: true });
+  expect(first.responseDelayMs).toBeGreaterThanOrEqual(5000);
+  act(() => tree.unmount()); await mount();
+  expect(tree.root.findByType(MessageRepair).props.position).toBe(0);
+  expect(checkpoint()?.checkId).toBe('computer-repair-am-v1');
+  await act(async () => { vi.advanceTimersByTime(2000); });
+  await act(async () => button('MY').props.onClick());
+  expect(tree.root.findByType(MessageRepair).props.result).toBe('model');
+  expect(learner().at(-1)).toMatchObject({ correct: false, parentAttemptId: first.id });
+  expect(learner().at(-1)?.responseDelayMs).toBeGreaterThanOrEqual(7000);
+  expect(readLearningActivities(user).filter((event) => event.activityId === 'model:computer-repair-am-v1')).toMatchObject([{ source: 'authored', correct: null }]);
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.kind === 'write')).toEqual([]);
+  await advance(); expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
+});
 it('la reparación del puzle termina en modelo de cuatro bloques sin fabricar acierto', async () => {
   await mount(); for (let i = 0; i < 6; i++) await advance();
   await act(async () => button('Está jugando en su ordenador.').props.onClick()); await advance();
+  await solveDetective();
   await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('I playing am on my computer'));
   await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('computer my on I am playing'));
   act(() => tree.unmount()); await mount();

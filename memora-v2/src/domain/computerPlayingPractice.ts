@@ -23,6 +23,10 @@ export function computerPlayingLesson(unit: AtomicUnit, formId: string): Grammar
   ], checks: [
     { id: 'computer-order-v1', kind: 'choose', prompt: 'Monta el aviso para que no apaguen tu ordenador.', ordering: [piece('ON MY COMPUTER', 'context'), piece('PLAYING', 'verb'), piece('I', 'subject'), piece('AM', 'auxiliary')], answers: [message], hint: 'I + AM + PLAYING + ON MY COMPUTER. El último bloque indica qué aparato usas.', success: 'El aviso ya está montado.' },
     { id: 'computer-meaning-v1', kind: 'explain', prompt: 'Entrega el mensaje a quien está usando el ordenador para jugar.', choices: ['Está jugando en su ordenador.', 'Está jugando con una consola.'], answers: ['Está jugando en su ordenador.'], situation: { message, scenes: [{ choice: 'Está jugando en su ordenador.', state: 'computer-playing' }, { choice: 'Está jugando con una consola.', state: 'console-playing' }] }, hint: 'Las dos personas juegan. ON MY COMPUTER indica el ordenador, no la consola.', success: 'Has identificado qué aparato está usando.' },
+    { id: 'computer-repair-am-v1', kind: 'choose', prompt: 'Repara el aviso antes de enviarlo.', answers: [message], hint: 'Para decir «yo estoy», conserva I AM. Después va PLAYING.', success: 'El aviso ya conserva quién y qué está haciendo.', repair: {
+      target: 'Estoy jugando en mi ordenador.', solution: `${message}.`, pieces: [piece('I', 'subject'), piece('playing', 'verb'), piece('on my computer', 'context')], choices: [piece('MY', 'context'), piece('AM', 'auxiliary'), piece('I', 'subject')],
+      joined: { before: '', first: 'I', inserted: 'am', after: ' playing on my computer.' }, insight: 'I AM: yo estoy. PLAYING cuenta la acción que haces ahora.',
+    } },
     { id: 'computer-use-v1', kind: 'write', prompt: 'Avisa de que estás jugando en tu ordenador.', answers: [message, "I'm playing on my computer"], hint: 'I + AM + PLAYING + ON MY COMPUTER.', success: 'El personaje sabe que el ordenador está en uso.' },
   ] };
 }

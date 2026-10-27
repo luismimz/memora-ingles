@@ -1,21 +1,21 @@
 import { Fragment } from 'react';
-import type { LessonPiece } from '../domain/grammarLesson';
+import type { MessageRepairData } from '../domain/messageRepair';
 import { SpeechModelButton } from './SpeechModelButton';
 import './messageRepair.css';
 
 /** An explicitly broken authored message, not a pronunciation model.
  * Choosing a seam is navigation. Only inserting a tile submits an attempt. */
-export function MessageRepair({ target, pieces, choices, solution, joined, insight, position, result, onPosition, onAnswer }: {
-  target: string; pieces: LessonPiece[]; choices: LessonPiece[]; solution: string;
-  joined: { before: string; first: string; inserted: string; after: string }; insight: string;
+export function MessageRepair({ target, pieces, choices, solution, joined, insight, position, result, onPosition, onAnswer, headingLevel = 1 }: MessageRepairData & {
   position?: number; result: 'idle' | 'retry' | 'correct' | 'model';
+  headingLevel?: 1 | 2;
   onPosition: (position: number) => void; onAnswer: (message: string) => void;
 }) {
   const done = result === 'correct' || result === 'model';
+  const Heading = headingLevel === 2 ? 'h2' : 'h1';
   const selected = position !== undefined && Number.isInteger(position) && position >= 0 && position <= pieces.length ? position : undefined;
   return <section className={`message-repair${done ? ' is-repaired' : ''}`} aria-label="Detective de mensajes">
     <p className="eyebrow">{done ? result === 'model' ? 'REPARACIÓN CON AYUDA' : 'MENSAJE REPARADO' : 'ARCADE · DETECTIVE'}</p>
-    <h1>{done ? 'Una pieza cambia el mensaje.' : 'El mensaje ha perdido una pieza.'}</h1>
+    <Heading>{done ? 'Una pieza cambia el mensaje.' : 'El mensaje ha perdido una pieza.'}</Heading>
     <p className="repair-target">{target}</p>
     <div className="repair-note">
       <span className="repair-note-author">Nora <small>{done ? 'Ahora sí' : 'Borrador con un error'}</small></span>

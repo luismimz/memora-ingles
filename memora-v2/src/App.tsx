@@ -22,12 +22,12 @@ import { DirectusError, endSession, hasSession, loadPublishedUnitSummaries, load
 import { prefetchSpeech, stopSpeech } from './services/audio';
 import { useAppearance } from './useAppearance';
 import { restartCourseProgress, startProgressSync, syncLabels, type SyncStatus } from './services/progressSync';
-import { buildJourneyRoute, grammarTricks, missingTrickWords, nextJourneyStop, trickStop } from './domain/journeyTricks';
+import { buildJourneyRoute, completedTrick, grammarTricks, missingTrickWords, nextJourneyStop, trickStop } from './domain/journeyTricks';
 import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { loadLearningLibrary } from './services/directus';
 import { GrammarJourney } from './components/GrammarJourney';
 import { grammarJourney, grammarPreparationCandidate, missingGrammarStop, nextGrammarStop, readGrammarPosition, writeGrammarPosition } from './domain/grammarJourney';
-import { computerSituationSource, prepareKeysSituation } from './domain/keysSituation';
+import { computerSituationSource, keysSituationSource, prepareKeysSituation, situationCompleted } from './domain/keysSituation';
 
 const ContentManager = lazy(() => import('./components/ContentManager').then((module) => ({ default: module.ContentManager })));
 const PhrasalFusionDemo = lazy(() => import('./components/PhrasalFusionDemo').then((module) => ({ default: module.PhrasalFusionDemo })));
@@ -302,7 +302,14 @@ export default function App() {
     const source = situationUnit;
     setSituationUnit(null);
     const computer = computerSituationSource(units);
-    const next = computer && !readUnitProgress(userId, computer.id) ? computer : units.find((candidate) => candidate.id !== source.id && journeyEntryMode(candidate) === 'adventure' && !readUnitProgress(userId, candidate.id))
+    const computerTrick = computer?.grammarTricks?.find((trick) => trick.formId === 'ing');
+    if (computer && computerTrick && !readUnitProgress(userId, computer.id)) {
+      const stop = trickStop(computer, computerTrick);
+      const prepare = missingTrickWords(stop, readWordMemories(userId), userId).length > 0;
+      void openUnit(prepare ? computer : stop, false, prepare ? 'vocabulary' : undefined);
+      return;
+    }
+    const next = units.find((candidate) => candidate.id !== source.id && journeyEntryMode(candidate) === 'adventure' && !readUnitProgress(userId, candidate.id))
       ?? journeyRoute.find((candidate) => candidate.id !== source.id && !candidate.routeTrick && !readUnitProgress(userId, candidate.id))
       ?? units.find((candidate) => candidate.id === source.id);
     if (next) void openUnit(next, false, journeyEntryMode(next));
@@ -528,6 +535,13 @@ export default function App() {
   function followingJourneyStop(id: string) {
     const activities = readLearningActivities(userId);
     const memories = readWordMemories(userId);
+    const computer = computerSituationSource(units);
+    const nora = keysSituationSource(units);
+    const preparedTrick = computer?.grammarTricks?.find((trick) => trick.formId === 'ing');
+    if (id === computer?.id && learningMode === 'vocabulary' && preparedTrick && nora && situationCompleted(userId, nora.contentVersion ?? '1', nora.id)) {
+      const stop = trickStop(computer, preparedTrick);
+      if (!completedTrick(stop, activities) && !missingTrickWords(stop, memories, userId).length) return stop;
+    }
     const completedIds = new Set(units.filter((candidate) => readUnitProgress(userId, candidate.id) || completedVocabularyStop(candidate, activities)).map((candidate) => candidate.id));
     return nextJourneyStop(id, buildJourneyRoute(units, memories), memories, activities, completedIds);
   }
