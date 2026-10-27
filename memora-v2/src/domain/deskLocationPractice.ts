@@ -10,7 +10,11 @@ export function deskLocationLesson(unit: AtomicUnit, formId: string): GrammarLes
   if (!computerPlayingLesson(unit, formId) || !unit.words.some((word) => word.en === 'DESK' && word.es === 'escritorio')
     || !unit.practiceSentences?.some((sentence) => sentence.en === "I'm playing on my computer at my desk.")) return null;
   const message = 'I am playing at my desk';
-  return { id: deskLocationSkill, title: 'Dile a Nora dónde estás jugando', language: 'en', advanceMode: 'manual', steps: [
+  return { id: deskLocationSkill, title: 'Dile a Nora dónde estás jugando', language: 'en', advanceMode: 'manual', overview: {
+    es: [piece('Yo estoy ', 'auxiliary'), piece('jugando ', 'verb'), piece('en mi escritorio', 'context')],
+    en: [piece('I am ', 'auxiliary'), piece('playing ', 'verb'), piece('at my desk', 'context')],
+    caption: 'AT MY DESK indica dónde estás. El bloque anterior, ON MY COMPUTER, indicaba qué aparato usabas.', advanceLabel: 'Ponlo a prueba',
+  }, steps: [
     { caption: 'YO se dice I: haces visible quién actúa.', es: [piece('YO', 'subject')], en: [piece('I', 'subject')] },
     { caption: 'YO ESTOY se expresa con I AM.', es: [piece('YO ', 'subject'), piece('ESTOY', 'auxiliary')], en: [piece('I ', 'subject'), piece('AM', 'auxiliary')] },
     { caption: 'La acción ya es conocida: I AM PLAYING, estoy jugando. Ahora vas a indicar dónde.', es: [piece('Yo ', 'subject'), piece('estoy ', 'auxiliary'), piece('jugando', 'verb')], en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), piece('playing', 'verb')] },

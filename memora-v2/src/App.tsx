@@ -292,7 +292,7 @@ export default function App() {
       const loaded = preview ? reviewUnits.find((candidate) => candidate.id === summary.id) : await loadUnit(summary.id);
       if (request !== lessonRequest.current) return;
       if (!loaded || !prepareKeysSituation(loaded)) throw new Error('Esta historia necesita actualizar sus modelos. Tu actividad anterior sigue guardada.');
-      setSituationRecall(recallOnly); setSituationUnit(loaded);
+      rememberUnit(summary.id, 'adventure'); setSituationRecall(recallOnly); setSituationUnit(loaded);
     } catch (reason) { if (request === lessonRequest.current) setUnitError(reason instanceof Error ? reason.message : 'No se pudo abrir la historia.'); }
     finally { if (request === lessonRequest.current) setLoading(false); }
   }

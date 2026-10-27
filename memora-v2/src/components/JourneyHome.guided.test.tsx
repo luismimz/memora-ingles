@@ -31,17 +31,16 @@ it('solo Continuar compite como acción principal; modos, mapa y evidencia sigue
   act(() => outsideDetails[0].props.onClick()); expect(open).toHaveBeenCalledWith(source);
   expect(readLearningActivities(user)).toEqual([]);
 });
-it('prioriza una escena completa frente a palabras aisladas sin borrar montaje, revelar inglés ni crear aprendizaje', () => {
+it('una preparación de palabras empezada conserva su destino, sin imponer otra escena o revelar inglés', () => {
   const pack = { ...source, id: 'synthetic-cognates', kind: 'vocabulary-pack' as const };
   const prepared = { ...source, hasDialogue: true };
   writeGameCheckpoint(user, `${pack.id}:vocabulary`, pack.contentVersion ?? '1', { ...initialGame, wordAssembly: { selected: [0], hinted: false, modelUsed: false, layout: 'letters-v2' } });
   const before = localStorage.getItem(`memora-v2.checkpoint.${user}.${pack.id}:vocabulary`);
   const start = vi.fn(); mount([pack, prepared], pack.id, 'vocabulary', start);
-  expect(text(tree.root.findByType('h1'))).toBe(source.sentence.es);
+  expect(text(tree.root.findByProps({ className: 'home-now-place' }))).toBe('Retoma tu palabra');
   expect(text(tree.root.findByProps({ className: 'home-now' }))).not.toContain(source.sentence.en);
-  const enter = tree.root.findAllByType('button').find((node) => text(node).startsWith('Entrar en la escena'))!;
-  act(() => enter.props.onClick()); expect(start).toHaveBeenCalledWith(prepared); expect(open).not.toHaveBeenCalled();
-  act(() => tree.root.findByProps({ className: 'home-saved-words' }).props.onClick()); expect(open).toHaveBeenCalledWith(pack);
+  const enter = tree.root.findAllByType('button').find((node) => text(node).startsWith('Continuar jugando'))!;
+  act(() => enter.props.onClick()); expect(start).not.toHaveBeenCalled(); expect(open).toHaveBeenCalledWith(pack);
   expect(localStorage.getItem(`memora-v2.checkpoint.${user}.${pack.id}:vocabulary`)).toBe(before);
   expect(readLearningActivities(user)).toEqual([]);
 });

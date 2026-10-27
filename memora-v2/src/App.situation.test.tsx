@@ -50,6 +50,11 @@ it('Nora prepara las palabras del ordenador y enlaza al coach contextual con Det
   expect(tree.root.findByType(LanguageGame).props.learningMode).toBe('vocabulary');
   expect(localStorage.getItem('memora-v2.resume.situation-app-isolated')).toBe('m1-test-desk');
   expect(readLearningActivities('situation-app-isolated').filter((event) => event.source === 'learner')).toEqual([]);
+  await click('← Recorrido');
+  expect(text(tree.root.findByProps({ className: 'home-now' }))).not.toContain('Nora espera. Tus llaves no aparecen.');
+  await click('Continuar jugando');
+  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
+  expect(tree.root.findByType(LanguageGame).props.learningMode).toBe('vocabulary');
   // Routing contract after the real preparation functions; the complete lexical
   // and coach interactions have their own component tests with isolated data.
   recordLearningActivity('situation-app-isolated', { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion!, activityId: `${keysSituationId}:completed:test-run`, skill: 'looking-for', phase: 'completion', source: 'learner', modality: 'choice', prompt: 'Historia practicada', response: 'Terminado', expected: '', correct: null, helped: false });

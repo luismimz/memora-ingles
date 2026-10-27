@@ -1,5 +1,19 @@
 # Acciones docentes y orientación dentro de la actividad
 
+## Respetar el destino y enseñar el mensaje de una vez · 27/10/2026
+
+La petición humana permite reconstruir lo necesario, incluso desde cero, pero no obliga a borrar el progreso. Se conserva la base útil y se cambia otro tramo completo de comportamiento, no se crea un motor/curso paralelo.
+
+Inicio respeta la actividad guardada o la siguiente ya elegida. Un repaso debido de Nora, una historia aún no estrenada o la preferencia anterior por otra escena ya no reemplazan una preparación o mensaje pendientes. Nora queda accesible como práctica opcional. Abrir expresamente su historia actualiza la posición de navegación existente: al volver, esa elección sí se retoma, sin crear aprendizaje o borrar otros checkpoints. La ida historia→palabras del ordenador→Inicio→misma preparación→coach contextual queda probada con datos aislados.
+
+Para nuevas preparaciones revisadas de ON MY COMPUTER y AT MY DESK, una sola vista enseña mensaje completo, tres bloques espejo, escena correspondiente y truco breve. La primera distingue aparato usado de estar encima; la segunda distingue el lugar del aparato previamente utilizado. Ambos idiomas son manipulables, audio inglés completo una vez, escucha manual disponible. «Desmontar el truco» abre el desglose original a demanda; sus componentes se montan solo al abrirlo, no seis tarjetas ocultas por defecto. No temporiza enseñanza ni obliga a explicar o grabar.
+
+El esquema overview opcional debe conservar exactamente el mensaje del último modelo y sus piezas/caption válidos. No amplía ni aprueba contenido privado. presentation=message-overview-v1 en el checkpoint existente conserva esa presentación al recargar, sin repetir audio automáticamente. Las tareas anteriores guardadas siguen su recorrido; no se alteran órdenes parciales, borradores, límites de errores o evidencia. Comprensión→montaje→conversación sigue requerida, no se escribe dos veces la misma frase. La demostración de contracción anterior sigue disponible en recorridos antiguos/recordatorio; no se obliga a recorrerla antes de cada nuevo mensaje.
+
+La portada del ordenador/escritorio usa la misma escena revisada que el reto, en vez de tres nombres decorativos sin situación. Otras fuentes no se representan con una escena inventada. No es un rediseño gráfico global ni se acredita inspección visual humana.
+
+Verificación final994/164 y TypeScript/Vite correctos, /private/tmp/memora-message-entry-integration-final.log y build-final.log. Regresiones enfocadas40/40 y continuidad13/13. Se corrigieron sintaxis JSX, un simulador histórico de hooks afectado por índices/estado y duplicados ocultos del desglose antes de esta integración. Principal666,59kB gzip201,60; aviso>500kB abierto. Sin partida móvil, audio físico, nueva inspección visual o eficacia/diversión humana verificadas; puertas cerradas no reintentadas. Versión pública en checkpoint único.
+
 ## Retirar las vueltas obligatorias · 27/10/2026
 
 La prueba humana rechaza el resultado anterior: demasiado repetitivo, aburrido y estancado. Esta decisión sustituye la ampliación por más ejercicios obligatorios sobre el mismo mensaje; no se presenta el Detective anterior como solución global ni las pruebas como aprobación del diseño.

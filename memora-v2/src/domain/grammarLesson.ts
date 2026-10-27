@@ -20,7 +20,7 @@ export interface LessonCheck {
   ordering?: LessonPiece[];
   repair?: MessageRepairData;
 }
-export interface GrammarLessonData { id: string; title: string; language: 'en'; steps: LessonStep[]; checks: LessonCheck[]; advanceMode?: 'manual' | 'automatic' }
+export interface GrammarLessonData { id: string; title: string; language: 'en'; steps: LessonStep[]; overview?: LessonStep; checks: LessonCheck[]; advanceMode?: 'manual' | 'automatic' }
 export const piece = (text: string, role: LessonPiece['role'] = 'context'): LessonPiece => ({ text, role });
 
 /** Defer only a written task that will actually be answered in this chat. */
@@ -34,7 +34,8 @@ export function grammarChecksForExperience(lesson: GrammarLessonData, conversati
 export function validateGrammarLesson(value: GrammarLessonData): void {
   if (value?.advanceMode !== undefined && !['manual', 'automatic'].includes(value.advanceMode)) throw new Error('El ritmo del truco no es válido.');
   if (!value?.id?.trim() || !value.title?.trim() || value.language !== 'en' || !Array.isArray(value.steps) || !value.steps.length || value.steps.length > 6 || !Array.isArray(value.checks) || !value.checks.length) throw new Error('El truco necesita demostración y práctica revisadas.');
-  for (const step of value.steps) {
+  if (value.overview && (value.overview.hideEnglish || normalizeSentenceAnswer(value.overview.en?.map((part) => part.text).join('') ?? '') !== normalizeSentenceAnswer(value.steps.at(-1)!.en.map((part) => part.text).join('')))) throw new Error('La vista completa debe enseñar el mismo mensaje que el desglose.');
+  for (const step of [...value.steps, ...(value.overview ? [value.overview] : [])]) {
     if (step.hideEnglish !== undefined && typeof step.hideEnglish !== 'boolean' || step.advanceLabel !== undefined && !step.advanceLabel.trim()) throw new Error('La revelación del truco necesita un botón y un estado válidos.');
     if (!step.caption?.trim() || step.caption.split(/\s+/).length > 35) throw new Error('Cada paso explica una sola idea en un máximo de 35 palabras.');
     for (const row of [step.es, step.en]) if (!Array.isArray(row) || !row.length || row.some((part) => !part.text?.trim() || !['subject', 'auxiliary', 'verb', 'change', 'context'].includes(part.role))) throw new Error('La transformación requiere piezas explícitas, no terminaciones adivinadas.');

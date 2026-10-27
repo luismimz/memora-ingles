@@ -13,7 +13,11 @@ export function computerPlayingLesson(unit: AtomicUnit, formId: string): Grammar
     || unit.sentence.en !== "I'm playing on my computer."
     || !Object.entries({ PLAY: 'jugar', COMPUTER: 'ordenador' }).every(([en, es]) => unit.words.some((word) => word.en === en && word.es === es))) return null;
   const message = 'I am playing on my computer';
-  return { id: computerPlayingSkill, title: 'Avisa para que no apaguen tu ordenador', language: 'en', advanceMode: 'manual', steps: [
+  return { id: computerPlayingSkill, title: 'Avisa para que no apaguen tu ordenador', language: 'en', advanceMode: 'manual', overview: {
+    es: [piece('Yo estoy ', 'auxiliary'), piece('jugando ', 'verb'), piece('en mi ordenador', 'context')],
+    en: [piece('I am ', 'auxiliary'), piece('playing ', 'verb'), piece('on my computer', 'context')],
+    caption: 'ON MY COMPUTER indica el aparato que usas. No significa estar encima de él.', advanceLabel: 'Ponlo a prueba',
+  }, steps: [
     { caption: 'Primero, quién actúa: YO se dice I.', es: [piece('YO', 'subject')], en: [piece('I', 'subject')] },
     { caption: 'Para «yo estoy», une I + AM.', es: [piece('YO ', 'subject'), piece('ESTOY', 'auxiliary')], en: [piece('I ', 'subject'), piece('AM', 'auxiliary')] },
     { caption: 'PLAY es jugar. Para contar que estás jugando ahora: I AM PLAYING.', es: [piece('Yo ', 'subject'), piece('estoy ', 'auxiliary'), piece('jugando', 'verb')], en: [piece('I ', 'subject'), piece('am ', 'auxiliary'), piece('playing', 'verb')] },

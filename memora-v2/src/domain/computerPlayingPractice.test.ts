@@ -27,3 +27,10 @@ it('no confunde PLAY practicado con COMPUTER preparado, ni reemplaza otra autorÃ
   expect(computerPlayingLesson({ ...source, sentence: { ...source.sentence, en: 'An authored replacement.' } }, 'ing')).toBeNull();
   expect(computerPlayingLesson({ ...source, grammarContinuation: { status: 'needs_review', formId: 'ing', vocabulary: ['play'], grammarSkills: [] } }, 'ing')).toBeNull();
 });
+it('la vista de tres bloques conserva el mensaje del desglose y rechaza resumirlo con otra frase', () => {
+  const lesson = computerPlayingLesson(source, 'ing')!;
+  expect(lesson.overview!.en.map((part) => part.text.trim())).toEqual(['I am', 'playing', 'on my computer']);
+  expect(lesson.overview!.caption).toContain('No significa estar encima');
+  expect(() => validateGrammarLesson({ ...lesson, overview: { ...lesson.overview!, en: [{ text: 'I have a computer', role: 'context' }] } })).toThrow('mismo mensaje');
+  expect(() => validateGrammarLesson({ ...lesson, overview: { ...lesson.overview!, hideEnglish: true } })).toThrow('mismo mensaje');
+});

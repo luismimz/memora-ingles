@@ -79,3 +79,5 @@
 }
 .home-situation-scene { width: 100%; margin-bottom: 20px; }
 .home-situation-scene .situation-room { display: block; width: 100%; max-height: 190px; border-radius: 20px; }
+.home-message-scene { width: min(100%, 420px); margin: 0 auto 20px; padding: 12px; box-sizing: border-box; border: 1px solid #ffffff18; border-radius: 22px; background: #ffffff09; }
+.home-message-scene > svg { display: block; width: 100%; max-height: 180px; }

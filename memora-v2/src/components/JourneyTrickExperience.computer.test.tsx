@@ -42,16 +42,23 @@ afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.un
 it('enseña el bloque, distingue el aparato, retoma piezas y avisa una sola vez sin apagar el ordenador', async () => {
   await mount();
   expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Avisa para que no apaguen tu ordenador');
-  for (let i = 0; i < 6; i++) {
-    expect(tree.root.findAllByType('input')).toHaveLength(0);
-    if (i === 5) {
-      await act(async () => tree.root.findByProps({ 'aria-label': 'Juntar I y AM' }).props.onClick());
-      expect(playEnglish).toHaveBeenLastCalledWith("I'm playing on my computer", undefined, true, expect.any(Function));
-      expect(readLearningActivities(user).filter((event) => event.activityId.startsWith('contraction-lab-v1:'))).toMatchObject([{ source: 'authored', correct: null }]);
-      expect(readGrammarAttempts(user)).toHaveLength(0);
-    }
-    await advance();
-  }
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+  expect(visible()).toContain('UNMENSAJE·TRESBLOQUES');
+  expect(checkpoint()?.presentation).toBe('message-overview-v1');
+  expect(readGrammarAttempts(user)).toHaveLength(0);
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Relacionar on my computer con el español' }).props.onClick());
+  expect(learner()).toHaveLength(0);
+  const details = tree.root.findByProps({ className: 'message-overview-details' });
+  expect(details.findAllByType('section')).toHaveLength(0);
+  await act(async () => details.props.onToggle({ currentTarget: { open: true } }));
+  expect(details.findAllByType('section')).toHaveLength(6);
+  expect(learner()).toHaveLength(0);
+  await act(async () => details.props.onToggle({ currentTarget: { open: false } }));
+  const narrationCount = vi.mocked(playEnglish).mock.calls.length;
+  act(() => tree.unmount()); await mount();
+  expect(checkpoint()?.presentation).toBe('message-overview-v1');
+  expect(vi.mocked(playEnglish).mock.calls).toHaveLength(narrationCount);
+  await advance();
   expect(learner()).toHaveLength(0);
   await act(async () => button('Está jugando con una consola.').props.onClick());
   expect(visible()).toContain('estausaunaconsola');
@@ -110,7 +117,7 @@ it('Detective del ordenador conserva sitio, error y demora al reanudar; dos erro
   await advance(); expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(1);
 });
 it('la reparación del puzle termina en modelo de cuatro bloques sin fabricar acierto', async () => {
-  await mount(); for (let i = 0; i < 6; i++) await advance();
+  await mount(); await advance();
   await act(async () => button('Está jugando en su ordenador.').props.onClick()); await advance();
   expect(tree.root.findAllByType(MessageRepair)).toHaveLength(0);
   await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('I playing am on my computer'));
@@ -126,17 +133,17 @@ it('la reparación del puzle termina en modelo de cuatro bloques sin fabricar ac
 });
 it('I AM demostrado no omite el bloque nuevo ni un checkpoint; el viejo significado no acredita el nuevo', async () => {
   recordGrammarAttempt(user, { unitId: source.id, skill: 'present-continuous:play', check: 'turn-respond', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
-  await mount(); expect(checkpoint()?.stage).toBe(2);
+  await mount(); expect(checkpoint()?.stage).toBe(5);
   expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Avisa para que no apaguen tu ordenador');
-  await advance(); expect(visible()).toContain('MYCOMPUTER');
-  await advance(); expect(visible()).toContain('notraducesiempre');
+  expect(visible()).toContain('ONMYCOMPUTER');
+  expect(visible()).toContain('Nosignificaestarencima');
   expect(grammarArcadeRounds(user, [source]).some((round) => round.skill === computerPlayingSkill)).toBe(false);
 });
 it('una nueva práctica prepara AT MY DESK tras el aviso del ordenador y comunica ubicación sin escritura duplicada', async () => {
   recordGrammarAttempt(user, { unitId: source.id, skill: computerPlayingSkill, check: 'turn-respond', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
-  await mount(); expect(checkpoint()?.stage).toBe(2);
+  await mount(); expect(checkpoint()?.stage).toBe(5);
   expect(text(tree.root.findByProps({ className: 'play-intention' }))).toBe('Dile a Nora dónde estás jugando');
-  for (let i = 0; i < 4; i++) await advance();
+  await advance();
   expect(checkpoint()?.episodeId).toBe(deskLocationIdentity);
   await act(async () => button('Está jugando en el suelo.').props.onClick());
   expect(visible()).toContain('juegaenelsuelo');
