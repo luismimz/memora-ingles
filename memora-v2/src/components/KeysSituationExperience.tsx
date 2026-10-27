@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AtomicUnit } from '../domain/unit';
-import { keysSituationId, keysSituationSkill, keysSituationStages, prepareKeysSituation, resumeKeysSituation, situationCheckpointVersion, situationRunCompleted } from '../domain/keysSituation';
+import { keysSituationFlow, nextKeysSituationStage, keysSituationId, keysSituationSkill, keysSituationStages, prepareKeysSituation, resumeKeysSituation, situationCheckpointVersion, situationRunCompleted } from '../domain/keysSituation';
 import { clearTrickCheckpoint, readTrickCheckpoint, writeTrickCheckpoint, type TrickCheckpoint } from '../domain/trickCheckpoint';
 import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
-import { recordWordRecall, recordChunkExposure, recordSentenceExposure, recordSentenceRecall, sentenceKey } from '../domain/memory';
+import { practicedWordMeaning, readWordMemories, recordWordRecall, recordChunkExposure, recordSentenceExposure, recordSentenceRecall, sentenceKey } from '../domain/memory';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 import type { Appearance } from '../useAppearance';
@@ -33,7 +33,7 @@ import { ExplainBack } from './ExplainBack';
 import './keysSituation.css';
 
 type Props = { unit: AtomicUnit; userId: string; appearance: Appearance; onToggleAppearance: () => void; syncStatus?: SyncStatus; onExit: () => void; onNext: () => void; inspection?: boolean; recallOnly?: boolean };
-const freshSituation = (recallOnly = false): TrickCheckpoint => ({ stage: recallOnly ? keysSituationStages.indexOf('use') : 0, checkIndex: 0, checkId: recallOnly ? 'use' : 'key', input: '', feedback: 'idle', helped: false, episodeId: crypto.randomUUID(), episodeStartedAt: new Date().toISOString(), promptStartedAt: new Date().toISOString() });
+const freshSituation = (recallOnly = false): TrickCheckpoint => ({ stage: recallOnly ? keysSituationStages.indexOf('use') : 0, checkIndex: 0, checkId: recallOnly ? 'use' : 'key', input: '', feedback: 'idle', helped: false, situationLayout: 'message-chunks-v1', episodeId: crypto.randomUUID(), episodeStartedAt: new Date().toISOString(), promptStartedAt: new Date().toISOString() });
 /** One authored situation, existing checkpoint/journal/memory and interaction components. */
 export function KeysSituationExperience(props: Props) {
   const prepared = prepareKeysSituation(props.unit);
@@ -42,10 +42,20 @@ export function KeysSituationExperience(props: Props) {
 }
 function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncStatus, onExit, onNext, inspection = false, recallOnly = false, prepared }: Props & { prepared: NonNullable<ReturnType<typeof prepareKeysSituation>> }) {
   const version = situationCheckpointVersion(unit.id, unit.contentVersion ?? '1');
+  const needsIntroduction = (index: number) => inspection || !readWordMemories(userId).some((memory) => practicedWordMeaning(memory, prepared.words[index]));
+  const fresh = () => {
+    const checkpoint = freshSituation(recallOnly);
+    if (!recallOnly && !needsIntroduction(0)) {
+      const first = needsIntroduction(1) ? 'phone' : 'object';
+      checkpoint.checkId = first;
+      checkpoint.stage = keysSituationStages.indexOf(first);
+    }
+    return checkpoint;
+  };
   const [state, setState] = useState<TrickCheckpoint>(() => {
     const saved = !inspection ? resumeKeysSituation(readTrickCheckpoint(userId, keysSituationId, version)) : null;
     const finished = saved && situationRunCompleted(userId, unit.id, unit.contentVersion ?? '1', saved);
-    return saved && !finished ? saved : freshSituation(recallOnly);
+    return saved && !finished ? saved : fresh();
   });
   const live = useRef(state); live.current = state;
   const stage = keysSituationStages[state.stage];
@@ -83,8 +93,16 @@ function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncS
   function advance() {
     if (!ready || lock.current && state.feedback !== 'correct' || live.current.stage !== state.stage || stage === 'use') return;
     lock.current = true; stopSpeech();
-    save({ stage: state.stage + 1, checkId: keysSituationStages[state.stage + 1], input: '', feedback: 'idle', helped: false, checkFailures: 0, order: [], previousAttemptId: undefined, correctionResponse: undefined, reflection: undefined, promptStartedAt: new Date().toISOString() });
+    let next = nextKeysSituationStage(stage)!;
+    if (next === 'phone' && !needsIntroduction(1)) next = 'object';
+    save({ stage: keysSituationStages.indexOf(next), checkId: next, input: '', feedback: 'idle', helped: false, checkFailures: 0, order: [], previousAttemptId: undefined, correctionResponse: undefined, reflection: undefined, promptStartedAt: new Date().toISOString() });
   }
+  useEffect(() => {
+    // Only a solved task advances itself; teaching, errors, models and writing do not.
+    if (!['meaning', 'build'].includes(stage) || state.feedback !== 'correct' || state.helped || calm) return;
+    const timer = window.setTimeout(advance, 1200);
+    return () => window.clearTimeout(timer);
+  }, [stage, state.feedback, state.helped, calm]);
   function answer(response: string, expected: string, phase: 'grammar' | 'construction' | 'transfer' | 'arcade', helped = true) {
     const current = live.current;
     if (lock.current || current.stage !== state.stage || current.feedback === 'correct' || (current.checkFailures ?? 0) >= 2 || clock.paused && sound) return false;
@@ -92,6 +110,7 @@ function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncS
     const event = record({ response, expected, phase, correct, helped: helped || current.helped, parentAttemptId: current.previousAttemptId, responseDelayMs: current.promptStartedAt ? Math.max(0, Date.now() - Date.parse(current.promptStartedAt)) : undefined });
     if (correct) {
       lock.current = true; playSnap();
+      if (!inspection && stage === 'meaning') recordWordRecall(userId, prepared.words[0], 'hesitant', new Date(), 'recognition', undefined, true);
       if (!inspection && stage === 'build') { prepared.keys.slots.forEach((_, index) => recordChunkExposure(userId, unit.id, prepared.keys, index)); recordSentenceExposure(userId, unit.id, prepared.keys); }
       save({ input: response, feedback: 'correct', previousAttemptId: undefined });
     } else {
@@ -122,7 +141,8 @@ function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncS
   const exactKey = word.en === 'KEY' && word.bridge === 'KIWI' && word.scene === 'Un KIWI se traga tu LLAVE y huye rodando.';
   const causal = !rejected.includes(word.en) && (exactKey || causalDiscoveryPresentation(word)?.kind === 'phone-fondo');
   const showResult = state.feedback === 'correct' || model;
-  const advanceLabel = ['Y ahora, el móvil', 'Cómo pedir ayuda', 'Añade lo que haces', 'Añade lo que buscas', 'Entiende el mensaje', 'Construye tu mensaje', 'Cambia lo que buscas', 'Entra en Arcade', 'Repara un mensaje', 'El oído decide', 'Úsalo sin piezas'][state.stage] ?? 'Sigue la historia';
+  const advanceLabel = stage === 'key' ? 'Y ahora, el móvil' : stage === 'phone' || teaching ? teaching && stage === 'object' ? 'Entiende el mensaje' : 'Cómo pedir ayuda' : stage === 'meaning' ? 'Construye tu mensaje' : 'Habla con Nora';
+  const flowIndex = keysSituationFlow.findIndex((item) => item === stage);
   const pairRounds = prepared.words.map((word) => ({ unit, word, phrase: { en: prepared.keys.en, es: prepared.keys.es, key: '' }, options: [], due: false }));
   const pairClosed: Record<string, 'correct' | 'model'> = {};
   if (stage === 'pairs' && !inspection) for (const event of readLearningActivities(userId)) {
@@ -131,9 +151,9 @@ function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncS
   }
   const pairHelped = Object.values(pairClosed).includes('model');
   return <main className="game-screen play-flow situation-experience" data-play-tone={['pairs', 'repair', 'sound'].includes(stage) ? 'arcade' : teaching ? 'grammar' : stage === 'build' || stage === 'change' ? 'build' : 'associate'}>
-    <PlayHeader title={title} progress={state.stage / (keysSituationStages.length - 1) * 100} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} inspection={inspection} additionalControls={<><button type="button" onClick={restart}>Reiniciar solo esta historia</button><small>Conserva tus palabras, intentos y recorrido anterior.</small></>} position="HISTORIA · ANTES DE SALIR" />
+    <PlayHeader title={title} progress={(flowIndex < 0 ? 4 : flowIndex) / (keysSituationFlow.length - 1) * 100} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} inspection={inspection} additionalControls={<><button type="button" aria-pressed={calm} onClick={() => { const value = !calm; setCalm(value); if (!inspection) writeArcadeCalm(userId, value); }}>Modo tranquilo</button><button type="button" onClick={restart}>Reiniciar solo esta historia</button><small>Conserva tus palabras, intentos y recorrido anterior.</small></>} position="HISTORIA · ANTES DE SALIR" />
     <section className="game-stage">
-    {stage === 'use' ? <ConversationPractice vertical unit={prepared.conversation} userId={userId} reviewMode={inspection} renderScene={(turn) => <KeysSituationScene object={turn.expected.en.includes("phone") ? "phone" : "keys"} />} checkpointScope={`${keysSituationId}:${run}`} skillId={keysSituationSkill} onWrittenResponse={(turn, correct, helped) => { if (!correct || !helped) { const sentence = turn.expected.en.includes('phone') ? prepared.phone : prepared.keys; recordSentenceRecall(userId, sentenceKey(unit.id, sentence), correct ? 'hesitant' : 'missed'); } }} onContinue={finish} /> : <GameCard key={`${run}:${stage}`} vertical stepKey={`${run}:${stage}`} feedback={state.feedback === 'correct' ? 'correct' : model ? 'model' : state.feedback === 'help' ? 'retry' : undefined} onAdvance={ready ? advance : undefined} advanceLabel={advanceLabel}>
+    {stage === 'use' ? <ConversationPractice vertical unit={prepared.conversation} userId={userId} reviewMode={inspection} renderScene={(turn) => <KeysSituationScene object={turn.expected.en.includes("phone") ? "phone" : "keys"} />} checkpointScope={`${keysSituationId}:${run}`} skillId={keysSituationSkill} onWrittenResponse={(turn, correct, helped) => { if (!inspection && (!correct || !helped)) { const phone = turn.expected.en.includes('phone'); const sentence = phone ? prepared.phone : prepared.keys; recordSentenceRecall(userId, sentenceKey(unit.id, sentence), correct ? 'hesitant' : 'missed'); recordWordRecall(userId, prepared.words[phone ? 1 : 0], correct ? 'hesitant' : 'missed', new Date(), 'recall', correct ? undefined : 'meaning', helped); } }} onContinue={finish} /> : <GameCard key={`${run}:${stage}`} vertical stepKey={`${run}:${stage}`} feedback={state.feedback === 'correct' ? 'correct' : model ? 'model' : state.feedback === 'help' ? 'retry' : undefined} onAdvance={ready ? advance : undefined} advanceLabel={advanceLabel}>
       <div className="situation-episode-content">
         {discovered ? <>
           <p className="eyebrow">{stage === 'key' ? 'NO SALIMOS SIN LAS LLAVES' : 'Y TAMBIÉN NECESITAS EL MÓVIL'}</p>
@@ -155,9 +175,9 @@ function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncS
               save({ reflection: { draft: response, compared: true } });
             }} /> : null}
           </> : null}
-          {teaching ? <><p className="eyebrow">{stage === 'who' ? 'QUIÉN + CÓMO ESTÁ' : stage === 'action' ? 'LA ACCIÓN VIAJA EN UN BLOQUE' : 'EL OBJETO QUE NECESITAS'}</p><GrammarComparison connectPieces interactive step={prepared.teaching[teachingIndex]} previous={prepared.teaching[teachingIndex - 1]} /><p className="situation-trick">{prepared.teaching[teachingIndex].caption}</p><SpeechModelButton key={stage} text={prepared.teaching[teachingIndex].en.map((part) => part.text).join('')} idleLabel="Escuchar el mensaje" /></> : null}
+          {teaching ? <><p className="eyebrow">{stage === 'object' ? 'UN MENSAJE · TRES BLOQUES' : 'TU MENSAJE'}</p><GrammarComparison connectPieces step={stage === 'object' ? prepared.messageTeaching : prepared.teaching[teachingIndex]} /><p className="situation-trick">{stage === 'object' ? prepared.messageTeaching.caption : prepared.teaching[teachingIndex].caption}</p>{stage === 'object' ? <p className="situation-object-bridge"><span lang="en">MY PHONE</span> · mi móvil</p> : null}<SpeechModelButton key={stage} text={prepared.teaching[teachingIndex].en.map((part) => part.text).join('')} idleLabel="Escuchar el mensaje" />{stage === 'object' ? <details className="situation-inline-help"><summary>Desmontar el truco</summary>{prepared.teaching.map((step, index) => <div key={index}><GrammarRow parts={step.en} language="en" /><p>{step.caption}</p></div>)}</details> : null}</> : null}
           {stage === 'meaning' ? <><p className="eyebrow">NORA TE ENVÍA ESTE MENSAJE</p><h1>¿Qué necesita encontrar?</h1><SceneDelivery message={prepared.keys.en} selected={state.input} feedback={state.feedback} disabled={showResult} presentationKey={keysSituationId} onAnswer={(value) => answer(value, 'Sus llaves', 'grammar')} listenControl={<SpeechModelButton text={prepared.keys.en} idleLabel="Escuchar" />} options={[{ choice: 'Sus llaves', label: 'Sus llaves', visual: <span aria-hidden="true">🔑</span> }, { choice: 'Su móvil', label: 'Su móvil', visual: <span aria-hidden="true">📱</span> }]} instruction="Toca lo que está buscando." /></> : null}
-          {stage === 'build' ? <><p className="eyebrow">NORA PUEDE AYUDARTE</p><h1>Estoy buscando mis llaves.</h1>{model ? <GrammarRow parts={prepared.teaching[2].en} language="en" /> : <GrammarOrder puzzle autoCheck pieces={prepared.pieces} selected={state.order ?? []} locked={state.feedback === 'correct'} onChange={(order) => save({ order })} onAnswer={(value) => answer(value, prepared.keys.en, 'construction')} />}<details className="situation-inline-help" onToggle={(event) => { if (event.currentTarget.open) { save({ helped: true }); record({ source: 'authored', activityId: `${keysSituationId}:build:help`, response: prepared.keys.en, correct: null }); } }}><summary>Cómo se construye</summary><GrammarRow parts={prepared.teaching[2].es} language="es" /><GrammarRow parts={prepared.teaching[2].en} language="en" /><p>Conserva LOOKING FOR junto: aquí significa «buscando».</p><SpeechModelButton text={prepared.keys.en} /></details></> : null}
+          {stage === 'build' ? <><p className="eyebrow">NORA PUEDE AYUDARTE</p><h1>Estoy buscando mis llaves.</h1>{model ? <GrammarRow parts={prepared.messageTeaching.en} language="en" /> : <GrammarOrder puzzle autoCheck pieces={state.situationLayout === 'message-chunks-v1' ? prepared.messagePieces : prepared.pieces} selected={state.order ?? []} locked={state.feedback === 'correct'} onChange={(order) => save({ order })} onAnswer={(value) => answer(value, prepared.keys.en, 'construction')} />}<details className="situation-inline-help" onToggle={(event) => { if (event.currentTarget.open) { save({ helped: true }); record({ source: 'authored', activityId: `${keysSituationId}:build:help`, response: prepared.keys.en, correct: null }); } }}><summary>Cómo se construye</summary><GrammarRow parts={prepared.messageTeaching.es} language="es" /><GrammarRow parts={prepared.messageTeaching.en} language="en" /><p>Conserva LOOKING FOR junto: aquí significa «buscando».</p><SpeechModelButton text={prepared.keys.en} /></details></> : null}
           {stage === 'change' ? <><p className="eyebrow">MISMA ESTRUCTURA · OTRO OBJETO</p><h1>Ahora buscas tu móvil.</h1><p className="situation-scaffold" lang="en">I am looking for my <strong>{showResult ? 'phone' : '…'}</strong></p><div className="situation-object-choices">{['KEYS', 'PHONE'].map((value) => <button key={value} type="button" disabled={showResult} onClick={() => { const accepted = answer(value, 'PHONE', 'transfer'); if (accepted && value === 'PHONE' && !inspection) recordSentenceExposure(userId, unit.id, prepared.phone); }}>{value === 'KEYS' ? '🔑 ' : '📱 '}{value}</button>)}</div><p className="situation-trick">MY no cambia: mis llaves → MY KEYS; mi móvil → MY PHONE.</p>{showResult ? <SpeechModelButton text={prepared.phone.en} idleLabel="Escuchar tu nuevo mensaje" /> : null}</> : null}
           {stage === 'pairs' ? <ArcadePairs rounds={pairRounds} seed={0} paused={showResult} initialClosed={pairClosed} onPair={(target, chosen, correct) => {
             record({ activityId: eventId(`pairs:${target.word.en}`), skill: target.word.en, phase: 'arcade', prompt: target.word.en, response: chosen.word.es, expected: target.word.es, correct, helped: true });

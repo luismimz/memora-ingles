@@ -49,7 +49,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const initialConstructionCheck = useRef(checkpoint ? checkpoint.checkId
     ? lesson.checks.find((check) => check.id === checkpoint.checkId)
     : !generatedContinuous ? grammarChecksForExperience(lesson, conversationAnswers)[checkpoint.checkIndex] : undefined : undefined);
-  const checks = grammarChecksForExperience(lesson, conversationAnswers, constructionAnswers, initialConstructionCheck.current?.ordering ? initialConstructionCheck.current.id : undefined).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain'));
+  const checks = grammarChecksForExperience(lesson, conversationAnswers, constructionAnswers, initialConstructionCheck.current?.ordering ? initialConstructionCheck.current.id : undefined).filter((check) => !(omitGeneratedExplanation && generatedContinuous && check.id === 'explain') && (!check.repair || initialConstructionCheck.current?.id === check.id));
   const teachingStage = !explanationOnly && checkpoint && checkpoint.stage <= lesson.steps.length ? checkpoint.stage : undefined;
   // Filtering earlier questions must not discard an identified unfinished response.
   const savedCheckIndex = checkpoint?.checkId !== undefined ? checks.findIndex((check) => check.id === checkpoint.checkId) : checkpoint?.checkIndex ?? -1;

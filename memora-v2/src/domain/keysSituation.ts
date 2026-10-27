@@ -11,6 +11,12 @@ export const keysSituationId = 'situation:before-leaving-v1';
 export const keysSituationSkill = 'looking-for:objects-in-context-v1';
 export const keysSituationStages = ['key', 'phone', 'who', 'action', 'object', 'meaning', 'build', 'change', 'pairs', 'repair', 'sound', 'use'] as const;
 export type KeysSituationStage = typeof keysSituationStages[number];
+/** Historical IDs stay readable. Games are no longer compulsory laps around two words. */
+export const keysSituationFlow = ['key', 'phone', 'object', 'meaning', 'build', 'use'] as const;
+export function nextKeysSituationStage(stage: KeysSituationStage): KeysSituationStage | undefined {
+  if (stage === 'use') return undefined;
+  return ({ key: 'phone', phone: 'object', who: 'object', action: 'object', object: 'meaning', meaning: 'build', build: 'use', change: 'use', pairs: 'use', repair: 'use', sound: 'use' } as const)[stage];
+}
 /** Reuse only the subject actually produced; this does not prove another verb,
  * contraction, general ING rule, spoken skill or long-term retention. */
 export function hasPreparedSituationSubject(activities: readonly LearningActivity[]): boolean {
@@ -43,7 +49,7 @@ export function situationInProgress(userId: string, unitId: string, version: str
 export function resumeKeysSituation(saved: TrickCheckpoint | null): TrickCheckpoint | null {
   if (!saved?.checkId) return null;
   const stage = keysSituationStages.findIndex((id) => id === saved.checkId);
-  if (stage < 0 || saved.order?.some((id) => id > 4) || saved.checkId === 'repair' && (saved.order?.length ?? 0) > 1) return null;
+  if (stage < 0 || saved.order?.some((id) => id > (saved.checkId === 'build' && saved.situationLayout === 'message-chunks-v1' ? 2 : 4)) || saved.checkId === 'repair' && (saved.order?.length ?? 0) > 1) return null;
   return { ...saved, stage };
 }
 /** Existing SRS dates for these taught messages only, not another schedule. */
@@ -74,5 +80,10 @@ export function prepareKeysSituation(source: AtomicUnit) {
     ], transfer: { role: 'B', en: keys.en, es: keys.es, acceptedAnswers: [keys.en, "I'm looking for my keys."] }, transferContext: 'El móvil ya está. Ahora dile a Nora que buscas tus llaves.', reply: { en: 'I will help you.', es: '¡Ahora sé qué buscar contigo!' }, rhythmTip: 'Imita el ritmo si te apetece. No necesitas micrófono para seguir.' },
   } };
   const repair = { target: keys.es, solution: keys.en, pieces: [piece('I', 'subject'), piece('am', 'auxiliary'), piece('looking', 'verb'), piece('my keys', 'context')], choices: [piece('AM', 'auxiliary'), piece('MY', 'context'), piece('FOR', 'verb')], joined: { before: 'I am ', first: 'looking', inserted: 'for', after: ' my keys.' }, insight: 'FOR completa LOOKING FOR: «buscando» en este mensaje.' };
-  return { words: preparedWords, teaching, keys, phone, conversation, repair, pieces: [piece('MY'), piece('KEYS'), piece('LOOKING FOR', 'verb'), piece('I', 'subject'), piece('AM', 'auxiliary')], modelOrder: [3, 4, 2, 0, 1] };
+  const messageTeaching: LessonStep = {
+    es: [piece('Yo estoy ', 'auxiliary'), piece('buscando ', 'verb'), piece('mis llaves', 'context')],
+    en: [piece('I am ', 'auxiliary'), piece('looking for ', 'verb'), piece('my keys', 'context')],
+    caption: 'LOOKING FOR significa «buscando» aquí. Conserva las dos palabras juntas.',
+  };
+  return { words: preparedWords, teaching, messageTeaching, messagePieces: [piece('MY KEYS', 'context'), piece('LOOKING FOR', 'verb'), piece('I AM', 'auxiliary')], keys, phone, conversation, repair, pieces: [piece('MY'), piece('KEYS'), piece('LOOKING FOR', 'verb'), piece('I', 'subject'), piece('AM', 'auxiliary')], modelOrder: [3, 4, 2, 0, 1] };
 }

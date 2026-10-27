@@ -31,11 +31,6 @@ async function advance() {
   const region = tree.root.findByProps({ role: 'region' }); const target = { closest: () => null }; const currentTarget = { scrollTop: 100, scrollHeight: 700, clientHeight: 600 };
   await act(async () => { region.props.onTouchStart({ target, currentTarget, touches: [{ clientY: 350 }] }); region.props.onTouchMove({ target, currentTarget, touches: [{ clientY: 250 }] }); vi.advanceTimersByTime(230); });
 }
-async function solveDetective() {
-  await act(async () => tree.root.findByType(MessageRepair).props.onPosition(1));
-  await act(async () => button('AM').props.onClick());
-  await advance();
-}
 beforeEach(() => {
   vi.useFakeTimers(); finished.mockClear(); vi.mocked(playEnglish).mockClear();
   const values = new Map<string, string>();
@@ -66,7 +61,7 @@ it('enseña el bloque, distingue el aparato, retoma piezas y avisa una sola vez 
   await act(async () => button('Está jugando en su ordenador.').props.onClick());
   expect(learner()).toMatchObject([{ id: error.id, correct: false }, { correct: true, parentAttemptId: error.id, helped: true }]);
   await advance();
-  await solveDetective();
+  expect(tree.root.findAllByType(MessageRepair)).toHaveLength(0);
   for (const part of ['I', 'AM']) await act(async () => button(part).props.onClick());
   act(() => tree.unmount()); await mount();
   expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([2, 3]);
@@ -91,8 +86,8 @@ it('un episodio corto guardado sigue corto, aunque ahora COMPUTER esté preparad
   expect(learner()).toHaveLength(0);
 });
 it('Detective del ordenador conserva sitio, error y demora al reanudar; dos errores muestran modelo sin crédito de escritura', async () => {
-  await mount(); for (let index = 0; index < 6; index++) await advance();
-  await act(async () => button('Está jugando en su ordenador.').props.onClick()); await advance();
+  writeTrickCheckpoint(user, stop.id, source.contentVersion ?? '1', { stage: 6, checkIndex: 1, checkId: 'computer-repair-am-v1', input: '', feedback: 'idle', helped: false, episodeId: computerPlayingIdentity, promptStartedAt: new Date().toISOString() });
+  await mount();
   expect(tree.root.findAllByType(MessageRepair)).toHaveLength(1);
   const oldCount = learner().length;
   await act(async () => tree.root.findByType(MessageRepair).props.onPosition(0));
@@ -117,7 +112,7 @@ it('Detective del ordenador conserva sitio, error y demora al reanudar; dos erro
 it('la reparación del puzle termina en modelo de cuatro bloques sin fabricar acierto', async () => {
   await mount(); for (let i = 0; i < 6; i++) await advance();
   await act(async () => button('Está jugando en su ordenador.').props.onClick()); await advance();
-  await solveDetective();
+  expect(tree.root.findAllByType(MessageRepair)).toHaveLength(0);
   await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('I playing am on my computer'));
   await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('computer my on I am playing'));
   act(() => tree.unmount()); await mount();

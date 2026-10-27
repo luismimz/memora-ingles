@@ -1,5 +1,19 @@
 # Acciones docentes y orientación dentro de la actividad
 
+## Retirar las vueltas obligatorias · 27/10/2026
+
+La prueba humana rechaza el resultado anterior: demasiado repetitivo, aburrido y estancado. Esta decisión sustituye la ampliación por más ejercicios obligatorios sobre el mismo mensaje; no se presenta el Detective anterior como solución global ni las pruebas como aprobación del diseño.
+
+La historia inicial reduce doce etapas a seis: asociación KEY → asociación PHONE → mensaje completo en tres bloques espejo → comprender → montar → conversar. Las asociaciones ya practicadas en el mismo sentido/versión no se presentan de nuevo; fallar o cambiar el sentido no permite omitirlas. El modelo enseña I AM / LOOKING FOR / MY KEYS en una sola vista, con conexión bidireccional y MY PHONE/mi móvil explícito antes de transferir. Los detalles de I, AM, MY y plural siguen consultables, sin tres pantallas de explicación obligatorias. El montaje nuevo conserva esos mismos tres chunks. Los montajes anteriores de cinco piezas siguen con sus índices, sin perder un intento o una selección por actualizar.
+
+Cambio de objeto, parejas, Detective y escucha de las mismas dos palabras dejan de ser peajes del camino nuevo. Un ejercicio antiguo empezado se conserva hasta su resolución/modelo, pero después va al uso y no a otra cadena de juegos. En el coach del ordenador también se retira la reparación obligatoria; una reparación guardada puede terminarse sin desaparecer. No se borran las modalidades de Arcade existentes ni su preferencia tranquila; esto no añade una nueva sorpresa o variedad al resto del curso.
+
+Tras acertar comprensión o montaje se muestra el resultado y avanza a los1200ms. No avanza por tiempo al enseñar, escribir, fallar o ver un modelo. Si se pidió ayuda o está activo el modo tranquilo, se conserva el avance manual/scroll. Salir/reiniciar cancela temporizadores y no duplica el siguiente paso. Modo tranquilo accesible en menú de historia, con preferencia existente persistente. La navegación no resuelve la tarea siguiente ni registra completados.
+
+El reconocimiento real de KEY y el uso escrito de cada objeto alimentan la memoria existente con su modalidad/ayuda; no se compensan juegos retirados inventando aciertos. Inspección no modifica memoria. Se conservan las dos respuestas contextuales de la conversación (móvil y llaves) y el SRS; no prueba habla espontánea o retención diferida.
+
+Verificación:48pruebas enfocadas,989/163 de integración y build TypeScript/Vite correctos. Se corrigió un estrechamiento TypeScript al seleccionar la primera etapa, sin ocultar el fallo. Aviso de chunk principal>500kB permanece. Sin partida móvil, nueva inspección visual o aprobación humana de diversión; controles previamente cerrados no se reintentan. Esta entrega cambia el recorrido inicial y la obligación de reparación en coach, no reconstruye de golpe todas las escenas o el curso de30d. Publicación real en checkpoint único.
+
 ## Segunda estructura y continuidad preparada · 27/10/2026
 
 Detective llega al aviso del ordenador: tras enseñar I AM / PLAYING / ON MY COMPUTER y comprobar el significado, reparar «I playing on my computer» colocando AM. Después se monta el mensaje y se usa en la conversación existente, sin duplicar la escritura. La elección sigue siendo asistida: no acredita producción independiente. Se guardan sitio, primer error, respuesta completa, vínculo y demora real; dos fallos llevan al modelo neutral. Recargar conserva el sitio y el reto. No se narra el borrador incorrecto.

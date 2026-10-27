@@ -1,12 +1,21 @@
 import { expect, it, vi } from 'vitest';
 import keys from '../../content/keys-mission.json';
 import { validateUnit } from './unit';
-import { computerSituationSource, hasPreparedSituationSubject, keysSituationSkill, keysSituationSource, keysSituationStages, prepareKeysSituation, resumeKeysSituation, situationReviewDue } from './keysSituation';
+import { computerSituationSource, hasPreparedSituationSubject, keysSituationFlow, nextKeysSituationStage, keysSituationSkill, keysSituationSource, keysSituationStages, prepareKeysSituation, resumeKeysSituation, situationReviewDue } from './keysSituation';
 import { recordSentenceExposure, recordSentenceRecall, sentenceKey } from './memory';
 import type { LearningActivity } from './learningActivity';
 import { conversationTurns } from './conversation';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 const unit = validateUnit(keys);
+it('el camino nuevo contiene seis pantallas y sale de juegos antiguos sin encadenar más peajes', () => {
+  const actual: string[] = ['key'];
+  while (actual.at(-1) !== 'use') actual.push(nextKeysSituationStage(actual.at(-1) as typeof keysSituationStages[number])!);
+  expect(actual).toEqual(keysSituationFlow);
+  for (const stage of ['change', 'pairs', 'repair', 'sound'] as const) expect(nextKeysSituationStage(stage)).toBe('use');
+  expect(nextKeysSituationStage('use')).toBeUndefined();
+  const data = prepareKeysSituation(unit)!;
+  expect([2, 1, 0].map((index) => data.messagePieces[index].text).join(' ').toLowerCase()).toBe(normalizeSentenceAnswer(data.keys.en));
+});
 it('inserta Detective sin mover una escucha o conversación empezada a otro reto', () => {
   const base = { checkIndex: 0, input: 'borrador', feedback: 'idle' as const, helped: false };
   expect(resumeKeysSituation({ ...base, stage: 9, checkId: 'sound' })).toMatchObject({ stage: keysSituationStages.indexOf('sound'), checkId: 'sound', input: 'borrador' });

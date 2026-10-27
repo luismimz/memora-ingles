@@ -4,7 +4,7 @@ import keys from '../../content/keys-mission.json';
 import { validateUnit } from '../domain/unit';
 import { keysSituationId, keysSituationStages, prepareKeysSituation } from '../domain/keysSituation';
 import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
-import { readWordMemories, readSentenceMemories, recordSentenceExposure } from '../domain/memory';
+import { readWordMemories, readSentenceMemories, recordSentenceExposure, recordWordRecall } from '../domain/memory';
 import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
 import { KeysSituationExperience } from './KeysSituationExperience';
 import { GrammarOrder } from './GrammarOrder';
@@ -36,11 +36,15 @@ beforeEach(() => {
   vi.stubGlobal('window', { setTimeout, clearTimeout, setInterval, clearInterval, dispatchEvent: vi.fn(), matchMedia: () => ({ matches: true }), getSelection: () => null });
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
-it('desde cero enseña antes de pedir, conserva los bloques y cambia el objeto sin otra lección', async () => {
+it('desde cero llega al uso en seis pantallas: modelo completo, significado y montaje, sin vueltas obligatorias de Arcade', async () => {
   await mount();
   expect(text(tree.toJSON())).toContain('NO SALIMOS SIN LAS LLAVES');
   expect(tree.root.findAllByType('input')).toHaveLength(0);
-  for (let index = 0; index < 5; index++) await advance();
+  await advance(); expect(checkpoint().checkId).toBe('phone');
+  await advance(); expect(checkpoint().checkId).toBe('object');
+  expect(text(tree.toJSON())).toContain('UN MENSAJE · TRES BLOQUES');
+  expect(text(tree.toJSON())).toContain('MY PHONE');
+  await advance();
   expect(checkpoint().stage).toBe(5);
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toEqual([]);
   expect(readWordMemories(user)).toEqual([]);
@@ -48,15 +52,60 @@ it('desde cero enseña antes de pedir, conserva los bloques y cambia el objeto s
   expect(readLearningActivities(user)).toMatchObject([{ correct: true, helped: true }]);
   await advance();
   const order = tree.root.findByType(GrammarOrder);
-  await act(async () => order.props.onChange([3,4,2]));
+  expect(order.props.pieces.map((piece: { text: string }) => piece.text)).toEqual(['MY KEYS', 'LOOKING FOR', 'I AM']);
+  await act(async () => order.props.onChange([2,1]));
   act(() => tree.unmount()); await mount();
-  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([3,4,2]);
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([2,1]);
   await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer(prepared.keys.en));
   await advance();
-  expect(text(tree.toJSON())).toContain('Ahora buscas tu móvil.');
-  await act(async () => button('📱 PHONE').props.onClick());
-  expect(readLearningActivities(user).filter((event) => event.phase === 'transfer')).toMatchObject([{ response: 'PHONE', correct: true, helped: true }]);
+  expect(checkpoint().checkId).toBe('use');
+  expect(tree.root.findAllByType(ConversationPractice)).toHaveLength(1);
+  expect(readLearningActivities(user).some((event) => event.phase === 'arcade' || event.phase === 'transfer')).toBe(false);
   expect(next).not.toHaveBeenCalled();
+});
+it('una palabra ya practicada no vuelve a presentarse ni acredita nuevos aciertos al saltar su modelo', async () => {
+  recordWordRecall(user, prepared.words[0], 'hesitant', new Date(), 'recognition', undefined, true);
+  await mount(); expect(checkpoint().checkId).toBe('phone');
+  act(() => tree.unmount());
+  recordWordRecall(user, prepared.words[1], 'hesitant', new Date(), 'recognition', undefined, true);
+  writeTrickCheckpoint(user, keysSituationId, version, { ...checkpoint(), episodeId: 'closed' });
+  recordLearningActivity(user, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion!, activityId: `${keysSituationId}:completed:closed`, skill: 'test', phase: 'completion', source: 'learner', modality: 'choice', prompt: '', response: '', expected: '', correct: null, helped: false });
+  await mount(); expect(checkpoint().checkId).toBe('object');
+  expect(readLearningActivities(user).filter((event) => event.correct === true)).toHaveLength(0);
+});
+it('un fallo o un sentido distinto no permite saltar la presentación', async () => {
+  recordWordRecall(user, prepared.words[0], 'missed');
+  recordWordRecall(user, { ...prepared.words[1], es: 'otro sentido' }, 'hesitant');
+  await mount(); expect(checkpoint().checkId).toBe('key');
+  await advance(); expect(checkpoint().checkId).toBe('phone');
+});
+it('un acierto avanza a los 1200ms sin otro botón, pero no resuelve ni completa la tarea siguiente', async () => {
+  jump(5); await mount();
+  await act(async () => tree.root.findByType(SceneDelivery).props.onAnswer('Sus llaves'));
+  await act(async () => { vi.advanceTimersByTime(1199); });
+  expect(checkpoint().checkId).toBe('meaning');
+  await act(async () => { vi.advanceTimersByTime(1); });
+  expect(checkpoint().checkId).toBe('build');
+  expect(checkpoint().feedback).toBe('idle');
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([]);
+  await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer(prepared.keys.en));
+  await act(async () => { vi.advanceTimersByTime(1200); });
+  expect(checkpoint().checkId).toBe('use');
+  expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(2);
+  expect(readLearningActivities(user).some((event) => event.phase === 'completion' || event.phase === 'arcade')).toBe(false);
+});
+it('modo tranquilo conserva el acierto sin avance automático y una salida cancela el avance pendiente', async () => {
+  jump(5); await mount();
+  await act(async () => button('Modo tranquilo').props.onClick());
+  await act(async () => tree.root.findByType(SceneDelivery).props.onAnswer('Sus llaves'));
+  await act(async () => { vi.advanceTimersByTime(5000); });
+  expect(checkpoint().checkId).toBe('meaning');
+  await act(async () => button('Modo tranquilo').props.onClick());
+  const events = readLearningActivities(user);
+  act(() => tree.unmount());
+  await act(async () => { vi.advanceTimersByTime(5000); });
+  expect(checkpoint().checkId).toBe('meaning');
+  expect(readLearningActivities(user)).toEqual(events);
 });
 it('Arcade conserva cada pareja y sus intentos al recargar; una sola pareja no termina el tablero', async () => {
   jump(8); await mount();
@@ -73,7 +122,7 @@ it('Arcade conserva cada pareja y sus intentos al recargar; una sola pareja no t
   await pair('PHONE', 'móvil');
   expect(checkpoint().feedback).toBe('correct');
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toHaveLength(2);
-  await advance(); expect(checkpoint().stage).toBe(9);
+  await advance(); expect(checkpoint().checkId).toBe('use');
 });
 it('un audio bloqueado no abre una adivinanza: hay alternativa de texto y no consume tiempo', async () => {
   jump(9); await mount();
@@ -112,7 +161,7 @@ it('Detective pide colocar y reparar, guarda el primer error y no acredita escri
   expect(readSentenceMemories(user)).toEqual([]);
   expect(playEnglish).not.toHaveBeenCalled();
   await advance();
-  expect(checkpoint().checkId).toBe('sound');
+  expect(checkpoint().checkId).toBe('use');
 });
 it('Explica-ya conserva borrador y comparación sin evaluar la explicación ni bloquear la historia', async () => {
   jump(keysSituationStages.indexOf('repair'), { checkId: 'repair', feedback: 'correct' }); await mount();
@@ -127,7 +176,7 @@ it('Explica-ya conserva borrador y comparación sin evaluar la explicación ni b
   expect(checkpoint().reflection?.compared).toBe(true);
   act(() => tree.unmount()); await mount();
   expect(explain().props.compared).toBe(true);
-  await advance(); expect(checkpoint().checkId).toBe('sound');
+  await advance(); expect(checkpoint().checkId).toBe('use');
   expect(checkpoint().reflection).toBeUndefined();
 });
 it('dos reparaciones fallidas muestran el modelo, conservan el límite tras recargar y permiten seguir', async () => {
@@ -139,7 +188,7 @@ it('dos reparaciones fallidas muestran el modelo, conservan el límite tras reca
   act(() => tree.unmount()); await mount();
   expect(repair().props.result).toBe('model');
   expect(readLearningActivities(user).some((event) => event.correct === true)).toBe(false);
-  await advance(); expect(checkpoint().checkId).toBe('sound');
+  await advance(); expect(checkpoint().checkId).toBe('use');
 });
 it('las parejas restauradas conservan el modelo real aunque el checkpoint haya perdido su marca de ayuda', async () => {
   jump(8); await mount();
@@ -179,7 +228,7 @@ it('acota reparación, conserva demora real y primer error al recargar, sin acie
   expect(readLearningActivities(user)[1].parentAttemptId).toBe(first.id);
   expect(checkpoint().checkFailures).toBe(2);
   expect(readLearningActivities(user).some((event) => event.correct === true)).toBe(false);
-  await advance(); expect(checkpoint().stage).toBe(7);
+  await advance(); expect(checkpoint().checkId).toBe('use');
 });
 it('la conversación retira modelo y piezas, usa móvil y luego llaves, y no completa al abrirla', async () => {
   jump(10); await mount();
