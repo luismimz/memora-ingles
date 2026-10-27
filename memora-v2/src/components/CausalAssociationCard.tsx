@@ -13,12 +13,14 @@ import { BridgeSoundNote } from './BridgeSoundNote';
 import { AssociationAudioStatus } from './AssociationAudioStatus';
 import { useSpeechPlayback } from './useSpeechPlayback';
 import { stopSpeech } from '../services/audio';
+import { recordWordDemonstration } from '../domain/wordDemonstration';
 import './causalDiscovery.css';
 
-export function CausalAssociationCard({ unit, word, userId, index, total, assemblyPosition, onAssemblyProgress, onConnect, onReject }: {
+export function CausalAssociationCard({ unit, word, userId, index, total, assemblyPosition, onAssemblyProgress, onConnect, onReject, rehearseWord = true }: {
   unit: AtomicUnit; word: AtomicWord; userId: string; index: number; total: number;
   assemblyPosition?: WordAssemblyPosition; onAssemblyProgress?: (position: WordAssemblyPosition) => void;
   onConnect: () => void; onReject: () => void;
+  rehearseWord?: boolean;
 }) {
   const [restored] = useState(() => hasCausalDiscovery(userId, unit, word));
   const [active, setActive] = useState(restored);
@@ -40,12 +42,13 @@ export function CausalAssociationCard({ unit, word, userId, index, total, assemb
   }
   function assemble() {
     playback.reset(); stopSpeech();
+    if (!rehearseWord) { recordWordDemonstration(userId, unit, word); onConnect(); return; }
     onAssemblyProgress?.({ selected: [], hinted: false, modelUsed: false, layout: 'letters-v2' }); setAssembling(true);
   }
   if (assembling) return <WordAssembly word={word} userId={userId} vertical sceneAsHelp initialPosition={assemblyPosition} onProgress={onAssemblyProgress} onContinue={onConnect} />;
   if (!presentation) return null;
   const scene = presentation.kind === 'pillow-piloto' ? <CausalPillowScene active={active} replay={replay} /> : presentation.kind === 'phone-fondo' ? <CausalPhoneScene active={active} replay={replay} /> : <CausalDeskScene active={active} replay={replay} />;
-  return <GameCard vertical stepKey={active ? 'causal-result' : 'causal-seed'} className="causal-discovery-card" onAdvance={active ? assemble : discover} advanceLabel={active ? 'Armar con menos ayuda' : 'Descubrir la conexión'}>
+  return <GameCard vertical stepKey={active ? 'causal-result' : 'causal-seed'} className="causal-discovery-card" onAdvance={active ? assemble : discover} advanceLabel={active ? rehearseWord ? 'Armar con menos ayuda' : index + 1 < total ? 'Descubre la siguiente' : 'Recuerda las palabras' : 'Descubrir la conexión'}>
     <div className="causal-discovery">
       <p className="eyebrow">DESCUBRE · {index + 1}/{total}</p>
       <div className={`causal-word-slot${playback.audio?.status === 'playing' ? ' is-speaking' : ''}`}>

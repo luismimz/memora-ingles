@@ -60,9 +60,7 @@ it('enseña solo el modelo nuevo de una escena mixta y después recupera todas s
   await mount();
   expect(readGameCheckpoint(user, unit.id, unit.contentVersion!)).toMatchObject({ phase: 'associate', wordIndex: 1, acquisitionIndexes: [1], correct: 0 });
   await act(async () => tree.root.findByType(GameCard).props.onAdvance());
-  expect(tree.root.findByType(WordAssembly).props.word).toBe(unit.words[1]);
-  // Isolate the navigation callback; the real assembly guard has separate tests.
-  await act(async () => tree.root.findByType(WordAssembly).props.onContinue());
+  expect(tree.root.findAllByType(WordAssembly)).toHaveLength(0);
   expect(readGameCheckpoint(user, unit.id, unit.contentVersion!)).toMatchObject({ phase: 'recall', recallIndex: 0, recallAnswered: false, correct: 0 });
   const recovered: string[] = [];
   for (let index = 0; index < unit.words.length; index++) {
@@ -79,10 +77,11 @@ it('congela la enseñanza al iniciar y restaura las piezas, sin recalcular por p
   recordWordRecall(user, unit.words[0], 'hesitant', new Date(), 'recognition', undefined, true);
   await mount();
   expect(readGameCheckpoint(user, unit.id, unit.contentVersion!)).toMatchObject({ wordIndex: 1, acquisitionIndexes: [1, 2] });
-  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
   const position = { selected: [], hinted: true, modelUsed: true, layout: 'letters-v2' as const };
-  await act(async () => tree.root.findByType(WordAssembly).props.onProgress(position));
+  const originalPlan = readGameCheckpoint(user, unit.id, unit.contentVersion!)!;
   act(() => tree.unmount());
+  // A rehearsal begun on the previous version is not removed by the new flow.
+  writeGameCheckpoint(user, unit.id, unit.contentVersion!, { ...originalPlan, wordAssembly: position });
   // A successful practice elsewhere must not replace an already-started plan.
   for (const index of [1, 2]) recordWordRecall(user, unit.words[index], 'hesitant', new Date(), 'recognition', undefined, true);
   await mount();
@@ -117,6 +116,8 @@ it('la práctica explícita de palabras mantiene su montaje aunque haya vocabula
   expect(canReuseSceneVocabulary({ ...unit, communication: undefined }, readWordMemories(user))).toBe(false);
   await mount('vocabulary');
   expect(readGameCheckpoint(user, `${unit.id}:vocabulary`, unit.contentVersion!)?.phase).toBe('associate');
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  expect(tree.root.findAllByType(WordAssembly)).toHaveLength(1);
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toEqual([]);
 });
 it('el repaso no sustituye un montaje guardado ni omite un significado o historia nuevos', async () => {

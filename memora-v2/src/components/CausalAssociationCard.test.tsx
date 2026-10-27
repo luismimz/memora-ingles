@@ -30,6 +30,16 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
 async function mount() { await act(async () => { tree = create(<CausalAssociationCard unit={previewUnit} word={word} userId={user} index={2} total={3} onConnect={connect} onAssemblyProgress={progress} onReject={reject} />); }); }
+it('en aventura la asociación lleva a recuperar y usar, sin copiar la palabra recién revelada', async () => {
+  await act(async () => { tree = create(<CausalAssociationCard rehearseWord={false} unit={previewUnit} word={word} userId={user} index={2} total={3} onConnect={connect} onAssemblyProgress={progress} onReject={reject} />); });
+  await act(async () => tree.root.findByProps({ 'aria-label': 'Tocar el disco' }).props.onClick());
+  await act(async () => tree.root.findByType(GameCard).props.onAdvance());
+  expect(connect).toHaveBeenCalledOnce();
+  expect(progress).not.toHaveBeenCalled();
+  expect(tree.root.findAllByType(WordAssembly)).toHaveLength(0);
+  expect(readLearningActivities(user).every((event) => event.correct === null)).toBe(true);
+  expect(readWordMemories(user)).toEqual([]);
+});
 it('provocar descubre, no aprueba: modelo inglés inicial, transformación y registro neutral único', async () => {
   await mount();
   expect(playEnglish).toHaveBeenCalledWith(word.en, word.audioUrl, true, expect.any(Function));

@@ -77,8 +77,9 @@ export function JourneyHome(props: Props) {
   const missionLabel = featured?.routeTrick ? trickCheckpoint?.continuation?.phase === 'build' ? 'Monta tu mensaje' : trickCheckpoint?.continuation?.phase === 'conversation' ? 'Responde al personaje' : 'Descubre cómo decirlo' : resume ? gameCheckpoint ? gameCheckpoint.wordAssembly ? 'Retoma tu palabra' : gameCheckpoint.phase === 'recall' && gameCheckpoint.recognitionStyle === 'scene-delivery-v1' ? 'Lleva la palabra a su escena' : activityLabels[gameCheckpoint.phase] ?? 'Retoma esta práctica' : mirrorStageLabels[mirrorCheckpoint?.stage ?? 0] ?? 'Continúa esta actividad'
     : featured && completedIds.has(featured.id) ? 'Vuelve a practicar' : featuredPresentation?.pack ? 'Conecta y recuerda estas palabras' : 'Descubre esta historia';
 
-  const methodSteps = featured?.routeTrick ? ['Descubre', 'Monta', 'Conversa'] : ['Descubre', 'Arma', 'Recuerda'];
-  const methodStep = featured?.routeTrick ? trickCheckpoint?.continuation?.phase === 'conversation' ? 2 : trickCheckpoint?.continuation?.phase === 'build' ? 1 : 0 : gameCheckpoint?.phase === 'recall' ? 2 : gameCheckpoint?.wordAssembly ? 1 : 0;
+  const sceneWordFlow = resumeLearningMode === 'adventure' && featured && journeyEntryMode(featured) === 'adventure' && !gameCheckpoint?.wordAssembly;
+  const methodSteps = featured?.routeTrick ? ['Descubre', 'Monta', 'Conversa'] : sceneWordFlow ? ['Descubre', 'Recuerda', 'Usa'] : ['Descubre', 'Arma', 'Recuerda'];
+  const methodStep = featured?.routeTrick ? trickCheckpoint?.continuation?.phase === 'conversation' ? 2 : trickCheckpoint?.continuation?.phase === 'build' ? 1 : 0 : sceneWordFlow ? gameCheckpoint?.phase === 'recall' ? 1 : gameCheckpoint && ['reward', 'grammar', 'build', 'conversation'].includes(gameCheckpoint.phase) ? 2 : 0 : gameCheckpoint?.phase === 'recall' ? 2 : gameCheckpoint?.wordAssembly ? 1 : 0;
 
   // The default invitation is communication, not an endless vocabulary detour.
   // Keep an active message and every saved word checkpoint intact.

@@ -41,4 +41,10 @@ describe('cognados con la presentación visual original', () => {
     expect(html).toContain('is-shared'); expect(html).toContain('is-different');
     expect(html.indexOf('scene-visual')).toBeGreaterThan(html.indexOf('<details'));
   });
+  it('el cognado de una escena enseña el inglés y propone recuperación, no copiarlo en letras', () => {
+    const html = renderToStaticMarkup(<CognateAssociationCard vertical rehearseWord={false} word={adult} index={2} total={3} onConnect={() => {}} />);
+    expect(html).toContain('aria-label="ADULT"');
+    expect(html).toContain('Recuerda las palabras');
+    expect(html).not.toContain('Armar la palabra');
+  });
 });

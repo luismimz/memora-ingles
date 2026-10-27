@@ -10,11 +10,11 @@ import { CognateConnection } from './CognateConnection';
 import { WordUsageExample } from './WordUsageExample';
 
 /** Same visual card as PLAY; a transparent cognate is not a made-up acoustic bridge. */
-export function CognateAssociationCard({ word, index, total, audioState, onListen, onConnect, vertical = false }: {
-  word: AtomicWord; index: number; total: number; audioState?: AssociationAudioState; onListen?: () => void; onConnect: () => void; vertical?: boolean;
+export function CognateAssociationCard({ word, index, total, audioState, onListen, onConnect, vertical = false, rehearseWord = true }: {
+  word: AtomicWord; index: number; total: number; audioState?: AssociationAudioState; onListen?: () => void; onConnect: () => void; vertical?: boolean; rehearseWord?: boolean;
 }) {
   const visual = wordVisual(word);
-  return <GameCard vertical={vertical} onAdvance={onConnect} advanceControl advanceLabel={vertical ? 'Armar la palabra' : 'Ya la he conectado'} back={vertical ? undefined : <div className="hint-face"><SceneVisual word={visual} showMemoryLink /><p><strong lang="en">{word.en}</strong> → <strong>{word.es}</strong></p><p>Se parecen y comparten este significado.</p></div>}>
+  return <GameCard vertical={vertical} onAdvance={onConnect} advanceControl advanceLabel={vertical ? rehearseWord ? 'Armar la palabra' : index + 1 < total ? 'Descubre la siguiente' : 'Recuerda las palabras' : 'Ya la he conectado'} back={vertical ? undefined : <div className="hint-face"><SceneVisual word={visual} showMemoryLink /><p><strong lang="en">{word.en}</strong> → <strong>{word.es}</strong></p><p>Se parecen y comparten este significado.</p></div>}>
     <div className="association-content cognate-association is-revealed">
       <p className="eyebrow">PALABRA {index + 1}/{total}</p>
       <div className="association-word-top">{vertical ? <h1 className="cognate-discovery-title">Mira lo que ya conoces</h1> : <WordHeading en={word.en} es={word.es.toUpperCase()} />}<button type="button" className="round-audio" aria-busy={audioState?.status === 'preparing'} title={audioState?.status === 'preparing' ? 'Preparando audio…' : audioState?.status === 'playing' ? 'Reproduciendo…' : 'Escuchar'} onClick={onListen ?? (() => void playEnglish(word.en.toLowerCase(), word.audioUrl))} aria-label={`Escuchar ${word.en}`}>🔊</button></div>
