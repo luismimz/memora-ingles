@@ -10,7 +10,8 @@ import { WordAssembly } from './components/WordAssembly';
 import { ActiveRecallCard } from './components/ActiveRecallCard';
 import { initialGame } from './domain/game';
 import { readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
-import { readLearningActivities } from './domain/learningActivity';
+import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
+import { keysSituationSkill } from './domain/keysSituation';
 import { readWordMemories, recordWordRecall } from './domain/memory';
 import { canReuseSceneVocabulary, sceneAcquisitionIndexes } from './domain/learningModes';
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), prefetchSpeech: vi.fn(), prefetchSpanish: vi.fn(), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn() }));
@@ -31,6 +32,15 @@ it('la escena enseña palabras en la misma superficie vertical, sin volver al fl
   expect(tree.root.findAllByProps({ className: 'game-card-swipe ' })).toHaveLength(0);
   expect(readLearningActivities(user).filter((event) => event.source === 'learner')).toEqual([]);
   expect(next).not.toHaveBeenCalled();
+});
+it('la siguiente acción reutiliza I AM producido en la historia, pero mantiene explicación y práctica nuevas', async () => {
+  recordLearningActivity(user, { unitId: 'published-prior', unitTitle: 'Prior scene', contentVersion: 'test', activityId: 'turn-respond', skill: keysSituationSkill, phase: 'dialogue', source: 'learner', modality: 'writing', prompt: 'Estoy buscando mi móvil.', response: 'I am looking for my phone.', expected: 'I am looking for my phone.', correct: true, helped: false });
+  writeGameCheckpoint(user, unit.id, unit.contentVersion!, { ...initialGame, phase: 'grammar' });
+  await mount();
+  expect(tree.root.findByType(GrammarCoach).props.reusePreparedSubject).toBe(true);
+  expect(readGameCheckpoint(user, unit.id, unit.contentVersion!)?.phase).toBe('grammar');
+  expect(readLearningActivities(user)).toHaveLength(1);
+  expect(next).not.toHaveBeenCalled(); expect(finished).not.toHaveBeenCalled();
 });
 it('una escena nueva con vocabulario practicado entra a recuperar, no vuelve a copiarlo ni regala resultados', async () => {
   for (const word of unit.words) recordWordRecall(user, word, 'hesitant', new Date(), 'recognition', undefined, true);

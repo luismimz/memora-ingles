@@ -14,6 +14,8 @@ Reutiliza GameCard, GrammarComparison, GrammarOrder, ArcadePairs, useArcadeClock
 
 Verificación de código y versión enviada/servida en MEMORA-IMPLEMENTACION-01.md. La inspección visual/táctil, voz física y eficacia siguen pendientes por las puertas de control cerradas; no se declara curso30d completo ni superioridad a otras aplicaciones.
 
+Continuidad posterior: I AM solo se reutiliza si existe escritura correcta SIN ayuda en uno de los mensajes de la historia, con respuesta/objetivo coincidentes. Un modelo, elección, oral sin evaluación o cierre no bastan. En la siguiente acción generada se retira solo el arranque español ya preparado, no la acción nueva, su modelo, transformación o práctica. Los episodios autorales conservan sus piezas nuevas y los checkpoints empezados prevalecen. No se atribuye por ello dominio de otras acciones, ING o contracciones. Además, una pareja que se mostró con modelo conserva ese estado al restaurar desde los eventos aunque el checkpoint haya perdido la marca de ayuda. Verificación947/158 y build correctos; pruebas enfocadas de continuidad61/61 antes de añadir la protección de pareja restaurada.
+
 ## Referencia humana y escenario continuo · 27/10/2026
 
 Diez capturas aportadas por el usuario de mem-ora son la referencia visual concreta de esta revisión: vocabulario/historia juntos, un escenario reconocible entre enseñanza y juego, bloques claros, controles grandes y resultado en el mismo lugar. No son aprobación de Memora ni autorización para editar/publicar/copiar el otro proyecto.

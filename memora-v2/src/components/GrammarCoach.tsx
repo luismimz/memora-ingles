@@ -55,7 +55,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const validOrder = !savedPieces || (!checkpoint?.order ? checkpoint?.feedback !== 'correct' : checkpoint.order.every((index) => Number.isInteger(index) && index >= 0 && index < savedPieces.length) && new Set(checkpoint.order).size === checkpoint.order.length && (checkpoint.feedback !== 'correct' || checkpoint.order.length === savedPieces.length));
   const validCheckpoint = teachingStage !== undefined && checkpoint && savedCheckIndex >= 0 && savedCheckIndex < checks.length
     && validOrder && (checkpoint.checkId !== undefined || (checks.length === lesson.checks.length && !generatedContinuous)) ? { ...checkpoint, checkIndex: savedCheckIndex } : null;
-  const [stage, setStage] = useState(explanationOnly ? 0 : teachingStage ?? (reusePreparedSubject && preparedMessage ? 2 : startAtExample && generatedContinuous ? lesson.steps.length - 1 : startAtPractice ? lesson.steps.length : 0));
+  const [stage, setStage] = useState(explanationOnly ? 0 : teachingStage ?? (reusePreparedSubject && preparedMessage ? 2 : reusePreparedSubject && generatedContinuous ? 1 : startAtExample && generatedContinuous ? lesson.steps.length - 1 : startAtPractice ? lesson.steps.length : 0));
   const [paused, setPaused] = useState(false);
   const [checkIndex, setCheckIndex] = useState(validCheckpoint?.checkIndex ?? 0);
   const [input, setInput] = useState(validCheckpoint?.input ?? '');
@@ -81,7 +81,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const contractionLab = Boolean(stream && (generatedContinuous || preparedMessage) && !reusePreparedSubject && !startAtExample && step && stage === lesson.steps.length - 1
     && (step.en[0]?.text.trim().toLowerCase() === "i'm" || step.en[0]?.text.trim().toLowerCase() === 'i' && step.en[1]?.text.trim().toLowerCase() === 'am'));
   const exampleBridge = Boolean(step && startAtExample && generatedContinuous && stage === lesson.steps.length - 1);
-  const caption = exampleBridge ? `Misma estructura, nueva acción: «estoy ${form!.spanish}». Mira y escucha cómo queda antes de montarla.` : step?.caption;
+  const caption = exampleBridge ? `Misma estructura, nueva acción: «estoy ${form!.spanish}». Mira y escucha cómo queda antes de montarla.` : reusePreparedSubject && generatedContinuous && stage === 1 ? `Ya has usado I AM: yo estoy. Ahora escucha «${form!.english}»: «${form!.spanish}».` : step?.caption;
   const transition = step ? grammarTransition(step, lesson.steps[stage - 1]) : undefined;
   const comparisonLab = Boolean(stream && !contractionLab && transition && (transition.changed.length || transition.contraction));
   // For a conversational mission the written answer belongs to its live exchange,

@@ -88,6 +88,22 @@ it('un audio bloqueado no abre una adivinanza: hay alternativa de texto y no con
   expect(readWordMemories(user)[0].capabilities?.auditory?.attempts ?? 0).toBe(0);
   expect(readLearningActivities(user)).toMatchObject([{ correct: true, helped: true }]);
 });
+it('las parejas restauradas conservan el modelo real aunque el checkpoint haya perdido su marca de ayuda', async () => {
+  jump(8); await mount();
+  const english = () => tree.root.findByProps({ 'aria-label': 'Palabras inglesas' }).findAllByType('button');
+  const meanings = () => tree.root.findByProps({ 'aria-label': 'Significados en español' }).findAllByType('button');
+  await act(async () => english()[0].props.onClick());
+  await act(async () => meanings()[0].props.onClick());
+  await act(async () => english()[1].props.onClick());
+  await act(async () => meanings()[0].props.onClick());
+  const events = readLearningActivities(user);
+  const prior = checkpoint();
+  act(() => tree.unmount());
+  writeTrickCheckpoint(user, keysSituationId, version, { ...prior, feedback: 'idle', helped: false, checkFailures: 0 });
+  await mount();
+  expect(checkpoint()).toMatchObject({ feedback: 'help', checkFailures: 2 });
+  expect(readLearningActivities(user)).toEqual(events);
+});
 it('el reloj empieza después del audio; caducar conserva omisión neutral y no cambia memoria', async () => {
   vi.mocked(playEnglish).mockResolvedValue({ status: 'played', source: 'kokoro' });
   jump(9); await mount();

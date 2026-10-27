@@ -36,6 +36,7 @@ import { dogWalkingIdentity, dogWalkingSkill, preparedDogWalkingPractice } from 
 import { treeLocationIdentity, treeLocationSkill, preparedTreeLocationPractice } from '../domain/treeLocationPractice';
 import { meatCookingIdentity, meatCookingSkill, meatCookingLesson, preparedMeatCookingPractice, meatCookingPreparation, type MeatPreparationTarget } from '../domain/meatCookingPractice';
 import './preparationNotice.css';
+import { hasPreparedSituationSubject } from '../domain/keysSituation';
 
 export function JourneyTrickExperience({ unit, stop, preparationSources = [], onPrepare, userId, inspection, onFinished, onNext, onExit, continuous = false, nextLabel = 'Continuar jugando →', syncStatus, appearance, onToggleAppearance }: {
   unit: AtomicUnit; stop: UnitSummary; userId: string; inspection: boolean; onFinished: () => void; onNext: () => void; onExit: () => void;
@@ -79,7 +80,7 @@ export function JourneyTrickExperience({ unit, stop, preparationSources = [], on
   const sceneWord = unit.words.find((word) => word.en.toLowerCase() === form?.englishBase?.toLowerCase()) ?? unit.words[0];
   const practicedPattern = !inspection && form && !form.lesson && (form.visualContract === 'present-continuous' || form.id === 'ing')
     && readGrammarAttempts(userId).some((attempt) => attempt.skill.startsWith('present-continuous:') && attempt.skill !== trick.skill && attempt.kind === 'write' && attempt.correct && !attempt.helped);
-  const reuseSubject = Boolean(authoredPractice && !inspection && readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill, treeLocationSkill, meatCookingSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped));
+  const reuseSubject = Boolean(authoredPractice && !inspection && (hasPreparedSituationSubject(readLearningActivities(userId)) || readGrammarAttempts(userId).some((attempt) => (attempt.skill.startsWith('present-continuous:') || [searchKeysSkill, bedMakingSkill, computerPlayingSkill, deskLocationSkill, dinnerCookingSkill, kitchenLocationSkill, teethBrushingSkill, mirrorLocationSkill, dogWalkingSkill, treeLocationSkill, meatCookingSkill].includes(attempt.skill)) && attempt.kind === 'write' && attempt.correct && !attempt.helped)));
   // An old in-flight coach keeps its identified task/draft, even if an author
   // adds an episode later. Fresh entries opt in only with actual preparation.
   const [shortPractice] = useState(() => authoredPractice?.unit ?? preparedActionPractice(unit, trick.formId, readWordMemories(userId)));

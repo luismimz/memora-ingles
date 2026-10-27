@@ -1,13 +1,22 @@
 import type { AtomicUnit, UnitSentence } from './unit';
 import type { UnitSummary } from '../services/directus';
 import { piece, type LessonStep } from './grammarLesson';
-import { readLearningActivities } from './learningActivity';
+import { readLearningActivities, type LearningActivity } from './learningActivity';
+import { normalizeSentenceAnswer } from './sentenceAnswer';
 
 /** A reviewed application of a published source, not a replacement catalogue. */
 export const keysSituationId = 'situation:before-leaving-v1';
 export const keysSituationSkill = 'looking-for:objects-in-context-v1';
 export const keysSituationStages = ['key', 'phone', 'who', 'action', 'object', 'meaning', 'build', 'change', 'pairs', 'sound', 'use'] as const;
 export type KeysSituationStage = typeof keysSituationStages[number];
+/** Reuse only the subject actually produced; this does not prove another verb,
+ * contraction, general ING rule, spoken skill or long-term retention. */
+export function hasPreparedSituationSubject(activities: readonly LearningActivity[]): boolean {
+  return activities.some((event) => event.skill === keysSituationSkill && event.source === 'learner' && event.modality === 'writing'
+    && ['dialogue', 'transfer'].includes(event.phase) && event.correct === true && !event.helped
+    && ['i am looking for my keys', 'i am looking for my phone'].includes(normalizeSentenceAnswer(event.expected))
+    && normalizeSentenceAnswer(event.response) === normalizeSentenceAnswer(event.expected));
+}
 export function keysSituationSource(units: readonly UnitSummary[]): UnitSummary | undefined {
   const suitable = (unit: UnitSummary) => unit.words?.some((word) => word.en.toUpperCase() === 'KEY' && word.es.toLowerCase() === 'llave') && unit.words.some((word) => word.en.toUpperCase() === 'PHONE' && word.es.toLowerCase() === 'móvil');
   return units.find((unit) => unit.id === 'm1-entry-keys' && suitable(unit)) ?? units.find(suitable);

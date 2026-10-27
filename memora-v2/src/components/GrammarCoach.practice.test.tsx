@@ -185,6 +185,19 @@ it('el recorrido sin etiquetas editoriales anuncia la última pieza y respeta la
   expect(nodes[0].props.advanceLabel).toBe('Practicar el mensaje');
   expect(readLearningActivities('learner')).toHaveLength(0);
 });
+it('reutilizar I AM omite solo su arranque, no la acción nueva, la transformación ni la práctica', () => {
+  const props = { lesson: generatedLesson, puzzle: true, reusePreparedSubject: true };
+  expect(render(props)).toContain('TRUCO DE GRAMÁTICA · 2/3');
+  expect(render(props)).toContain('Ya has usado');
+  expect(nodes[0].props.onAdvance).toBeTypeOf('function');
+  nodes[0].props.onAdvance();
+  expect(render(props)).toContain('TRUCO DE GRAMÁTICA · 3/3');
+  nodes[0].props.onAdvance(); render(props);
+  expect(nodes[0].props.onAdvance).toBeUndefined();
+  expect(nodes.some((node) => node.type === GrammarOrder)).toBe(true);
+  expect(readLearningActivities('learner')).toEqual([]);
+  expect(complete).not.toHaveBeenCalled();
+});
 it('reutiliza la estructura generada sin repetir la pregunta, pero exige escribir el nuevo mensaje', () => {
   const html = render({ startAtPractice: true, omitGeneratedExplanation: true });
   expect(html).not.toContain('¿Qué falta?');
