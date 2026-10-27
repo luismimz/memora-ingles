@@ -82,7 +82,7 @@ it('corrige el envío real sin borrar el borrador ni su primer error y mantiene 
   const submit = () => { nodes.find((node) => node.type === 'form')!.props.onSubmit({ preventDefault() {} }); return render(props); };
   type('I playing');
   expect(submit()).toContain('Falta AM');
-  expect(playSpanish).toHaveBeenLastCalledWith(expect.stringContaining('Falta AM'));
+  expect(playSpanish).not.toHaveBeenCalled();
   expect(nodes.find((node) => node.type === 'input')!.props.value).toBe('I playing');
   type('am playing');
   expect(render(props)).toContain('Falta AM'); // Feedback refers to the last submitted answer, not live typing.

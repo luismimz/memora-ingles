@@ -1,6 +1,29 @@
 import { apiRequest, DirectusError } from './directus';
-import { activeCourse, initializeJournal, journalKey, readJournal, writeJournal, type ProgressEvent } from '../domain/progressJournal';
+import { activeCourse, appendProgress, initializeJournal, journalKey, readJournal, writeJournal, type ProgressEvent } from '../domain/progressJournal';
 import { restoreProgress } from '../domain/restoreProgress';
+import { appliedRestartKey, archiveCourseState, courseRestartActivity, latestCourseRestart, prepareRestartMaterialization } from '../domain/courseRestart';
+
+function materializeProgress(userId: string, events: ProgressEvent[]) {
+  const restored = restoreProgress(userId, events);
+  const restart = latestCourseRestart(events);
+  const changed = restart ? prepareRestartMaterialization(userId, restart) : false;
+  restored.forEach((value, key) => localStorage.setItem(key, value));
+  if (restart) localStorage.setItem(appliedRestartKey(userId), restart.id);
+  if (changed) window.dispatchEvent(new Event('memora-course-restarted'));
+}
+
+/** Only called by an explicit action in the signed-in learner's settings.
+ * The existing sync uploads the neutral boundary; no DELETE or admin API. */
+export function restartCourseProgress(userId: string) {
+  if (!userId || userId === 'preview') throw new Error('Abre tu cuenta para reiniciar tu recorrido.');
+  initializeJournal(userId);
+  const id = crypto.randomUUID(), at = new Date().toISOString();
+  const event: ProgressEvent = { id, at, kind: 'learning', args: [courseRestartActivity(id, at)] };
+  try { archiveCourseState(userId, event); } catch { throw new Error('No hay espacio para archivar. No se ha reiniciado tu progreso.'); }
+  if (!appendProgress(userId, 'learning', event.args, at, id)) throw new Error('No se pudo guardar el reinicio. Tu historial sigue conservado.');
+  materializeProgress(userId, readJournal(userId)!.events);
+  window.dispatchEvent(new Event('memora-progress-restored'));
+}
 
 export type SyncStatus = 'syncing' | 'saved' | 'offline' | 'error' | 'storage-full';
 export const syncLabels: Record<SyncStatus, string> = {
@@ -63,8 +86,7 @@ export function startProgressSync(userId: string, notify: (status: SyncStatus) =
       const current = readJournal(userId)!;
       const materializedKey = `${journalKey(userId)}.materialized`;
       if (remoteChanged || localStorage.getItem(materializedKey) !== String(current.cursor)) {
-        const restored = restoreProgress(userId, current.events);
-        restored.forEach((value, key) => localStorage.setItem(key, value));
+        materializeProgress(userId, current.events);
         localStorage.setItem(materializedKey, String(current.cursor));
         window.dispatchEvent(new Event('memora-progress-restored'));
       }

@@ -5,12 +5,13 @@ import { recordUnitProgress, type UnitProgress } from './journey';
 import { recordWordRecall, replaceAssociation, recordChunkExposure, recordChunkRecall, recordSentenceExposure, recordSentenceRecall, type RecallGrade, type RecallDirection, type RecallError } from './memory';
 import type { AtomicWord, UnitSentence } from './unit';
 import { progressPrefixes, withReplayStore, type ProgressEvent } from './progressJournal';
+import { currentCourseEvents, compareProgressEvents } from './courseRestart';
 
 /** Rebuild from immutable attempts, so two devices never overwrite each other's answers. */
 export function restoreProgress(userId: string, events: ProgressEvent[]): Map<string, string> {
   const state = new Map<string, string>();
   const store = { getItem: (key: string) => state.get(key) ?? null, setItem: (key: string, value: string) => { state.set(key, value); } };
-  const unique = [...new Map(events.map((event) => [event.id, event])).values()];
+  const unique = currentCourseEvents([...new Map(events.map((event) => [event.id, event])).values()]);
   const keyFor = (part: string) => part.startsWith('unit.') ? `memora-v2.unit.${userId}.${part.slice(5)}` : `memora-v2.${part}.${userId}`;
   // Legacy snapshots are seeds, not new attempts. Merge conservatively; never add counters twice.
   for (const event of unique.filter((item) => item.kind === 'baseline')) {
@@ -33,7 +34,7 @@ export function restoreProgress(userId: string, events: ProgressEvent[]): Map<st
     }
   }
   withReplayStore(store, () => {
-    for (const event of unique.filter((item) => item.kind !== 'baseline').sort((a, b) => Date.parse(a.at) - Date.parse(b.at) || (a.device === b.device ? (a.sequence ?? 0) - (b.sequence ?? 0) : 0) || a.id.localeCompare(b.id))) {
+    for (const event of unique.filter((item) => item.kind !== 'baseline').sort(compareProgressEvents)) {
       const [a, b, c, d, e] = event.args;
       const at = new Date(event.at);
       switch (event.kind) {

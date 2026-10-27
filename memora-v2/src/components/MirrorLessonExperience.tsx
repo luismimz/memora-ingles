@@ -8,7 +8,7 @@ import { recordWordRecall } from '../domain/memory';
 import { clearMirrorCheckpoint, readMirrorCheckpoint, writeMirrorCheckpoint } from '../domain/gameCheckpoint';
 import { nextReviewAt } from '../domain/unit';
 import { syncLabels, type SyncStatus } from '../services/progressSync';
-import { playEnglish, playSpanish, playSnap, stopSpeech } from '../services/audio';
+import { playEnglish, playSnap, stopSpeech } from '../services/audio';
 import type { Appearance } from '../useAppearance';
 import { GameCard } from './GameCard';
 import { MirrorQuestion, MirrorRow, MirrorText } from './MirrorPieces';
@@ -69,7 +69,7 @@ export function MirrorLessonExperience({ unit, userId, grammarOnly = false, insp
     <section className="game-stage">
       {stage === 4 && questionReady ? <ConversationPractice unit={unit} userId={userId} reviewMode={inspection} onContinue={() => move(5)} /> : <GameCard className="mirror-card"><div className="mirror-content">
         {stage === 0 ? <><p className="eyebrow">VER → DESCUBRIR</p><h1>Hay una pieza escondida.</h1><div className="mirror-discovery"><span className={`mirror-silhouette ${person ? 'is-revealed' : ''}`} aria-label={person ? 'YO, la persona revelada' : 'Persona escondida'}>{person ? 'YO' : <svg viewBox="0 0 50 68" aria-hidden="true"><circle cx="25" cy="17" r="12" /><path d="M7 65V43Q7 31 25 31T43 43V65Z" /></svg>}</span><span>Estoy jugando.</span></div>
-          {!person ? <button type="button" className="primary-action" onClick={() => { setPerson(true); playSnap(); authored('mirror-discover-person', 'YO'); void playSpanish(lesson.discovery); }}>Revelar la pieza escondida</button> : <><p className="mirror-discovery-tip">{lesson.discovery}</p><button type="button" className="primary-action" onClick={() => move(1)}>Ver las piezas →</button></>}
+          {!person ? <button type="button" className="primary-action" onClick={() => { setPerson(true); playSnap(); authored('mirror-discover-person', 'YO'); }}>Revelar la pieza escondida</button> : <><p className="mirror-discovery-tip">{lesson.discovery}</p><button type="button" className="primary-action" onClick={() => move(1)}>Ver las piezas →</button></>}
           {!grammarOnly ? <div className="mirror-memory">{unit.words[0].en === 'PLAY' && unit.words[0].bridge === 'PLAYA' ? <PlayBeachScene /> : <SceneVisual word={unit.words[0]} />}<p><MnemonicSceneText word={unit.words[0]} /></p><button type="button" className="quiet-action" onClick={() => void playEnglish(unit.words[0].en)}>{unit.words[0].bridge} → {unit.words[0].en} → {unit.words[0].es.toUpperCase()} · 🔊</button><small>El puente ayuda a recordar; escucha la palabra para aprender su sonido.</small></div> : null}
         </> : null}
         {stage === 1 ? <><p className="eyebrow">ESPAÑOL ESPEJO</p><h1>Las mismas piezas, a la vista.</h1><div className="mirror-board"><div className="mirror-row"><small>Español natural</small><p className="mirror-natural">{first.natural}</p></div>{reveal >= 1 ? <MirrorRow pieces={first.mirror} label="Español espejo · hacemos visible YO" language="es" /> : null}{reveal >= 2 ? <MirrorRow pieces={first.english} label="Inglés" language="en" /> : null}</div>

@@ -132,7 +132,7 @@ it('enseñar → comprender → montar → conversar se recorre completo sin mon
   expect(text(tree.toJSON()).replace(/\s+/gu, ' ')).toContain('¿Qué estás haciendo ahora?');
   expect(text(tree.toJSON())).not.toContain('What are you doing?');
   expect(vi.mocked(playEnglish).mock.calls.some(([message]) => message.includes('What are you'))).toBe(false);
-  expect(vi.mocked(playSpanish).mock.calls.some(([message]) => message.includes('¿Qué estás haciendo'))).toBe(true);
+  expect(vi.mocked(playSpanish).mock.calls.some(([message]) => message.includes('¿Qué estás haciendo'))).toBe(false);
   expect(tree.root.findAllByType('input')).toHaveLength(1);
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: "I'm playing" } }));
   const beforeScroll = learner();

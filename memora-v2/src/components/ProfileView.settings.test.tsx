@@ -32,6 +32,24 @@ beforeEach(() => {
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
 
+it('reinicio solo al confirmar, no al entrar en ajustes ni al cancelar, y muestra errores sin fingir éxito', () => {
+  const restart = vi.fn();
+  act(() => { tree = create(<ProfileView {...props} onRestart={restart} />); });
+  expect(restart).not.toHaveBeenCalled();
+  act(() => button('Reiniciar mi progreso').props.onClick());
+  expect(restart).not.toHaveBeenCalled();
+  act(() => button('Conservar mi recorrido').props.onClick());
+  expect(restart).not.toHaveBeenCalled();
+  act(() => button('Reiniciar mi progreso').props.onClick());
+  restart.mockImplementationOnce(() => { throw new Error('Sin espacio para archivar'); });
+  act(() => button('Sí, empezar de cero').props.onClick());
+  expect(text(tree.toJSON())).toContain('Sin espacio para archivar');
+  act(() => button('Sí, empezar de cero').props.onClick());
+  expect(restart).toHaveBeenCalledTimes(2);
+  act(() => button('Sí, empezar de cero').props.onClick());
+  expect(restart).toHaveBeenCalledTimes(2);
+});
+
 it('separa ajustes de aprendizaje, con una sola acción principal y sin leer estadísticas o escribir progreso', () => {
   mount();
   expect(text(tree.toJSON())).toContain('Perfil y ajustes');

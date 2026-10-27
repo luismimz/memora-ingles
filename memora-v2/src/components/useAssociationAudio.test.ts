@@ -29,7 +29,7 @@ describe('audio acompañante de la asociación', () => {
     expect(speech.playEnglish).toHaveBeenLastCalledWith(previewUnit.words[0].en.toLowerCase(), previewUnit.words[0].audioUrl, true, expect.any(Function));
   });
   it('con puente rechazado conserva modelo inglés sin narrar ni precargar la historia', async () => {
-    useAssociationAudio(previewUnit.words[0], true, false); hooks.effects[0](); await flush();
+    useAssociationAudio(previewUnit.words[0]); hooks.effects[0](); await flush();
     expect(speech.playEnglish).toHaveBeenCalledOnce();
     expect(speech.playSpanish).not.toHaveBeenCalled();
     expect(speech.prefetchSpanish).not.toHaveBeenCalled();
@@ -38,12 +38,11 @@ describe('audio acompañante de la asociación', () => {
     useAssociationAudio(previewUnit.words[0], false); hooks.effects[0](); await flush();
     expect(speech.playEnglish).not.toHaveBeenCalled(); expect(speech.playSpanish).not.toHaveBeenCalled(); expect(speech.prefetchSpanish).not.toHaveBeenCalled();
   });
-  it('mantiene palabra → historia → palabra y solo continúa tras reproducciones confirmadas', async () => {
+  it('pronuncia una sola vez el modelo inglés, sin narrar ni precargar español', async () => {
     useAssociationAudio(previewUnit.words[0]); hooks.effects[0](); await flush();
-    expect(speech.playEnglish).toHaveBeenCalledTimes(2);
-    expect(speech.playSpanish).toHaveBeenCalledWith(previewUnit.words[0].scene, true, expect.any(Function));
-    expect(speech.playEnglish.mock.invocationCallOrder[0]).toBeLessThan(speech.playSpanish.mock.invocationCallOrder[0]);
-    expect(speech.playSpanish.mock.invocationCallOrder[0]).toBeLessThan(speech.playEnglish.mock.invocationCallOrder[1]);
+    expect(speech.playEnglish).toHaveBeenCalledOnce();
+    expect(speech.playSpanish).not.toHaveBeenCalled();
+    expect(speech.prefetchSpanish).not.toHaveBeenCalled();
     expect(hooks.state).toEqual({ status: 'ready', source: 'kokoro' });
   });
   it('un bloqueo muestra el reintento sin fingir escucha ni narrar encima', async () => {

@@ -11,23 +11,27 @@ import { readLearningActivities, recordLearningActivity } from './domain/learnin
 import { keysSituationId, prepareKeysSituation } from './domain/keysSituation';
 import { recordSentenceExposure, recordSentenceRecall, sentenceKey } from './domain/memory';
 import { ConversationPractice } from './components/ConversationPractice';
+import { initializeJournal, readJournal } from './domain/progressJournal';
 const unit = validateUnit(keys);
 const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>) }));
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
-vi.mock('./services/progressSync', () => ({ syncLabels: { saved: 'Guardado' }, startProgressSync: (_id: string, report: (status: string) => void) => { report('saved'); return { stop() {} }; } }));
+vi.mock('./services/progressSync', async (original) => ({ ...await original<typeof import('./services/progressSync')>(), startProgressSync: (_id: string, report: (status: string) => void) => { report('saved'); return { stop() {} }; } }));
 vi.mock('./services/directus', async (original) => ({ ...await original<typeof import('./services/directus')>(), hasSession: () => true, loadIdentity: async () => ({ id: 'situation-app-isolated', isAdmin: false }), loadPublishedUnitSummaries: async () => [{ ...unit, hasDialogue: true, grammarTricks: grammarTricks(unit) }], loadUnit: async () => source.load ? source.load() : unit, loadKeysPilot: async () => null, loadMirrorPilot: async () => null, loadAsset: async () => '' }));
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick()); };
 async function mount(seed?: () => void) {
   const values = new Map<string, string>();
-  const local = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
+  const local = { get length() { return values.size; }, key: (index: number) => [...values.keys()][index] ?? null, getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
   vi.stubGlobal('localStorage', local);
-  vi.stubGlobal('window', { localStorage: local, location: { search: '' }, addEventListener: vi.fn(), removeEventListener: vi.fn(), dispatchEvent: vi.fn(), setTimeout, clearTimeout, setInterval, clearInterval, matchMedia: () => ({ matches: true }), getSelection: () => null });
+  const session = new Map<string, string>();
+  vi.stubGlobal('sessionStorage', { getItem: (key: string) => session.get(key) ?? null, setItem: (key: string, value: string) => session.set(key, value) });
+  vi.stubGlobal('window', Object.assign(new EventTarget(), { localStorage: local, location: { search: '' }, setTimeout, clearTimeout, setInterval, clearInterval, matchMedia: () => ({ matches: true }), getSelection: () => null }));
   vi.stubGlobal('document', { documentElement: { dataset: {}, style: {} } });
   writeGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!, { ...initialGame, phase: 'build', filledSlots: 1 });
   local.setItem('memora-v2.resume.situation-app-isolated', unit.id);
   local.setItem('memora-v2.resume-mode.situation-app-isolated', 'adventure');
+  initializeJournal('situation-app-isolated');
   seed?.();
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
@@ -44,6 +48,24 @@ it('la portada abre la historia nueva sin resetear el montaje anterior ni invent
   await click('Retomar mi actividad anterior');
   expect(tree.root.findByType(LanguageGame).props.unit.id).toBe(unit.id);
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+});
+it('el reinicio confirmado desde Perfil vuelve al inicio sin reabrir el checkpoint antiguo', async () => {
+  await mount(() => {
+    recordLearningActivity('situation-app-isolated', { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion!, activityId: `${keysSituationId}:completed:old`, skill: 'old', phase: 'completion', source: 'learner', modality: 'choice', prompt: 'Historia anterior', response: 'Practicada', expected: '', correct: null, helped: false, at: '2026-10-26T00:00:00Z' });
+  });
+  expect(readLearningActivities('situation-app-isolated')).toHaveLength(1);
+  await import('./components/ProfileView');
+  await click('Perfil y ajustes');
+  await click('Reiniciar mi progreso');
+  expect(readLearningActivities('situation-app-isolated')).toHaveLength(1);
+  await click('Sí, empezar de cero');
+  expect(text(tree.toJSON())).toContain('Has vuelto al inicio. Guardando tu progreso');
+  expect(text(tree.toJSON())).toContain('Nora espera. Tus llaves no aparecen.');
+  expect(text(tree.toJSON())).toContain('Entrar en la historia');
+  expect(readLearningActivities('situation-app-isolated')).toEqual([]);
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toBeNull();
+  expect(localStorage.getItem('memora-v2.resume.situation-app-isolated')).toBeNull();
+  expect(readJournal('situation-app-isolated')!.events).toHaveLength(2);
 });
 it('cancelar una carga no abre después una historia tardía ni cambia la posición antigua', async () => {
   await mount();

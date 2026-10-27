@@ -17,7 +17,9 @@ export function TypedChatMessage({ message, partner, form, autoSpeak, onReady, r
     const finish = () => {
       if (!active) return;
       setVisible(message.text.length);
-      if (message.who === 'partner' && speak.current) void listen(message.text, message.language);
+      // Spanish context is already visible. Reserve automatic speech for the
+      // English exchange; both languages remain available from the speaker.
+      if (message.who === 'partner' && message.language !== 'es' && speak.current) void listen(message.text, message.language);
       ready.current?.();
     };
     if (message.instant) { setVisible(message.text.length); return; }

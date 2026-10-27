@@ -11,7 +11,7 @@ import { recordGrammarAttempt } from '../domain/grammarMemory';
 import { contextualCorrection, readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
 import type { AtomicWord, GrammarForm } from '../domain/unit';
 import { SceneVisual } from './SceneVisual';
-import { playEnglish, playSpanish, playSnap, stopSpeech } from '../services/audio';
+import { playEnglish, playSnap, stopSpeech } from '../services/audio';
 import type { TrickCheckpoint } from '../domain/trickCheckpoint';
 import { recordSentenceExposure } from '../domain/memory';
 import { GrammarActionScene, supportsGrammarAction } from './GrammarActionScene';
@@ -105,14 +105,13 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   useEffect(() => {
     const restored = restoredTeaching.current; restoredTeaching.current = false;
     if (restored) return;
-    if (!step || paused || contractionLab) return;
-    // Spanish TTS expands ING as the abbreviation for «ingeniero». The written
-    // suffix stays visible; the English model pronounces it inside the verb.
-    void playSpanish(caption!.replace(/\bING\b/gu, 'la terminación inglesa'));
+    if (!step || paused || contractionLab || step.hideEnglish || stage !== lesson.steps.length - 1) return;
+    // Hear the complete new English model once, not a narration of every caption.
+    void playEnglish(step.en.map((part) => part.text).join(''));
     // Teaching is not a timed Arcade round: keep the example visible until
     // the learner chooses to move on, even when speech ends or fails.
     return () => { stopSpeech(); };
-  }, [step, caption, paused, contractionLab]);
+  }, [step, stage, lesson.steps.length, paused, contractionLab]);
   useEffect(() => { if (finished) readyRef.current(); }, [finished]);
   useEffect(() => () => { clearTimeout(timer.current); stopSpeech(); }, []);
 
@@ -141,9 +140,8 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
         if (pair) recordSentenceExposure(userId, unitId, { en: check.answers[0], es: pair.es.map((part) => part.text).join(''), slots: [], pronunciationTip: 'Escucha las piezas de la frase.' });
       }
     }
-    if (!correct) { setCorrectionResponse(check.kind === 'write' ? value : undefined); setFeedback('help'); markHelped(); void playSpanish(correction); return; }
+    if (!correct) { setCorrectionResponse(check.kind === 'write' ? value : undefined); setFeedback('help'); markHelped(); return; }
     setCorrectionResponse(undefined); setFeedback('correct'); playSnap();
-    if (check.kind !== 'explain') void playEnglish(check.answers[0]);
   }
   function markHelped() { helpedRef.current = true; setHelped(true); }
   function nextCheck() {
@@ -182,7 +180,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
           {!comparisonLab ? <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p> : null}
         </>}
         <div className="coach-teaching-actions">{!step.hideEnglish && !contractionLab && !comparisonLab ? <SpeechModelButton key={`${lesson.id}:${stage}`} text={step.en.map((part) => part.text).join('')} /> : null}{!stream ? <button type="button" className="primary-action" onClick={advanceTeaching}>{explanationOnly ? teachingAdvanceLabel : step.advanceLabel ?? 'Seguir ahora →'}</button> : null}</div>
-        {!stream ? <details className="coach-teaching-options"><summary>Opciones de explicación</summary><div><button type="button" className="quiet-action coach-pause" aria-pressed={paused} onClick={() => { stopSpeech(); setPaused((value) => !value); }}>{paused ? 'Reanudar explicación' : 'Pausar'}</button><button type="button" className="quiet-action" onClick={skipKnownTrick}>{requirePractice ? 'Ya lo entiendo · probarlo' : 'Ya conozco el truco · ir a la frase'}</button></div></details> : null}
+        <details className="coach-teaching-options"><summary>Escuchar la explicación</summary><SpeechModelButton text={caption!.replace(/\bING\b/gu, 'la terminación inglesa')} language="es" label="Escuchar explicación en español" />{!stream ? <div><button type="button" className="quiet-action coach-pause" aria-pressed={paused} onClick={() => { stopSpeech(); setPaused((value) => !value); }}>{paused ? 'Reanudar explicación' : 'Pausar'}</button><button type="button" className="quiet-action" onClick={skipKnownTrick}>{requirePractice ? 'Ya lo entiendo · probarlo' : 'Ya conozco el truco · ir a la frase'}</button></div> : null}</details>
       </> : !finished ? <div className={`coach-practice${writing ? ' coach-response-studio' : ''}`}>
         {!writing ? <h2>{needsModel ? 'Vamos con ayuda' : streamSolved ? '✓ Acertaste' : situation ? 'Entrega el mensaje' : check.prompt}</h2> : null}
         {startAtPractice && !streamSolved ? <button type="button" className="quiet-action" onClick={() => { stopSpeech(); markHelped(); setStage(0); }}>Ver el truco otra vez</button> : null}
@@ -191,7 +189,7 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
         {!needsModel ? <p className="coach-feedback" role="status">{feedback === 'correct' ? check.success : feedback === 'help' ? helpText : ''}</p> : null}
         {!stream && needsModel ? <button type="button" className="primary-action" onClick={nextCheck}>Seguir con el modelo →</button> : null}
         {!stream && feedback === 'correct' ? <button type="button" className="primary-action" onClick={nextCheck}>Seguir →</button> : null}
-        {streamSolved ? null : writing ? <details onToggle={(event) => { if (event.currentTarget.open) markHelped(); }}><summary>Ver cómo se arma</summary><div className="response-model">{writingPair ? <><GrammarRow parts={writingPair.es} language="es" /><GrammarRow parts={writingPair.en} language="en" /></> : <p lang="en">{check.answers[0]}</p>}<p>{check.hint}</p><SpeechModelButton key={`${lesson.id}:${check.id}:writing`} text={check.answers[0]} label="Escuchar modelo" /></div></details> : stream ? !needsModel && feedback !== 'correct' ? <details onToggle={(event) => { if (event.currentTarget.open) { markHelped(); setFeedback('help'); } }}><summary>Una ayuda</summary><p>{check.hint}</p></details> : null : <>{feedback === 'idle' ? <button type="button" className="quiet-action" onClick={() => { markHelped(); setFeedback('help'); void playSpanish(check.hint); }}>Dame una pista</button> : null}{!requirePractice ? <button type="button" className="quiet-action" onClick={skipKnownTrick}>Pasar este repaso · ir a la frase</button> : null}</>}
+        {streamSolved ? null : writing ? <details onToggle={(event) => { if (event.currentTarget.open) markHelped(); }}><summary>Ver cómo se arma</summary><div className="response-model">{writingPair ? <><GrammarRow parts={writingPair.es} language="es" /><GrammarRow parts={writingPair.en} language="en" /></> : <p lang="en">{check.answers[0]}</p>}<p>{check.hint}</p><SpeechModelButton key={`${lesson.id}:${check.id}:writing`} text={check.answers[0]} label="Escuchar modelo" /></div></details> : stream ? !needsModel && feedback !== 'correct' ? <details onToggle={(event) => { if (event.currentTarget.open) { markHelped(); setFeedback('help'); } }}><summary>Una ayuda</summary><p>{check.hint}</p></details> : null : <>{feedback === 'idle' ? <button type="button" className="quiet-action" onClick={() => { markHelped(); setFeedback('help'); }}>Dame una pista</button> : null}{!requirePractice ? <button type="button" className="quiet-action" onClick={skipKnownTrick}>Pasar este repaso · ir a la frase</button> : null}</>}
       </div> : <div className="coach-finished">
         {subject ? <>{hasAuthoredPair ? <><GrammarRow parts={finalStep.es} language="es" /><GrammarRow parts={finalStep.en} language="en" /></> : <><p className="coach-caption"><GrammarText text={`${subject.reducedEs || subject.es} ${form!.spanish}`} form={form!} language="es" /></p><p className="coach-row" lang="en"><GrammarText text={subject.phrase} form={form!} /></p></>}<button type="button" className="quiet-action" onClick={() => void playEnglish(subject.phrase)}>🔊 Escuchar</button>{form!.subjects.length > 1 ? <div className="subject-list">{form!.subjects.map((item, index) => <button type="button" className={index === person ? 'is-active' : ''} key={index} onClick={() => { setPerson(index); void playEnglish(item.phrase); }}>{item.es}</button>)}</div> : null}</>
           : <><GrammarRow parts={lesson.steps.at(-1)!.es} language="es" /><GrammarRow parts={lesson.steps.at(-1)!.en} language="en" /></>}

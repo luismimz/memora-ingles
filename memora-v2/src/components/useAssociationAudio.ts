@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { AtomicWord } from '../domain/unit';
-import { playEnglish, playSpanish, prefetchSpanish, stopSpeech, type PlaybackResult, type SpeechSource } from '../services/audio';
+import { playEnglish, stopSpeech, type PlaybackResult, type SpeechSource } from '../services/audio';
 
 export interface AssociationAudioState {
   status: 'preparing' | 'playing' | 'ready' | 'blocked' | 'unavailable';
@@ -8,11 +8,11 @@ export interface AssociationAudioState {
 }
 
 /** Audio accompanies discovery; it never gates visibility, advancement or mastery. */
-export function useAssociationAudio(word: AtomicWord, autoPlay = true, narrateScene = true) {
-  const [audioState, setAudioState] = useState<AssociationAudioState | undefined>({ status: 'preparing', source: null });
+export function useAssociationAudio(word: AtomicWord, autoPlay = true) {
+  const [audioState, setAudioState] = useState<AssociationAudioState | undefined>(autoPlay ? { status: 'preparing', source: null } : undefined);
   const generation = useRef(0);
   const failedWord = useRef('');
-  const run = useCallback(async (wordOnly: boolean) => {
+  const run = useCallback(async (manual: boolean) => {
     const token = ++generation.current;
     const current = () => token === generation.current;
     const preparing = () => { if (current()) setAudioState({ status: 'preparing', source: null }); };
@@ -30,21 +30,16 @@ export function useAssociationAudio(word: AtomicWord, autoPlay = true, narrateSc
     preparing();
     const safe = (playback: Promise<PlaybackResult>) => playback.catch(() => ({ status: 'unavailable' as const, source: null }));
     const key = JSON.stringify([word.en, word.audioUrl]);
-    const first = await safe(wordOnly && failedWord.current === key ? playEnglish(word.en.toLowerCase(), word.audioUrl, true, started, true) : playEnglish(word.en.toLowerCase(), word.audioUrl, true, started));
+    const first = await safe(manual && failedWord.current === key ? playEnglish(word.en.toLowerCase(), word.audioUrl, true, started, true) : playEnglish(word.en.toLowerCase(), word.audioUrl, true, started));
     if (current()) failedWord.current = first.status === 'blocked' || first.status === 'unavailable' ? key : '';
-    if (!accept(first) || wordOnly || !narrateScene || word.associationMode === 'cognate') return;
-    preparing();
-    if (!accept(await safe(playSpanish(word.scene, true, started)))) return;
-    preparing();
-    accept(await safe(playEnglish(word.en.toLowerCase(), word.audioUrl, true, started)));
-  }, [word.en, word.audioUrl, word.scene, word.associationMode, narrateScene]);
+    accept(first);
+  }, [word.en, word.audioUrl]);
 
   useEffect(() => {
     if (!autoPlay) return;
     void run(false);
-    if (narrateScene && word.associationMode !== 'cognate') prefetchSpanish(word.scene);
     return () => { generation.current++; stopSpeech(); };
-  }, [run, word.associationMode, word.scene, autoPlay, narrateScene]);
+  }, [run, autoPlay]);
 
   // AssociationCard stays mounted while its word assembly replaces the scene.
   // Invalidate pending narration at that boundary, not only on unmount.

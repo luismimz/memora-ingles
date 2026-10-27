@@ -21,6 +21,7 @@ import { KeysSituationScene } from './KeysSituationScene';
 
 type Props = {
   units: UnitSummary[]; userId: string; resumeUnitId?: string | null; error?: string | null;
+  notice?: string;
   resumeLearningMode?: LearningMode;
   onOpen: (unit: UnitSummary) => void; onConverse: (unit: UnitSummary) => void;
   onStartScene?: (unit: UnitSummary) => void;
@@ -112,6 +113,7 @@ export function JourneyHome(props: Props) {
       </NavigationMenu>
     </header>
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
+    {props.notice ? <p role="status">{props.notice}</p> : null}
     <div className="home-guided-body">
       {launch ? <section className="home-now" aria-labelledby="home-adventure-title">
         <div className="home-now-context"><span>{situationPending ? 'HISTORIA EN CURSO' : situationRecall ? 'RECUPERA LO PRACTICADO' : situation ? 'NUEVA HISTORIA · ANTES DE SALIR' : sceneLaunch ? 'TU PRÓXIMA ESCENA' : resume ? 'Actividad en curso' : 'TU SIGUIENTE PASO'}</span><small className="sr-only" aria-label={`Paso ${launchIndex} de ${stories.length}`}>{`${launchIndex} / ${stories.length}`}</small><span className="home-live-mark" aria-hidden="true">↗</span></div>

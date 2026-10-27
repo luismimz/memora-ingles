@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { TypedChatMessage } from './TypedChatMessage';
-import { playEnglish, type PlaybackResult } from '../services/audio';
+import { playEnglish, playSpanish, type PlaybackResult } from '../services/audio';
 import { previewUnit } from '../preview/previewUnit';
 
 vi.mock('../services/audio', () => ({ playEnglish: vi.fn(), playSpanish: vi.fn() }));
@@ -17,6 +17,15 @@ beforeEach(() => {
   vi.stubGlobal('window', { matchMedia: () => ({ matches: true }) });
 });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
+
+it('no narra automáticamente contexto español, pero conserva el altavoz y la recepción', async () => {
+  await act(async () => { tree = create(<TypedChatMessage message={{ id: 'spanish-context', who: 'partner', language: 'es', text: '¿Qué estás buscando?' }} partner="Nora" form={previewUnit.grammar[0]} autoSpeak onReady={ready} />); });
+  expect(playEnglish).not.toHaveBeenCalled(); expect(playSpanish).not.toHaveBeenCalled();
+  expect(ready).toHaveBeenCalledOnce();
+  vi.mocked(playSpanish).mockResolvedValueOnce({ status: 'played', source: 'kokoro' });
+  await act(async () => speaker().props.onClick());
+  expect(playSpanish).toHaveBeenCalledOnce();
+});
 
 it('muestra preparación y fallo breve; permite reintentar sin repetir recepción', async () => {
   await mount();

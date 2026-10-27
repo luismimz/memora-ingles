@@ -21,7 +21,7 @@ import { previewUnit, reviewUnits } from './preview/previewUnit';
 import { DirectusError, endSession, hasSession, loadPublishedUnitSummaries, loadUnit, loadKeysPilot, loadMirrorPilot, logIn, loadIdentity, clearAssetCache, type UnitSummary } from './services/directus';
 import { prefetchSpeech, stopSpeech } from './services/audio';
 import { useAppearance } from './useAppearance';
-import { startProgressSync, type SyncStatus } from './services/progressSync';
+import { restartCourseProgress, startProgressSync, syncLabels, type SyncStatus } from './services/progressSync';
 import { buildJourneyRoute, grammarTricks, missingTrickWords, nextJourneyStop, trickStop } from './domain/journeyTricks';
 import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { loadLearningLibrary } from './services/directus';
@@ -74,6 +74,7 @@ export default function App() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('syncing');
+  const [restartedAccount, setRestartedAccount] = useState<string | null>(null);
   const [, refreshProgress] = useState(0);
   const [activeTrick, setActiveTrick] = useState<UnitSummary | null>(null);
   const [situationUnit, setSituationUnit] = useState<AtomicUnit | null>(null);
@@ -129,9 +130,17 @@ export default function App() {
     if (preview || !authenticated || userId === 'preview') return;
     const sync = startProgressSync(userId, setSyncStatus);
     const refresh = () => refreshProgress((version) => version + 1);
+    const restarted = () => {
+      leaveLesson(); setLibraryMode(null); setLibraryUnits([]); libraryBrowse.current = {};
+      setLastOpenedUnitId(null); setResumeMode('adventure'); setConversationStart(false);
+      setProfileOpen(false); setEvolutionOpen(false); setUnitError(null); setLibraryNotice(null);
+      setRestartedAccount(userId);
+      refresh();
+    };
     window.addEventListener('memora-progress-restored', refresh);
     window.addEventListener('memora-learning-activity', refresh);
-    return () => { sync.stop(); window.removeEventListener('memora-progress-restored', refresh); window.removeEventListener('memora-learning-activity', refresh); };
+    window.addEventListener('memora-course-restarted', restarted);
+    return () => { sync.stop(); window.removeEventListener('memora-progress-restored', refresh); window.removeEventListener('memora-learning-activity', refresh); window.removeEventListener('memora-course-restarted', restarted); };
   }, [preview, authenticated, userId, isAdmin]);
 
   useEffect(() => {
@@ -568,7 +577,7 @@ return <><LanguageGame continuous={!inspectionMode} learningMode={learningMode} 
     : contentOpen && isAdmin && !preview
     ? <DeferredScreen label="el gestor de contenido" onBack={() => setContentOpen(false)}><ContentManager userId={userId} onBack={() => setContentOpen(false)} onReview={reviewManagedUnit} onPublished={refreshPublishedUnits} onTest={testExpansionMission} /></DeferredScreen>
     : profileOpen
-    ? <DeferredScreen label="tu perfil" onBack={() => setProfileOpen(false)}><ProfileView key={userId} userId={userId} syncStatus={preview ? undefined : syncStatus} appearance={appearance} onToggleAppearance={toggleAppearance} onBack={() => setProfileOpen(false)} onExit={exit} onEvolution={!preview ? () => { setProfileOpen(false); setEvolutionOpen(true); } : undefined} onManageContent={isAdmin && !preview ? () => { setProfileOpen(false); setContentOpen(true); } : undefined} /></DeferredScreen>
-    : <JourneyHome onSituation={(summary, recallOnly) => void openSituation(summary, recallOnly)} onStartScene={(summary) => void openUnit(summary, false, 'adventure')} resumeLearningMode={resumeMode} onWords={() => void openLibrary('vocabulary')} onGrammar={() => void openLibrary('grammar')} units={units} userId={userId} resumeUnitId={lastOpenedUnitId} error={unitError} onOpen={(summary) => void openUnit(summary)} onConverse={(summary) => void openUnit(summary, true)} onArcade={() => void openArcade()} onManageContent={isAdmin && !preview ? () => setContentOpen(true) : undefined} onMirror={preview || isAdmin && mirrorPilot ? openMirrorFromHome : undefined} onGrammarReview={preview || isAdmin ? () => setGrammarOpen(true) : undefined} onFusionDemo={preview || isAdmin ? () => setFusionOpen(true) : undefined} onTryPreview={previewAllowed && !preview ? usePreview : undefined} onExit={exit} onEvolution={!preview ? () => setEvolutionOpen(true) : undefined} onProfile={() => setProfileOpen(true)} appearance={appearance} onToggleAppearance={toggleAppearance} />}{microOverlay}</>;
+    ? <DeferredScreen label="tu perfil" onBack={() => setProfileOpen(false)}><ProfileView key={userId} userId={userId} syncStatus={preview ? undefined : syncStatus} onRestart={!preview ? () => { restartCourseProgress(userId); setSyncStatus('syncing'); } : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} onBack={() => setProfileOpen(false)} onExit={exit} onEvolution={!preview ? () => { setProfileOpen(false); setEvolutionOpen(true); } : undefined} onManageContent={isAdmin && !preview ? () => { setProfileOpen(false); setContentOpen(true); } : undefined} /></DeferredScreen>
+    : <JourneyHome notice={restartedAccount === userId ? `Has vuelto al inicio. ${syncLabels[syncStatus]}` : undefined} onSituation={(summary, recallOnly) => void openSituation(summary, recallOnly)} onStartScene={(summary) => void openUnit(summary, false, 'adventure')} resumeLearningMode={resumeMode} onWords={() => void openLibrary('vocabulary')} onGrammar={() => void openLibrary('grammar')} units={units} userId={userId} resumeUnitId={lastOpenedUnitId} error={unitError} onOpen={(summary) => void openUnit(summary)} onConverse={(summary) => void openUnit(summary, true)} onArcade={() => void openArcade()} onManageContent={isAdmin && !preview ? () => setContentOpen(true) : undefined} onMirror={preview || isAdmin && mirrorPilot ? openMirrorFromHome : undefined} onGrammarReview={preview || isAdmin ? () => setGrammarOpen(true) : undefined} onFusionDemo={preview || isAdmin ? () => setFusionOpen(true) : undefined} onTryPreview={previewAllowed && !preview ? usePreview : undefined} onExit={exit} onEvolution={!preview ? () => setEvolutionOpen(true) : undefined} onProfile={() => setProfileOpen(true)} appearance={appearance} onToggleAppearance={toggleAppearance} />}{microOverlay}</>;
   return <main className="gate-screen"><form className="gate-card" onSubmit={submit}><div className="gate-card-top"><span className="brand-mark">M</span><button type="button" className="appearance-toggle" onClick={toggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`} title={`Modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button></div><p className="eyebrow">MEMORA · NUEVA EXPERIENCIA</p><h1>Recuerda palabras. Úsalas en frases tuyas.</h1><label>Correo<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} autoComplete="username" required /></label><label>Contraseña<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} autoComplete="current-password" required /></label>{error ? <p className="gate-error" role="alert">{error}</p> : null}<button type="submit" className="primary-action">Entrar a la unidad →</button>{previewAllowed ? <button type="button" className="quiet-action" onClick={usePreview}>Probar diseño sin tocar Directus</button> : null}</form></main>;
 }

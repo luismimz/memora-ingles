@@ -11,7 +11,7 @@ import { readLearningActivities, recordLearningActivity as persistLearningActivi
 import { recordSentenceExposure } from '../domain/memory';
 import { KeysScene } from './KeysScene';
 import { GrammarText } from './GrammarText';
-import { playSpanish, playSnap, stopSpeech } from '../services/audio';
+import { playSnap, stopSpeech } from '../services/audio';
 import { MirrorText } from './MirrorPieces';
 import { mirrorHint, nextMirrorHint } from '../domain/mirrorLesson';
 import { useSpeechPlayback } from './useSpeechPlayback';
@@ -177,7 +177,6 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
       helpedRef.current = true;
       setHelped(true); setHintLevel((value) => Math.min(3, value + 1));
       if (!reviewMode) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `chat-hint-${turn.id}-${Math.min(3, hintLevel + 1)}`, skill: unit.mirror?.id ?? unit.id, phase: 'dialogue', source: 'authored', modality: 'choice', prompt: displayedPrompt, response: correction, expected: '', correct: null, helped: true, feedback: 'Corrección escrita contextual; el alumno puede volver a intentar o pasar.', parentAttemptId: previousAttempt.current });
-      void playSpanish(correction);
       clearTimeout(timer.current);
       timer.current = setTimeout(() => { submitted.current = null; }, 350);
       return;

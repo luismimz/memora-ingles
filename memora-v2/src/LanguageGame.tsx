@@ -49,7 +49,7 @@ function StandardAssociationCard({ unit, inspection, word, index, total, userId,
   const [reconstruct, setReconstruct] = useState(false);
   const [assembling, setAssembling] = useState(Boolean(vertical && !inspection && assemblyPosition));
   const [associationRejected, setAssociationRejected] = useState(() => rejectedPreference ?? isAssociationRejected(userId, word));
-  const { audioState, listen, cancel } = useAssociationAudio(word, !assembling && !reconstruct, !associationRejected);
+  const { audioState, listen, cancel } = useAssociationAudio(word, !assembling && !reconstruct);
 
   function connect() {
     cancel();
@@ -208,10 +208,6 @@ export function LanguageGame({ unit, userId, learningMode = 'adventure', preview
     if (reviewMode) return;
     if (state.phase === 'grammar') prefetchSpeech(grammarForms[state.grammarIndex].subjects[0].phrase);
   }, [reviewMode, state.phase, state.grammarIndex, grammarForms]);
-
-  useEffect(() => {
-    if (state.phase === 'recall') prefetchSpeech(recallWord.en.toLowerCase());
-  }, [state.phase, state.recallIndex, recallWord.en]);
 
   useEffect(() => {
     if (state.phase !== 'recall' || state.recallAnswered) return undefined;

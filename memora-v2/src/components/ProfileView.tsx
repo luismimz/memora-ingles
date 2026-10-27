@@ -6,10 +6,10 @@ import { syncLabels, type SyncStatus } from '../services/progressSync';
 import './profileSettings.css';
 import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 
-export function ProfileView({ userId, appearance, onToggleAppearance, onBack, onExit, onEvolution, onManageContent, syncStatus }: {
+export function ProfileView({ userId, appearance, onToggleAppearance, onBack, onExit, onEvolution, onManageContent, onRestart, syncStatus }: {
   userId: string; appearance: Appearance; onToggleAppearance: () => void;
   onBack: () => void; onExit: () => void; onEvolution?: () => void;
-  onManageContent?: () => void; syncStatus?: SyncStatus;
+  onManageContent?: () => void; onRestart?: () => void; syncStatus?: SyncStatus;
 }) {
   const [avatar, setAvatar] = useState(() => readAvatar(userId));
   const [avatarError, setAvatarError] = useState('');
@@ -17,11 +17,15 @@ export function ProfileView({ userId, appearance, onToggleAppearance, onBack, on
   const [calm, setCalm] = useState(() => readArcadeCalm(userId));
   const [rhythmStatus, setRhythmStatus] = useState('');
   const [rhythmError, setRhythmError] = useState('');
+  const [restartOpen, setRestartOpen] = useState(false);
+  const [restartError, setRestartError] = useState('');
+  const restarting = useRef(false);
   const reader = useRef<FileReader | null>(null);
   const avatarRequest = useRef(0);
   useEffect(() => {
     setAvatar(readAvatar(userId)); setAvatarError(''); setAvatarStatus('');
     setCalm(readArcadeCalm(userId)); setRhythmStatus(''); setRhythmError('');
+    setRestartOpen(false); setRestartError(''); restarting.current = false;
     return () => { avatarRequest.current++; reader.current?.abort(); reader.current = null; };
   }, [userId]);
 
@@ -68,6 +72,11 @@ export function ProfileView({ userId, appearance, onToggleAppearance, onBack, on
       <section className="profile-settings-card profile-settings-storage" aria-labelledby="profile-storage-title"><h2 id="profile-storage-title">Guardado de tu práctica</h2><p role="status">{syncStatus ? syncLabels[syncStatus] : 'Vista de revisión: no registra aprendizaje.'}</p><p>Los ajustes de esta pantalla no completan actividades ni cambian tus intentos.</p>{onEvolution ? <button type="button" className="quiet-action" onClick={onEvolution}>Ver Mi evolución</button> : null}</section>
     </div>
     <div className="profile-settings-return"><button type="button" className="primary-action" onClick={onBack}>Volver a mi recorrido</button></div>
+    {onRestart ? <section className="profile-settings-card" aria-labelledby="restart-course-title"><h2 id="restart-course-title">Empezar desde el inicio</h2><p>Reinicia tus actividades, contadores y repasos. Tu historial anterior se conserva archivado; tu cuenta y ajustes no se borran.</p>{restartOpen ? <div role="group" aria-label="Confirmar reinicio del recorrido"><p>¿Empezar de cero en esta cuenta?</p><button type="button" className="quiet-action" onClick={() => {
+      if (restarting.current) return;
+      restarting.current = true; setRestartError('');
+      try { onRestart(); } catch (error) { restarting.current = false; setRestartError(error instanceof Error ? error.message : 'No se pudo aplicar el reinicio. Tu historial sigue conservado.'); }
+    }}>Sí, empezar de cero</button><button type="button" className="quiet-action" onClick={() => setRestartOpen(false)}>Conservar mi recorrido</button></div> : <button type="button" className="quiet-action" onClick={() => setRestartOpen(true)}>Reiniciar mi progreso</button>}{restartError ? <p role="alert" className="profile-error">{restartError}</p> : null}<p><small>Se guarda con tu progreso. Espera a ver «Progreso guardado en tu cuenta» antes de cambiar de dispositivo.</small></p></section> : null}
     <details className="profile-settings-extra"><summary>Sesión</summary><p>{syncStatus ? 'Cerrar sesión es distinto de volver al recorrido.' : 'Puedes salir de la revisión sin registrar aprendizaje.'}</p><button type="button" className="quiet-action" onClick={onExit}>{syncStatus ? 'Cerrar sesión' : 'Salir de la revisión'}</button></details>
     {onManageContent ? <details className="profile-settings-extra"><summary>Administración de contenido</summary><p>Herramientas de revisión y publicación. No forman parte de tu práctica como alumno.</p><button type="button" className="quiet-action" onClick={onManageContent}>Gestionar contenido</button></details> : null}
   </main>;

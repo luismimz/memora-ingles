@@ -5,7 +5,7 @@ import type { AtomicUnit } from '../domain/unit';
 import { recordLearningActivity } from '../domain/learningActivity';
 import { recordGrammarAttempt } from '../domain/grammarMemory';
 import { recordSentenceExposure } from '../domain/memory';
-import { playEnglish, playSnap, playSpanish } from '../services/audio';
+import { playEnglish, playSnap } from '../services/audio';
 import { MirrorText } from './MirrorPieces';
 
 export function MirrorWriteTest({ unit, example, lesson, userId, inspection, activityId, nextLabel, onSuccess, recall = false }: { unit: AtomicUnit; example: MirrorExample; lesson: MirrorLessonData; userId: string; inspection: boolean; activityId: string; nextLabel: string; onSuccess: () => void; recall?: boolean }) {
@@ -23,7 +23,6 @@ export function MirrorWriteTest({ unit, example, lesson, userId, inspection, act
     const cue = mirrorHint(hints, response, next);
     setLevel(next); setFeedback(cue);
     if (!inspection) recordLearningActivity(userId, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion ?? '1', activityId: `${activityId}:hint-${next}`, skill: lesson.id, phase: 'grammar', source: 'authored', modality: 'choice', prompt: example.natural, response: cue, expected: '', correct: null, helped: true, feedback: `Pista ${next} de 3 · no revela la frase completa.`, parentAttemptId: previous.current });
-    void playSpanish(cue);
     return cue;
   }
   function answer() {
