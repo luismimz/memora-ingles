@@ -3,6 +3,8 @@ import type { UnitSummary } from '../services/directus';
 import { piece, type LessonStep } from './grammarLesson';
 import { readLearningActivities, type LearningActivity } from './learningActivity';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
+import { dueSentenceMemories } from './memory';
+import { readTrickCheckpoint, type TrickCheckpoint } from './trickCheckpoint';
 
 /** A reviewed application of a published source, not a replacement catalogue. */
 export const keysSituationId = 'situation:before-leaving-v1';
@@ -21,7 +23,19 @@ export function keysSituationSource(units: readonly UnitSummary[]): UnitSummary 
   const suitable = (unit: UnitSummary) => unit.words?.some((word) => word.en.toUpperCase() === 'KEY' && word.es.toLowerCase() === 'llave') && unit.words.some((word) => word.en.toUpperCase() === 'PHONE' && word.es.toLowerCase() === 'móvil');
   return units.find((unit) => unit.id === 'm1-entry-keys' && suitable(unit)) ?? units.find(suitable);
 }
-export const situationCompleted = (userId: string, version: string, unitId = 'm1-entry-keys') => readLearningActivities(userId).some((event) => event.contentVersion === version && event.unitId === unitId && event.activityId === `${keysSituationId}:completed`);
+export const situationCompleted = (userId: string, version: string, unitId = 'm1-entry-keys') => readLearningActivities(userId).some((event) => event.contentVersion === version && event.unitId === unitId && (event.activityId === `${keysSituationId}:completed` || event.activityId.startsWith(`${keysSituationId}:completed:`)));
+export const situationCheckpointVersion = (unitId: string, version: string) => `${unitId}:${version}:${keysSituationId}`;
+export function situationRunCompleted(userId: string, unitId: string, version: string, saved: TrickCheckpoint): boolean {
+  return readLearningActivities(userId).some((event) => event.unitId === unitId && event.contentVersion === version && (event.activityId === `${keysSituationId}:completed:${saved.episodeId ?? saved.episodeStartedAt ?? 'legacy'}` || event.activityId === `${keysSituationId}:completed` && event.at >= (saved.episodeStartedAt ?? '')));
+}
+export function situationInProgress(userId: string, unitId: string, version: string): boolean {
+  const saved = readTrickCheckpoint(userId, keysSituationId, situationCheckpointVersion(unitId, version));
+  return Boolean(saved && saved.stage < keysSituationStages.length && saved.checkId === keysSituationStages[saved.stage] && !situationRunCompleted(userId, unitId, version, saved));
+}
+/** Existing SRS dates for these taught messages only, not another schedule. */
+export function situationReviewDue(userId: string, unitId: string, now = Date.now()): boolean {
+  return dueSentenceMemories(userId, now).some((memory) => memory.unitId === unitId && ['i am looking for my keys', 'i am looking for my phone'].includes(normalizeSentenceAnswer(memory.sentenceEn)));
+}
 export function prepareKeysSituation(source: AtomicUnit) {
   // The new application owns its three teaching models. It does not borrow an
   // unrelated lesson or publish a pilot just to acquire these two words.

@@ -7,7 +7,10 @@ import { KeysSituationExperience } from './components/KeysSituationExperience';
 import { LanguageGame } from './LanguageGame';
 import { initialGame } from './domain/game';
 import { readGameCheckpoint, writeGameCheckpoint } from './domain/gameCheckpoint';
-import { readLearningActivities } from './domain/learningActivity';
+import { readLearningActivities, recordLearningActivity } from './domain/learningActivity';
+import { keysSituationId, prepareKeysSituation } from './domain/keysSituation';
+import { recordSentenceExposure, recordSentenceRecall, sentenceKey } from './domain/memory';
+import { ConversationPractice } from './components/ConversationPractice';
 const unit = validateUnit(keys);
 const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>) }));
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
@@ -16,7 +19,7 @@ vi.mock('./services/directus', async (original) => ({ ...await original<typeof i
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick()); };
-async function mount() {
+async function mount(seed?: () => void) {
   const values = new Map<string, string>();
   const local = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };
   vi.stubGlobal('localStorage', local);
@@ -25,6 +28,7 @@ async function mount() {
   writeGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!, { ...initialGame, phase: 'build', filledSlots: 1 });
   local.setItem('memora-v2.resume.situation-app-isolated', unit.id);
   local.setItem('memora-v2.resume-mode.situation-app-isolated', 'adventure');
+  seed?.();
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
 }
@@ -50,4 +54,20 @@ it('cancelar una carga no abre después una historia tardía ni cambia la posici
   await act(async () => resolve(unit));
   expect(tree.root.findAllByType(KeysSituationExperience)).toHaveLength(0);
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+});
+it('cuando corresponde el repaso real, la portada abre recuperación sin repetir la presentación', async () => {
+  await mount(() => {
+    recordLearningActivity('situation-app-isolated', { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion!, activityId: `${keysSituationId}:completed:earlier`, skill: 'test', phase: 'completion', source: 'learner', modality: 'choice', prompt: '', response: '', expected: '', correct: null, helped: false });
+    recordSentenceExposure('situation-app-isolated', unit.id, prepareKeysSituation(unit)!.phone, new Date(Date.now() - 3600001));
+  });
+  expect(text(tree.toJSON())).toContain('Nora vuelve a necesitarte.');
+  await click('Recuperar la historia');
+  expect(tree.root.findByType(KeysSituationExperience).props.recallOnly).toBe(true);
+  expect(tree.root.findAllByType(ConversationPractice)).toHaveLength(1);
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+  // A partial review stays resumable even after its only due sentence is answered.
+  recordSentenceRecall('situation-app-isolated', sentenceKey(unit.id, prepareKeysSituation(unit)!.phone), 'hesitant');
+  await click('← Recorrido');
+  await click('Seguir mi historia');
+  expect(tree.root.findAllByType(ConversationPractice)).toHaveLength(1);
 });

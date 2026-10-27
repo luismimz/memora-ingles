@@ -16,7 +16,7 @@ import './homeGuided.css';
 import { buildJourneyRoute, completedTrick, missingTrickWords } from '../domain/journeyTricks';
 import { readTrickCheckpoint } from '../domain/trickCheckpoint';
 import { journeyEntryMode } from '../domain/learningModes';
-import { keysSituationSource, situationCompleted } from '../domain/keysSituation';
+import { keysSituationSource, situationCompleted, situationReviewDue, situationInProgress } from '../domain/keysSituation';
 import { KeysSituationScene } from './KeysSituationScene';
 
 type Props = {
@@ -24,7 +24,7 @@ type Props = {
   resumeLearningMode?: LearningMode;
   onOpen: (unit: UnitSummary) => void; onConverse: (unit: UnitSummary) => void;
   onStartScene?: (unit: UnitSummary) => void;
-  onSituation?: (unit: UnitSummary) => void;
+  onSituation?: (unit: UnitSummary, recallOnly?: boolean) => void;
   onWords?: () => void; onGrammar?: () => void;
   onArcade?: () => void; onManageContent?: () => void; onFusionDemo?: () => void;
   onGrammarReview?: () => void; onEvolution?: () => void; onMirror?: () => void;
@@ -93,8 +93,11 @@ export function JourneyHome(props: Props) {
   const savedWords = Boolean(scene && featured && (scene.id !== featured.id || resumeLearningMode === 'vocabulary'));
   const launchIndex = launch ? stories.findIndex((unit) => unit.id === launch.id) + 1 : currentIndex;
   const situationSource = props.onSituation ? keysSituationSource(units) : undefined;
-  const situation = situationSource && !situationCompleted(userId, situationSource.contentVersion ?? '1', situationSource.id) ? situationSource : undefined;
-  const enter = () => { if (situation && props.onSituation) props.onSituation(situation); else if (scene && props.onStartScene) props.onStartScene(scene); else if (featured) onOpen(featured); };
+  const situationDone = situationSource && situationCompleted(userId, situationSource.contentVersion ?? '1', situationSource.id);
+  const situationPending = Boolean(situationSource && situationInProgress(userId, situationSource.id, situationSource.contentVersion ?? '1'));
+  const situationRecall = Boolean(situationSource && situationDone && situationReviewDue(userId, situationSource.id));
+  const situation = situationSource && (!situationDone || situationRecall || situationPending) ? situationSource : undefined;
+  const enter = () => { if (situation && props.onSituation) props.onSituation(situation, situationRecall); else if (scene && props.onStartScene) props.onStartScene(scene); else if (featured) onOpen(featured); };
 
   return <main className="journey-screen home-v2 home-guided" id="inicio">
     <header className="home-guided-header">
@@ -110,13 +113,13 @@ export function JourneyHome(props: Props) {
     {error ? <p className="journey-error" role="alert">{error}</p> : null}
     <div className="home-guided-body">
       {launch ? <section className="home-now" aria-labelledby="home-adventure-title">
-        <div className="home-now-context"><span>{situation ? 'NUEVA HISTORIA · ANTES DE SALIR' : sceneLaunch ? 'TU PRÓXIMA ESCENA' : resume ? 'Actividad en curso' : 'TU SIGUIENTE PASO'}</span><small className="sr-only" aria-label={`Paso ${launchIndex} de ${stories.length}`}>{`${launchIndex} / ${stories.length}`}</small><span className="home-live-mark" aria-hidden="true">↗</span></div>
+        <div className="home-now-context"><span>{situationPending ? 'HISTORIA EN CURSO' : situationRecall ? 'RECUPERA LO PRACTICADO' : situation ? 'NUEVA HISTORIA · ANTES DE SALIR' : sceneLaunch ? 'TU PRÓXIMA ESCENA' : resume ? 'Actividad en curso' : 'TU SIGUIENTE PASO'}</span><small className="sr-only" aria-label={`Paso ${launchIndex} de ${stories.length}`}>{`${launchIndex} / ${stories.length}`}</small><span className="home-live-mark" aria-hidden="true">↗</span></div>
         <div className="home-now-main">
           {situation ? <div className="home-situation-scene"><KeysSituationScene /></div> : <div className="home-word-orbit" aria-hidden="true">{launch.words?.slice(0, 3).map((word, index) => <span key={`${index}:${word.es}`} style={{ '--word-position': index } as CSSProperties}>{word.es}</span>)}<svg viewBox="0 0 320 60" focusable="false"><path d="M55 0v8q0 22 42 22h28q35 0 35 30M160 0v60M265 0v8q0 22-42 22h-28q-35 0-35 30" /></svg></div>}
           <p className="home-goal-label">{situation ? 'TU INGLÉS RESUELVE ALGO' : launch.routeTrick ? 'TU SIGUIENTE ESTRUCTURA' : goal ? 'TU INGLÉS, EN UNA FRASE' : 'PALABRAS PARA TU INGLÉS'}</p>
-          <ScreenHeading id="home-adventure-title">{situation ? 'Nora espera. Tus llaves no aparecen.' : goal ?? launchPresentation?.title}</ScreenHeading>
+          <ScreenHeading id="home-adventure-title">{situationPending && situationDone ? 'Tu historia sigue donde la dejaste.' : situationRecall ? 'Nora vuelve a necesitarte.' : situation ? 'Nora espera. Tus llaves no aparecen.' : goal ?? launchPresentation?.title}</ScreenHeading>
           <p className="home-now-place">{situation ? 'Aprende a pedir ayuda. Después cambia lo que buscas.' : launchLabel}</p>
-          <button type="button" className="primary-action home-continue" onClick={enter}>{situation ? 'Entrar en la historia' : sceneLaunch ? 'Entrar en la escena' : completedIds.has(launch.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">↗</span></button>
+          <button type="button" className="primary-action home-continue" onClick={enter}>{situationPending ? 'Seguir mi historia' : situationRecall ? 'Recuperar la historia' : situation ? 'Entrar en la historia' : sceneLaunch ? 'Entrar en la escena' : completedIds.has(launch.id) && !resume ? 'Volver a practicar' : 'Continuar jugando'} <span aria-hidden="true">↗</span></button>
           {situation ? <p className="home-scene-promise">Una historia. Dos objetos. Tú construyes el mensaje.</p> : sceneLaunch ? <p className="home-scene-promise">Primero te enseñamos. Después lo dices tú.</p> : <p className="home-method" aria-label="Tu fase actual">{methodSteps.map((step, index) => <span key={step} aria-current={index === methodStep ? 'step' : undefined}>{index > 0 ? <i aria-hidden="true">→</i> : null}{step}</span>)}</p>}
           {!situation ? <details className="home-about"><summary>{savedWords ? 'Tu práctica de palabras sigue guardada' : 'Dentro de esta escena'}</summary><p>{sceneLaunch ? 'Verás las palabras y las piezas de la estructura antes de construir y usar el mensaje.' : featuredPresentation?.subtitle}</p><p>{resume ? 'Tu actividad y tus ayudas siguen donde las dejaste.' : 'Te enseñamos antes de pedirte una respuesta.'}</p>{savedWords && featured ? <button type="button" className="home-saved-words" onClick={() => onOpen(featured)}>Retomar mi práctica de palabras →</button> : null}</details> : null}
           {situation && featured ? <details className="home-about"><summary>Mi recorrido anterior sigue guardado</summary><button type="button" className="home-saved-words" onClick={() => onOpen(featured)}>Retomar mi actividad anterior</button></details> : null}
@@ -132,6 +135,7 @@ export function JourneyHome(props: Props) {
         {stories.length ? <details className="home-map-panel" onToggle={(event) => setShowMap(event.currentTarget.open)}><summary>Ver mi recorrido <small>Ubicarme o elegir otra parada</small></summary>{showMap ? <><p>{completed.length} paradas completadas. El catálogo contiene {catalogue.words} palabras y {catalogue.expressions} expresiones; no son palabras aprendidas.</p><JourneyMap units={stories} currentId={featured?.id} completedIds={completedIds} lockedIds={lockedIds} onOpen={onOpen} onLockedOpen={onOpen} /></> : null}</details> : null}
         <details className="home-practice-panel"><summary>Practicar por mi cuenta <small>Opcional · no hace falta para continuar</small></summary><nav className="home-practice-links" aria-label="Práctica libre">
           <button type="button" onClick={onWords} disabled={!onWords}>Aprender palabras</button><button type="button" onClick={onGrammar} disabled={!onGrammar}>Gramática</button><button type="button" onClick={onArcade} disabled={!onArcade}>Arcade</button>
+          {situationSource && situationDone ? <button type="button" onClick={() => props.onSituation?.(situationSource, true)}>Volver a la historia de Nora</button> : null}
           {conversationUnit ? <button type="button" onClick={() => onConverse(conversationUnit)}>Volver a una conversación conocida</button> : null}
         </nav></details>
       </div></details>

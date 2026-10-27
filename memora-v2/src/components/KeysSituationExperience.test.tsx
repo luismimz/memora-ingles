@@ -3,8 +3,8 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import keys from '../../content/keys-mission.json';
 import { validateUnit } from '../domain/unit';
 import { keysSituationId, prepareKeysSituation } from '../domain/keysSituation';
-import { readLearningActivities } from '../domain/learningActivity';
-import { readWordMemories } from '../domain/memory';
+import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
+import { readWordMemories, readSentenceMemories, recordSentenceExposure } from '../domain/memory';
 import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
 import { KeysSituationExperience } from './KeysSituationExperience';
 import { GrammarOrder } from './GrammarOrder';
@@ -23,7 +23,7 @@ let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const button = (label: string) => tree.root.findAllByType('button').find((node) => text(node).replace(/\s+/gu, ' ').trim() === label)!;
 const checkpoint = () => readTrickCheckpoint(user, keysSituationId, version)!;
-const mount = async (inspection = false) => { await act(async () => { tree = create(<KeysSituationExperience unit={unit} userId={user} inspection={inspection} onNext={next} onExit={exit} appearance="light" onToggleAppearance={() => {}} />); }); };
+const mount = async (inspection = false, recallOnly = false) => { await act(async () => { tree = create(<KeysSituationExperience unit={unit} userId={user} inspection={inspection} recallOnly={recallOnly} onNext={next} onExit={exit} appearance="light" onToggleAppearance={() => {}} />); }); };
 const advance = async () => { await act(async () => tree.root.findByType(GameCard).props.onAdvance()); };
 const jump = (stage: number, extra = {}) => writeTrickCheckpoint(user, keysSituationId, version, { stage, checkIndex: 0, checkId: ['key','phone','who','action','object','meaning','build','change','pairs','sound','use'][stage], input: '', feedback: 'idle', helped: false, promptStartedAt: new Date(Date.now() - 5000).toISOString(), episodeStartedAt: new Date(Date.now() - 10000).toISOString(), ...extra });
 beforeEach(() => {
@@ -151,7 +151,33 @@ it('puede escribir los dos mensajes reales y salir a la siguiente actividad sin 
     await advance();
   }
   expect(readLearningActivities(user).filter((event) => event.source === 'learner' && event.modality === 'writing' && event.correct === true)).toHaveLength(2);
+  expect(readSentenceMemories(user).map((memory) => ({ attempts: memory.attempts, correct: memory.correct }))).toEqual([{ attempts: 1, correct: 1 }, { attempts: 1, correct: 1 }]);
   expect(next).toHaveBeenCalledOnce();
+});
+it('el repaso empieza sin modelo, no restaura un chat completado y conserva un montaje todavía abierto', async () => {
+  jump(10, { episodeId: 'finished-run' });
+  recordLearningActivity(user, { unitId: unit.id, unitTitle: unit.title, contentVersion: unit.contentVersion!, activityId: `${keysSituationId}:completed:finished-run`, skill: 'test-routing', phase: 'completion', source: 'learner', modality: 'choice', prompt: '', response: '', expected: '', correct: null, helped: false });
+  await mount(false, true);
+  expect(checkpoint().stage).toBe(10);
+  expect(checkpoint().episodeId).not.toBe('finished-run');
+  expect(tree.root.findAllByType(ConversationPractice)).toHaveLength(1);
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  act(() => tree.unmount());
+  jump(6, { episodeId: 'unfinished', order: [3,4] });
+  await mount(false, true);
+  expect(checkpoint().stage).toBe(6);
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([3,4]);
+});
+it('el SRS no convierte una corrección con ayuda en recuperación independiente', async () => {
+  recordSentenceExposure(user, unit.id, prepared.phone);
+  jump(10); await mount();
+  const chat = tree.root.findByType(ConversationPractice);
+  const turn = { expected: prepared.conversation.communication!.dialogue!.turns[1] };
+  const before = readSentenceMemories(user);
+  await act(async () => chat.props.onWrittenResponse(turn, true, true));
+  expect(readSentenceMemories(user)).toEqual(before);
+  await act(async () => chat.props.onWrittenResponse(turn, false, false));
+  expect(readSentenceMemories(user)[0]).toMatchObject({ attempts: 1, correct: 0 });
 });
 it('inspección y preferencia de asociación no escriben intentos ni memorias', async () => {
   await mount(true);

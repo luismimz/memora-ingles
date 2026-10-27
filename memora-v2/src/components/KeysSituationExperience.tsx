@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { AtomicUnit } from '../domain/unit';
-import { keysSituationId, keysSituationSkill, keysSituationStages, prepareKeysSituation } from '../domain/keysSituation';
-import { readTrickCheckpoint, writeTrickCheckpoint, type TrickCheckpoint } from '../domain/trickCheckpoint';
+import { keysSituationId, keysSituationSkill, keysSituationStages, prepareKeysSituation, situationCheckpointVersion, situationRunCompleted } from '../domain/keysSituation';
+import { clearTrickCheckpoint, readTrickCheckpoint, writeTrickCheckpoint, type TrickCheckpoint } from '../domain/trickCheckpoint';
 import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
-import { recordWordRecall, recordChunkExposure, recordSentenceExposure } from '../domain/memory';
+import { recordWordRecall, recordChunkExposure, recordSentenceExposure, recordSentenceRecall, sentenceKey } from '../domain/memory';
 import { normalizeSentenceAnswer } from '../domain/sentenceAnswer';
 import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 import type { Appearance } from '../useAppearance';
@@ -30,19 +30,20 @@ import { causalDiscoveryPresentation } from '../domain/causalDiscovery';
 import { isAssociationRejected, rememberAssociationPreference } from '../domain/associationPreference';
 import './keysSituation.css';
 
-type Props = { unit: AtomicUnit; userId: string; appearance: Appearance; onToggleAppearance: () => void; syncStatus?: SyncStatus; onExit: () => void; onNext: () => void; inspection?: boolean };
-const freshSituation = (): TrickCheckpoint => ({ stage: 0, checkIndex: 0, checkId: 'key', input: '', feedback: 'idle', helped: false, episodeId: crypto.randomUUID(), episodeStartedAt: new Date().toISOString(), promptStartedAt: new Date().toISOString() });
+type Props = { unit: AtomicUnit; userId: string; appearance: Appearance; onToggleAppearance: () => void; syncStatus?: SyncStatus; onExit: () => void; onNext: () => void; inspection?: boolean; recallOnly?: boolean };
+const freshSituation = (recallOnly = false): TrickCheckpoint => ({ stage: recallOnly ? 10 : 0, checkIndex: 0, checkId: recallOnly ? 'use' : 'key', input: '', feedback: 'idle', helped: false, episodeId: crypto.randomUUID(), episodeStartedAt: new Date().toISOString(), promptStartedAt: new Date().toISOString() });
 /** One authored situation, existing checkpoint/journal/memory and interaction components. */
 export function KeysSituationExperience(props: Props) {
   const prepared = prepareKeysSituation(props.unit);
   if (!prepared) return <main className="gate-screen"><section className="gate-card"><h1>Esta historia ha cambiado</h1><p>Tu progreso sigue guardado. Puedes seguir con las otras actividades.</p><button type="button" onClick={props.onExit}>Volver al recorrido</button></section></main>;
   return <PreparedSituation {...props} prepared={prepared} />;
 }
-function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncStatus, onExit, onNext, inspection = false, prepared }: Props & { prepared: NonNullable<ReturnType<typeof prepareKeysSituation>> }) {
-  const version = `${unit.id}:${unit.contentVersion ?? '1'}:${keysSituationId}`;
+function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncStatus, onExit, onNext, inspection = false, recallOnly = false, prepared }: Props & { prepared: NonNullable<ReturnType<typeof prepareKeysSituation>> }) {
+  const version = situationCheckpointVersion(unit.id, unit.contentVersion ?? '1');
   const [state, setState] = useState<TrickCheckpoint>(() => {
     const saved = !inspection && readTrickCheckpoint(userId, keysSituationId, version);
-    return saved && saved.stage < keysSituationStages.length && saved.checkId === keysSituationStages[saved.stage] && (!saved.order || saved.order.every((id) => id < prepared.pieces.length)) ? saved : freshSituation();
+    const finished = saved && situationRunCompleted(userId, unit.id, unit.contentVersion ?? '1', saved);
+    return saved && !finished && saved.stage < keysSituationStages.length && saved.checkId === keysSituationStages[saved.stage] && (!saved.order || saved.order.every((id) => id < prepared.pieces.length)) ? saved : freshSituation(recallOnly);
   });
   const live = useRef(state); live.current = state;
   const stage = keysSituationStages[state.stage];
@@ -95,18 +96,21 @@ function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncS
       const failures = Math.min(2, (current.checkFailures ?? 0) + 1);
       save({ input: response, feedback: 'help', helped: true, checkFailures: failures, previousAttemptId: event?.id });
       if (failures === 2) record({ activityId: `${keysSituationId}:${stage}:model`, source: 'authored', response: expected, correct: null, parentAttemptId: event?.id });
+      if (failures === 2 && !inspection && (stage === 'build' || stage === 'change')) recordSentenceExposure(userId, unit.id, stage === 'build' ? prepared.keys : prepared.phone);
     }
     return true;
   }
   function showModel(reason = 'Modelo consultado; no es un acierto.') {
     if (live.current.stage !== state.stage || live.current.feedback === 'correct' || (live.current.checkFailures ?? 0) >= 2) return;
     record({ activityId: `${keysSituationId}:${stage}:model`, source: 'authored', response: stage === 'build' ? prepared.keys.en : stage === 'sound' ? 'PHONE → móvil' : prepared.phone.en, correct: null, feedback: reason });
+    if (!inspection && (stage === 'build' || stage === 'change')) recordSentenceExposure(userId, unit.id, stage === 'build' ? prepared.keys : prepared.phone);
     save({ helped: true, checkFailures: 2, feedback: 'help' });
   }
   function finish() {
     if (completed.current) return;
     completed.current = true;
-    record({ activityId: `${keysSituationId}:completed`, phase: 'completion', source: 'learner', response: 'Historia practicada; recuerdo diferido pendiente.', correct: null, helped: false });
+    record({ activityId: `${keysSituationId}:completed:${run}`, phase: 'completion', source: 'learner', response: 'Historia practicada; recuerdo diferido pendiente.', correct: null, helped: false });
+    if (!inspection) clearTrickCheckpoint(userId, keysSituationId);
     onNext();
   }
   const roomObject = ['phone', 'change', 'pairs', 'sound', 'use'].includes(stage) ? 'phone' : 'keys';
@@ -127,7 +131,7 @@ function PreparedSituation({ unit, userId, appearance, onToggleAppearance, syncS
   return <main className="game-screen play-flow situation-experience" data-play-tone={['pairs', 'sound'].includes(stage) ? 'arcade' : teaching ? 'grammar' : stage === 'build' || stage === 'change' ? 'build' : 'associate'}>
     <PlayHeader title={title} progress={state.stage / (keysSituationStages.length - 1) * 100} onExit={onExit} appearance={appearance} onToggleAppearance={onToggleAppearance} syncStatus={syncStatus} inspection={inspection} additionalControls={<><button type="button" onClick={restart}>Reiniciar solo esta historia</button><small>Conserva tus palabras, intentos y recorrido anterior.</small></>} position="HISTORIA · ANTES DE SALIR" />
     <section className="game-stage">
-    {stage === 'use' ? <ConversationPractice vertical unit={prepared.conversation} userId={userId} reviewMode={inspection} renderScene={(turn) => <KeysSituationScene object={turn.expected.en.includes("phone") ? "phone" : "keys"} />} checkpointScope={`${keysSituationId}:${run}`} skillId={keysSituationSkill} onContinue={finish} /> : <GameCard key={`${run}:${stage}`} vertical stepKey={`${run}:${stage}`} feedback={state.feedback === 'correct' ? 'correct' : model ? 'model' : state.feedback === 'help' ? 'retry' : undefined} onAdvance={ready ? advance : undefined} advanceLabel={advanceLabel}>
+    {stage === 'use' ? <ConversationPractice vertical unit={prepared.conversation} userId={userId} reviewMode={inspection} renderScene={(turn) => <KeysSituationScene object={turn.expected.en.includes("phone") ? "phone" : "keys"} />} checkpointScope={`${keysSituationId}:${run}`} skillId={keysSituationSkill} onWrittenResponse={(turn, correct, helped) => { if (!correct || !helped) { const sentence = turn.expected.en.includes('phone') ? prepared.phone : prepared.keys; recordSentenceRecall(userId, sentenceKey(unit.id, sentence), correct ? 'hesitant' : 'missed'); } }} onContinue={finish} /> : <GameCard key={`${run}:${stage}`} vertical stepKey={`${run}:${stage}`} feedback={state.feedback === 'correct' ? 'correct' : model ? 'model' : state.feedback === 'help' ? 'retry' : undefined} onAdvance={ready ? advance : undefined} advanceLabel={advanceLabel}>
       <div className="situation-episode-content">
         {discovered ? <>
           <p className="eyebrow">{stage === 'key' ? 'NO SALIMOS SIN LAS LLAVES' : 'Y TAMBIÉN NECESITAS EL MÓVIL'}</p>

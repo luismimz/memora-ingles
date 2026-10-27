@@ -42,7 +42,7 @@ function readChatCheckpoint(userId: string, unitId: string, version: string, tur
 }
 
 /** Incoming message → learner's answer → reply. A feed gesture only advances a ready reply. */
-export function ConversationPractice({ unit, userId, reviewMode, checkpointScope = 'story', skillId, initialHelped = false, vertical = false, renderScene, onContinue }: { unit: AtomicUnit; userId: string; reviewMode: boolean; checkpointScope?: string; skillId?: string; initialHelped?: boolean; vertical?: boolean; renderScene?: (turn: ChatTurn) => ReactNode; onContinue: () => void }) {
+export function ConversationPractice({ unit, userId, reviewMode, checkpointScope = 'story', skillId, initialHelped = false, vertical = false, renderScene, onWrittenResponse, onContinue }: { unit: AtomicUnit; userId: string; reviewMode: boolean; checkpointScope?: string; skillId?: string; initialHelped?: boolean; vertical?: boolean; renderScene?: (turn: ChatTurn) => ReactNode; onWrittenResponse?: (turn: ChatTurn, correct: boolean, helped: boolean) => void; onContinue: () => void }) {
   const checkpointUnitId = checkpointScope === 'story' ? unit.id : `${unit.id}:${checkpointScope}`;
   const dialogue = unit.communication!.dialogue!;
   const partnerMessage = (id: string, pair: { en: string; es?: string }): ChatMessage => dialogue.partnerLanguage === 'es'
@@ -169,6 +169,7 @@ export function ConversationPractice({ unit, userId, reviewMode, checkpointScope
       previousAttempt.current = ok ? undefined : attempt.id;
       recordGrammarAttempt(userId, { skill: skillId ?? `dialogue:${unit.id}`, unitId: unit.id, check: turn.expected.role, kind: 'write', correct: ok, helped: helpedRef.current, at: new Date().toISOString() });
       if (ok) recordSentenceExposure(userId, unit.id, { en: turn.expected.en, es: turn.expected.es, slots: [], pronunciationTip: dialogue.rhythmTip });
+      onWrittenResponse?.(turn, ok, helpedRef.current);
     }
     setMessages((current) => [...current, { id: id(), who: 'learner', text: input, correct: ok, instant: true }, ...(!ok ? [{ id: id(), who: 'coach' as const, text: correction, instant: true }] : [])]);
     if (!ok) {
