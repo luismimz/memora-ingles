@@ -11,6 +11,9 @@ const remote = vi.hoisted(() => ({ events: [] as any[], request: vi.fn() }));
 vi.mock('./directus', async (original) => ({ ...await original<typeof import('./directus')>(), apiRequest: remote.request }));
 import { restartCourseProgress, startProgressSync } from './progressSync';
 import { recordLearningActivity } from '../domain/learningActivity';
+import { recordSentenceExposure, recordSentenceRecall, recordWordRecall, readSentenceMemories, readWordMemories, sentenceKey } from '../domain/memory';
+import { recordGrammarAttempt, readGrammarAttempts } from '../domain/grammarMemory';
+import { dueZeroReviews, zeroJourney, zeroMessages, zeroWords } from '../domain/zeroJourney';
 
 let local: Map<string, string>;
 beforeEach(() => {
@@ -33,6 +36,34 @@ beforeEach(() => {
 });
 afterEach(() => { vi.unstubAllGlobals(); });
 describe('finalización y restauración mediante el servicio real de sincronización', () => {
+  it('el contrato existente acepta y restaura el uso de Play y sus fechas sin inventar un calendario paralelo', async () => {
+    initializeJournal('learner');
+    recordSentenceExposure('learner', zeroJourney.id, zeroMessages.coldWater, new Date(Date.now() - 7_200_000));
+    recordSentenceRecall('learner', sentenceKey(zeroJourney.id, zeroMessages.coldWater), 'hesitant');
+    for (const word of [zeroWords[0], zeroWords[2]]) recordWordRecall('learner', word, 'hesitant', new Date(), 'production', undefined, false);
+    recordGrammarAttempt('learner', { unitId: zeroJourney.id, skill: 'zero:cold-before-drink-v1', check: 'write-cold-water', kind: 'write', correct: true, helped: false, at: new Date().toISOString() });
+    recordLearningActivity('learner', { unitId: zeroJourney.id, unitTitle: zeroJourney.title, contentVersion: zeroJourney.version, activityId: 'zero:isolated:write-cold-water', skill: 'zero:cold-before-drink-v1', phase: 'dialogue', source: 'learner', modality: 'writing', prompt: 'Quiero agua fría.', response: 'I want cold water.', expected: 'I want cold water.', correct: true, helped: false, responseDelayMs: 5300, promptLanguage: 'es', responseLanguage: 'en' });
+    recordSentenceExposure('learner', zeroJourney.id, zeroMessages.wantKey, new Date(Date.now() - 7_200_000));
+    recordLearningActivity('learner', { unitId: zeroJourney.id, unitTitle: zeroJourney.title, contentVersion: zeroJourney.version, activityId: 'zero:isolated:write-key', skill: 'zero:have-or-want-key-v1', phase: 'dialogue', source: 'authored', modality: 'writing', prompt: 'Quiero una llave.', response: 'Una llave se dice A KEY. Conserva A delante de KEY.', expected: '', correct: null, helped: true, promptLanguage: 'es', responseLanguage: 'es' });
+    recordLearningActivity('learner', { unitId: zeroJourney.id, unitTitle: zeroJourney.title, contentVersion: zeroJourney.version, activityId: 'zero:isolated:write-key', skill: 'zero:have-or-want-key-v1', phase: 'dialogue', source: 'learner', modality: 'writing', prompt: 'Quiero una llave.', response: 'I want a key.', expected: 'I want a key.', correct: true, helped: true, promptLanguage: 'es', responseLanguage: 'en' });
+    const memories = readSentenceMemories('learner');
+    const sync = startProgressSync('learner', () => {});
+    try { await sync.ready; await sync.flush(); } finally { sync.stop(); }
+    expect(readJournal('learner')!.pending).toEqual([]);
+    const sent = remote.events.length;
+    local.clear(); // Isolated second device; never clears production data.
+    const restored = startProgressSync('learner', () => {});
+    try {
+      await restored.ready;
+      expect(readSentenceMemories('learner')).toEqual(memories);
+      expect(readWordMemories('learner').map((memory) => memory.word.en)).toEqual(['WATER', 'COLD']);
+      expect(readGrammarAttempts('learner')).toMatchObject([{ correct: true, helped: false, check: 'write-cold-water' }]);
+      expect(readLearningActivities('learner')).toMatchObject([{ responseDelayMs: 5300, helped: false, response: 'I want cold water.' }, { correct: null, source: 'authored', responseLanguage: 'es' }, { helped: true, response: 'I want a key.' }]);
+      expect(dueZeroReviews('learner')).toEqual(['write-key']);
+      expect(dueZeroReviews('learner', Date.now() + 86_400_000)).toEqual(['write-key', 'write-cold-water']);
+      expect(remote.events).toHaveLength(sent);
+    } finally { restored.stop(); }
+  });
   it('reinicia solo por petición explícita, sincroniza el límite sin DELETE y conserva la práctica nueva en otro dispositivo', async () => {
     initializeJournal('learner');
     const result = { correct: 2, attempted: 3, completedAt: '2026-10-16T00:00:00Z', nextReviewAt: '2026-10-17T00:00:00Z' };

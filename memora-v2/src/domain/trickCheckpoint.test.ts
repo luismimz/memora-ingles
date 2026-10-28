@@ -74,3 +74,15 @@ it('conserva la reflexión libre sin dar dominio y descarta solo un borrador inv
     expect(readTrickCheckpoint('reflection-isolated', 'invalid', '1')?.reflection).toBeUndefined();
   }
 });
+it('guarda una cola finita de navegación de repaso sin fechas ni afectar checkpoints anteriores', () => {
+  const legacy = { stage: 3, checkIndex: 0, input: '', feedback: 'idle' as const, helped: false };
+  expect(parseTrickCheckpoint(legacy)).toEqual(legacy);
+  const state = { ...legacy, review: { pending: ['write-cold', 'write-key'], total: 2 } };
+  writeTrickCheckpoint('review-isolated', 'valid', '1', state);
+  expect(readTrickCheckpoint('review-isolated', 'valid', '1')).toEqual(state);
+  for (const review of [null, { pending: ['a', 'a'], total: 2 }, { pending: ['a'], total: 0 }, { pending: ['a', 'b'], total: 1 }, { pending: [1], total: 1 }, { pending: [''], total: 1 }, { pending: [], total: 9 }]) {
+    expect(parseTrickCheckpoint({ ...legacy, review })).toBeNull();
+  }
+  expect(parseTrickCheckpoint({ ...legacy, review: { pending: [], total: 2 } })).not.toBeNull();
+  expect(readTrickCheckpoint('review-isolated', 'valid', '1')).toEqual(state);
+});

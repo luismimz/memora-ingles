@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { freshZeroJourney, nextZeroStep, resumeZeroJourney, zeroAccepts, zeroCorrection, zeroCoffeePieces, zeroNoWaterPieces, zeroMessages, zeroSteps, zeroTask, zeroWords } from './zeroJourney';
+import { freshZeroJourney, nextZeroStep, resumeZeroJourney, zeroAccepts, zeroCorrection, zeroDraftCue, zeroCoffeePieces, zeroNoWaterPieces, zeroMessages, zeroSteps, zeroTask, zeroWords } from './zeroJourney';
 it('cada transferencia sigue a la enseñanza de sus piezas y usa un mensaje diferente', () => {
   expect(new Set(zeroWords.map((word) => word.en)).size).toBe(4);
   expect(zeroWords.every((word) => !word.imageUrl && word.ipa && word.scene && word.associationId)).toBe(true);
@@ -29,6 +29,10 @@ it('da una reparación del error observado, no una orden genérica de volver a e
   expect(zeroAccepts('I don’t want coffee', zeroMessages.noCoffee.en)).toBe(true);
   expect(zeroTask('not-want').target).toBe('No quiero café.');
   expect(zeroTask('have').target).toBe('Tengo una llave.');
+  expect(zeroDraftCue('write-key', 'I want')).toBeUndefined();
+  expect(zeroDraftCue('write-key', 'I want a k')).toBeUndefined();
+  expect(zeroDraftCue('write-key', 'I want key')).toContain('A KEY');
+  expect(zeroDraftCue('use-refusal', 'I dont want coffee')).toContain('apóstrofo');
 });
 it('migra por identidad, conserva borradores e historial, y rechaza piezas inválidas', () => {
   const state = freshZeroJourney();
@@ -41,4 +45,7 @@ it('migra por identidad, conserva borradores e historial, y rechaza piezas invá
   expect(resumeZeroJourney({ ...state, checkId: 'handoff' })).toMatchObject({ checkId: 'not-want', feedback: 'idle', input: '', helped: false, episodeId: state.episodeId });
   expect(nextZeroStep('write-key')).toBe('complete');
   expect(nextZeroStep('write-coffee')).toBe('not-want');
+  expect(resumeZeroJourney(freshZeroJourney(['write-key']))).toMatchObject({ checkId: 'write-key', review: { pending: ['write-key'], total: 1 } });
+  expect(resumeZeroJourney({ ...freshZeroJourney(['write-key']), checkId: 'water' })).toBeNull();
+  expect(resumeZeroJourney({ ...freshZeroJourney(['write-key']), review: { pending: ['have'], total: 1 } })).toBeNull();
 });

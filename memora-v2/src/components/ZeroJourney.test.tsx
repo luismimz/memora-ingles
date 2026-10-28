@@ -2,11 +2,11 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { ZeroJourney } from './ZeroJourney';
 import { GrammarOrder } from './GrammarOrder';
-import { freshZeroJourney, zeroJourney, zeroSteps } from '../domain/zeroJourney';
+import { dueZeroReviews, freshZeroJourney, zeroJourney, zeroMessages, zeroSteps } from '../domain/zeroJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
 import { ZeroDoorScene, ZeroJourneyScene } from './ZeroJourneyScene';
 import { readLearningActivities } from '../domain/learningActivity';
-import { readSentenceMemories, readWordMemories } from '../domain/memory';
+import { readSentenceMemories, readWordMemories, recordSentenceExposure } from '../domain/memory';
 import { readGrammarAttempts } from '../domain/grammarMemory';
 import { playEnglish } from '../services/audio';
 
@@ -155,11 +155,13 @@ it('la escritura no pasa por scroll ni por un borrador equivocado, y la ayuda no
   await reachWriting();
   await type('I want cold water'); await wait();
   await swipe(); expect(step()).toBe('write-cold');
-  const beforeDraft = events().length;
-  await type('I cold'); await wait(5000); expect(events()).toHaveLength(beforeDraft);
+  const beforeDraft = events().filter((event) => event.source === 'learner').length;
+  await type('I cold'); await wait(5000);
+  expect(events().filter((event) => event.source === 'learner')).toHaveLength(beforeDraft);
+  expect(events().at(-1)).toMatchObject({ source: 'authored', correct: null, feedback: 'Pista de borrador: no es un envío ni un error.' });
   await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
   await type('I am cold'); await wait();
-  expect(readGrammarAttempts(user).filter((attempt) => attempt.check === 'write-cold')).toMatchObject([{ correct: false, helped: false }, { correct: true, helped: true }]);
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.check === 'write-cold')).toMatchObject([{ correct: false, helped: true }, { correct: true, helped: true }]);
   expect(readSentenceMemories(user).find((memory) => memory.sentenceEn === 'I am cold.')?.correct ?? 0).toBe(0);
 });
 it('un episodio terminado en la versión anterior entra en lo nuevo; un borrador pendiente se conserva', async () => {
@@ -209,6 +211,77 @@ it('el segundo Arcade caducado muestra el rechazo completo, no afirma haber entr
   expect(readWordMemories(user)).toEqual([]);
   await wait(15000); expect(step()).toBe('arcade-refusal');
   await swipe(); expect(step()).toBe('write-cold-water');
+});
+it('vuelve a una escena según la fecha del SRS sin repetir modelos ni acreditar una visita', async () => {
+  const start = Date.now();
+  recordSentenceExposure(user, zeroJourney.id, zeroMessages.coldWater);
+  recordSentenceExposure(user, zeroJourney.id, zeroMessages.wantKey);
+  recordSentenceExposure(user, 'otro-curso', zeroMessages.cold);
+  // The have-model has no corresponding written review in this release.
+  recordSentenceExposure(user, zeroJourney.id, zeroMessages.haveKey);
+  expect(dueZeroReviews(user, start)).toEqual([]);
+  vi.setSystemTime(start + 3_600_001);
+  const due = dueZeroReviews(user);
+  expect(due).toEqual(['write-cold-water', 'write-key']);
+  writeTrickCheckpoint(user, zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('complete'), checkId: 'complete' });
+  await mount(); expect(step()).toBe('write-cold-water');
+  expect(checkpoint().review).toEqual({ pending: due, total: 2 });
+  expect(text(tree.toJSON())).toContain('SIN VOLVER A MIRAR');
+  expect(events()).toEqual([]); expect(playEnglish).not.toHaveBeenCalled();
+  expect(tree.root.findAllByType(GrammarOrder)).toHaveLength(0);
+  expect(text(tree.toJSON())).not.toContain('I want cold water');
+  await type('I want cold water'); await wait(); expect(step()).toBe('write-key');
+  expect(readSentenceMemories(user).find((memory) => memory.sentenceEn === zeroMessages.coldWater.en)?.step).toBe(1);
+  await type('I want a key'); await wait(); expect(step()).toBe('complete');
+  expect(checkpoint().review).toEqual({ pending: [], total: 2 });
+  expect(next).toHaveBeenCalledOnce();
+  expect(dueZeroReviews(user)).toEqual([]);
+  expect(readGrammarAttempts(user).every((attempt) => attempt.correct && !attempt.helped)).toBe(true);
+});
+it('un repaso reanuda su borrador/cola; consultar modelo no lo declara recordado ni repite la tarea en esa visita', async () => {
+  recordSentenceExposure(user, zeroJourney.id, zeroMessages.coldWater);
+  recordSentenceExposure(user, zeroJourney.id, zeroMessages.wantKey);
+  const original = readSentenceMemories(user);
+  writeTrickCheckpoint(user, zeroJourney.id, zeroJourney.version, freshZeroJourney(['write-cold-water', 'write-key']));
+  await mount(); await type('I want water cold');
+  await act(async () => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  const first = events().find((event) => event.correct === false)!;
+  act(() => tree.unmount()); await wait(5000); await mount();
+  expect(step()).toBe('write-cold-water'); expect(tree.root.findByType('input').props.value).toBe('I want water cold');
+  expect(checkpoint().review?.pending).toEqual(['write-cold-water', 'write-key']);
+  await act(async () => button('Ver una ayuda').props.onClick());
+  expect(events().at(-1)).toMatchObject({ correct: null, source: 'authored' });
+  expect(readGrammarAttempts(user)).toMatchObject([{ correct: false, helped: false }]);
+  expect(readSentenceMemories(user).find((memory) => memory.sentenceEn === zeroMessages.coldWater.en)).toMatchObject({ correct: 0, lapses: 1 });
+  await swipe(); expect(step()).toBe('write-key');
+  await act(async () => button('Ver una ayuda').props.onClick()); await swipe();
+  expect(step()).toBe('complete'); expect(next).toHaveBeenCalledOnce();
+  expect(readSentenceMemories(user).find((memory) => memory.sentenceEn === zeroMessages.wantKey.en)).toEqual(original.find((memory) => memory.sentenceEn === zeroMessages.wantKey.en));
+  expect(events().filter((event) => event.correct === false)).toMatchObject([{ id: first.id }]);
+  expect(events().filter((event) => event.correct === true)).toEqual([]);
+});
+it('una tarea aún empezada tiene prioridad sobre repasos nuevos que venzan al recargar', async () => {
+  recordSentenceExposure(user, zeroJourney.id, zeroMessages.wantKey, new Date(Date.now() - 86_400_000));
+  const pending = { ...freshZeroJourney(), stage: zeroSteps.indexOf('build-no-water'), checkId: 'build-no-water', order: [2], helped: true };
+  writeTrickCheckpoint(user, zeroJourney.id, zeroJourney.version, pending);
+  await mount(); expect(step()).toBe('build-no-water');
+  expect(checkpoint().review).toBeUndefined();
+  expect(tree.root.findByType(GrammarOrder).props.selected).toEqual([2]);
+});
+it('una construcción casi terminada recibe pista sin Enter ni rojo; recarga conserva la ayuda y acertar con ella no da recuerdo libre', async () => {
+  writeTrickCheckpoint(user, zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('write-key'), checkId: 'write-key' });
+  await mount(); await type('I want'); await wait(2000); expect(events()).toEqual([]);
+  await type('I want key'); await wait(1000);
+  expect(readGrammarAttempts(user)).toEqual([]);
+  expect(tree.root.findByProps({ className: 'game-card-anchor card-vertical zero-card' }).props['data-feedback']).toBeUndefined();
+  expect(text(tree.toJSON())).toContain('Una llave se dice A KEY.');
+  expect(events()).toMatchObject([{ source: 'authored', correct: null, helped: true }]);
+  act(() => tree.unmount()); await mount();
+  expect(text(tree.toJSON())).toContain('Una llave se dice A KEY.');
+  expect(tree.root.findByType('input').props.value).toBe('I want key');
+  await type('I want a key'); await wait();
+  expect(readGrammarAttempts(user)).toMatchObject([{ correct: true, helped: true }]);
+  expect(readSentenceMemories(user).some((memory) => memory.correct > 0)).toBe(false);
 });
 it('inspección no guarda y desmontar cancela una transición pendiente', async () => {
   await mount(true); await activate(); await swipe();

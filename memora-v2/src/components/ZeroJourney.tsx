@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { zeroJourney, zeroSteps, zeroWords, zeroMessages, zeroFrames, zeroCoffeePieces, zeroNoWaterPieces, zeroTask, nextZeroStep, zeroAccepts, zeroCorrection, freshZeroJourney, resumeZeroJourney } from '../domain/zeroJourney';
+import { zeroJourney, zeroSteps, zeroWords, zeroMessages, zeroFrames, zeroCoffeePieces, zeroNoWaterPieces, zeroTask, nextZeroStep, zeroAccepts, zeroCorrection, zeroDraftCue, dueZeroReviews, freshZeroJourney, resumeZeroJourney } from '../domain/zeroJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint, type TrickCheckpoint } from '../domain/trickCheckpoint';
 import { recordLearningActivity, readLearningActivities } from '../domain/learningActivity';
 import { recordSentenceExposure, recordSentenceRecall, recordWordRecall, sentenceKey } from '../domain/memory';
@@ -18,7 +18,16 @@ import './zeroJourney.css';
 
 /** New presentation/sequence, using the existing journal, checkpoint, SRS and controls. */
 export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { userId: string; inspection?: boolean; onExit: () => void; onNext: () => void }) {
-  const [state, setState] = useState(() => !inspection && resumeZeroJourney(readTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version)) || freshZeroJourney());
+  const [state, setState] = useState(() => {
+    const saved = !inspection && resumeZeroJourney(readTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version));
+    // An unfinished draft wins over newly due reviews. A finished route can
+    // return directly to known scenes, without showing their English models.
+    if (saved && saved.checkId === 'complete') {
+      const reviews = dueZeroReviews(userId);
+      return reviews.length ? freshZeroJourney(reviews) : saved;
+    }
+    return saved || freshZeroJourney();
+  });
   const live = useRef(state); live.current = state;
   const [calm, setCalm] = useState(() => readArcadeCalm(userId));
   const handedOff = useRef(false);
@@ -53,8 +62,10 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
     const current = live.current;
     if (current.stage !== state.stage || !ready || clock.paused || step === 'complete') return;
     stopSpeech();
-    const next = zeroSteps.indexOf(nextZeroStep(step));
-    save({ stage: next, checkId: zeroSteps[next], input: '', order: [], feedback: 'idle', helped: false, checkFailures: 0, previousAttemptId: undefined, correctionResponse: undefined, promptStartedAt: new Date().toISOString() });
+    const pending = current.review?.pending.slice(1);
+    const nextStep = pending ? (pending[0] ?? 'complete') as typeof step : nextZeroStep(step);
+    const next = zeroSteps.indexOf(nextStep);
+    save({ stage: next, checkId: zeroSteps[next], input: '', order: [], feedback: 'idle', helped: false, checkFailures: 0, previousAttemptId: undefined, correctionResponse: undefined, promptStartedAt: new Date().toISOString(), ...(pending ? { review: { pending, total: current.review!.total } } : {}) });
   }
   useEffect(() => {
     if (!inspection) writeTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version, live.current);
@@ -69,7 +80,7 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
     if (step !== 'complete' || handedOff.current) return;
     handedOff.current = true;
     const activityId = `zero:${state.episodeId}:cafe-transfer-completed`;
-    if (!inspection && !readLearningActivities(userId).some((event) => event.unitId === zeroJourney.id && event.activityId === activityId)) record({ activityId, phase: 'completion', source: 'learner', response: 'Pedido, estado, rechazo y llave practicados. Recuerdo diferido pendiente.', responseLanguage: 'es', expected: '', correct: null, helped: false });
+    if (!inspection && !readLearningActivities(userId).some((event) => event.unitId === zeroJourney.id && event.activityId === activityId)) record({ activityId, phase: 'completion', source: 'learner', response: state.review ? 'Repaso de escenas registrado con sus ayudas. Próximas oportunidades según el SRS.' : 'Pedido, estado, rechazo y llave practicados. Recuerdo diferido pendiente.', responseLanguage: 'es', expected: '', correct: null, helped: false });
     onNext();
   }, [step, onNext]);
 
@@ -119,6 +130,13 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
     if (!inspection && writing) recordSentenceExposure(userId, zeroJourney.id, task.message);
     save({ feedback: 'help', helped: true, checkFailures: 2 });
   }
+  function cueDraft(value: string, hint: string) {
+    const current = live.current;
+    if (current.stage !== state.stage || current.input !== value || current.feedback !== 'idle' || clock.paused) return;
+    record({ source: 'authored', response: hint, responseLanguage: 'es', expected: '', correct: null, helped: true, feedback: 'Pista de borrador: no es un envío ni un error.' });
+    // Idle + helped records a neutral cue, separately from a submitted attempt.
+    save({ helped: true, correctionResponse: value });
+  }
   function restart() {
     stopSpeech(); handedOff.current = false;
     const next = freshZeroJourney(); live.current = next; setState(next);
@@ -131,8 +149,10 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
   const choiceClass = (value: string) => solved && value === expected ? 'is-answer-correct' : state.feedback === 'help' && value === state.correctionResponse ? 'is-answer-wrong' : undefined;
   const temperaturePiece = <button key="temperature" type="button" className="zero-quality" onClick={activate} aria-label={revealed ? 'Escuchar I want cold coffee' : 'Mover FRÍO delante de CAFÉ y descubrir COLD COFFEE'}>{revealed ? 'COLD' : 'FRÍO'}<small>{revealed ? 'frío' : 'Toca para mover ←'}</small></button>;
   const drinkPiece = <span key="drink" className="zero-object">{revealed ? 'COFFEE' : 'CAFÉ'}<small>{revealed ? 'café' : 'la bebida'}</small></span>;
+  const position = state.review ? (state.review.total - state.review.pending.length) / state.review.total : state.stage / (zeroSteps.length - 1);
+  const draftHint = state.feedback === 'idle' && state.helped && state.input === state.correctionResponse ? zeroDraftCue(step, state.input) : undefined;
   return <main className={`zero-journey${arcade ? ' zero-arcade' : ''}${coldScene ? ' zero-winter' : ''}${rejection ? ' zero-rejection' : ''}${door ? ' zero-door' : ''}`}>
-    <header className="zero-header"><span className="zero-brand">M<span>MEMORA / PLAY</span></span><div className="zero-position" aria-label="Posición en este episodio; no mide dominio"><span style={{ width: `${state.stage / (zeroSteps.length - 1) * 100}%` }} /></div><details className="zero-menu" onKeyDown={menu.onKeyDown} onClick={(event) => { if ((event.target as HTMLElement).closest?.('button')) event.currentTarget.open = false; }}><summary ref={menu.trigger} aria-label="Pausa, ayuda y recorrido anterior">•••</summary><nav>
+    <header className="zero-header"><span className="zero-brand">M<span>MEMORA / PLAY</span></span><div className="zero-position" aria-label="Posición en este episodio; no mide dominio"><span style={{ width: `${position * 100}%` }} /></div><details className="zero-menu" onKeyDown={menu.onKeyDown} onClick={(event) => { if ((event.target as HTMLElement).closest?.('button')) event.currentTarget.open = false; }}><summary ref={menu.trigger} aria-label="Pausa, ayuda y recorrido anterior">•••</summary><nav>
       <button type="button" onClick={clock.togglePause}>{clock.paused ? 'Reanudar' : 'Pausar'}</button>
       <button type="button" aria-pressed={calm} onClick={() => { setCalm(!calm); if (!inspection) writeArcadeCalm(userId, !calm); }}>Modo tranquilo</button>
       {!teaching ? <button type="button" onClick={() => showModel()}>Ver una ayuda</button> : null}
@@ -142,7 +162,7 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
     </nav></details></header>
     {clock.paused ? <aside className="zero-paused"><span>Ⅱ</span><h1>En pausa</h1><button type="button" onClick={clock.togglePause}>Reanudar</button></aside> : <GameCard vertical showAdvanceButton={false} key={`${state.episodeId}:${step}`} stepKey={step} onAdvance={ready ? advance : undefined} feedback={solved ? 'correct' : model ? 'model' : state.feedback === 'help' ? 'retry' : undefined} className="zero-card">
       <div className="zero-content">
-        <p className="zero-kicker">{arcade ? '⚡ ARCADE / PEDIDO RELÁMPAGO' : door ? '04 / AL OTRO LADO' : state.stage >= zeroSteps.indexOf('not-want') ? '03 / TÚ CAMBIAS EL PEDIDO' : coldScene ? '02 / CAMBIA LO QUE DICES' : '01 / UN CAFÉ CON BYTE'}</p>
+        <p className="zero-kicker">{state.review ? 'RECUERDA / SIN VOLVER A MIRAR' : arcade ? '⚡ ARCADE / PEDIDO RELÁMPAGO' : door ? '04 / AL OTRO LADO' : state.stage >= zeroSteps.indexOf('not-want') ? '03 / TÚ CAMBIAS EL PEDIDO' : coldScene ? '02 / CAMBIA LO QUE DICES' : '01 / UN CAFÉ CON BYTE'}</p>
         {teaching ? <>
           <h1>{discovery ? step === 'water' ? 'Byte tiene sed.' : step === 'coffee' ? 'Ahora, algo caliente.' : step === 'key' ? 'La puerta no abre.' : 'La col te roba la bufanda.' : step === 'want' ? 'Hazte entender.' : step === 'not-want' ? 'Llegó el pedido equivocado.' : step === 'cold-order' ? 'Cambia la temperatura.' : step === 'have' ? 'Esta vez, ya la tienes.' : 'No lo quieres. Lo sientes.'}</h1>
           {door ? discovery ? <button type="button" data-feed-surface="true" className="zero-world" onClick={activate} aria-label="Girar el kiwi y descubrir KEY"><ZeroDoorScene mnemonic discovered={revealed} /><span>{revealed ? 'Toca para escuchar' : 'Gira el kiwi: toca'}</span></button> : <ZeroDoorScene discovered owned /> : null}
@@ -164,7 +184,7 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
           {model ? <div className="zero-model" role="status"><p>Vamos con ayuda</p><strong lang="en">{modelMessage}</strong><SpeechModelButton text={modelMessage} /></div> : step === 'build-coffee' || step === 'build-no-water' ? <GrammarOrder puzzle autoCheck pieces={step === 'build-coffee' ? zeroCoffeePieces : zeroNoWaterPieces} selected={state.order ?? []} locked={solved} onChange={(order) => { if (!solved) save({ order }); }} onAnswer={answer} />
             : arcade ? <><p className="zero-order" lang="en">{target}</p>{!calm ? <ArcadeClock durationMs={10000} remaining={clock.remaining} paused={clock.paused} revealed={solved} /> : null}<div className="zero-drinks">{(step === 'arcade-refusal' ? ['COFFEE', 'WATER'] : ['WATER', 'COFFEE']).map((value) => <button key={value} type="button" className={choiceClass(value)} aria-pressed={Boolean(choiceClass(value))} disabled={solved} onClick={() => answer(value)}><span aria-hidden="true">{value === 'WATER' ? '💧' : '☕'}</span>{value === 'WATER' ? 'Agua' : 'Café'}</button>)}</div></>
             : step === 'contrast' || step === 'have-meaning' ? <><p className="zero-order" lang="en">I <span className="zero-missing">{solved ? expected : '…'}</span> {door ? 'A KEY' : 'COLD'}</p><p className="zero-native">{target}</p><div className="zero-verb-options">{(door ? ['HAVE', 'WANT'] : ['WANT', 'AM']).map((value) => <button key={value} type="button" className={choiceClass(value)} aria-pressed={Boolean(choiceClass(value))} disabled={solved} onClick={() => answer(value)}>{value}<small>{value === 'WANT' ? 'quiero' : value === 'HAVE' ? 'tengo' : 'estoy'}</small></button>)}</div></>
-            : writing ? <AnswerStudio id="zero-answer" taskKey={`${state.episodeId}:${step}`} target={target} value={state.input} onChange={(input) => save({ input })} onAnswer={answer} accepts={(value) => zeroAccepts(value, expected)} disabled={solved} /> : null}
+            : writing ? <AnswerStudio id="zero-answer" taskKey={`${state.episodeId}:${step}`} target={target} value={state.input} onChange={(input) => save({ input })} onAnswer={answer} accepts={(value) => zeroAccepts(value, expected)} draftCue={(value) => zeroDraftCue(step, value)} onDraftCue={cueDraft} feedback={draftHint} disabled={solved} /> : null}
           {solved ? <p className="zero-reaction" role="status">✓ {step === 'write-key' ? 'Tu amigo recibe la llave y puede entrar.' : step === 'have-meaning' ? 'La llave ya está en tu mano.' : step === 'write-cold' ? 'Byte te trae una bufanda.' : step === 'write-cold-water' ? 'Tu vaso llega con hielo.' : step === 'build-no-water' ? 'El agua se retira del pedido.' : rejection ? 'El café se retira del pedido.' : step === 'write-coffee' || step === 'build-coffee' ? 'Byte te sirve café.' : 'Te ha entendido.'}</p> : state.feedback === 'help' && !model ? <p className="zero-retry" role="status">{step === 'have-meaning' ? 'Ya está en tu mano: HAVE, tengo.' : step === 'contrast' ? 'Aquí cuentas cómo estás: AM.' : writing ? zeroCorrection(step, state.correctionResponse ?? '') : step === 'build-no-water' ? "I · DON'T WANT · WATER. El bloque central ya dice «no quiero»." : step === 'arcade-refusal' ? "DON'T WANT significa «no quiero». Busca la bebida que rechaza." : 'Prueba otra combinación. Tus piezas siguen aquí.'}</p> : null}
         </>}
         {ready && (!solved || calm) ? <p className="zero-swipe">Desliza ↑</p> : null}

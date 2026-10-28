@@ -9,7 +9,7 @@ import type { LearningMode } from './domain/game';
 import { JourneyHome } from './components/JourneyHomeV2';
 import { ZeroJourney } from './components/ZeroJourney';
 import { ZeroJourneyScene } from './components/ZeroJourneyScene';
-import { freshZeroJourney, zeroJourney } from './domain/zeroJourney';
+import { dueZeroReviews, freshZeroJourney, zeroJourney } from './domain/zeroJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint } from './domain/trickCheckpoint';
 import { completedVocabularyStop } from './domain/journeyMap';
 import { ArcadeExperience, eligibleGrammarUnits } from './components/ArcadeExperience';
@@ -337,7 +337,7 @@ export default function App() {
   }
   function openZeroJourney() {
     const saved = readTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version);
-    if (saved?.checkId === 'complete') writeTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version, freshZeroJourney());
+    if (saved?.checkId === 'complete') writeTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version, freshZeroJourney(dueZeroReviews(userId)));
     setZeroOpen(true);
   }
 

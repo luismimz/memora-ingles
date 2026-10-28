@@ -2,6 +2,7 @@ import type { AtomicWord, UnitSentence } from './unit';
 import { piece } from './grammarLesson';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 import type { TrickCheckpoint } from './trickCheckpoint';
+import { dueSentenceMemories } from './memory';
 
 /** Small, explicitly authored release; not imported pilot content or a 30-day claim. */
 export const zeroJourney = { id: 'memora:zero-cafe-v1', version: '1', title: 'Una mañana con Byte' };
@@ -52,6 +53,18 @@ export const zeroTask = (step: ZeroStep) => {
     words: step === 'write-cold-water' ? [zeroWords[0], zeroWords[2]] : [zeroWords[step === 'write-cold' ? 2 : step === 'write-key' ? 3 : 1]],
   };
 };
+export const zeroRecallSteps = ['write-cold-water', 'write-cold', 'use-refusal', 'write-key', 'write-coffee'] as const;
+export type ZeroRecallStep = typeof zeroRecallSteps[number];
+/** Route opportunities selected by the existing SRS, never calculate a new schedule. */
+export function dueZeroReviews(userId: string, now = Date.now()): ZeroRecallStep[] {
+  return dueSentenceMemories(userId, now).filter((memory) => memory.unitId === zeroJourney.id).flatMap((memory) => {
+    const step = zeroRecallSteps.find((candidate) => {
+      const { message } = zeroTask(candidate);
+      return zeroAccepts(memory.sentenceEn, message.en) && memory.sentenceEs === message.es;
+    });
+    return step ? [step] : [];
+  }).filter((step, index, all) => all.indexOf(step) === index);
+}
 export const zeroAccepts = (value: string, expected: string) => normalizeSentenceAnswer(value).replace(/\bdon't\b/gu, 'do not') === normalizeSentenceAnswer(expected).replace(/\bdon't\b/gu, 'do not');
 export function zeroCorrection(step: ZeroStep, response: string): string {
   const value = normalizeSentenceAnswer(response);
@@ -67,6 +80,16 @@ export function zeroCorrection(step: ZeroStep, response: string): string {
   if (step === 'write-cold' && !/\bi am\b/u.test(value)) return 'En esta expresión dices cómo estás: I AM COLD, tengo frío.';
   return 'Revisa las piezas de tu mensaje. En ••• puedes ver un modelo.';
 }
+/** Only known, complete misconstructions. A pause or unfinished prefix is not an error. */
+export function zeroDraftCue(step: ZeroStep, value: string): string | undefined {
+  const draft = normalizeSentenceAnswer(value);
+  if (step === 'use-refusal' && draft === 'i dont want coffee') return "DON'T lleva apóstrofo. DON'T WANT significa «no quiero».";
+  const complete = step === 'write-key' ? ['i have a key', 'i want key']
+    : step === 'use-refusal' ? ['i want coffee']
+    : step === 'write-cold-water' ? ['i want water cold', 'i want cold coffee']
+    : step === 'write-cold' ? ['i cold', 'i have cold', 'i want cold'] : [];
+  return complete.includes(draft) ? zeroCorrection(step, value) : undefined;
+}
 export function resumeZeroJourney(saved: TrickCheckpoint | null): TrickCheckpoint | null {
   if (!saved?.episodeId) return null;
   // Old completed runs enter the extension, not a restart or an immediate exit.
@@ -74,6 +97,7 @@ export function resumeZeroJourney(saved: TrickCheckpoint | null): TrickCheckpoin
   const stage = zeroSteps.indexOf(saved.checkId as ZeroStep);
   const limit = saved.checkId === 'build-coffee' || saved.checkId === 'build-no-water' ? 3 : 0;
   if (stage < 0 || saved.order?.some((index) => !Number.isInteger(index) || index < 0 || index >= limit) || new Set(saved.order).size !== (saved.order?.length ?? 0)) return null;
+  if (saved.review && (saved.review.pending.some((id) => !zeroRecallSteps.includes(id as typeof zeroRecallSteps[number])) || (saved.review.pending[0] ?? 'complete') !== saved.checkId)) return null;
   return { ...saved, stage };
 }
-export const freshZeroJourney = (): TrickCheckpoint => ({ stage: 0, checkIndex: 0, checkId: zeroSteps[0], input: '', feedback: 'idle', helped: false, order: [], episodeId: crypto.randomUUID(), episodeStartedAt: new Date().toISOString(), promptStartedAt: new Date().toISOString() });
+export const freshZeroJourney = (reviews: ZeroRecallStep[] = []): TrickCheckpoint => ({ stage: reviews.length ? zeroSteps.indexOf(reviews[0]) : 0, checkIndex: 0, checkId: reviews[0] ?? zeroSteps[0], input: '', feedback: 'idle', helped: false, order: [], episodeId: crypto.randomUUID(), episodeStartedAt: new Date().toISOString(), promptStartedAt: new Date().toISOString(), ...(reviews.length ? { review: { pending: [...reviews], total: reviews.length } } : {}) });

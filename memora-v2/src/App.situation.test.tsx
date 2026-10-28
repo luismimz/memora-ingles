@@ -17,7 +17,7 @@ import { completeLearningMode } from './domain/learningModes';
 import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { GrammarCoach } from './components/GrammarCoach';
 import { ZeroJourney } from './components/ZeroJourney';
-import { freshZeroJourney, zeroJourney, zeroSteps } from './domain/zeroJourney';
+import { freshZeroJourney, zeroJourney, zeroMessages, zeroSteps } from './domain/zeroJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint } from './domain/trickCheckpoint';
 const unit = validateUnit(keys);
 const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>), followup: null as null | ReturnType<typeof validateUnit> }));
@@ -80,6 +80,17 @@ it('reabrir un Play ampliado terminado reinicia solo el episodio, no el resto de
   expect(readTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version)?.checkId).toBe('water');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
   expect(readLearningActivities('situation-app-isolated').filter((event) => event.correct !== null)).toEqual([]);
+});
+it('al volver tras la fecha del SRS abre uso sin modelo, no otra vuelta por las asociaciones', async () => {
+  await mount(() => {
+    recordSentenceExposure('situation-app-isolated', zeroJourney.id, zeroMessages.coldWater, new Date(Date.now() - 7_200_000));
+    writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('complete'), checkId: 'complete' });
+  }, false);
+  expect(text(tree.toJSON())).toContain('SIN VOLVER A MIRAR');
+  expect(text(tree.toJSON())).toContain('Quiero agua fría.');
+  expect(text(tree.toJSON())).not.toContain('I want cold water');
+  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+  expect(readLearningActivities('situation-app-isolated')).toEqual([]);
 });
 it('Nora prepara las palabras del ordenador y enlaza al coach contextual con Detective, sin enseñar piezas desconocidas', async () => {
   source.followup = validateUnit(examples[0]);

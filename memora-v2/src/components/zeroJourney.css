@@ -1,6 +1,6 @@
 .zero-journey { --ink: #f4f5fa; --muted: #adb8d0; --line: #ffffff25; --surface-strong: #202a43; --surface-soft: #1a2339; --accent: #a2e8d2; --accent-ink: #b2f2dc; --zero-glow: #39518c; height: 100dvh; min-height: 0; display: grid; grid-template-rows: 58px minmax(0, 1fr); overflow: hidden; color: var(--ink); background: radial-gradient(ellipse at 50% -12%, var(--zero-glow), transparent 66%), #0c1120; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
 .zero-winter { --zero-glow: #28566c; }
-.zero-arcade { --zero-glow: #653b92; }
+.zero-journey.zero-arcade { --zero-glow: #653b92; }
 .zero-rejection { --zero-glow: #674862; }
 .zero-door { --zero-glow: #695c42; }
 .zero-header { display: flex; align-items: center; gap: 24px; padding: 8px max(22px, calc((100vw - 650px) / 2)); z-index: 20; }
@@ -97,6 +97,7 @@
 .zero-journey .answer-studio-target { font-size: 1.65rem; }
 .zero-journey .answer-studio input { background: #ffffff08; border-color: #ffffff30; color: #f4f5fa; }
 .zero-journey .answer-studio-status { font-size: .7rem; color: #adb8d0; }
+.zero-journey .answer-studio-feedback { color: #f3c894; font-size: .9rem; }
 .zero-content:has(.answer-studio:focus-within) { min-height: 0; justify-content: flex-start; gap: 12px; }
 .zero-content:has(.answer-studio:focus-within) > .zero-scene { height: 70px; }
 .zero-paused { display: grid; align-content: center; justify-items: center; gap: 22px; }
