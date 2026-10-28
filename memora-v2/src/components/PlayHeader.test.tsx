@@ -2,6 +2,7 @@ import { expect, it, vi } from 'vitest';
 import { act, create } from 'react-test-renderer';
 import { PlayHeader } from './PlayHeader';
 import { syncLabels } from '../services/progressSync';
+import { PlayFeed } from './GameCard';
 
 it('Escape cierra opciones, devuelve foco y no sale de la actividad ni cambia su apariencia', () => {
   const focus = vi.fn(), exit = vi.fn(), theme = vi.fn(); let tree!: ReturnType<typeof create>;
@@ -12,6 +13,19 @@ it('Escape cierra opciones, devuelve foco y no sale de la actividad ni cambia su
   expect(focus).toHaveBeenCalledExactlyOnceWith({ preventScroll: true });
   expect(exit).not.toHaveBeenCalled(); expect(theme).not.toHaveBeenCalled();
   expect(tree.root.findByProps({ className: 'play-save-warning' }).children).toEqual([syncLabels.offline]);
+  act(() => tree.unmount());
+});
+
+it('la cabecera del feed conserva salida y guardado en opciones, con la misma marca sin otra acción principal', () => {
+  const exit = vi.fn(); let tree!: ReturnType<typeof create>;
+  act(() => { tree = create(<PlayFeed><PlayHeader title="Monta tu mensaje" onExit={exit} appearance="light" onToggleAppearance={() => {}} syncStatus="saved" /></PlayFeed>); });
+  expect(tree.root.findByProps({ className: 'play-brand-mark' }).children).toEqual(['M']);
+  const back = tree.root.findByProps({ className: 'activity-back' });
+  expect(back.parent!.props.className).toBe('play-options-panel');
+  act(() => back.props.onClick()); expect(exit).toHaveBeenCalledOnce();
+  const currentTarget = { open: true };
+  act(() => tree.root.findByProps({ className: 'play-options' }).props.onClick({ target: { closest: () => ({ tagName: 'BUTTON' }) }, currentTarget }));
+  expect(currentTarget.open).toBe(false);
   act(() => tree.unmount());
 });
 

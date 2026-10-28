@@ -1,7 +1,14 @@
-import { useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import './verticalEpisode.css';
 
 const interactiveCardTarget = (target: EventTarget) => Boolean((target as HTMLElement).closest?.('button,input,textarea,select,a,summary,[contenteditable="true"],[draggable="true"],[role="button"]'));
+
+const FeedPresentation = createContext(false);
+export const usePlayFeed = () => useContext(FeedPresentation);
+/** Presentation only: reuse every existing readiness, answer and save condition. */
+export function PlayFeed({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
+  return <FeedPresentation.Provider value={enabled}>{children}</FeedPresentation.Provider>;
+}
 
 interface GameCardProps {
   children: ReactNode;
@@ -25,6 +32,8 @@ interface GameCardProps {
 
 /** La misma superficie y física para asociaciones, recompensas y gramática. */
 export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', reserveFooter = false, revealFooter = true, className = '', showBack, advanceControl = false, vertical = false, showAdvanceButton = true, stepKey = '', feedback }: GameCardProps) {
+  const feedOnly = useContext(FeedPresentation);
+  const showButton = showAdvanceButton && !feedOnly;
   const verticalAdvanceLabel = advanceLabel.replace(/\s*→\s*$/u, '');
   const [dragX, setDragX] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -125,9 +134,9 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
       return Boolean(onAdvance && revealFooter && (!interactiveCardTarget(target) || sceneSurface) && !window.getSelection?.()?.toString());
     };
     return <div className={`game-card-anchor card-vertical ${className}`} data-feedback={feedback}>
-      <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : dragX < 0 ? ' is-following-touch' : ''}`} role="region" aria-label={showAdvanceButton ? 'Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir.' : 'Escena de juego. Desliza hacia arriba o usa la flecha abajo al terminar la acción.'} tabIndex={0}
+      <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : dragX < 0 ? ' is-following-touch' : ''}`} role="region" aria-label={showButton ? 'Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir.' : 'Escena de juego. Desliza hacia arriba o usa la flecha abajo al terminar la acción.'} tabIndex={0}
         style={{ transform: `translate3d(0, ${dragX}px, 0)` }}
-        onKeyDown={!showAdvanceButton ? (event) => { if (['ArrowUp', 'ArrowDown', 'PageDown'].includes(event.key) && canLeave(event.target) && atEnd(event.currentTarget)) { event.preventDefault(); advance(); } } : undefined}
+        onKeyDown={!showButton ? (event) => { if (['ArrowUp', 'ArrowDown', 'PageDown'].includes(event.key) && canLeave(event.target) && atEnd(event.currentTarget)) { event.preventDefault(); advance(); } } : undefined}
         onPointerDown={() => { touchStart.current = undefined; }}
         onTouchStart={(event) => { touchStart.current = event.touches.length === 1 && canLeave(event.target) && atEnd(event.currentTarget) ? { x: event.touches[0].clientX ?? 0, y: event.touches[0].clientY } : undefined; }}
         onTouchMove={(event) => {
@@ -161,7 +170,8 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
         }}>
         <article className="game-card-face card-vertical-page"><div className="game-card-body">{children}{back ? <details className="card-vertical-memory"><summary>Recordar la escena</summary>{back}</details> : null}</div></article>
       </div>
-      {onAdvance && revealFooter && showAdvanceButton ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel} title="Desliza hacia arriba o toca para seguir"><span>{verticalAdvanceLabel}</span><span className="feed-next-arrow" aria-hidden="true">↑</span></button></footer> : <div className="card-vertical-rest" aria-hidden="true" />}
+      {onAdvance && revealFooter && showButton ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel} title="Desliza hacia arriba o toca para seguir"><span>{verticalAdvanceLabel}</span><span className="feed-next-arrow" aria-hidden="true">↑</span></button></footer> : feedOnly ? <footer className="card-feed-hint">{onAdvance && revealFooter ? <span>Desliza para seguir <b aria-hidden="true">↑</b></span> : null}</footer> : <div className="card-vertical-rest" aria-hidden="true" />}
+      {!showButton && onAdvance && revealFooter ? <button type="button" className="sr-only feed-accessible-next" onClick={advance} disabled={exiting} aria-label="Pasar a la siguiente escena">Pasar a la siguiente escena ↑</button> : null}
     </div>;
   }
 

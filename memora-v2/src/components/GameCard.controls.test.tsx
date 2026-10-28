@@ -5,6 +5,7 @@ vi.mock('react', async (original) => ({
   ...await original<typeof import('react')>(),
   useState: (initial: unknown) => [initial, vi.fn()],
   useRef: (initial: unknown) => ({ current: initial }), useEffect: () => {},
+  useContext: () => false,
 }));
 import { GameCard } from './GameCard';
 function button(node: ReactNode): ReactElement<any> | undefined {

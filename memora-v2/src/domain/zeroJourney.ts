@@ -6,10 +6,12 @@ import { dueSentenceMemories } from './memory';
 
 /** Small, explicitly authored release; not imported pilot content or a 30-day claim. */
 export const zeroJourney = { id: 'memora:zero-cafe-v1', version: '1', title: 'Una mañana con Byte' };
-export const zeroSteps = ['water', 'coffee', 'want', 'build-coffee', 'arcade-water', 'cold', 'be', 'contrast', 'not-want', 'build-no-water', 'cold-order', 'arcade-refusal', 'write-cold-water', 'write-cold', 'use-refusal', 'key', 'have', 'have-meaning', 'write-key', 'write-coffee', 'complete'] as const;
+export const zeroSteps = ['water', 'coffee', 'want', 'build-coffee', 'arcade-water', 'cold', 'be', 'contrast', 'not-want', 'build-no-water', 'cold-order', 'arcade-refusal', 'arcade-refusal-action', 'write-cold-water', 'write-cold', 'use-refusal', 'key', 'have', 'have-meaning', 'write-key', 'write-coffee', 'complete'] as const;
 export type ZeroStep = typeof zeroSteps[number];
 // A saved coffee draft remains answerable. New runs do not repeat that old task.
-export const nextZeroStep = (step: ZeroStep): ZeroStep => step === 'write-key' ? 'complete' : step === 'write-coffee' ? 'not-want' : zeroSteps[Math.min(zeroSteps.indexOf(step) + 1, zeroSteps.length - 1)];
+export const nextZeroStep = (step: ZeroStep): ZeroStep => step === 'write-key' ? 'complete' : step === 'write-coffee' ? 'not-want'
+  : step === 'cold-order' ? 'arcade-refusal-action' : step === 'arcade-refusal' ? 'write-cold-water'
+  : step === 'write-cold-water' ? 'key' : zeroSteps[Math.min(zeroSteps.indexOf(step) + 1, zeroSteps.length - 1)];
 export const zeroWords: AtomicWord[] = [
   { id: 901001, en: 'WATER', es: 'agua', ipa: '/ˈwɔːtə/', bridge: 'WÁTER', associationMode: 'acoustic_bridge', scene: 'Un WÁTER estornuda y lo llena todo de AGUA.', emojis: ['🚽', '💧'], associationId: 'zero-water-wc-v1', associationVersion: 1 },
   { id: 901002, en: 'COFFEE', es: 'café', ipa: '/ˈkɒfi/', bridge: 'CAFÉ', associationMode: 'cognate', scene: 'El CAFÉ salta de la taza al oír COFFEE.', cognateEvidence: { sameMeaning: true, note: 'COFFEE y café nombran la misma bebida; el audio modela el sonido inglés.' }, emojis: ['☕'], associationId: 'zero-coffee-cognate-v1', associationVersion: 1 },
@@ -40,16 +42,16 @@ export const zeroTask = (step: ZeroStep) => {
   const message = ['coffee', 'build-coffee', 'write-coffee'].includes(step) ? zeroMessages.coffee
     : ['water', 'want', 'arcade-water'].includes(step) ? zeroMessages.water
     : step === 'build-no-water' ? zeroMessages.noWater
-    : ['not-want', 'use-refusal', 'arcade-refusal'].includes(step) ? zeroMessages.noCoffee
+    : ['not-want', 'use-refusal', 'arcade-refusal', 'arcade-refusal-action'].includes(step) ? zeroMessages.noCoffee
     : step === 'cold-order' ? zeroMessages.coldCoffee
     : step === 'write-cold-water' ? zeroMessages.coldWater : step === 'write-key' ? zeroMessages.wantKey : ['key', 'have', 'have-meaning'].includes(step) ? zeroMessages.haveKey : zeroMessages.cold;
   return {
     message,
     writing: ['write-cold', 'write-coffee', 'write-cold-water', 'use-refusal', 'write-key'].includes(step),
-    arcade: step === 'arcade-water' || step === 'arcade-refusal',
-    expected: step === 'contrast' ? 'AM' : step === 'have-meaning' ? 'HAVE' : step === 'arcade-water' ? 'WATER' : step === 'arcade-refusal' ? 'COFFEE' : message.en,
-    target: step === 'arcade-water' ? zeroMessages.water.en : step === 'arcade-refusal' ? zeroMessages.noCoffee.en : message.es,
-    skill: ['key', 'have', 'have-meaning', 'write-key'].includes(step) ? 'zero:have-or-want-key-v1' : ['not-want', 'build-no-water', 'arcade-refusal', 'use-refusal'].includes(step) ? 'zero:refuse-drink-v1' : ['cold-order', 'write-cold-water'].includes(step) ? 'zero:cold-before-drink-v1' : ['cold', 'be', 'contrast', 'write-cold'].includes(step) ? 'zero:be-cold-v1' : 'zero:want-drink-v1',
+    arcade: step === 'arcade-water' || step === 'arcade-refusal' || step === 'arcade-refusal-action',
+    expected: step === 'contrast' ? 'AM' : step === 'have-meaning' ? 'HAVE' : step === 'arcade-water' ? 'WATER' : step === 'arcade-refusal' ? 'COFFEE' : step === 'arcade-refusal-action' ? 'RETIRAR' : message.en,
+    target: step === 'arcade-water' ? zeroMessages.water.en : step === 'arcade-refusal' || step === 'arcade-refusal-action' ? zeroMessages.noCoffee.en : message.es,
+    skill: ['key', 'have', 'have-meaning', 'write-key'].includes(step) ? 'zero:have-or-want-key-v1' : ['not-want', 'build-no-water', 'arcade-refusal', 'arcade-refusal-action', 'use-refusal'].includes(step) ? 'zero:refuse-drink-v1' : ['cold-order', 'write-cold-water'].includes(step) ? 'zero:cold-before-drink-v1' : ['cold', 'be', 'contrast', 'write-cold'].includes(step) ? 'zero:be-cold-v1' : 'zero:want-drink-v1',
     words: step === 'write-cold-water' ? [zeroWords[0], zeroWords[2]] : [zeroWords[step === 'write-cold' ? 2 : step === 'write-key' ? 3 : 1]],
   };
 };

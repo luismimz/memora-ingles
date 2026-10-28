@@ -91,10 +91,10 @@ it('tras Play, preparar el ordenador lleva a usar esas palabras aunque haya otro
 });
 it('quien terminó el primer Play encuentra la ampliación sin borrar su recorrido anterior', async () => {
   await mount(() => writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: 10, checkId: 'handoff' }), false);
-  expect(text(tree.toJSON())).toContain('Llegó el pedido equivocado.');
+  expect(text(tree.toJSON())).toContain('No era tu pedido.');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
   await click('Recorrido anterior'); await click('Memora Play · recorrido nuevo');
-  expect(text(tree.toJSON())).toContain('Llegó el pedido equivocado.');
+  expect(text(tree.toJSON())).toContain('No era tu pedido.');
   expect(readLearningActivities('situation-app-isolated')).toEqual([]);
 });
 it('reabrir un Play ampliado terminado reinicia solo el episodio, no el resto del curso', async () => {

@@ -31,3 +31,4 @@
 @media (max-width: 500px) { .card-vertical-scroll { border-radius: 20px; } .card-vertical .card-vertical-page { border-radius: 20px; } }
 @media (prefers-reduced-motion: reduce) { .card-vertical-scroll { transition: none; } .card-vertical-scroll.is-exiting { opacity: 1; } }
 .card-vertical-scroll.is-following-touch { transition: none; }
+.feed-accessible-next:focus-visible { position: fixed; z-index: 60; right: 16px; bottom: 16px; width: auto; height: auto; clip: auto; clip-path: none; white-space: normal; min-height: 44px; padding: 12px 18px; border: 2px solid var(--accent-ink); border-radius: 16px; background: var(--surface-strong); color: var(--ink); }

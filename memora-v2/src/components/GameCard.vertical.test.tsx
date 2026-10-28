@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
-import { GameCard } from './GameCard';
+import { GameCard, PlayFeed } from './GameCard';
 let tree: ReactTestRenderer;
 const target = { closest: () => null };
 const viewport = { scrollTop: 0, scrollHeight: 800, clientHeight: 600 };
@@ -12,6 +12,30 @@ function mount(advance?: () => void, stepKey = 'one') {
 }
 beforeEach(() => { viewport.scrollTop = 0; vi.useFakeTimers(); vi.stubGlobal('window', { setTimeout, clearTimeout, matchMedia: () => ({ matches: false }), getSelection: () => null }); });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+it('el feed compartido cambia presentación sin responder, mantiene teclado y no salta lo pendiente', () => {
+  const advance = vi.fn(), preventDefault = vi.fn();
+  act(() => { tree = create(<PlayFeed><GameCard vertical>Pendiente</GameCard></PlayFeed>); });
+  viewport.scrollTop = 200;
+  act(() => region().props.onKeyDown(event({ key: 'ArrowDown', preventDefault })));
+  expect(advance).not.toHaveBeenCalled(); expect(tree.root.findAllByType('button')).toHaveLength(0);
+  expect(tree.root.findByProps({ className: 'card-feed-hint' }).children).toEqual([]);
+  act(() => tree.update(<PlayFeed><GameCard vertical onAdvance={advance}>Preparado</GameCard></PlayFeed>));
+  expect(tree.root.findAllByType('button')).toHaveLength(1);
+  expect(tree.root.findByType('button').props.className).toBe('sr-only feed-accessible-next');
+  act(() => { region().props.onKeyDown(event({ key: 'ArrowDown', preventDefault })); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+  act(() => tree.update(<PlayFeed enabled={false}><GameCard vertical onAdvance={advance}>Revisión</GameCard></PlayFeed>));
+  expect(tree.root.findAllByType('button')).toHaveLength(1);
+  expect(region().props.onKeyDown).toBeUndefined();
+});
+it('el feed ofrece una acción para lector de pantalla sin volver al botón visual repetido', () => {
+  const advance = vi.fn();
+  act(() => { tree = create(<PlayFeed><GameCard vertical onAdvance={advance}>Modelo</GameCard></PlayFeed>); });
+  const accessible = tree.root.findByProps({ 'aria-label': 'Pasar a la siguiente escena' });
+  expect(accessible.props.className).toContain('sr-only');
+  act(() => { accessible.props.onClick(); accessible.props.onClick(); vi.advanceTimersByTime(230); });
+  expect(advance).toHaveBeenCalledOnce();
+});
 it('el modo sin botón conserva teclado/gesto y nunca permite saltarse una tarea pendiente', () => {
   const advance = vi.fn(), preventDefault = vi.fn();
   act(() => { tree = create(<GameCard vertical showAdvanceButton={false}>Pendiente</GameCard>); });

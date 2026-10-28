@@ -3,9 +3,11 @@ import type { LessonPiece } from '../domain/grammarLesson';
 import './grammarOrder.css';
 
 /** Controlled navigation only. GrammarCoach owns attempts, hints and checkpoints. */
-export function GrammarOrder({ pieces, selected, locked, onChange, onAnswer, puzzle = false, autoCheck = puzzle }: {
+export function GrammarOrder({ pieces, selected, locked, onChange, onAnswer, puzzle = false, autoCheck = puzzle, translations }: {
   pieces: LessonPiece[]; selected: number[]; locked: boolean; onChange: (selection: number[]) => void; onAnswer: (answer: string) => void;
   puzzle?: boolean; autoCheck?: boolean;
+  /** Prepared meanings, not guesses. Optional for guided teaching games. */
+  translations?: readonly string[];
 }) {
   const root = useRef<HTMLDivElement>(null);
   const controlsId = useId();
@@ -90,7 +92,7 @@ export function GrammarOrder({ pieces, selected, locked, onChange, onAnswer, puz
       {puzzle ? Array.from({ length: pieces.length - selected.length }, (_, index) => <span key={`empty-${index}`} className="order-empty" aria-hidden="true">·</span>) : null}
     </div>
     <div className="order-bank" role="group" aria-label="Piezas disponibles">
-      {pieces.map((part, index) => <button type="button" key={index} disabled={locked || selected.includes(index)} className={`coach-piece coach-${part.role}${dragging === index ? ' is-dragging' : ''}`} style={selected.includes(index) ? undefined : dragStyle(index)} onPointerDown={(event) => begin(event, index)} onPointerMove={move} onPointerUp={end} onPointerCancel={cancel} onClick={(event) => click(event, () => add(index))}>{part.text}</button>)}
+      {pieces.map((part, index) => <button type="button" key={index} disabled={locked || selected.includes(index)} className={`coach-piece coach-${part.role}${dragging === index ? ' is-dragging' : ''}`} style={selected.includes(index) ? undefined : dragStyle(index)} onPointerDown={(event) => begin(event, index)} onPointerMove={move} onPointerUp={end} onPointerCancel={cancel} onClick={(event) => click(event, () => add(index))}>{part.text}{translations?.[index] ? <small lang="es" className="order-piece-meaning">{translations[index]}</small> : null}</button>)}
     </div>
     {!autoCheck ? <button type="button" className="primary-action" disabled={locked || selected.length !== pieces.length} onClick={() => onAnswer(selected.map((id) => pieces[id].text).join(' '))}>Enviar mensaje →</button> : <details className="order-help"><summary>Cómo mover las piezas</summary><small id={controlsId}>{puzzle ? 'Arrastra para cambiar el orden o toca una pieza colocada para quitarla. Con teclado: ← y → en una pieza.' : 'La última pieza comprueba el mensaje. Toca una pieza colocada para quitarla.'}</small><small>Con piezas es práctica con apoyo, no escritura sin pistas.</small></details>}
     {!autoCheck ? <small className={puzzle ? 'sr-only' : undefined}>Con piezas es práctica con apoyo, no escritura sin pistas.</small> : null}

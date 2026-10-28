@@ -74,6 +74,11 @@ it('migra por identidad, conserva borradores e historial, y rechaza piezas invá
   expect(resumeZeroJourney({ ...state, checkId: 'handoff' })).toMatchObject({ checkId: 'not-want', feedback: 'idle', input: '', helped: false, episodeId: state.episodeId });
   expect(nextZeroStep('write-key')).toBe('complete');
   expect(nextZeroStep('write-coffee')).toBe('not-want');
+  expect(nextZeroStep('cold-order')).toBe('arcade-refusal-action');
+  expect(nextZeroStep('arcade-refusal')).toBe('write-cold-water');
+  expect(nextZeroStep('write-cold-water')).toBe('key');
+  expect(nextZeroStep('write-cold')).toBe('use-refusal');
+  expect(resumeZeroJourney({ ...state, checkId: 'arcade-refusal', feedback: 'help', correctionResponse: 'WATER' })).toMatchObject({ checkId: 'arcade-refusal', feedback: 'help', correctionResponse: 'WATER' });
   expect(resumeZeroJourney(freshZeroJourney(['write-key']))).toMatchObject({ checkId: 'write-key', review: { pending: ['write-key'], total: 1 } });
   expect(resumeZeroJourney({ ...freshZeroJourney(['write-key']), checkId: 'water' })).toBeNull();
   expect(resumeZeroJourney({ ...freshZeroJourney(['write-key']), review: { pending: ['have'], total: 1 } })).toBeNull();

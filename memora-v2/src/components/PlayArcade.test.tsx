@@ -1,0 +1,40 @@
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { afterEach, expect, it, vi } from 'vitest';
+import { PlayArcade } from './PlayArcade';
+import { SceneDelivery } from './GrammarSituation';
+vi.mock('../services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn() }));
+let tree: ReactTestRenderer;
+afterEach(() => { if (tree) act(() => tree.unmount()); });
+const event = (x: number, y = 100) => ({ pointerId: 4, clientX: x, clientY: y, button: 0, currentTarget: { setPointerCapture: vi.fn() } });
+it('servir conserva los mensajes/sentidos preparados y las dos escenas tienen toque equivalente', () => {
+  const answer = vi.fn();
+  act(() => { tree = create(<PlayArcade kind="serve" message="I want water." presentationKey="one" selected="" feedback="idle" onAnswer={answer} />); });
+  expect(tree.root.findByType(SceneDelivery).props.options.map((option: { choice: string }) => option.choice)).toEqual(['WATER','COFFEE']);
+  act(() => tree.root.findByProps({ 'data-drop-choice': 'WATER' }).props.onClick());
+  expect(answer).toHaveBeenCalledExactlyOnceWith('WATER');
+  expect(tree.root.findAllByType('input')).toHaveLength(0);
+});
+it('retirar usa el gesto lateral, no un scroll vertical; cancelar no responde ni bloquea el siguiente toque', () => {
+  const answer = vi.fn();
+  act(() => { tree = create(<PlayArcade kind="remove" message="I don't want coffee." presentationKey="two" selected="" feedback="idle" onAnswer={answer} />); });
+  const cup = () => tree.root.findByProps({ className: 'arcade-swipe-cup' });
+  act(() => { cup().props.onPointerDown(event(150)); cup().props.onPointerMove(event(145,20)); cup().props.onPointerUp(event(145,20)); });
+  expect(answer).not.toHaveBeenCalled();
+  act(() => { cup().props.onPointerDown(event(150)); cup().props.onPointerMove(event(70)); cup().props.onPointerCancel(); cup().props.onPointerUp(event(70)); });
+  expect(answer).not.toHaveBeenCalled();
+  act(() => { cup().props.onPointerDown(event(150)); cup().props.onPointerMove(event(220)); cup().props.onPointerUp(event(220)); cup().props.onPointerUp(event(220)); });
+  expect(answer).toHaveBeenCalledExactlyOnceWith('DEJAR');
+  act(() => tree.root.findAllByType('button').find((node) => node.children.join('') === '← Retirar')!.props.onClick());
+  expect(answer).toHaveBeenLastCalledWith('RETIRAR'); expect(answer).toHaveBeenCalledTimes(2);
+  act(() => { cup().props.onPointerDown(event(150)); cup().props.onPointerUp(event(70)); });
+  expect(answer).toHaveBeenLastCalledWith('RETIRAR'); expect(answer).toHaveBeenCalledTimes(3);
+});
+it('un resultado restaurado no vuelve a responder y representa la bandeja sin café', () => {
+  const answer = vi.fn();
+  act(() => { tree = create(<PlayArcade kind="remove" message="I don't want coffee." presentationKey="two" selected="RETIRAR" feedback="correct" onAnswer={answer} />); });
+  const cup = tree.root.findByProps({ className: 'arcade-swipe-cup is-removed' });
+  act(() => { cup.props.onPointerDown(event(150)); cup.props.onPointerUp(event(70)); });
+  expect(answer).not.toHaveBeenCalled();
+  expect(tree.root.findByProps({ 'aria-label': 'La bandeja queda sin café' })).toBeDefined();
+  expect(tree.root.findAllByType('button').filter((node) => node.props.disabled)).toHaveLength(2);
+});

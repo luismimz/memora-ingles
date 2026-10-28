@@ -2,6 +2,7 @@ import { afterEach, beforeEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { ZeroJourney } from './ZeroJourney';
 import { GrammarOrder } from './GrammarOrder';
+import { PlayGrammarToy } from './PlayGrammarToy';
 import { dueZeroReviews, freshZeroJourney, zeroJourney, zeroMessages, zeroRecallSteps, zeroSteps, zeroWritingGuide } from '../domain/zeroJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint } from '../domain/trickCheckpoint';
 import { ZeroDoorScene, ZeroJourneyScene } from './ZeroJourneyScene';
@@ -20,7 +21,7 @@ const step = () => checkpoint().checkId;
 const events = () => readLearningActivities(user);
 const mount = async (inspection = false) => { await act(async () => { tree = create(<ZeroJourney userId={user} inspection={inspection} onExit={exit} onNext={next} />); }); };
 const wait = async (ms = 1400) => { await act(async () => { vi.advanceTimersByTime(ms); }); };
-const activate = async () => { await act(async () => tree.root.findAllByType('button').find((node) => ['zero-world', 'zero-verb', 'zero-quality'].includes(node.props.className))!.props.onClick()); };
+const activate = async () => { const world = tree.root.findAllByType('button').find((node) => node.props.className === 'zero-world'); await act(async () => world ? world.props.onClick() : tree.root.findByType(PlayGrammarToy).findByProps({ className: 'order-bank' }).findByType('button').props.onClick({ detail: 0 })); };
 async function swipe() {
   const region = tree.root.findByProps({ role: 'region' });
   const target = { closest: () => null }, currentTarget = { scrollTop: 0, scrollHeight: 600, clientHeight: 600 };
@@ -37,15 +38,15 @@ async function solveBuild() {
 }
 async function reachWriting() {
   await reachBuild(); await solveBuild();
-  await act(async () => button('💧Agua').props.onClick()); await wait();
+  await act(async () => button('Agua').props.onClick()); await wait();
   await activate(); await swipe(); await activate(); await swipe();
   await act(async () => button('AMestoy').props.onClick()); await wait();
   expect(step()).toBe('not-want'); await activate(); await swipe();
   await act(async () => { tree.root.findByType(GrammarOrder).props.onChange([2, 0, 1]); tree.root.findByType(GrammarOrder).props.onAnswer("I DON'T WANT WATER"); }); await wait();
   expect(step()).toBe('cold-order'); await activate();
-  expect(tree.root.findByProps({ className: 'zero-temperature is-reversed' }).children.map((node: any) => text(node))).toEqual(['COLD frío', 'COFFEE café']);
-  await swipe(); expect(step()).toBe('arcade-refusal');
-  await act(async () => button('☕Café').props.onClick()); await wait();
+  expect(tree.root.findByType(PlayGrammarToy).props).toMatchObject({ revealed: true, token: { text: 'COLD', role: 'context' }, after: { en: 'COFFEE' } });
+  await swipe(); expect(step()).toBe('arcade-refusal-action');
+  await act(async () => button('← Retirar').props.onClick()); await wait();
   expect(step()).toBe('write-cold-water');
 }
 async function type(value: string) {
@@ -98,9 +99,7 @@ it('usa estructuras para pedidos nuevos, rechazos y una puerta sin copiar los me
   expect(readGrammarAttempts(user)).toEqual([]);
   expect(events().filter((event) => event.modality === 'writing')).toEqual([]);
   expect(events().some((event) => event.source === 'authored' && event.response === 'I want cold water.')).toBe(false);
-  await type('I want cold water.'); await wait(); expect(step()).toBe('write-cold');
-  await type('I am cold.'); await wait(); expect(step()).toBe('use-refusal');
-  await type("I don't want coffee."); await wait(); expect(step()).toBe('key');
+  await type('I want cold water.'); await wait(); expect(step()).toBe('key');
   expect(tree.root.findAllByType(ZeroJourneyScene)).toHaveLength(0);
   expect(tree.root.findAllByType(ZeroDoorScene)).toHaveLength(1);
   await activate(); await swipe(); expect(step()).toBe('have');
@@ -111,11 +110,11 @@ it('usa estructuras para pedidos nuevos, rechazos y una puerta sin copiar los me
   expect(events().some((event) => event.source === 'authored' && event.response === 'I want a key.')).toBe(false);
   await type('I want a key.'); await wait();
   expect(step()).toBe('complete'); expect(next).toHaveBeenCalledOnce();
-  expect(readGrammarAttempts(user)).toHaveLength(4);
+  expect(readGrammarAttempts(user)).toHaveLength(2);
   expect(readGrammarAttempts(user).every((attempt) => attempt.kind === 'write' && attempt.correct && !attempt.helped)).toBe(true);
-  expect(readSentenceMemories(user).filter((memory) => memory.correct > 0)).toHaveLength(4);
+  expect(readSentenceMemories(user).filter((memory) => memory.correct > 0)).toHaveLength(2);
   expect(events().filter((event) => event.phase === 'completion')).toMatchObject([{ correct: null }]);
-  expect(readWordMemories(user).map((memory) => memory.word.en).sort()).toEqual(['COFFEE', 'COLD', 'KEY', 'WATER']);
+  expect(readWordMemories(user).map((memory) => memory.word.en).sort()).toEqual(['COLD', 'KEY', 'WATER']);
 });
 it('conserva piezas, primer error y demora al recargar; dos fallos ofrecen modelo sin acierto', async () => {
   await reachBuild();
@@ -150,14 +149,14 @@ it('modo tranquilo y pausa detienen reloj/avance; reiniciar no borra intentos ni
   expect(text(tree.toJSON())).toContain('En pausa');
   await wait(20000); expect(step()).toBe('arcade-water');
   await act(async () => button('Reanudar').props.onClick());
-  await act(async () => button('💧Agua').props.onClick());
+  await act(async () => button('Agua').props.onClick());
   const before = events(), memories = readWordMemories(user);
   await act(async () => button('Volver al comienzo de este episodio').props.onClick());
   await wait(5000); expect(step()).toBe('water'); expect(events()).toEqual(before); expect(readWordMemories(user)).toEqual(memories);
 });
 it('la escritura no pasa por scroll ni por un borrador equivocado, y la ayuda no se convierte en recuerdo libre', async () => {
-  await reachWriting();
-  await type('I want cold water'); await wait();
+  writeTrickCheckpoint(user, zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('write-cold'), checkId: 'write-cold' });
+  await mount();
   await swipe(); expect(step()).toBe('write-cold');
   const beforeDraft = events().filter((event) => event.source === 'learner').length;
   await type('I cold'); await wait(5000);
@@ -185,7 +184,7 @@ it('desatasca la captura ya guardada: señala WHATER, corrige solo esa palabra y
   expect(readSentenceMemories(user)).toMatchObject([{ correct: 0 }]);
   expect(readWordMemories(user)).toEqual([]);
   expect(text(tree.toJSON())).toContain('Con ayuda');
-  await wait(); expect(step()).toBe('write-cold');
+  await wait(); expect(step()).toBe('key');
 });
 
 it('orienta cada errata distinta sin inventar envíos y al editar retira el rojo sin borrar primer intento', async () => {
@@ -206,7 +205,7 @@ it('orienta cada errata distinta sin inventar envíos y al editar retira el rojo
   await type('i want cold water'); await wait();
   expect(readGrammarAttempts(user)).toMatchObject([{ kind: 'write', correct: false, helped: true }, { kind: 'write', correct: true, helped: true }]);
   expect(readSentenceMemories(user).find((memory) => memory.sentenceEn === zeroMessages.coldWater.en)?.correct ?? 0).toBe(0);
-  expect(step()).toBe('write-cold');
+  expect(step()).toBe('key');
 });
 
 it('ofrece bloques espejo a la vista, conserva el montaje al recargar y lo termina sin exigir copiar después', async () => {
@@ -262,7 +261,7 @@ it('dos errores escritos no cierran la reparación y dos montajes fallidos ofrec
   expect(events().filter((event) => event.correct === false)).toHaveLength(2);
   expect(events().filter((event) => event.correct === true)).toEqual([]);
   expect(readSentenceMemories(user).every((memory) => memory.correct === 0)).toBe(true);
-  await swipe(); expect(step()).toBe('write-cold'); expect(checkpoint().continuation).toBeUndefined();
+  await swipe(); expect(step()).toBe('key'); expect(checkpoint().continuation).toBeUndefined();
 });
 
 it('la ayuda no actúa por una pausa ni persiste datos al inspeccionar', async () => {
@@ -299,9 +298,9 @@ it('un borrador de frío anterior no salta la enseñanza nueva ni exige escribir
   await activate(); await swipe();
   await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer("I DON'T WANT WATER")); await wait();
   await activate(); await swipe();
-  await act(async () => button('☕Café').props.onClick()); await wait();
+  await act(async () => button('← Retirar').props.onClick()); await wait();
   expect(step()).toBe('write-cold-water');
-  await type('I want cold water'); await wait(); expect(step()).toBe('use-refusal');
+  await type('I want cold water'); await wait(); expect(step()).toBe('key');
   expect(readGrammarAttempts(user).filter((attempt) => attempt.check === 'write-cold')).toHaveLength(1);
 });
 it('la nueva escritura conserva primer error/demora; el modelo no crea acierto ni puerta abierta', async () => {
@@ -328,7 +327,7 @@ it('la elección señala la opción tocada; tener no se confunde con querer y el
   await mount(); await act(async () => button('WANTquiero').props.onClick());
   expect(button('WANTquiero').props.className).toBe('is-answer-wrong');
   expect(button('WANTquiero').props['aria-pressed']).toBe(true);
-  expect(text(tree.toJSON())).toContain('Ya está en tu mano: HAVE, tengo.');
+  expect(text(tree.toJSON())).toContain('HAVE: ya la tienes. WANT: la quieres.');
   await act(async () => button('HAVEtengo').props.onClick());
   expect(button('HAVEtengo').props.className).toBe('is-answer-correct');
   expect(events().filter((event) => event.source === 'learner')).toMatchObject([{ response: 'WANT', correct: false, helped: true }, { response: 'HAVE', correct: true, helped: true }]);
@@ -341,6 +340,17 @@ it('el segundo Arcade caducado muestra el rechazo completo, no afirma haber entr
   expect(readWordMemories(user)).toEqual([]);
   await wait(15000); expect(step()).toBe('arcade-refusal');
   await swipe(); expect(step()).toBe('write-cold-water');
+});
+it('el nuevo Arcade de retirar conserva el primer error y la acción española, no inventa una palabra producida', async () => {
+  writeTrickCheckpoint(user, zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('arcade-refusal-action'), checkId: 'arcade-refusal-action' });
+  await mount(); await swipe(); expect(step()).toBe('arcade-refusal-action');
+  await act(async () => button('Dejar →').props.onClick());
+  const first = events().at(-1)!;
+  expect(first).toMatchObject({ phase: 'arcade', modality: 'choice', response: 'DEJAR', expected: 'RETIRAR', responseLanguage: 'es', correct: false, helped: true });
+  await act(async () => button('← Retirar').props.onClick());
+  expect(events().at(-1)).toMatchObject({ response: 'RETIRAR', correct: true, parentAttemptId: first.id, helped: true });
+  expect(readWordMemories(user)).toEqual([]); expect(readGrammarAttempts(user)).toEqual([]);
+  await wait(); expect(step()).toBe('write-cold-water');
 });
 it('vuelve a una escena según la fecha del SRS sin repetir modelos ni acreditar una visita', async () => {
   const start = Date.now();

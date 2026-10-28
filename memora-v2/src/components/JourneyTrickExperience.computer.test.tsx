@@ -3,6 +3,7 @@ import { act, create, type ReactTestRenderer } from 'react-test-renderer';
 import { previewUnit as source } from '../preview/previewUnit';
 import { JourneyTrickExperience } from './JourneyTrickExperience';
 import { GrammarOrder } from './GrammarOrder';
+import { PlayGrammarToy } from './PlayGrammarToy';
 import { MessageRepair } from './MessageRepair';
 import { grammarTricks, trickStop } from '../domain/journeyTricks';
 import { readLearningActivities } from '../domain/learningActivity';
@@ -46,7 +47,9 @@ it('enseña el bloque, distingue el aparato, retoma piezas y avisa una sola vez 
   expect(visible()).toContain('UNMENSAJE·TRESBLOQUES');
   expect(checkpoint()?.presentation).toBe('message-overview-v1');
   expect(readGrammarAttempts(user)).toHaveLength(0);
-  await act(async () => tree.root.findByProps({ 'aria-label': 'Relacionar on my computer con el español' }).props.onClick());
+  await act(async () => tree.root.findByType(PlayGrammarToy).findByProps({ className: 'order-bank' }).findByType('button').props.onClick({ detail: 0 }));
+  expect(tree.root.findByType(PlayGrammarToy).props.revealed).toBe(true);
+  expect(readLearningActivities(user).filter((event) => event.activityId === `overview-connected:${computerPlayingSkill}`)).toMatchObject([{ source: 'authored', correct: null }]);
   expect(learner()).toHaveLength(0);
   const details = tree.root.findByProps({ className: 'message-overview-details' });
   expect(details.findAllByType('section')).toHaveLength(0);
@@ -58,6 +61,7 @@ it('enseña el bloque, distingue el aparato, retoma piezas y avisa una sola vez 
   act(() => tree.unmount()); await mount();
   expect(checkpoint()?.presentation).toBe('message-overview-v1');
   expect(vi.mocked(playEnglish).mock.calls).toHaveLength(narrationCount);
+  expect(tree.root.findByType(PlayGrammarToy).props.revealed).toBe(true);
   await advance();
   expect(learner()).toHaveLength(0);
   await act(async () => button('Está jugando con una consola.').props.onClick());

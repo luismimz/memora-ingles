@@ -30,6 +30,7 @@ import { treeLocationSkill } from '../domain/treeLocationPractice';
 import { meatCookingSkill } from '../domain/meatCookingPractice';
 import { ExplainBack } from './ExplainBack';
 import { MessageRepair } from './MessageRepair';
+import { PlayGrammarToy } from './PlayGrammarToy';
 import './messageOverview.css';
 
 const normalize = (text: string) => text.toLowerCase().replace(/[‘’]/g, "'").replace(/[.,!?;:]/g, '').replace(/\s+/g, ' ').trim();
@@ -178,7 +179,8 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
   const streamSolved = stream && feedback === 'correct';
   const writing = !step && !finished && check?.kind === 'write' && !needsModel && !streamSolved;
   const writingPair = writing ? [...lesson.steps].reverse().find((sample) => !sample.hideEnglish && check.answers.some((value) => normalize(value) === normalize(sample.en.map((part) => part.text).join('')))) : undefined;
-  const advanceTeaching = () => { stopSpeech(); if (explanationOnly && stage === lesson.steps.length - 1) { continueRef.current(); return; } setStage((value) => overview ? lesson.steps.length : value + 1); };
+  const overviewToy = overview && step && [computerPlayingSkill, deskLocationSkill].includes(lesson.id) && step.en.length === 3 && step.es.length === 3 ? step : undefined;
+  const advanceTeaching = () => { stopSpeech(); if (explanationOnly && stage === lesson.steps.length - 1) { continueRef.current(); return; } if (overviewToy) setOrder([]); setStage((value) => overview ? lesson.steps.length : value + 1); };
   const teachingSituation = overview && step ? lesson.checks.find((item) => item.situation)?.situation : undefined;
   const teachingScene = teachingSituation && lesson.checks.find((item) => item.situation === teachingSituation)?.answers[0];
   const overviewScene = teachingSituation?.scenes.find((scene) => scene.choice === teachingScene)?.state;
@@ -192,7 +194,14 @@ export function GrammarCoach({ lesson, form, sceneWord, userId, unitId, unitTitl
       <p className="eyebrow">{finished ? 'AHORA, ÚSALO' : needsModel ? 'MODELO' : streamSolved ? 'RESULTADO' : ordering ? 'MONTA EL MENSAJE' : situation ? 'EL MENSAJE CAMBIA LA ESCENA' : check.id === 'meaning-now-v1' ? 'ENTIENDE EL MENSAJE' : check.kind === 'explain' ? 'AHORA TÚ ENSEÑAS' : check.kind === 'write' ? 'TU PRIMERA RESPUESTA' : 'PRUÉBALO'}</p></>}
       {overviewScene ? <div className="overview-scene"><SituationScreen state={overviewScene} /></div> : !needsModel && (!writing || feedback === 'correct') && !situation && !ordering && !repair && (actionScene ? <GrammarActionScene lesson={lesson} form={form} stage={step ? 'teach' : finished ? 'finished' : check.kind === 'write' ? 'write' : 'explain'} feedback={feedback} /> : sceneWord ? <SceneVisual word={sceneWord} compact /> : null)}
       {step ? <>
-        {contractionLab ? <GrammarContractionLab step={step} lessonId={lesson.id} unitId={unitId} unitTitle={unitTitle} contentVersion={contentVersion} userId={userId} reviewMode={reviewMode} /> : <>
+        {contractionLab ? <GrammarContractionLab step={step} lessonId={lesson.id} unitId={unitId} unitTitle={unitTitle} contentVersion={contentVersion} userId={userId} reviewMode={reviewMode} /> : overviewToy ? <><PlayGrammarToy before={{ en: step.en[0].text.trim().toUpperCase(), es: step.es[0].text.trim().toLowerCase() }} after={{ en: step.en[2].text.trim().toUpperCase(), es: step.es[2].text.trim() }} token={{ ...step.en[1], text: step.en[1].text.trim().toUpperCase() }} meaning={step.es[1].text.trim()} target={step.es.map((part) => part.text).join('')} rule="PLAY + ING → PLAYING" insight={caption!} revealed={order.includes(0)} onDiscover={() => {
+          if (order.includes(0)) return;
+          setOrder([0]); playSnap();
+          if (!reviewMode) {
+            const en = step.en.map((part) => part.text).join(''), es = step.es.map((part) => part.text).join('');
+            recordLearningActivity(userId, { unitId, unitTitle, contentVersion, activityId: `overview-connected:${lesson.id}`, skill: lesson.id, phase: 'grammar', source: 'authored', modality: 'choice', prompt: es, response: en, expected: '', correct: null, helped: true, feedback: 'Modelo encajado con significado visible; no es un acierto ni escritura.' });
+          }
+        }} />{!order.includes(0) ? <p className="coach-caption">{caption}</p> : null}</> : <>
           <GrammarComparison key={`${lesson.id}:${stage}`} connectPieces={stream} interactive={comparisonLab} caption={caption} step={step} previous={lesson.steps[stage - 1]} />
           {!comparisonLab ? <p className="coach-caption" aria-live="polite"><GrammarCaption text={caption!} marks={exampleBridge ? step.es : step.captionMarks ?? [...step.es, ...step.en].filter((part) => part.role !== 'context').map((part) => ({ ...part, text: part.text.trim() }))} /></p> : null}
         </>}
