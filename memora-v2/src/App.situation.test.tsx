@@ -20,10 +20,10 @@ import { ZeroJourney } from './components/ZeroJourney';
 import { freshZeroJourney, zeroJourney, zeroMessages, zeroSteps } from './domain/zeroJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint } from './domain/trickCheckpoint';
 const unit = validateUnit(keys);
-const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>), followup: null as null | ReturnType<typeof validateUnit> }));
+const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>), followup: null as null | ReturnType<typeof validateUnit>, extra: [] as ReturnType<typeof validateUnit>[] }));
 vi.mock('./services/audio', () => ({ playEnglish: vi.fn(async () => ({ status: 'blocked', source: null })), playSpanish: vi.fn(async () => ({ status: 'blocked', source: null })), stopSpeech: vi.fn(), playSnap: vi.fn(), playMiss: vi.fn(), prefetchSpeech: vi.fn() }));
 vi.mock('./services/progressSync', async (original) => ({ ...await original<typeof import('./services/progressSync')>(), startProgressSync: (_id: string, report: (status: string) => void) => { report('saved'); return { stop() {} }; } }));
-vi.mock('./services/directus', async (original) => ({ ...await original<typeof import('./services/directus')>(), hasSession: () => true, loadIdentity: async () => ({ id: 'situation-app-isolated', isAdmin: false }), loadPublishedUnitSummaries: async () => [unit, ...(source.followup ? [source.followup] : [])].map((item) => ({ ...item, hasDialogue: true, grammarTricks: grammarTricks(item) })), loadUnit: async (id: string) => source.load ? source.load() : source.followup?.id === id ? source.followup : unit, loadKeysPilot: async () => null, loadMirrorPilot: async () => null, loadAsset: async () => '' }));
+vi.mock('./services/directus', async (original) => ({ ...await original<typeof import('./services/directus')>(), hasSession: () => true, loadIdentity: async () => ({ id: 'situation-app-isolated', isAdmin: false }), loadPublishedUnitSummaries: async () => [unit, ...source.extra, ...(source.followup ? [source.followup] : [])].map((item) => ({ ...item, hasDialogue: true, grammarTricks: grammarTricks(item) })), loadUnit: async (id: string) => source.load ? source.load() : source.followup?.id === id ? source.followup : source.extra.find((item) => item.id === id) ?? unit, loadKeysPilot: async () => null, loadMirrorPilot: async () => null, loadAsset: async () => '' }));
 let tree: ReactTestRenderer;
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick()); };
@@ -44,7 +44,7 @@ async function mount(seed?: () => void, legacy = true) {
   await act(async () => { tree = create(<App />); });
   if (legacy) await click('Recorrido anterior');
 }
-afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; source.followup = null; vi.unstubAllGlobals(); });
+afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; source.followup = null; source.extra = []; vi.unstubAllGlobals(); });
 it('el nuevo comienzo es la entrada principal; salir conserva la actividad anterior y puede retomarse Play', async () => {
   await mount(undefined, false);
   expect(text(tree.toJSON())).toContain('Byte tiene sed.');
@@ -63,6 +63,31 @@ it('terminar Play enlaza preparación publicada, sin completar ni resetear esa m
   expect(tree.root.findByType(LanguageGame).props.learningMode).toBe('vocabulary');
   expect(readLearningActivities('situation-app-isolated')).toEqual([]);
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+});
+it('tras Play, preparar el ordenador lleva a usar esas palabras aunque haya otro truco antiguo disponible', async () => {
+  source.followup = validateUnit(examples[0]);
+  // A valid earlier published-summary fixture can share the same grammar skill.
+  // The generic map deduplicates it, but this contextual continuation must not
+  // send the learner to that older story after preparing the computer scene.
+  source.extra = [validateUnit({ ...examples[0], id: 'm1-z1-01' })];
+  await mount(() => {
+    for (const word of unit.words) recordWordRecall('situation-app-isolated', word, 'hesitant');
+    writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('complete'), checkId: 'complete' });
+  }, false);
+  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
+  // A page reload must not lose the contextual intent or duplicate completion.
+  act(() => tree.unmount());
+  const App = (await import('./App')).default;
+  await act(async () => { tree = create(<App />); });
+  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
+  expect(readLearningActivities('situation-app-isolated').filter((event) => event.unitId === zeroJourney.id && event.phase === 'completion')).toHaveLength(1);
+  for (const word of source.followup.words) recordWordRecall('situation-app-isolated', word, 'hesitant');
+  completeLearningMode('situation-app-isolated', source.followup, 'vocabulary', { correct: 3, attempted: 3, completedAt: new Date().toISOString(), nextReviewAt: new Date(Date.now() + 3600000).toISOString() });
+  await act(async () => tree.root.findByType(LanguageGame).props.onFinished());
+  await act(async () => tree.root.findByType(LanguageGame).props.onNext());
+  expect(tree.root.findByType(JourneyTrickExperience).props.unit.id).toBe('m1-test-desk');
+  expect(tree.root.findByType(GrammarCoach).props.lesson.id).toBe('computer-playing-prepared-v1');
+  expect(readLearningActivities('situation-app-isolated').some((event) => event.activityId.startsWith(`${keysSituationId}:completed`))).toBe(false);
 });
 it('quien terminó el primer Play encuentra la ampliación sin borrar su recorrido anterior', async () => {
   await mount(() => writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: 10, checkId: 'handoff' }), false);

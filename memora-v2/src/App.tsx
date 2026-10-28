@@ -564,7 +564,13 @@ export default function App() {
     const computer = computerSituationSource(units);
     const nora = keysSituationSource(units);
     const preparedTrick = computer?.grammarTricks?.find((trick) => trick.formId === 'ing');
-    if (id === computer?.id && learningMode === 'vocabulary' && preparedTrick && nora && situationCompleted(userId, nora.contentVersion ?? '1', nora.id)) {
+    // Play's continuation prepares this scene explicitly. The generic map can
+    // deduplicate ING into an older story; that must not steal this handoff.
+    // Use the existing completion evidence so the intention survives a reload.
+    const playCompleted = activities.some((event) => event.unitId === zeroJourney.id && event.contentVersion === zeroJourney.version
+      && event.source === 'learner' && event.phase === 'completion' && event.correct === null
+      && event.activityId.startsWith('zero:') && event.activityId.endsWith(':cafe-transfer-completed'));
+    if (id === computer?.id && learningMode === 'vocabulary' && preparedTrick && (playCompleted || nora && situationCompleted(userId, nora.contentVersion ?? '1', nora.id))) {
       const stop = trickStop(computer, preparedTrick);
       if (!completedTrick(stop, activities) && !missingTrickWords(stop, memories, userId).length) return stop;
     }
