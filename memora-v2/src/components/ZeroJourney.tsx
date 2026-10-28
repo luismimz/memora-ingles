@@ -63,9 +63,10 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
     if (current.stage !== state.stage || !ready || clock.paused || step === 'complete') return;
     stopSpeech();
     const pending = current.review?.pending.slice(1);
-    const nextStep = pending ? (pending[0] ?? 'complete') as typeof step : nextZeroStep(step);
+    let nextStep = pending ? (pending[0] ?? 'complete') as typeof step : current.resumeAfter === 'not-want' ? 'not-want' : nextZeroStep(step);
+    if (!pending && nextStep === 'write-cold' && readLearningActivities(userId).some((event) => event.unitId === zeroJourney.id && event.activityId === `zero:${current.episodeId}:write-cold` && event.source === 'learner' && event.correct === true && zeroAccepts(event.response, zeroMessages.cold.en))) nextStep = 'use-refusal';
     const next = zeroSteps.indexOf(nextStep);
-    save({ stage: next, checkId: zeroSteps[next], input: '', order: [], feedback: 'idle', helped: false, checkFailures: 0, previousAttemptId: undefined, correctionResponse: undefined, promptStartedAt: new Date().toISOString(), ...(pending ? { review: { pending, total: current.review!.total } } : {}) });
+    save({ stage: next, checkId: zeroSteps[next], input: '', order: [], feedback: 'idle', helped: false, checkFailures: 0, previousAttemptId: undefined, correctionResponse: undefined, resumeAfter: undefined, promptStartedAt: new Date().toISOString(), ...(pending ? { review: { pending, total: current.review!.total } } : {}) });
   }
   useEffect(() => {
     if (!inspection) writeTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version, live.current);
@@ -149,7 +150,7 @@ export function ZeroJourney({ userId, inspection = false, onExit, onNext }: { us
   const choiceClass = (value: string) => solved && value === expected ? 'is-answer-correct' : state.feedback === 'help' && value === state.correctionResponse ? 'is-answer-wrong' : undefined;
   const temperaturePiece = <button key="temperature" type="button" className="zero-quality" onClick={activate} aria-label={revealed ? 'Escuchar I want cold coffee' : 'Mover FRÍO delante de CAFÉ y descubrir COLD COFFEE'}>{revealed ? 'COLD' : 'FRÍO'}<small>{revealed ? 'frío' : 'Toca para mover ←'}</small></button>;
   const drinkPiece = <span key="drink" className="zero-object">{revealed ? 'COFFEE' : 'CAFÉ'}<small>{revealed ? 'café' : 'la bebida'}</small></span>;
-  const position = state.review ? (state.review.total - state.review.pending.length) / state.review.total : state.stage / (zeroSteps.length - 1);
+  const position = state.review ? (state.review.total - state.review.pending.length) / state.review.total : (state.resumeAfter ? zeroSteps.indexOf('not-want') : state.stage) / (zeroSteps.length - 1);
   const draftHint = state.feedback === 'idle' && state.helped && state.input === state.correctionResponse ? zeroDraftCue(step, state.input) : undefined;
   return <main className={`zero-journey${arcade ? ' zero-arcade' : ''}${coldScene ? ' zero-winter' : ''}${rejection ? ' zero-rejection' : ''}${door ? ' zero-door' : ''}`}>
     <header className="zero-header"><span className="zero-brand">M<span>MEMORA / PLAY</span></span><div className="zero-position" aria-label="Posición en este episodio; no mide dominio"><span style={{ width: `${position * 100}%` }} /></div><details className="zero-menu" onKeyDown={menu.onKeyDown} onClick={(event) => { if ((event.target as HTMLElement).closest?.('button')) event.currentTarget.open = false; }}><summary ref={menu.trigger} aria-label="Pausa, ayuda y recorrido anterior">•••</summary><nav>

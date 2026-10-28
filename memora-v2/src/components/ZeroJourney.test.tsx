@@ -174,6 +174,21 @@ it('un episodio terminado en la versión anterior entra en lo nuevo; un borrador
   await type('I want coffee'); await wait(); expect(step()).toBe('not-want');
   expect(readGrammarAttempts(user)).toMatchObject([{ correct: true, helped: true }]);
 });
+it('un borrador de frío anterior no salta la enseñanza nueva ni exige escribirlo dos veces', async () => {
+  writeTrickCheckpoint(user, zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: 8, checkId: 'write-cold', input: 'I am c' });
+  await mount(); expect(tree.root.findByType('input').props.value).toBe('I am c');
+  expect(checkpoint().resumeAfter).toBe('not-want');
+  act(() => tree.unmount()); await mount(); expect(checkpoint().resumeAfter).toBe('not-want');
+  await type('I am cold'); await wait(); expect(step()).toBe('not-want');
+  expect(checkpoint().resumeAfter).toBeUndefined();
+  await activate(); await swipe();
+  await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer("I DON'T WANT WATER")); await wait();
+  await activate(); await swipe();
+  await act(async () => button('☕Café').props.onClick()); await wait();
+  expect(step()).toBe('write-cold-water');
+  await type('I want cold water'); await wait(); expect(step()).toBe('use-refusal');
+  expect(readGrammarAttempts(user).filter((attempt) => attempt.check === 'write-cold')).toHaveLength(1);
+});
 it('la nueva escritura conserva primer error/demora; el modelo no crea acierto ni puerta abierta', async () => {
   writeTrickCheckpoint(user, zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('write-key'), checkId: 'write-key' });
   await mount(); await type('I have a key');

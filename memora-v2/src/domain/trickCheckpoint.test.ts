@@ -86,3 +86,9 @@ it('guarda una cola finita de navegación de repaso sin fechas ni afectar checkp
   expect(parseTrickCheckpoint({ ...legacy, review: { pending: [], total: 2 } })).not.toBeNull();
   expect(readTrickCheckpoint('review-isolated', 'valid', '1')).toEqual(state);
 });
+it('conserva la vuelta de una tarea migrada y rechaza destinos malformados', () => {
+  const state = { stage: 13, checkIndex: 0, checkId: 'write-cold', input: 'I am c', feedback: 'idle' as const, helped: false, resumeAfter: 'not-want' };
+  writeTrickCheckpoint('migration-isolated', 'valid', '1', state);
+  expect(readTrickCheckpoint('migration-isolated', 'valid', '1')).toEqual(state);
+  for (const resumeAfter of [null, 2, '', 'x'.repeat(81)]) expect(parseTrickCheckpoint({ ...state, resumeAfter })).toBeNull();
+});

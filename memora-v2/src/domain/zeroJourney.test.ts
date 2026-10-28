@@ -37,7 +37,7 @@ it('da una reparación del error observado, no una orden genérica de volver a e
 it('migra por identidad, conserva borradores e historial, y rechaza piezas inválidas', () => {
   const state = freshZeroJourney();
   expect(resumeZeroJourney(state)).toEqual(state);
-  expect(resumeZeroJourney({ ...state, stage: 8, checkId: 'write-cold', input: 'I am c', helped: true, previousAttemptId: 'previous' })).toMatchObject({ stage: zeroSteps.indexOf('write-cold'), input: 'I am c', helped: true, previousAttemptId: 'previous' });
+  expect(resumeZeroJourney({ ...state, stage: 8, checkId: 'write-cold', input: 'I am c', helped: true, previousAttemptId: 'previous' })).toMatchObject({ stage: zeroSteps.indexOf('write-cold'), input: 'I am c', helped: true, previousAttemptId: 'previous', resumeAfter: 'not-want' });
   expect(resumeZeroJourney({ ...state, checkId: 'another-route' })).toBeNull();
   expect(resumeZeroJourney({ ...state, order: [4] })).toBeNull();
   expect(resumeZeroJourney({ ...state, checkId: 'build-no-water', order: [2, 0] })?.order).toEqual([2, 0]);
@@ -48,4 +48,5 @@ it('migra por identidad, conserva borradores e historial, y rechaza piezas invá
   expect(resumeZeroJourney(freshZeroJourney(['write-key']))).toMatchObject({ checkId: 'write-key', review: { pending: ['write-key'], total: 1 } });
   expect(resumeZeroJourney({ ...freshZeroJourney(['write-key']), checkId: 'water' })).toBeNull();
   expect(resumeZeroJourney({ ...freshZeroJourney(['write-key']), review: { pending: ['have'], total: 1 } })).toBeNull();
+  expect(resumeZeroJourney({ ...state, resumeAfter: 'write-key' })).toBeNull();
 });

@@ -98,6 +98,9 @@ export function resumeZeroJourney(saved: TrickCheckpoint | null): TrickCheckpoin
   const limit = saved.checkId === 'build-coffee' || saved.checkId === 'build-no-water' ? 3 : 0;
   if (stage < 0 || saved.order?.some((index) => !Number.isInteger(index) || index < 0 || index >= limit) || new Set(saved.order).size !== (saved.order?.length ?? 0)) return null;
   if (saved.review && (saved.review.pending.some((id) => !zeroRecallSteps.includes(id as typeof zeroRecallSteps[number])) || (saved.review.pending[0] ?? 'complete') !== saved.checkId)) return null;
-  return { ...saved, stage };
+  if (saved.resumeAfter !== undefined && (saved.resumeAfter !== 'not-want' || saved.checkId !== 'write-cold' || saved.review)) return null;
+  // Old cold-writing preceded all new lessons. Preserve the draft, then teach
+  // the extension instead of jumping into an untaught negative sentence.
+  return { ...saved, stage, ...(saved.checkId === 'write-cold' && saved.stage === 8 ? { resumeAfter: 'not-want' } : {}) };
 }
 export const freshZeroJourney = (reviews: ZeroRecallStep[] = []): TrickCheckpoint => ({ stage: reviews.length ? zeroSteps.indexOf(reviews[0]) : 0, checkIndex: 0, checkId: reviews[0] ?? zeroSteps[0], input: '', feedback: 'idle', helped: false, order: [], episodeId: crypto.randomUUID(), episodeStartedAt: new Date().toISOString(), promptStartedAt: new Date().toISOString(), ...(reviews.length ? { review: { pending: [...reviews], total: reviews.length } } : {}) });
