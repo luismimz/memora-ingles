@@ -1,18 +1,44 @@
 import { expect, it } from 'vitest';
-import { freshZeroJourney, resumeZeroJourney, zeroAccepts, zeroCoffeePieces, zeroMessages, zeroSteps, zeroWords } from './zeroJourney';
-it('el comienzo tiene tres palabras, dos estructuras y una transferencia distinta del modelo inicial', () => {
-  expect(new Set(zeroWords.map((word) => word.en)).size).toBe(3);
+import { freshZeroJourney, nextZeroStep, resumeZeroJourney, zeroAccepts, zeroCorrection, zeroCoffeePieces, zeroNoWaterPieces, zeroMessages, zeroSteps, zeroTask, zeroWords } from './zeroJourney';
+it('cada transferencia sigue a la enseñanza de sus piezas y usa un mensaje diferente', () => {
+  expect(new Set(zeroWords.map((word) => word.en)).size).toBe(4);
   expect(zeroWords.every((word) => !word.imageUrl && word.ipa && word.scene && word.associationId)).toBe(true);
   expect([2, 1, 0].map((index) => zeroCoffeePieces[index].text).join(' ').toLowerCase()).toBe('i want coffee');
   expect(zeroMessages.water.en).not.toBe(zeroMessages.coffee.en);
   expect(zeroSteps.indexOf('want')).toBeLessThan(zeroSteps.indexOf('build-coffee'));
   expect(zeroSteps.indexOf('be')).toBeLessThan(zeroSteps.indexOf('write-cold'));
+  expect(zeroSteps.indexOf('not-want')).toBeLessThan(zeroSteps.indexOf('build-no-water'));
+  expect(zeroSteps.indexOf('cold-order')).toBeLessThan(zeroSteps.indexOf('write-cold-water'));
+  expect(zeroSteps.indexOf('have')).toBeLessThan(zeroSteps.indexOf('write-key'));
+  expect([2, 0, 1].map((index) => zeroNoWaterPieces[index].text).join(' ').toLowerCase()).toBe("i don't want water");
+  expect(zeroMessages.coldWater.en).not.toBe(zeroMessages.coldCoffee.en);
+  expect(zeroMessages.wantKey.en).not.toBe(zeroMessages.haveKey.en);
   expect(zeroAccepts("I'm cold", zeroMessages.cold.en)).toBe(true);
   expect(zeroAccepts('I want cold', zeroMessages.cold.en)).toBe(false);
+  expect(zeroAccepts('I do not want coffee', zeroMessages.noCoffee.en)).toBe(true);
+  expect(zeroAccepts('I want coffee', zeroMessages.noCoffee.en)).toBe(false);
+  expect(zeroAccepts('I have a key', zeroMessages.wantKey.en)).toBe(false);
+  expect(zeroTask('write-cold-water').words.map((word) => word.en)).toEqual(['WATER', 'COLD']);
 });
-it('reanuda el mismo paso y rechaza índices de otra disposición sin tocar otros recorridos', () => {
+it('da una reparación del error observado, no una orden genérica de volver a escuchar', () => {
+  expect(zeroCorrection('write-cold-water', 'I want water cold')).toContain('COLD va delante');
+  expect(zeroCorrection('write-key', 'I have a key')).toContain('WANT, quiero');
+  expect(zeroCorrection('write-key', 'I want key')).toContain('A KEY');
+  expect(zeroCorrection('use-refusal', 'I want coffee')).toContain("DON'T WANT rechaza");
+  expect(zeroCorrection('write-cold', 'I have cold')).toContain('En esta expresión');
+  expect(zeroAccepts('I don’t want coffee', zeroMessages.noCoffee.en)).toBe(true);
+  expect(zeroTask('not-want').target).toBe('No quiero café.');
+  expect(zeroTask('have').target).toBe('Tengo una llave.');
+});
+it('migra por identidad, conserva borradores e historial, y rechaza piezas inválidas', () => {
   const state = freshZeroJourney();
   expect(resumeZeroJourney(state)).toEqual(state);
-  expect(resumeZeroJourney({ ...state, checkId: 'write-cold' })).toBeNull();
+  expect(resumeZeroJourney({ ...state, stage: 8, checkId: 'write-cold', input: 'I am c', helped: true, previousAttemptId: 'previous' })).toMatchObject({ stage: zeroSteps.indexOf('write-cold'), input: 'I am c', helped: true, previousAttemptId: 'previous' });
+  expect(resumeZeroJourney({ ...state, checkId: 'another-route' })).toBeNull();
   expect(resumeZeroJourney({ ...state, order: [4] })).toBeNull();
+  expect(resumeZeroJourney({ ...state, checkId: 'build-no-water', order: [2, 0] })?.order).toEqual([2, 0]);
+  expect(resumeZeroJourney({ ...state, checkId: 'build-no-water', order: [2, 2] })).toBeNull();
+  expect(resumeZeroJourney({ ...state, checkId: 'handoff' })).toMatchObject({ checkId: 'not-want', feedback: 'idle', input: '', helped: false, episodeId: state.episodeId });
+  expect(nextZeroStep('write-key')).toBe('complete');
+  expect(nextZeroStep('write-coffee')).toBe('not-want');
 });

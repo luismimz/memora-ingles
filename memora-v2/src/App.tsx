@@ -337,7 +337,7 @@ export default function App() {
   }
   function openZeroJourney() {
     const saved = readTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version);
-    if (saved?.checkId === 'handoff') writeTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version, freshZeroJourney());
+    if (saved?.checkId === 'complete') writeTrickCheckpoint(userId, zeroJourney.id, zeroJourney.version, freshZeroJourney());
     setZeroOpen(true);
   }
 

@@ -1,5 +1,17 @@
 # Acciones docentes y orientación dentro de la actividad
 
+## Memora Play: usar las piezas para cambiar la situación · 28/10/2026
+
+La apertura ya no acaba tras repetir dos mensajes. Se prolonga con un pedido equivocado y una puerta: DON'T WANT cambia la intención; COLD se mueve de «café frío» a COLD COFFEE; el alumno produce «Quiero agua fría», que no se ha mostrado completa. Un segundo Arcade pregunta qué bebida se rechaza, no infiere que rechazar café implique querer agua. Después recupera estado/rechazo sin piezas. No se obliga a repetir la antigua escritura de café en partidas nuevas.
+
+La puerta introduce KEY con un kiwi que gira en la cerradura y se convierte en llave. I HAVE / A KEY enseña posesión y el bloque «una llave», sin reglas universales de tocar/contar. Se distingue tener de querer en una situación con la llave en la mano; después se pide I WANT A KEY, combinación diferente del modelo. Pedirla abre la puerta, el modelo de ayuda no. Cuatro sentidos léxicos en este tramo, no35/día ni un curso terminado.
+
+Las escenas ahora representan el anclaje anunciado: wáter que estornuda/agua, café que salta y bufanda que pasa de Byte a la col; no emojis superpuestos ajenos a la acción. Rechazo aparta la bebida y COLD añade hielo. SVG/CSS sin coste de imágenes; estados estáticos equivalentes con movimiento reducido. Los bloques mantienen sujeto azul, verbo melocotón y contexto menta del modelo al montaje. Acierto/error señalan la opción tocada además del marco; texto de resultado conserva su significado. Orden inglés accesible de COLD COFFEE coincide con el visual después del movimiento.
+
+Checkpoint por identidad: las tareas guardadas conservan borrador, piezas, ayuda, primer error y demora aunque cambie su índice. El antiguo handoff entra en la ampliación en vez de salir/reiniciar. Un borrador de café anterior sigue contestable y enlaza la novedad; el final nuevo usa complete. Reabrir un episodio acabado reinicia solo esa navegación, no curso/intentos/SRS. Neutralidad, dos fallos, pausa/calma y reconocimiento automático se conservan. Primer intento erróneo no inventa una exposición de un modelo aún no mostrado; un modelo sí se registra neutral, nunca como producción libre.
+
+Recorrido completo y compatibilidad comprobados con datos aislados; resultados y versión realmente servida en MEMORA-IMPLEMENTACION-01.md. Sin nueva inspección móvil, escucha física o validación humana de belleza/diversión/retención por las puertas cerradas. Tras este tramo sigue contenido anterior: queda por extender el diseño y el método, no se declara excelencia ni feed infinito.
+
 ## Nuevo comienzo: Memora Play / Byte · 27/10/2026
 
 Esta entrega sustituye la entrada principal, no vuelve a retocar la cadena de Nora. Tras el acceso/catálogo normales abre directamente una experiencia de pantalla completa, con lenguaje visual y personaje originales en SVG/CSS y emoticonos, sin imágenes generadas/stock ni servicios nuevos. El acceso mantiene sus controles: no es alternativa para un403. La portada de acceso usa el mismo escenario. El curso anterior permanece en menú «Recorrido anterior», con sus posiciones e intentos intactos; desde su menú se puede volver a Play. Un episodio empezado se retoma, y una reproducción explícita tras terminar reinicia solo esa navegación, no memoria o intentos.
