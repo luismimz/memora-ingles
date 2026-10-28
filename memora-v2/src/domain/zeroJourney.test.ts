@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { freshZeroJourney, nextZeroStep, resumeZeroJourney, zeroAccepts, zeroCorrection, zeroDraftCue, zeroCoffeePieces, zeroNoWaterPieces, zeroMessages, zeroSteps, zeroTask, zeroWords } from './zeroJourney';
+import { freshZeroJourney, nextZeroStep, resumeZeroJourney, zeroAccepts, zeroCorrection, zeroDraftCue, zeroCoffeePieces, zeroNoWaterPieces, zeroMessages, zeroRecallSteps, zeroSpellingRepair, zeroSteps, zeroTask, zeroWords, zeroWritingGuide } from './zeroJourney';
 it('cada transferencia sigue a la enseñanza de sus piezas y usa un mensaje diferente', () => {
   expect(new Set(zeroWords.map((word) => word.en)).size).toBe(4);
   expect(zeroWords.every((word) => !word.imageUrl && word.ipa && word.scene && word.associationId)).toBe(true);
@@ -19,6 +19,35 @@ it('cada transferencia sigue a la enseñanza de sus piezas y usa un mensaje dife
   expect(zeroAccepts('I want coffee', zeroMessages.noCoffee.en)).toBe(false);
   expect(zeroAccepts('I have a key', zeroMessages.wantKey.en)).toBe(false);
   expect(zeroTask('write-cold-water').words.map((word) => word.en)).toEqual(['WATER', 'COLD']);
+});
+
+it('repara la errata de la captura sin aceptarla como respuesta y prepara ayuda bilingüe para cada escritura', () => {
+  const draft = 'i want cold whater';
+  expect(zeroAccepts(draft, zeroMessages.coldWater.en)).toBe(false);
+  expect(zeroDraftCue('write-cold-water', draft)).toBe('whater → WATER. El resto de tu frase está bien.');
+  expect(zeroSpellingRepair('write-cold-water', draft)?.corrected).toBe('i want cold water');
+  expect(zeroSpellingRepair('cold-order', draft)).toBeUndefined();
+  for (const step of zeroRecallSteps) {
+    const guide = zeroWritingGuide(step);
+    expect(zeroAccepts(guide.model.map((part) => part.en).join(' '), zeroTask(step).expected)).toBe(true);
+    expect(guide.model.every((part) => part.es && part.role)).toBe(true);
+    expect(guide.pieces.map((part) => part.text).sort()).toEqual(guide.model.map((part) => part.en).sort());
+    expect(guide.pieces[0].text).not.toBe('I');
+  }
+  expect(zeroWritingGuide('write-cold').model).toContainEqual({ en: 'AM COLD', es: 'tengo frío', role: 'verb' });
+});
+
+it('reanuda el montaje asistido y rechaza índices, huecos o continuaciones de otra actividad', () => {
+  const saved = { ...freshZeroJourney(['write-cold-water', 'write-key']), input: 'i want cold whater', helped: true, checkFailures: 1, previousAttemptId: 'first-error', continuation: { phase: 'build' as const, sentenceIndex: 0, filledSlots: 2, modelUsed: true, order: [1, 2], failures: 1 as const } };
+  expect(resumeZeroJourney(saved)).toEqual(saved);
+  expect(resumeZeroJourney({ ...saved, continuation: { ...saved.continuation, order: [1, 1] } })).toBeNull();
+  expect(resumeZeroJourney({ ...saved, continuation: { ...saved.continuation, order: [1, -1] } })).toBeNull();
+  expect(resumeZeroJourney({ ...saved, continuation: { ...saved.continuation, order: [1, 4] } })).toBeNull();
+  expect(resumeZeroJourney({ ...saved, continuation: { ...saved.continuation, order: [1, 1.5] } })).toBeNull();
+  expect(resumeZeroJourney({ ...saved, continuation: { ...saved.continuation, filledSlots: 1 } })).toBeNull();
+  expect(resumeZeroJourney({ ...saved, continuation: { ...saved.continuation, modelUsed: false } })).toBeNull();
+  expect(resumeZeroJourney({ ...saved, continuation: { ...saved.continuation, phase: 'conversation' } })).toBeNull();
+  expect(resumeZeroJourney({ ...saved, checkId: 'build-coffee', review: undefined })).toBeNull();
 });
 it('da una reparación del error observado, no una orden genérica de volver a escuchar', () => {
   expect(zeroCorrection('write-cold-water', 'I want water cold')).toContain('COLD va delante');

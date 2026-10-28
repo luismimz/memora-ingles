@@ -98,6 +98,28 @@
 .zero-journey .answer-studio input { background: #ffffff08; border-color: #ffffff30; color: #f4f5fa; }
 .zero-journey .answer-studio-status { font-size: .7rem; color: #adb8d0; }
 .zero-journey .answer-studio-feedback { color: #f3c894; font-size: .9rem; }
+.zero-content.is-writing { gap: 12px; }
+.zero-content.is-writing > h1 { font-size: clamp(1.15rem,4vw,1.7rem); color: #c0cbe0; letter-spacing: -.02em; }
+.zero-content.is-writing > .zero-scene { height: 88px; }
+.zero-content.is-writing:has(.answer-studio:focus-within) > :is(h1,.zero-kicker) { display: none; }
+.zero-content.is-writing:has(.answer-studio:focus-within) > .zero-scene { height: 40px; }
+.zero-inline-help { min-height: 44px; padding: 9px 16px; border: 1px solid #a2e8d250; border-radius: 16px; color: #c8f4e7; background: #a2e8d20d; font: inherit; font-size: .9rem; }
+.zero-support-note { font-size: .72rem; color: #c0cbe0; }
+.writing-spelling-repair { display: grid; justify-items: center; gap: 10px; text-align: center; }
+.writing-spelling-repair > span { font-size: .8rem; color: #c0cbe0; }
+.writing-repair-changes { display: grid; gap: 6px; width: 100%; }
+.writing-repair-changes > div { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; font-size: 1.15rem; }
+.writing-repair-changes del { color: #ffc3b9; text-decoration-thickness: 1px; }
+.writing-repair-changes strong { color: #a2e8d2; letter-spacing: .02em; }
+.writing-spelling-repair > button { width: min(100%,320px); min-height: 46px; padding: 10px 14px; border: 0; border-radius: 13px; color: #102c28; background: #a2e8d2; font: inherit; font-weight: 650; }
+.zero-writing-guide { width: min(100%,540px); display: grid; gap: 16px; justify-items: center; }
+.zero-mirror { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.zero-mirror > span { display: grid; gap: 5px; padding: 10px 12px; border-radius: 13px; color: #10182a; background: #a2e8d2; }
+.zero-mirror .coach-subject { background: #b5c4ff; }
+.zero-mirror .coach-verb { background: #f3c894; }
+.zero-mirror strong { font-size: 1.05rem; }
+.zero-mirror small { font-size: .7rem; }
+.zero-content.is-repairing > .zero-scene { height: 55px; }
 .zero-content:has(.answer-studio:focus-within) { min-height: 0; justify-content: flex-start; gap: 12px; }
 .zero-content:has(.answer-studio:focus-within) > .zero-scene { height: 70px; }
 .zero-paused { display: grid; align-content: center; justify-items: center; gap: 22px; }

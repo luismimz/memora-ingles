@@ -1,6 +1,6 @@
 import type { AtomicWord, UnitSentence } from './unit';
 import { piece } from './grammarLesson';
-import { normalizeSentenceAnswer } from './sentenceAnswer';
+import { normalizeSentenceAnswer, sentenceSpellingRepair } from './sentenceAnswer';
 import type { TrickCheckpoint } from './trickCheckpoint';
 import { dueSentenceMemories } from './memory';
 
@@ -66,7 +66,20 @@ export function dueZeroReviews(userId: string, now = Date.now()): ZeroRecallStep
   }).filter((step, index, all) => all.indexOf(step) === index);
 }
 export const zeroAccepts = (value: string, expected: string) => normalizeSentenceAnswer(value).replace(/\bdon't\b/gu, 'do not') === normalizeSentenceAnswer(expected).replace(/\bdon't\b/gu, 'do not');
+export const zeroSpellingRepair = (step: ZeroStep, value: string) => zeroTask(step).writing ? sentenceSpellingRepair(value, zeroTask(step).expected) : undefined;
+/** Prepared bilingual chunks for optional rescue, never a new independent test. */
+export function zeroWritingGuide(step: ZeroStep) {
+  const model = step === 'write-cold' ? [{ en: 'I', es: 'yo', role: 'subject' as const }, { en: 'AM COLD', es: 'tengo frío', role: 'verb' as const }]
+    : step === 'use-refusal' ? [{ en: 'I', es: 'yo', role: 'subject' as const }, { en: "DON'T WANT", es: 'no quiero', role: 'verb' as const }, { en: 'COFFEE', es: 'café', role: 'context' as const }]
+    : step === 'write-key' ? [{ en: 'I', es: 'yo', role: 'subject' as const }, { en: 'WANT', es: 'quiero', role: 'verb' as const }, { en: 'A KEY', es: 'una llave', role: 'context' as const }]
+    : step === 'write-cold-water' ? [{ en: 'I', es: 'yo', role: 'subject' as const }, { en: 'WANT', es: 'quiero', role: 'verb' as const }, { en: 'COLD', es: 'fría', role: 'context' as const }, { en: 'WATER', es: 'agua', role: 'context' as const }]
+    : [{ en: 'I', es: 'yo', role: 'subject' as const }, { en: 'WANT', es: 'quiero', role: 'verb' as const }, { en: 'COFFEE', es: 'café', role: 'context' as const }];
+  const bank = [model.at(-1)!, ...model.slice(0, -1)];
+  return { model, pieces: bank.map((part) => piece(part.en, part.role)) };
+}
 export function zeroCorrection(step: ZeroStep, response: string): string {
+  const spelling = zeroSpellingRepair(step, response);
+  if (spelling) return spelling.changes.map((change) => `${change.written} → ${change.expected.toUpperCase()}`).join(' · ') + (spelling.changes.length === 1 ? '. El resto de tu frase está bien.' : '. Conserva las otras piezas.');
   const value = normalizeSentenceAnswer(response);
   if (step === 'write-key') {
     if (/\bhave\b/u.test(value)) return 'Aquí estás pidiendo: WANT, quiero. HAVE cuenta lo que ya tienes.';
@@ -78,11 +91,12 @@ export function zeroCorrection(step: ZeroStep, response: string): string {
     if (/\bcoffee\b/u.test(value)) return 'COFFEE es café. Esta vez quieres WATER, agua.';
   }
   if (step === 'write-cold' && !/\bi am\b/u.test(value)) return 'En esta expresión dices cómo estás: I AM COLD, tengo frío.';
-  return 'Revisa las piezas de tu mensaje. En ••• puedes ver un modelo.';
+  return 'Vamos por partes. Puedes armar el mensaje aquí mismo.';
 }
 /** Only known, complete misconstructions. A pause or unfinished prefix is not an error. */
 export function zeroDraftCue(step: ZeroStep, value: string): string | undefined {
   const draft = normalizeSentenceAnswer(value);
+  if (zeroSpellingRepair(step, value)) return zeroCorrection(step, value);
   if (step === 'use-refusal' && draft === 'i dont want coffee') return "DON'T lleva apóstrofo. DON'T WANT significa «no quiero».";
   const complete = step === 'write-key' ? ['i have a key', 'i want key']
     : step === 'use-refusal' ? ['i want coffee']
@@ -99,6 +113,10 @@ export function resumeZeroJourney(saved: TrickCheckpoint | null): TrickCheckpoin
   if (stage < 0 || saved.order?.some((index) => !Number.isInteger(index) || index < 0 || index >= limit) || new Set(saved.order).size !== (saved.order?.length ?? 0)) return null;
   if (saved.review && (saved.review.pending.some((id) => !zeroRecallSteps.includes(id as typeof zeroRecallSteps[number])) || (saved.review.pending[0] ?? 'complete') !== saved.checkId)) return null;
   if (saved.resumeAfter !== undefined && (saved.resumeAfter !== 'not-want' || saved.checkId !== 'write-cold' || saved.review)) return null;
+  if (saved.continuation) {
+    const repair = saved.continuation, size = zeroWritingGuide(saved.checkId as ZeroStep).pieces.length;
+    if (!zeroTask(saved.checkId as ZeroStep).writing || repair.phase !== 'build' || repair.sentenceIndex !== 0 || repair.modelUsed !== true || repair.filledSlots !== (repair.order?.length ?? 0) || repair.filledSlots > size || repair.order?.some((index) => !Number.isInteger(index) || index < 0 || index >= size) || new Set(repair.order).size !== (repair.order?.length ?? 0)) return null;
+  }
   // Old cold-writing preceded all new lessons. Preserve the draft, then teach
   // the extension instead of jumping into an untaught negative sentence.
   return { ...saved, stage, ...(saved.checkId === 'write-cold' && saved.stage === 8 ? { resumeAfter: 'not-want' } : {}) };

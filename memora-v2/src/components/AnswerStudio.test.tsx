@@ -91,3 +91,21 @@ it('cancelar o componer nunca dispara orientación pendiente y el acierto conser
   type('i am cooking meet'); act(() => tree.update(<Draft taskKey="new" />)); act(() => { vi.advanceTimersByTime(2000); }); expect(cue).not.toHaveBeenCalled();
   type('j am cooking meet'); act(() => tree.unmount()); act(() => { vi.advanceTimersByTime(2000); }); expect(cue).not.toHaveBeenCalled();
 });
+
+it('solo con opt-in orienta de nuevo sobre otro borrador y nunca repite una pista estable', () => {
+  const cue = vi.fn();
+  function Draft({ disabled = false }: { disabled?: boolean }) {
+    const [value, setValue] = useState('');
+    return <AnswerStudio id="repeat" taskKey="repeat" target="Quiero agua fría" value={value} onChange={setValue} onAnswer={answer} accepts={(text) => text === 'I want cold water'} repeatDraftCues draftCue={(text) => text.endsWith('whater') ? 'whater → WATER' : text.endsWith('watre') ? 'watre → WATER' : undefined} onDraftCue={cue} disabled={disabled} />;
+  }
+  act(() => { tree = create(<Draft />); });
+  type('I want cold whater'); act(() => { vi.advanceTimersByTime(1200); });
+  expect(cue).toHaveBeenCalledExactlyOnceWith('I want cold whater', 'whater → WATER');
+  act(() => tree.update(<Draft />)); act(() => { vi.advanceTimersByTime(5000); }); expect(cue).toHaveBeenCalledOnce();
+  type('I want cold watre'); act(() => { vi.advanceTimersByTime(1200); });
+  expect(cue).toHaveBeenLastCalledWith('I want cold watre', 'watre → WATER'); expect(cue).toHaveBeenCalledTimes(2);
+  act(() => tree.root.findByType('input').props.onCompositionStart()); type('I want cold whater');
+  act(() => { vi.advanceTimersByTime(3000); }); expect(cue).toHaveBeenCalledTimes(2);
+  act(() => tree.root.findByType('input').props.onCompositionEnd()); act(() => tree.update(<Draft disabled />));
+  act(() => { vi.advanceTimersByTime(3000); }); expect(cue).toHaveBeenCalledTimes(2); expect(answer).not.toHaveBeenCalled();
+});

@@ -2,31 +2,35 @@ import { useEffect, useRef, type ReactNode } from 'react';
 import './answerStudio.css';
 
 /** Presentation + exact-answer convenience. The caller still validates and records. */
-export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, accepts, disabled = false, feedback, instruction = 'Escribe en inglés', draftCue, onDraftCue }: {
+export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, accepts, disabled = false, feedback, instruction = 'Escribe en inglés', draftCue, onDraftCue, repeatDraftCues = false }: {
   id: string; taskKey: string; target: ReactNode; value: string; onChange: (value: string) => void;
   onAnswer: (value: string) => void; accepts: (value: string) => boolean; disabled?: boolean;
   feedback?: ReactNode;
   instruction?: string;
   draftCue?: (value: string) => string | undefined;
   onDraftCue?: (value: string, cue: string) => void;
+  /** Opt-in: a different complete draft can receive its own neutral cue. */
+  repeatDraftCues?: boolean;
 }) {
   const composing = useRef(false), timer = useRef<ReturnType<typeof setTimeout>>();
   const fired = useRef('');
   const edited = useRef(false);
   const cueSent = useRef(false);
-  const current = useRef({ taskKey, value, disabled, accepts, onAnswer, draftCue, onDraftCue });
-  current.current = { taskKey, value, disabled, accepts, onAnswer, draftCue, onDraftCue };
+  const cueSignature = useRef('');
+  const current = useRef({ taskKey, value, disabled, accepts, onAnswer, draftCue, onDraftCue, repeatDraftCues });
+  current.current = { taskKey, value, disabled, accepts, onAnswer, draftCue, onDraftCue, repeatDraftCues };
   function cancel() { clearTimeout(timer.current); }
   function schedule() {
     cancel(); const entry = current.current;
     if (!edited.current || composing.current || entry.disabled || !entry.value.trim()) return;
     if (!entry.accepts(entry.value)) {
-      if (cueSent.current || !entry.onDraftCue || !entry.draftCue?.(entry.value)) return;
+      const cue = entry.draftCue?.(entry.value), signature = `${entry.taskKey}:${entry.value}:${cue}`;
+      if ((!entry.repeatDraftCues && cueSent.current) || cueSignature.current === signature || !entry.onDraftCue || !cue) return;
       timer.current = setTimeout(() => {
         const latest = current.current;
-        if (composing.current || latest.disabled || latest.taskKey !== entry.taskKey || latest.value !== entry.value || cueSent.current || latest.accepts(latest.value)) return;
+        if (composing.current || latest.disabled || latest.taskKey !== entry.taskKey || latest.value !== entry.value || (!latest.repeatDraftCues && cueSent.current) || cueSignature.current === signature || latest.accepts(latest.value)) return;
         const cue = latest.draftCue?.(latest.value);
-        if (cue && latest.onDraftCue) { cueSent.current = true; latest.onDraftCue(latest.value, cue); }
+        if (cue && latest.onDraftCue) { cueSent.current = true; cueSignature.current = signature; latest.onDraftCue(latest.value, cue); }
       }, 1200);
       return;
     }
@@ -36,7 +40,7 @@ export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, a
       fired.current = signature; latest.onAnswer(latest.value);
     }, 450);
   }
-  useEffect(() => { edited.current = false; fired.current = ''; cueSent.current = false; cancel(); }, [taskKey]);
+  useEffect(() => { edited.current = false; fired.current = ''; cueSent.current = false; cueSignature.current = ''; cancel(); }, [taskKey]);
   useEffect(() => { schedule(); return cancel; }, [taskKey, value, disabled]);
   return <section className="answer-studio" aria-label="Tu reto de escritura">
     <label className="answer-studio-instruction" htmlFor={id}>{instruction}</label>
@@ -44,7 +48,7 @@ export function AnswerStudio({ id, taskKey, target, value, onChange, onAnswer, a
     <form onSubmit={(event) => { event.preventDefault(); cancel(); if (!disabled && !composing.current && value.trim()) onAnswer(value); }}>
       <input id={id} aria-describedby={`${id}-target ${id}-status${feedback ? ` ${id}-feedback` : ''}`} lang="en" value={value} onChange={(event) => { edited.current = true; onChange(event.target.value); }} onCompositionStart={() => { composing.current = true; cancel(); }} onCompositionEnd={() => { composing.current = false; schedule(); }} autoComplete="off" autoCapitalize="none" enterKeyHint="send" spellCheck={false} disabled={disabled} placeholder="Tu respuesta" />
     </form>
-    {feedback ? <p id={`${id}-feedback`} className="answer-studio-feedback" role="status">{feedback}</p> : null}
+    {feedback ? <div id={`${id}-feedback`} className="answer-studio-feedback" role="status">{feedback}</div> : null}
     <p id={`${id}-status`} className="answer-studio-status">Se reconoce al acertar. <kbd aria-label="Enter">↵</kbd> para revisar.</p>
   </section>;
 }
