@@ -54,6 +54,9 @@
 .story-actors > span { font-size: clamp(36px,11vw,65px); filter: drop-shadow(0 10px 8px #0003); animation: story-arrive .45s both; animation-delay: calc(var(--actor)*.08s); }
 .story-scene.is-alive .story-actors > span { animation: story-deliver .75s both; animation-delay: calc(var(--actor)*.08s); }
 .story-scene.is-alive .scene-train { animation: story-train 1.2s ease-out both; }
+.story-scene[data-milk] .story-actors > span:last-child { animation: none; transition: transform .35s ease,opacity .35s ease; }
+.story-scene[data-milk='with'] .story-actors > span:last-child { transform: translateX(-12px) rotate(-12deg); }
+.story-scene[data-milk='without'] .story-actors > span:last-child { transform: translateX(24px); opacity: .45; }
 .story-discover, .story-mirror, .story-builder, .story-choice { display: flex; flex-direction: column; gap: 16px; }
 .story-word { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 10px 16px; }
 .story-word strong { font-size: clamp(36px,10vw,54px); letter-spacing: -.045em; font-weight: 750; }

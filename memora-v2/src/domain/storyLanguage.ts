@@ -6,7 +6,7 @@ import { normalizeSentenceAnswer, sentenceSpellingRepair } from './sentenceAnswe
 export function storyRole(english: string): LessonPiece['role'] {
   if (/^(I|you|we|he|she|they)$/i.test(english)) return 'subject';
   if (/^(want|have|need|am|don't want|can i have|where is)$/i.test(english)) return 'verb';
-  if (/^(cold|my|please)$/i.test(english)) return 'change';
+  if (/^(cold|my|please|with milk|without milk)$/i.test(english)) return 'change';
   return 'context';
 }
 
@@ -18,9 +18,10 @@ const alternatives: Record<string, {label:string; source:string}[]> = {
   'cold-tea':[{label:'Sin frío',source:'order-tea'}],
   'wrong-drink':[{label:'Sí quiero',source:'want'}],
   'train-question':[{label:'Mi billete',source:'where'}],
+  'without-milk':[{label:'Con leche',source:'with-milk'}],
 };
 export function storyVariations(card: StoryCard): StoryVariation[] {
-  return [{label:card.id==='cold-tea'?'Con frío':card.id==='wrong-drink'?'No quiero':card.id==='train-question'?'El tren':card.id==='have'?'Lo tengo':'Lo necesito',card},
+  return [{label:card.id==='without-milk'?'Sin leche':card.id==='cold-tea'?'Con frío':card.id==='wrong-drink'?'No quiero':card.id==='train-question'?'El tren':card.id==='have'?'Lo tengo':'Lo necesito',card},
     ...(alternatives[card.id] ?? []).map(({label,source})=>({label,card:storyCards.find(item=>item.id===source)!}))];
 }
 

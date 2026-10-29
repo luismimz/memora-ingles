@@ -13,6 +13,7 @@ const transfers: Record<string,{source:string;title:string}> = {
   'polite-ticket':{source:'polite-request',title:'Pide la llave con amabilidad.'},
   'find-key':{source:'where',title:'La llave aparece; ahora falta tu billete.'},
   'recall-key':{source:'have',title:'Ya encontraste la llave. Cuéntalo.'},
+  'soup-order':{source:'without-milk',title:'Ahora cambia la sopa por una bebida.'},
 };
 export function storyTransfer(original:StoryCard):StoryCard|undefined {
   const variant=transfers[original.id];

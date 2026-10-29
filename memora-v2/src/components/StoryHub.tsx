@@ -13,8 +13,8 @@ export function StoryHub({ userId, inspection = false, syncStatus, onResume, onE
   onLegacy: () => void; onExit: () => void;
 }) {
   const saved = inspection ? null : readTrickCheckpoint(userId, storyJourney.id, storyJourney.version);
-  const finished = saved?.checkId === 'end';
-  const card = storyCards.find(item => item.id === saved?.checkId) ?? storyCards[0];
+  const finished = saved?.checkId === 'end' && saved.stage >= storyCards.length;
+  const card = (saved?.checkId === 'end' && !finished ? storyCards[saved.stage] : storyCards.find(item => item.id === saved?.checkId)) ?? storyCards[0];
   const chapter = storyChapters[card.chapter];
   return <main className="learning-space story-hub">
     <header className="space-header"><span className="space-brand">m <span>MEMORA</span></span>

@@ -2,6 +2,7 @@ import { act,create,type ReactTestRenderer } from 'react-test-renderer';
 import { afterEach,beforeEach,expect,it,vi } from 'vitest';
 import { StoryJourney } from './StoryJourney';
 import { GameCard } from './GameCard';
+import { StoryScene } from './StoryScene';
 import { GrammarOrder } from './GrammarOrder';
 import { AnswerStudio } from './AnswerStudio';
 import { storyCards,storyJourney,storySentence } from '../domain/storyJourney';
@@ -17,6 +18,33 @@ const checkpoint=()=>readTrickCheckpoint(user,storyJourney.id,storyJourney.versi
 const click=async(label:string)=>{await act(async()=>tree.root.findAllByType('button').find(node=>text(node).includes(label))!.props.onClick());};
 async function mount(id?:string){if(id)writeTrickCheckpoint(user,storyJourney.id,storyJourney.version,{stage:id==='end'?storyCards.length:storyCards.findIndex(card=>card.id===id),checkId:id,checkIndex:0,input:'',feedback:'idle',helped:false,episodeId:'test',promptStartedAt:new Date().toISOString()});await act(async()=>{tree=create(<StoryJourney userId={user} onExit={()=>{}}/>);});}
 beforeEach(()=>{vi.useFakeTimers();const values=new Map<string,string>();vi.stubGlobal('localStorage',{getItem:(key:string)=>values.get(key)??null,setItem:(key:string,value:string)=>values.set(key,value)});vi.stubGlobal('window',{setTimeout,clearTimeout,setInterval,clearInterval,matchMedia:()=>({matches:true}),getSelection:()=>null,dispatchEvent:vi.fn()});});
+it('un final de catálogo anterior abre solo las escenas añadidas, sin reiniciar ni sumar aciertos',async()=>{
+  writeTrickCheckpoint(user,storyJourney.id,storyJourney.version,{stage:31,checkId:'end',checkIndex:0,input:'',feedback:'idle',helped:false});
+  await mount();
+  expect(checkpoint().checkId).toBe('soup');
+  expect(text(tree.toJSON())).toContain('La sopa se convierte en una ola.');
+  expect(readLearningActivities(user)).toEqual([]);
+});
+it('con y sin cambian juntos escena, piezas y frase de audio; el montaje siguiente no hereda la variante',async()=>{
+  await mount('without-milk');
+  expect(tree.root.findByType(StoryScene).props.card.id).toBe('without-milk');
+  await click('Con leche');
+  expect(tree.root.findByType(StoryScene).props.card.id).toBe('with-milk');
+  expect(text(tree.toJSON())).toContain('Quiero té con leche.');
+  expect(readLearningActivities(user).at(-1)).toMatchObject({source:'authored',correct:null,response:'I want tea with milk.'});
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint().checkId).toBe('soup-order');
+  expect(tree.root.findByType(StoryScene).props.card.id).toBe('soup-order');
+  await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('I want soup without milk'));
+  await act(async()=>{vi.advanceTimersByTime(1500);});
+  expect(checkpoint().checkId).toBe('listen-milk');
+});
+it('una omisión del último reto nuevo llega al final sin declararlo aprendido',async()=>{
+  await mount('recall-milk');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint().checkId).toBe('end');
+  expect(readLearningActivities(user).at(-1)).toMatchObject({correct:null,feedback:'story:omitted'});
+});
 afterEach(()=>{if(tree)act(()=>tree.unmount());vi.useRealTimers();vi.unstubAllGlobals();});
 it('muestra palabra y asociación sin toque previo; pasar registra solo exposición',async()=>{await mount();expect(text(tree.toJSON())).toContain('coffee');expect(text(tree.toJSON())).toContain('El CAFÉ tiene alas');expect(text(tree.toJSON())).not.toContain('Toca para descubrir');expect(readLearningActivities(user)).toEqual([]);await act(async()=>tree.root.findByType(GameCard).props.onAdvance());expect(checkpoint().checkId).toBe('want');expect(readLearningActivities(user)).toMatchObject([{source:'authored',correct:null}]);expect(readSentenceMemories(user)).toEqual([]);});
 it('presenta el espejo completo sin destapar piezas ni evaluar enseñanza como recuerdo',async()=>{await mount('want');expect(text(tree.toJSON())).toContain('want');expect(text(tree.toJSON())).toContain('quiero');expect(tree.root.findAllByType('button').some(node=>text(node).includes('toca'))).toBe(false);await act(async()=>tree.root.findByType(GameCard).props.onAdvance());expect(readLearningActivities(user)).toHaveLength(1);expect(readLearningActivities(user)[0]).toMatchObject({source:'authored',correct:null,helped:true});expect(readSentenceMemories(user)[0].attempts).toBe(0);});
