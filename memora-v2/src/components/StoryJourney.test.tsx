@@ -77,3 +77,24 @@ it('espera a que termine el audio solicitado antes de avanzar automáticamente',
   await act(async()=>{vi.advanceTimersByTime(1500);});
   expect(checkpoint().checkId).toBe('cold-tea');
 });
+it('recupera una omisión con otro mensaje, conserva el regreso y no la encadena otra vez',async()=>{
+  await mount('order-tea');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(readLearningActivities(user).at(-1)).toMatchObject({feedback:'story:omitted',correct:null,modality:'choice'});
+  act(()=>tree.unmount());
+  await mount('arcade-cafe');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint()).toMatchObject({checkId:'order-tea',resumeAfter:'key',review:{mode:'transfer'}});
+  expect(text(tree.toJSON())).toContain('Quiero café.');
+  expect(text(tree.toJSON())).not.toContain('Quiero té.');
+  act(()=>tree.unmount());
+  await mount();
+  expect(checkpoint().review?.mode).toBe('transfer');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint().checkId).toBe('key');
+  expect(readLearningActivities(user).at(-1)).toMatchObject({feedback:'story:returned',correct:null});
+  act(()=>tree.unmount());
+  await mount('recall-cafe');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint().checkId).toBe('ticket');
+});

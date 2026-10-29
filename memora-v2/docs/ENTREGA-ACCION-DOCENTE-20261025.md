@@ -2,6 +2,8 @@
 
 ## Reconstrucción por historias · 29/10/2026
 
+Continuidad29/10 por la tarde: una actividad de construcción/escritura omitida puede volver en un límite de capítulo, tras al menos tres escenas, con otro mensaje autoral de piezas ya preparadas. Nueve correspondencias de transferencia, una oportunidad por omisión, sin repetirla indefinidamente ni dar un acierto al pasar. Prioridad a los repasos vencidos existentes; no scheduler nuevo. Se guarda modo de transferencia y destino de regreso en el checkpoint actual, se conserva la frase real en memoria y se registra navegación como elección neutral, nunca escritura. Pruebas incluyen recarga, regreso, no repetición, piezas previamente preparadas y compatibilidad de checkpoints.1102tests/177archivos y build pasan. fd24cf4 previo ya contrastado byte a byte; publicación de esta continuación en checkpoint.
+
 Nueva revisión integral solicitada tras1be6b98: el usuario rechaza la coherencia del conjunto. NO aceptado ni terminado. La programación existente fue reactivada explícitamente; criterios únicos de aceptación y continuación en MEMORA-IMPLEMENTACION-01.md.
 
 Superficie actual: una misma composición, materiales, tipografía y funciones de color para portada/historias/gramática/construcción/ayuda. StoryScene añade escenarios SVG propios de terraza, hotel y estación; actores emoji y reacción breve al resolver. Se sustituyó la hoja storyJourney.css, no se añadió otra capa de tema. No generó imágenes ni importó código de referencias. No se afirma revisión visual móvil.

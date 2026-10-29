@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { storyAccepts, storyBank, storyCards, storyChapters, storyJourney, storySentence, type StoryCard } from '../domain/storyJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint, type TrickCheckpoint } from '../domain/trickCheckpoint';
-import { recordLearningActivity } from '../domain/learningActivity';
+import { readLearningActivities, recordLearningActivity } from '../domain/learningActivity';
+import { pendingStoryReturns, storyTransfer } from '../domain/storyReturn';
 import { dueSentenceMemories, recordSentenceExposure, recordSentenceRecall, sentenceKey } from '../domain/memory';
 import { sentenceSpellingRepair } from '../domain/sentenceAnswer';
 import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
@@ -42,7 +43,7 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
   const [oral,setOral] = useState(false);
   const [audioBusy,setAudioBusy] = useState(false);
   const original = storyCards[state.stage];
-  const card: StoryCard | undefined = original && state.review ? {...original,kind:'write',title:'En otra ocasión, necesitas decirlo.',scene:['🧳',...original.scene.slice(-1)],answer:undefined,timed:false} : original;
+  const card: StoryCard | undefined = original && state.review ? state.review.mode==='transfer' ? storyTransfer(original) ?? original : {...original,kind:'write',title:'En otra ocasión, necesitas decirlo.',scene:['🧳',...original.scene.slice(-1)],answer:undefined,timed:false} : original;
   const solved = state.feedback === 'correct';
   const model = (state.checkFailures ?? 0) >= 2;
   const teach = card?.kind === 'discover' || card?.kind === 'mirror';
@@ -54,14 +55,14 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
     const next = {...live.current,...patch}; live.current=next; setState(next);
     if (!inspection) writeTrickCheckpoint(userId,storyJourney.id,storyJourney.version,next);
   }
-  function record(response:string, correct:boolean|null, helped:boolean, source:'learner'|'authored'='learner', shown=card) {
+  function record(response:string, correct:boolean|null, helped:boolean, source:'learner'|'authored'='learner', shown=card, feedback?:string) {
     if (inspection || !card || !shown) return undefined;
     const selected=source==='learner' ? shown.options?.find(option=>option.value===response) : undefined;
     const expected=selected ? shown.options?.find(option=>option.value===shown.answer)?.text : shown.en;
     return recordLearningActivity(userId,{ unitId:storyJourney.id,unitTitle:storyJourney.title,contentVersion:storyJourney.version,
-      activityId:`story:${state.episodeId}:${card.id}`,skill:`story:${card.id}`,phase:teach?'grammar':card.timed?'arcade':card.kind==='write'?'dialogue':'construction',
-      source,modality:card.kind==='write' && !helped?'writing':'choice',prompt:shown.es,response:selected?.text ?? response,expected:expected ?? shown.en,correct,helped,
-      promptLanguage:'es',responseLanguage:selected?(shown.choiceLanguage ?? 'es'):'en',parentAttemptId:live.current.previousAttemptId,
+      activityId:`story:${state.episodeId}:${card.id}`,skill:`story:${card.id}`,phase:state.review?.mode==='transfer'?'transfer':teach?'grammar':card.timed?'arcade':card.kind==='write'?'dialogue':'construction',feedback,
+      source,modality:!feedback && card.kind==='write' && !helped?'writing':'choice',prompt:shown.es,response:selected?.text ?? response,expected:expected ?? shown.en,correct,helped,
+      promptLanguage:'es',responseLanguage:feedback?'es':selected?(shown.choiceLanguage ?? 'es'):'en',parentAttemptId:live.current.previousAttemptId,
       responseDelayMs:Math.max(0,Date.now()-Date.parse(live.current.promptStartedAt ?? new Date().toISOString())) });
   }
   function expose(shown=card) {
@@ -74,18 +75,21 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
     // Visible teaching is an exposure, never a successful recall. Older revealed
     // checkpoints already recorded it; leaving must not duplicate that event.
     if (teach && live.current.input !== 'seen' && !(card.kind==='mirror' && live.current.order?.length===card.chunks?.length)) expose();
-    if (!solved && !teach && !model) record('Pasó a otra escena; práctica pendiente.',null,live.current.helped);
+    if(state.review?.mode==='transfer') record('Terminó la oportunidad de volver al mensaje.',null,live.current.helped,'learner',card,'story:returned');
+    else if (!solved && !teach && !model) record('Pasó a otra escena; práctica pendiente.',null,live.current.helped,'learner',card,'story:omitted');
     stopSpeech();
     const pending = live.current.review?.pending.slice(1);
     const returnStage=live.current.resumeAfter ? storyCards.findIndex(item=>item.id===live.current.resumeAfter) : storyCards.length;
     let nextStage = pending ? (pending.length ? storyCards.findIndex(item=>item.id===pending[0]) : returnStage<0?storyCards.length:returnStage) : state.stage+1;
-    let review=pending?.length ? {pending,total:state.review!.total} : undefined;
+    let review:TrickCheckpoint['review']=pending?.length ? {...state.review!,pending} : undefined;
     let resumeAfter=pending?.length ? live.current.resumeAfter : undefined;
     // A small due-memory interlude connects chapters. Timing belongs to the
     // existing SRS; swiping never marks a memory recalled or manufactures work.
-    if(!pending && !inspection && storyCards[nextStage] && storyCards[nextStage].chapter!==card.chapter) {
+    if(!pending && !inspection && (!storyCards[nextStage] || storyCards[nextStage].chapter!==card.chapter)) {
       const due=dueReviews(state.stage,2);
-      if(due.length) { resumeAfter=storyCards[nextStage].id; review={pending:due,total:due.length}; nextStage=storyCards.findIndex(item=>item.id===due[0]); }
+      const returns=due.length?[]:pendingStoryReturns(readLearningActivities(userId),state.stage);
+      const interlude=due.length?due:returns;
+      if(interlude.length) { resumeAfter=storyCards[nextStage]?.id ?? 'end'; review={pending:interlude,total:interlude.length,...(returns.length?{mode:'transfer' as const}:{})}; nextStage=storyCards.findIndex(item=>item.id===interlude[0]); }
     }
     save({...fresh(nextStage),episodeId:state.episodeId,continuation:undefined,previousAttemptId:undefined,correctionResponse:undefined,review,resumeAfter});
   }

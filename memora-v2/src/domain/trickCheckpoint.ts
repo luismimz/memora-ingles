@@ -1,7 +1,7 @@
 import { progressStorage } from './progressJournal';
 
 export interface TrickContinuationCheckpoint { phase: 'build' | 'conversation'; sentenceIndex: number; filledSlots: number; previousAttempt?: string; failures?: number; modelUsed?: boolean; order?: number[]; preparationStep?: number }
-export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string; episodeId?: string; episodeStartedAt?: string; promptStartedAt?: string; situationLayout?: 'message-chunks-v1'; presentation?: 'message-overview-v1'; reflection?: { draft: string; compared: boolean }; continuation?: TrickContinuationCheckpoint; review?: { pending: string[]; total: number }; resumeAfter?: string }
+export interface TrickCheckpoint { stage: number; checkIndex: number; input: string; feedback: 'idle' | 'help' | 'correct'; helped: boolean; checkId?: string; order?: number[]; correctionResponse?: string; checkFailures?: number; previousAttemptId?: string; episodeId?: string; episodeStartedAt?: string; promptStartedAt?: string; situationLayout?: 'message-chunks-v1'; presentation?: 'message-overview-v1'; reflection?: { draft: string; compared: boolean }; continuation?: TrickContinuationCheckpoint; review?: { pending: string[]; total: number; mode?: 'transfer' }; resumeAfter?: string }
 const key = (userId: string, stopId: string) => `memora-v2.trick.${userId}.${stopId}`;
 export function parseTrickCheckpoint(value: unknown): TrickCheckpoint | null {
   try {
@@ -22,6 +22,7 @@ export function parseTrickCheckpoint(value: unknown): TrickCheckpoint | null {
     if (saved.state.promptStartedAt !== undefined && (typeof saved.state.promptStartedAt !== 'string' || !Number.isFinite(Date.parse(saved.state.promptStartedAt)) || Date.parse(saved.state.promptStartedAt) > Date.now())) delete saved.state.promptStartedAt;
     // Navigation queue only. Due dates remain in the existing sentence SRS.
     const review = saved.state.review;
+    if(review?.mode !== undefined && review.mode !== 'transfer') return null;
     if (review !== undefined && (!review || !Array.isArray(review.pending) || !Number.isInteger(review.total) || review.total < 1 || review.total > 8 || review.pending.length > review.total || new Set(review.pending).size !== review.pending.length || review.pending.some((id) => typeof id !== 'string' || !id.trim() || id.length > 80))) return null;
     const continuation = saved.state.continuation;
     if (continuation && (!saved.state.episodeId || !['build', 'conversation'].includes(continuation.phase) || !Number.isInteger(continuation.sentenceIndex) || continuation.sentenceIndex < 0 || !Number.isInteger(continuation.filledSlots) || continuation.filledSlots < 0 || continuation.previousAttempt !== undefined && typeof continuation.previousAttempt !== 'string')) return null;

@@ -92,3 +92,9 @@ it('conserva la vuelta de una tarea migrada y rechaza destinos malformados', () 
   expect(readTrickCheckpoint('migration-isolated', 'valid', '1')).toEqual(state);
   for (const resumeAfter of [null, 2, '', 'x'.repeat(81)]) expect(parseTrickCheckpoint({ ...state, resumeAfter })).toBeNull();
 });
+it('conserva el motivo de transferencia sin cambiar el significado del repaso antiguo',()=>{
+  const base={stage:3,checkIndex:0,input:'',feedback:'idle' as const,helped:false,review:{pending:['order-tea'],total:1}};
+  expect(parseTrickCheckpoint(base)).toEqual(base);
+  expect(parseTrickCheckpoint({...base,review:{...base.review,mode:'transfer'}})?.review?.mode).toBe('transfer');
+  expect(parseTrickCheckpoint({...base,review:{...base.review,mode:'invented'}})).toBeNull();
+});
