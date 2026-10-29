@@ -4,6 +4,7 @@ import { readAvatar, saveAvatar } from '../domain/learningProfile';
 import type { Appearance } from '../useAppearance';
 import { syncLabels, type SyncStatus } from '../services/progressSync';
 import './profileSettings.css';
+import './learningSpace.css';
 import { readArcadeCalm, writeArcadeCalm } from '../domain/arcadeCadence';
 
 export function ProfileView({ userId, appearance, onToggleAppearance, onBack, onExit, onEvolution, onManageContent, onRestart, syncStatus }: {
@@ -57,7 +58,7 @@ export function ProfileView({ userId, appearance, onToggleAppearance, onBack, on
     event.target.value = '';
   }
 
-  return <main className="journey-screen profile-screen">
+  return <main className="journey-screen profile-screen learning-space">
     <header className="journey-header"><button type="button" className="journey-brand journey-brand-button" onClick={onBack} aria-label="Ir al inicio"><span className="brand-mark">M</span><span>MEMORA</span></button><nav className="journey-menu" aria-label="Navegación principal"><button type="button" onClick={onBack}>Inicio</button>{onEvolution ? <button type="button" onClick={onEvolution}>Mi evolución</button> : null}<button type="button" aria-current="page">Perfil</button></nav></header>
     <section className="profile-settings-heading"><p className="eyebrow">TU ESPACIO</p><ScreenHeading>Perfil y ajustes</ScreenHeading><p>{onEvolution ? 'Personaliza la aplicación. Tu práctica e historial están en Mi evolución.' : 'Personaliza la apariencia de la aplicación y vuelve al recorrido cuando quieras.'}</p></section>
     <div className="profile-settings-grid">

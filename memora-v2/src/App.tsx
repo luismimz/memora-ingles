@@ -10,6 +10,7 @@ import { JourneyHome } from './components/JourneyHomeV2';
 import { PlayFeed } from './components/GameCard';
 import { StoryJourney } from './components/StoryJourney';
 import { StoryWelcome } from './components/StoryWelcome';
+import { StoryHub } from './components/StoryHub';
 import { zeroJourney } from './domain/zeroJourney';
 import { completedVocabularyStop } from './domain/journeyMap';
 import { ArcadeExperience, eligibleGrammarUnits } from './components/ArcadeExperience';
@@ -89,6 +90,7 @@ export default function App() {
   const [arcadeLoading, setArcadeLoading] = useState(false);
   const [catalogueAttempt, setCatalogueAttempt] = useState(0);
   const [zeroOpen, setZeroOpen] = useState(true);
+  const [legacyHome, setLegacyHome] = useState(false);
   const arcadeOpening = useRef(false);
   const arcadeRequest = useRef(0);
   const lessonRequest = useRef(0);
@@ -222,6 +224,7 @@ export default function App() {
   }
 
   function exit() {
+    setLegacyHome(false); setZeroOpen(true);
     lessonRequest.current++; cancelArcadeLaunch();
     setPreparingGrammar(null);
     setActiveTrick(null);
@@ -321,6 +324,7 @@ export default function App() {
   }
 
   function openZeroJourney() {
+    setLegacyHome(false);
     setZeroOpen(true);
   }
 
@@ -603,6 +607,7 @@ return <PlayFeed enabled={!inspectionMode}><LanguageGame continuous={!inspection
   if (libraryMode === 'grammar' && !unit && (preview || authenticated)) return <GrammarJourney units={libraryUnits} userId={userId} inspection={preview} resumeId={readGrammarPosition(userId) || (resumeMode === 'grammar' ? lastOpenedUnitId : null)} notice={libraryNotice} onRetry={() => void openLibrary('grammar')} onOpen={openGrammarStop} onPrepare={(stop) => void prepareGrammarStop(stop)} onBack={() => setLibraryMode(null)} onArcade={() => { setLibraryMode(null); void openArcade(); }} onEvolution={!preview ? () => { setLibraryMode(null); setEvolutionOpen(true); } : undefined} appearance={appearance} onToggleAppearance={toggleAppearance} />;
   if (libraryMode && !unit && (preview || authenticated)) return <LearningLibrary mode={libraryMode} units={libraryUnits} userId={userId} inspection={preview} initialBrowse={libraryBrowse.current[`${userId}:${libraryMode}`]} onBrowseChange={(state) => { libraryBrowse.current[`${userId}:${libraryMode}`] = state; }} notice={libraryNotice} onRetry={() => void openLibrary(libraryMode)} onOpen={openLibraryUnit} onBack={() => setLibraryMode(null)} onWords={() => void openLibrary('vocabulary')} />;
   if ((preview || authenticated) && zeroOpen && !libraryMode && !evolutionOpen && !contentOpen && !profileOpen) return <DeferredScreen label="Memora" onBack={() => setZeroOpen(false)}><StoryJourney userId={userId} inspection={preview} onExit={() => setZeroOpen(false)} /></DeferredScreen>;
+  if ((preview || authenticated) && !legacyHome && !libraryMode && !evolutionOpen && !contentOpen && !profileOpen) return <><StoryHub userId={userId} inspection={preview} syncStatus={syncStatus} onResume={openZeroJourney} onProfile={() => setProfileOpen(true)} onEvolution={!preview ? () => setEvolutionOpen(true) : undefined} onLegacy={() => setLegacyHome(true)} onExit={exit} />{microOverlay}</>;
   if (preview || authenticated) return <>{evolutionOpen
     ? <DeferredScreen label="Mi evolución" onBack={() => setEvolutionOpen(false)}><EvolutionView userId={userId} units={units} pilot={pilot} syncStatus={syncStatus} inspectionMode={preview} onBack={() => setEvolutionOpen(false)} onPractice={() => void openArcade()} onProfile={() => { setEvolutionOpen(false); setProfileOpen(true); }} onExit={exit} appearance={appearance} onToggleAppearance={toggleAppearance} /></DeferredScreen>
     : contentOpen && isAdmin && !preview

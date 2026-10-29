@@ -10,6 +10,7 @@ import { playEnglish, playSpanish, stopSpeech } from '../services/audio';
 import { syncLabels, type SyncStatus } from '../services/progressSync';
 import type { Appearance } from '../useAppearance';
 import './evolutionChat.css';
+import './learningSpace.css';
 import { EvolutionMemoryLibrary } from './EvolutionMemoryLibrary';
 
 export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode = false, onBack, onPractice, onProfile, onExit, appearance, onToggleAppearance }: { userId: string; units: UnitSummary[]; pilot: AtomicUnit | null; syncStatus: SyncStatus; inspectionMode?: boolean; onBack: () => void; onPractice: () => void; onProfile: () => void; onExit: () => void; appearance: Appearance; onToggleAppearance: () => void }) {
@@ -33,7 +34,7 @@ export function EvolutionView({ userId, units, pilot, syncStatus, inspectionMode
   const log = useRef<HTMLDivElement>(null);
   useEffect(() => { if (log.current) log.current.scrollTop = log.current.scrollHeight; }, [historyOpen, active?.id, active?.lastAt]);
   useEffect(() => () => stopSpeech(), []);
-  return <main className="journey-screen evolution-screen">
+  return <main className="journey-screen evolution-screen learning-space">
     <header className="journey-header"><button type="button" className="journey-brand journey-brand-button" onClick={onBack}><span className="brand-mark">M</span><span>MEMORA</span></button><nav className="journey-menu" aria-label="Navegación principal"><button type="button" onClick={onBack}>Inicio</button><button type="button" aria-current="page">Mi evolución</button><button type="button" onClick={onProfile}>Perfil</button></nav><button type="button" className="appearance-toggle" onClick={onToggleAppearance} aria-label={`Activar modo ${appearance === 'light' ? 'oscuro' : 'claro'}`}>{appearance === 'light' ? '☾' : '☀'}</button><button type="button" className="journey-exit" onClick={onExit}>Salir</button></header>
     <section className="evolution-heading"><p className="eyebrow">MI EVOLUCIÓN</p><ScreenHeading>Tu práctica, más clara.</ScreenHeading><p role="status">{inspectionMode ? 'Vista de revisión · no lee ni modifica tu historial' : syncLabels[syncStatus]}</p></section>
     <section className="evolution-overview" aria-label="Resumen de mi práctica">

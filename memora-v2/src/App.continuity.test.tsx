@@ -62,6 +62,11 @@ function game() {
     root.props.onBack(); hooks.cursor = 0; hooks.refCursor = 0;
     root = App() as ReactElement<any>;
   }
+  const hub = root.props.children?.[0] ?? root;
+  if (hub.props.onLegacy) {
+    hub.props.onLegacy(); hooks.cursor = 0; hooks.refCursor = 0;
+    root = App() as ReactElement<any>;
+  }
   return (root.props.children?.[0] ?? root) as ReactElement<Record<string, any>>;
 }
 

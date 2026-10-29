@@ -17,6 +17,7 @@ import { completeLearningMode } from './domain/learningModes';
 import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { GrammarCoach } from './components/GrammarCoach';
 import { StoryJourney } from './components/StoryJourney';
+import { StoryHub } from './components/StoryHub';
 import { freshZeroJourney, zeroJourney, zeroSteps } from './domain/zeroJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint } from './domain/trickCheckpoint';
 const unit = validateUnit(keys);
@@ -42,7 +43,7 @@ async function mount(seed?: () => void, legacy = true) {
   seed?.();
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
-  if (legacy) await act(async () => tree.root.findByType(StoryJourney).props.onExit());
+  if (legacy) { await act(async () => tree.root.findByType(StoryJourney).props.onExit()); await click('Abrir mi curso anterior'); }
 }
 afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; source.followup = null; source.extra = []; vi.unstubAllGlobals(); });
 it('el nuevo comienzo es la entrada principal; salir conserva la actividad anterior y puede retomarse Play', async () => {
@@ -51,7 +52,7 @@ it('el nuevo comienzo es la entrada principal; salir conserva la actividad anter
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
   expect(readLearningActivities('situation-app-isolated')).toEqual([]);
   await act(async () => tree.root.findByType(StoryJourney).props.onExit());
-  await click('Memora Play · recorrido nuevo');
+  await click('Volver a mi historia');
   expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
 });
@@ -59,15 +60,32 @@ it('salir de las historias conserva acceso al recorrido sin abrir una misión po
   source.followup = validateUnit(examples[0]);
   await mount(undefined, false);
   await act(async () => tree.root.findByType(StoryJourney).props.onExit());
+  expect(tree.root.findAllByType(StoryHub)).toHaveLength(1);
+  expect(text(tree.toJSON())).not.toContain('Nora espera.');
   expect(tree.root.findAllByType(LanguageGame)).toHaveLength(0);
   expect(readLearningActivities('situation-app-isolated')).toEqual([]);
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
+});
+it('pausa, ajustes y memoria vuelven al mismo espacio, sin enviar al curso anterior', async () => {
+  await mount(undefined, false);
+  await act(async () => tree.root.findByType(StoryJourney).props.onExit());
+  await act(async () => tree.root.findByType(StoryHub).props.onProfile());
+  await act(async () => { await import('./components/ProfileView'); });
+  await click('Volver a mi recorrido');
+  expect(tree.root.findAllByType(StoryHub)).toHaveLength(1);
+  await act(async () => tree.root.findByType(StoryHub).props.onEvolution());
+  await act(async () => { await import('./components/EvolutionView'); });
+  await click('Ir a mi recorrido');
+  expect(tree.root.findAllByType(StoryHub)).toHaveLength(1);
+  await click('Volver a mi historia');
+  expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
+  expect(readLearningActivities('situation-app-isolated')).toEqual([]);
 });
 it('un checkpoint histórico no impide descubrir las nuevas historias ni se sobrescribe', async () => {
   await mount(() => writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: 10, checkId: 'handoff' }), false);
   expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
-  await act(async () => tree.root.findByType(StoryJourney).props.onExit()); await click('Memora Play · recorrido nuevo');
+  await act(async () => tree.root.findByType(StoryJourney).props.onExit()); await click('Volver a mi historia');
   expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
   expect(readTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version)?.checkId).toBe('handoff');
   expect(readLearningActivities('situation-app-isolated')).toEqual([]);
@@ -75,7 +93,7 @@ it('un checkpoint histórico no impide descubrir las nuevas historias ni se sobr
 it('reabrir las historias no resetea ni reinterpreta la finalización antigua', async () => {
   await mount(() => writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('complete'), checkId: 'complete' }), false);
   await act(async () => tree.root.findByType(StoryJourney).props.onExit());
-  await click('Memora Play · recorrido nuevo');
+  await click('Volver a mi historia');
   expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
   expect(readTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version)?.checkId).toBe('complete');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });

@@ -22,7 +22,7 @@ let values: Map<string, string>;
 let focused: { label: string; options: unknown }[];
 const text = (node: any): string => typeof node === 'string' ? node : Array.isArray(node) ? node.map(text).join(' ') : node?.children ? text(node.children) : '';
 const click = async (label: string) => { await act(async () => { tree.root.findAllByType('button').find((node) => text(node).trim().startsWith(label))!.props.onClick(); }); };
-async function mount() { const App = (await import('./App')).default; await act(async () => { tree = create(<App />, { createNodeMock: (node) => node.type === 'h1' ? { focus: (options: unknown) => focused.push({ label: text(tree.root.findByType('h1').props.children), options }) } : null }); }); const story = tree.root.findAllByType(StoryJourney)[0]; if (story) await act(async () => story.props.onExit()); }
+async function mount() { const App = (await import('./App')).default; await act(async () => { tree = create(<App />, { createNodeMock: (node) => node.type === 'h1' ? { focus: (options: unknown) => focused.push({ label: text(tree.root.findByType('h1').props.children), options }) } : null }); }); const story = tree.root.findAllByType(StoryJourney)[0]; if (story) { await act(async () => story.props.onExit()); await click('Abrir mi curso anterior'); } }
 beforeEach(() => {
   vi.clearAllMocks(); api.unit.mockReset(); api.library.mockReset(); api.identity.mockReset(); api.published.mockReset(); values = new Map(); focused = [];
   const storage = { getItem: (key: string) => values.get(key) ?? null, setItem: (key: string, value: string) => values.set(key, value), removeItem: (key: string) => values.delete(key) };

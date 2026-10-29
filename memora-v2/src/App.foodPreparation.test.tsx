@@ -33,7 +33,7 @@ async function start(staleCook = false) {
   for (const word of [...kitchen.words, ...food.words]) recordWordRecall(user, staleCook && word.en === 'COOK' ? { ...word, scene: 'Presentación antigua.' } : word, 'hesitant', new Date(), 'recognition', undefined, true);
   local.setItem(`memora-v2.resume.${user}`, foodStop.id); local.setItem(`memora-v2.resume-mode.${user}`, 'grammar');
   const App = (await import('./App')).default;
-  await act(async () => { tree = create(<App />); }); await act(async () => tree.root.findByType(StoryJourney).props.onExit()); await click('Continuar jugando');
+  await act(async () => { tree = create(<App />); }); await act(async () => tree.root.findByType(StoryJourney).props.onExit()); await click('Abrir mi curso anterior'); await click('Continuar jugando');
 }
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 it('el botón del paso previo abre el truco de cena con su ID estable sin fabricar intentos', async () => {

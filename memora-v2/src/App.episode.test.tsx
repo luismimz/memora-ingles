@@ -53,6 +53,7 @@ it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opciona
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />, { createNodeMock: (node) => node.type === 'h2' ? { focus: () => focused.push(String(node.props.children)) } : null }); });
   await act(async () => tree.root.findByType(StoryJourney).props.onExit());
+  await click('Abrir mi curso anterior');
   await click('Aprender palabras');
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'casa' } }));
   await act(async () => tree.root.findByProps({ className: 'learning-library-more' }).findByType('button').props.onClick());
@@ -66,11 +67,11 @@ it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opciona
   await click('← Inicio');
   await click('Perfil y ajustes');
   await act(async () => { await import('./components/ProfileView'); });
-  expect(tree.root.findAllByProps({ className: 'journey-screen profile-screen' })).toHaveLength(1);
+  expect(tree.root.findAllByProps({ className: 'journey-screen profile-screen learning-space' })).toHaveLength(1);
   expect(tree.root.findAllByType('summary').some((node) => text(node) === 'Administración de contenido')).toBe(false);
   await click('Mi evolución');
   await act(async () => { await import('./components/EvolutionView'); });
-  expect(tree.root.findAllByProps({ className: 'journey-screen evolution-screen' })).toHaveLength(1);
+  expect(tree.root.findAllByProps({ className: 'journey-screen evolution-screen learning-space' })).toHaveLength(1);
   expect(tree.root.findAllByProps({ className: 'evolution-overview' })).toHaveLength(1);
   await click('Ir a mi recorrido');
   expect(tree.root.findAllByProps({ className: 'journey-screen home-v2 home-guided' })).toHaveLength(1);
@@ -92,6 +93,7 @@ it('App real enlaza episodio→chat→siguiente disponible sin confirmación de 
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
   await act(async () => tree.root.findByType(StoryJourney).props.onExit());
+  await click('Abrir mi curso anterior');
   await click('Continuar jugando');
   for (let step = 0; step < 3; step++) await advance();
   await click('Estoy jugando ahora.'); await advance();
