@@ -45,6 +45,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
   const isFlipped = showBack ?? flipped;
   const scrollport = useRef<HTMLDivElement>(null);
   const touchStart = useRef<{ x: number; y: number }>();
+  const swipedControl = useRef(false);
   const wheelGesture = useRef({ at: -Infinity, allowed: false, distance: 0 });
   const available = useRef({ onAdvance, revealFooter, isFlipped, stepKey });
   available.current = { onAdvance, revealFooter, isFlipped, stepKey };
@@ -130,16 +131,20 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
     const canLeave = (target: EventTarget) => {
       // A large scene may be both tappable and the feed's swipe surface. This
       // explicit opt-in never enables scrolling through answer tiles or inputs.
-      const surface = (target as HTMLElement).closest?.('[data-feed-surface]');
+      const element = target as HTMLElement;
+      if (element.closest?.('input,textarea,select,[contenteditable="true"],[draggable="true"]')) return false;
+      const surface = element.closest?.('[data-feed-surface]');
       const sceneSurface = surface?.getAttribute?.('data-feed-surface') === 'true';
-      return Boolean(onAdvance && revealFooter && (!interactiveCardTarget(target) || sceneSurface) && !window.getSelection?.()?.toString());
+      const lockedControl = element.closest?.('button:disabled');
+      return Boolean(onAdvance && revealFooter && (!interactiveCardTarget(target) || sceneSurface || lockedControl) && !window.getSelection?.()?.toString());
     };
     return <div className={`game-card-anchor card-vertical ${className}`} data-feedback={feedback}>
       <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : dragX < 0 ? ' is-following-touch' : ''}`} role="region" aria-label={showButton ? 'Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir.' : 'Escena de juego. Desliza hacia arriba o usa la flecha abajo al terminar la acción.'} tabIndex={0}
         style={{ transform: `translate3d(0, ${dragX}px, 0)` }}
         onKeyDown={!showButton ? (event) => { if (['ArrowUp', 'ArrowDown', 'PageDown'].includes(event.key) && canLeave(event.target) && atEnd(event.currentTarget)) { event.preventDefault(); advance(); } } : undefined}
-        onPointerDown={() => { touchStart.current = undefined; }}
-        onTouchStart={(event) => { touchStart.current = event.touches.length === 1 && canLeave(event.target) && atEnd(event.currentTarget) ? { x: event.touches[0].clientX ?? 0, y: event.touches[0].clientY } : undefined; }}
+        onPointerDown={() => { touchStart.current = undefined; swipedControl.current = false; }}
+        onClickCapture={(event) => { if (swipedControl.current && event.detail !== 0) { event.preventDefault(); event.stopPropagation(); swipedControl.current = false; } }}
+        onTouchStart={(event) => { swipedControl.current = false; touchStart.current = event.touches.length === 1 && canLeave(event.target) && atEnd(event.currentTarget) ? { x: event.touches[0].clientX ?? 0, y: event.touches[0].clientY } : undefined; }}
         onTouchMove={(event) => {
           if (touchStart.current === undefined || event.touches.length !== 1) return;
           const distance = touchStart.current.y - event.touches[0].clientY;
@@ -147,9 +152,9 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
           if (across > Math.max(12, distance)) { touchStart.current = undefined; if (!advancing.current) setDragX(0); return; }
           if (!canLeave(event.target) || !atEnd(event.currentTarget)) return;
           if (!advancing.current) setDragX(-Math.min(32, Math.max(0, distance) * .42));
-          if (distance >= 48) advance();
+          if (distance >= 48) { swipedControl.current = true; advance(); }
         }}
-        onTouchCancel={() => { touchStart.current = undefined; if (!advancing.current) setDragX(0); }}
+        onTouchCancel={() => { touchStart.current = undefined; swipedControl.current = false; if (!advancing.current) setDragX(0); }}
         onTouchEnd={() => { touchStart.current = undefined; if (!advancing.current) setDragX(0); }}
         onWheel={(event) => {
           const now = Date.now();

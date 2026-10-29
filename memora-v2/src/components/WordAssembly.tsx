@@ -55,7 +55,7 @@ export function WordAssembly({ word, userId, onContinue, vertical = false, initi
     const timer = window.setTimeout(advance, 1300);
     return () => window.clearTimeout(timer);
   }, [done, vertical, feed, calm, playback.audio?.status]);
-  const speaker = <button type="button" className="round-audio" aria-busy={playback.audio?.status === 'preparing'} title={playback.label} onClick={() => void listen()} aria-label={done ? 'Escuchar palabra' : 'Escuchar modelo'}>🔊</button>;
+  const speaker = <button type="button" className="round-audio" data-feed-surface="true" aria-busy={playback.audio?.status === 'preparing'} title={playback.label} onClick={() => void listen()} aria-label={done ? 'Escuchar palabra' : 'Escuchar modelo'}>🔊</button>;
   return <GameCard feedback={done ? helped || hinted ? 'model' : 'correct' : cue ? 'retry' : undefined} vertical={vertical} stepKey={done ? 'assembled' : 'assemble'} onAdvance={done ? advance : undefined} advanceControl revealFooter={done} advanceLabel="Continuar" className="word-assembly-card"><div className="word-assembly">
     <div className={`assembly-context${sceneVisible ? ' has-scene' : ''}`}>
       {sceneVisible ? <SceneVisual word={word} compact hideAnswer={!done} /> : null}

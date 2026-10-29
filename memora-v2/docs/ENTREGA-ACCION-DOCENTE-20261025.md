@@ -18,13 +18,15 @@ El montaje de palabras mantiene su imagen junto al significado, no escondida den
 
 Al completar piezas dentro del feed, pasa tras1300ms de resultado una vez terminado el audio. No temporiza contenido nuevo, no corta una escucha pedida y no arranca por restaurar un resultado antiguo. Modo tranquilo conserva avance voluntario; gesto/teclado accesibles siguen disponibles. No añade scheduler ni almacenamiento.
 
+El gesto puede empezar también sobre fichas ya bloqueadas o un audio marcado como superficie de feed, siempre con avance autorizado y lectura terminada. Los campos editables y piezas todavía arrastrables quedan protegidos incluso bajo una superficie opt-in. Un swipe reconocido no dispara además el click del audio; un toque nuevo y las acciones de teclado siguen funcionando. No se rebaja el umbral ni se permite saltar una tarea pendiente para aparentar fluidez.
+
 La cadena inicial tiene15pantallas activas y cierre, en vez de17. Retira el montaje negativo inmediatamente posterior a su enseñanza y el hueco HAVE justo después de mostrar HAVE. El pedido/Arcade de agua reaparece después de frío/AM, no pegado a la construcción del café. Se conserva preparación de WANT, AM, DON'T WANT, HAVE y posición de COLD, dos Arcade y dos mensajes transferidos. zeroRoute separa esta cadena de IDs guardados: ningún borrador/repaso se borra o renombra como tarea nueva. La posición refleja la cadena actual, no las tareas históricas retiradas. Omitir un ejercicio no acredita saberlo.
 
 ### Referencia y comprobación
 
 Releído en público el Feed de mem-ora: https://github.com/luismimz/mem-ora/blob/main/apps/web/src/Feed.tsx. Fuente temporal /private/tmp/memora-keyboard-20261029-CPSh9h/reference-Feed.tsx, SHA256 d2c6ac05349f70b37e88a5d7a064b9c954ef34260ca1bc3d4ef14fdd9991950a. Comparación de código y capturas aportadas: una superficie reconocible, enseñanza/ejemplo juntos y alternancia de acciones. No se ejecutó, modificó, importó ni publicó su proyecto; no se afirma una nueva partida en su web.
 
-Integración1071tests/172archivos y build TypeScript/Vite pasan. Incluye eventos simulados de viewport, zoom/fallback/limpieza de listeners, foco de escritura, imagen persistente, audio pendiente, modo tranquilo, avance único, ruta nueva y borradores antiguos. Se corrigieron errores de tipos y dos fallos de integración (selector CSS y entorno sin window) antes de entregar. Principal711,20kB gzip215,63; aviso>500kB pendiente.
+Integración y build TypeScript/Vite pasan; resultados finales en el checkpoint. Incluye eventos simulados de viewport, zoom/fallback/limpieza de listeners, foco de escritura, imagen persistente, audio pendiente, modo tranquilo, avance único, gesto sobre controles, ruta nueva y borradores antiguos. Se corrigieron errores de tipos y dos fallos de integración (selector CSS y entorno sin window) antes de entregar. Aviso de principal>500kB pendiente.
 
 Publicación exacta y recursos servidos se registran en MEMORA-IMPLEMENTACION-01.md. Sin nueva inspección visual/Safari/iPhone/teclado real, partida autenticada, escucha física o retención diferida. No se da por validada la diversión, elegancia o todo el método. No añade contenido léxico ni garantiza30d. Sin reset de cuenta/progreso y automatización pausada conservada.
 

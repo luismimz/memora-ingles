@@ -106,7 +106,7 @@ it('un puzle, campo, ayuda o selección no navega y una pregunta no ofrece avanc
 
 it('una escena opt-in acepta el gesto desde la imagen, pero nunca habilita una tarea sin resolver', () => {
   const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
-  const sceneTarget = { closest: () => ({ getAttribute: (name: string) => name === 'data-feed-surface' ? 'true' : null }) };
+  const sceneTarget = { closest: (selector: string) => selector.startsWith('input,') || selector === 'button:disabled' ? null : { getAttribute: (name: string) => name === 'data-feed-surface' ? 'true' : null } };
   act(() => {
     region().props.onTouchStart(event({ target: sceneTarget, touches: [{ clientY: 350 }] }));
     region().props.onTouchMove(event({ target: sceneTarget, touches: [{ clientY: 200 }] }));
@@ -120,6 +120,27 @@ it('una escena opt-in acepta el gesto desde la imagen, pero nunca habilita una t
     vi.advanceTimersByTime(230);
   });
   expect(advance).toHaveBeenCalledOnce();
+});
+it.each(['audio','locked'])('un resultado admite deslizar sobre %s sin activar también un botón', (kind) => {
+  const advance = vi.fn(), preventDefault = vi.fn(), stopPropagation = vi.fn(); mount(advance); viewport.scrollTop = 200;
+  const button = { getAttribute: () => 'true' };
+  const control = { closest: (selector: string) => selector.startsWith('input,') ? null : selector === '[data-feed-surface]' ? kind === 'audio' ? button : null : selector === 'button:disabled' ? kind === 'locked' ? button : null : button };
+  act(() => {
+    region().props.onTouchStart(event({ target: control, touches: [{ clientY: 300 }] }));
+    region().props.onTouchMove(event({ target: control, touches: [{ clientY: 240 }] }));
+    region().props.onClickCapture({ detail: 1, preventDefault, stopPropagation });
+    vi.advanceTimersByTime(230);
+  });
+  expect(advance).toHaveBeenCalledOnce(); expect(preventDefault).toHaveBeenCalledOnce(); expect(stopPropagation).toHaveBeenCalledOnce();
+  // A fresh tap is a tap, not a swallowed leftover from the previous swipe.
+  act(() => { region().props.onTouchStart(event({ touches: [{ clientY: 300 }] })); region().props.onTouchEnd(); region().props.onClickCapture({ detail: 1, preventDefault, stopPropagation }); });
+  expect(preventDefault).toHaveBeenCalledOnce();
+});
+it('una superficie opt-in no permite pasar desde un campo o una pieza todavía arrastrable', () => {
+  const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
+  const field = { closest: () => ({ getAttribute: () => 'true' }) };
+  act(() => { region().props.onTouchStart(event({ target: field, touches: [{ clientY: 300 }] })); region().props.onTouchMove(event({ target: field, touches: [{ clientY: 100 }] })); vi.advanceTimersByTime(230); });
+  expect(advance).not.toHaveBeenCalled();
 });
 it('retirar autorización durante transición cancela la navegación antigua', () => {
   const advance = vi.fn(); mount(advance); viewport.scrollTop = 200;
