@@ -59,6 +59,7 @@ it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opciona
   await act(async () => tree.root.findByProps({ className: 'learning-library-more' }).findByType('button').props.onClick());
   expect(tree.root.findAllByType('article')).toHaveLength(12);
   await act(async () => tree.root.findAllByType('article')[10].findByType('button').props.onClick());
+  await act(async () => { await import('./LanguageGame'); });
   expect(tree.root.findAllByProps({ className: 'play-intention' })).toHaveLength(1);
   await click('← Recorrido');
   expect(tree.root.findByType('input').props.value).toBe('casa');
@@ -95,6 +96,7 @@ it('App real enlaza episodio→chat→siguiente disponible sin confirmación de 
   await act(async () => tree.root.findByType(StoryJourney).props.onExit());
   await click('Abrir mi curso anterior');
   await click('Continuar jugando');
+  await act(async () => { await import('./components/JourneyTrickExperience'); });
   for (let step = 0; step < 3; step++) await advance();
   await click('Estoy jugando ahora.'); await advance();
   await click('I');

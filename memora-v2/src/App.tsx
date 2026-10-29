@@ -1,7 +1,7 @@
 import { ScreenHeading } from './components/ScreenHeading';
 import { lazy, useEffect, useRef, useState, type FormEvent } from 'react';
 import { DeferredScreen } from './components/DeferredScreen';
-import { LanguageGame } from './LanguageGame';
+import { LanguageGame, JourneyTrickExperience, MirrorLessonExperience } from './components/DeferredCourse';
 import { LearningLibrary, type LibraryBrowseState } from './components/LearningLibrary';
 import { journeyEntryMode, missingGrammarWords } from './domain/learningModes';
 import { readWordMemories } from './domain/memory';
@@ -17,7 +17,6 @@ import { ArcadeExperience, eligibleGrammarUnits } from './components/ArcadeExper
 import { readLearningActivities } from './domain/learningActivity';
 import { shouldOfferMicroArcade, microRounds, arcadeCandidateIds } from './domain/microArcade';
 import { completeArcadeCadence, consumeAutomaticArcade, pendingAutomaticArcade, separatedArcadeUnits, type AutomaticArcadeMode } from './domain/arcadeCadence';
-import { MirrorLessonExperience } from './components/MirrorLessonExperience';
 import { PlayingGrammarReview } from './components/PlayingGrammarReview';
 import type { AtomicUnit } from './domain/unit';
 import type { MeatPreparationTarget } from './domain/meatCookingPractice';
@@ -28,7 +27,6 @@ import { prefetchSpeech, stopSpeech } from './services/audio';
 import { useAppearance } from './useAppearance';
 import { restartCourseProgress, startProgressSync, syncLabels, type SyncStatus } from './services/progressSync';
 import { buildJourneyRoute, completedTrick, grammarTricks, missingTrickWords, nextJourneyStop, trickStop } from './domain/journeyTricks';
-import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { loadLearningLibrary } from './services/directus';
 import { GrammarJourney } from './components/GrammarJourney';
 import { grammarJourney, grammarPreparationCandidate, missingGrammarStop, nextGrammarStop, readGrammarPosition, writeGrammarPosition } from './domain/grammarJourney';
