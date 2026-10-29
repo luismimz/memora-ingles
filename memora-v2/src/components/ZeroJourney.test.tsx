@@ -36,17 +36,25 @@ async function solveBuild() {
   await act(async () => { tree.root.findByType(GrammarOrder).props.onChange([2, 1, 0]); tree.root.findByType(GrammarOrder).props.onAnswer('I WANT COFFEE'); });
   await wait();
 }
-async function reachWriting() {
-  await reachBuild(); await solveBuild();
-  await act(async () => button('Agua').props.onClick()); await wait();
+async function prepareCold() {
+  expect(step()).toBe('cold');
   await activate(); await swipe(); await activate(); await swipe();
   await act(async () => button('AMestoy').props.onClick()); await wait();
+  if (step() === 'contrast') await swipe();
+  expect(step()).toBe('arcade-water');
+}
+async function reachArcade() {
+  await reachBuild(); await solveBuild(); await prepareCold();
+}
+async function reachWriting() {
+  await reachArcade();
+  await act(async () => button('Agua').props.onClick()); await wait();
   expect(step()).toBe('not-want'); await activate(); await swipe();
-  await act(async () => { tree.root.findByType(GrammarOrder).props.onChange([2, 0, 1]); tree.root.findByType(GrammarOrder).props.onAnswer("I DON'T WANT WATER"); }); await wait();
+  expect(step()).toBe('arcade-refusal-action');
+  await act(async () => button('← Retirar').props.onClick()); await wait();
   expect(step()).toBe('cold-order'); await activate();
   expect(tree.root.findByType(PlayGrammarToy).props).toMatchObject({ revealed: true, token: { text: 'COLD', role: 'context' }, after: { en: 'COFFEE' } });
-  await swipe(); expect(step()).toBe('arcade-refusal-action');
-  await act(async () => button('← Retirar').props.onClick()); await wait();
+  await swipe();
   expect(step()).toBe('write-cold-water');
 }
 async function type(value: string) {
@@ -104,8 +112,6 @@ it('usa estructuras para pedidos nuevos, rechazos y una puerta sin copiar los me
   expect(tree.root.findAllByType(ZeroDoorScene)).toHaveLength(1);
   await activate(); await swipe(); expect(step()).toBe('have');
   expect(text(tree.toJSON())).toContain('A KEY'); await activate(); await swipe();
-  expect(step()).toBe('have-meaning');
-  await act(async () => button('HAVEtengo').props.onClick()); await wait();
   expect(step()).toBe('write-key');
   expect(events().some((event) => event.source === 'authored' && event.response === 'I want a key.')).toBe(false);
   await type('I want a key.'); await wait();
@@ -127,23 +133,23 @@ it('conserva piezas, primer error y demora al recargar; dos fallos ofrecen model
   expect(events().filter((event) => event.correct === false)[1].responseDelayMs).toBeGreaterThanOrEqual(7000);
   await wait(20000); expect(step()).toBe('build-coffee');
   expect(events().filter((event) => event.correct === true)).toEqual([]);
-  await swipe(); expect(step()).toBe('arcade-water');
+  await swipe(); expect(step()).toBe('cold');
 });
 it('Arcade solo cuenta sobre material ya enseñado, y caducar es omisión neutral', async () => {
-  await reachBuild(); await solveBuild(); expect(step()).toBe('arcade-water');
+  await reachArcade();
   const memories = readWordMemories(user);
   await wait(11000);
   expect(checkpoint()).toMatchObject({ checkFailures: 2, helped: true });
   expect(events().at(-1)).toMatchObject({ source: 'authored', correct: null, response: 'I want water.' });
   expect(readWordMemories(user)).toEqual(memories);
-  await swipe(); expect(step()).toBe('cold');
+  await swipe(); expect(step()).toBe('not-want');
 });
 it('modo tranquilo y pausa detienen reloj/avance; reiniciar no borra intentos ni memoria', async () => {
   await reachBuild();
   await act(async () => button('Modo tranquilo').props.onClick());
   await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer('I WANT COFFEE'));
   await wait(20000); expect(step()).toBe('build-coffee');
-  await swipe(); expect(step()).toBe('arcade-water'); await wait(20000);
+  await swipe(); await prepareCold(); await wait(20000);
   expect(checkpoint().checkFailures).toBe(0);
   await act(async () => button('Pausar').props.onClick());
   expect(text(tree.toJSON())).toContain('En pausa');
@@ -296,9 +302,8 @@ it('un borrador de frío anterior no salta la enseñanza nueva ni exige escribir
   await type('I am cold'); await wait(); expect(step()).toBe('not-want');
   expect(checkpoint().resumeAfter).toBeUndefined();
   await activate(); await swipe();
-  await act(async () => tree.root.findByType(GrammarOrder).props.onAnswer("I DON'T WANT WATER")); await wait();
-  await activate(); await swipe();
   await act(async () => button('← Retirar').props.onClick()); await wait();
+  await activate(); await swipe();
   expect(step()).toBe('write-cold-water');
   await type('I want cold water'); await wait(); expect(step()).toBe('key');
   expect(readGrammarAttempts(user).filter((attempt) => attempt.check === 'write-cold')).toHaveLength(1);
@@ -350,7 +355,7 @@ it('el nuevo Arcade de retirar conserva el primer error y la acción española, 
   await act(async () => button('← Retirar').props.onClick());
   expect(events().at(-1)).toMatchObject({ response: 'RETIRAR', correct: true, parentAttemptId: first.id, helped: true });
   expect(readWordMemories(user)).toEqual([]); expect(readGrammarAttempts(user)).toEqual([]);
-  await wait(); expect(step()).toBe('write-cold-water');
+  await wait(); expect(step()).toBe('cold-order');
 });
 it('vuelve a una escena según la fecha del SRS sin repetir modelos ni acreditar una visita', async () => {
   const start = Date.now();

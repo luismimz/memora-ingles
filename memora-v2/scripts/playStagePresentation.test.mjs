@@ -12,6 +12,20 @@ const tokens = (selector, inherited = {}, sourceSheet = sheet) => {
 const rgb = (hex) => hex.match(/[a-f\d]{2}/gi).map((value) => parseInt(value, 16));
 const luminance = (color) => color.map((value) => { const n = value / 255; return n <= .04045 ? n / 12.92 : ((n + .055) / 1.055) ** 2.4; }).reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
 const ratio = (a, b) => { const [light, dark] = [luminance(a), luminance(b)].sort((x, y) => y - x); return (light + .05) / (dark + .05); };
+it('la escritura no colapsa ni oculta la escena al enfocarse y usa una sola altura de pantalla', () => {
+  const zero = parse(readFileSync(new URL('../src/components/zeroJourney.css', import.meta.url), 'utf8'));
+  zero.walkRules((rule) => {
+    if (!rule.selector.includes('focus-within')) return;
+    rule.walkDecls((decl) => expect(['height','min-height','display','justify-content']).not.toContain(decl.prop));
+  });
+  expect(tokens('.zero-content', {}, zero)['min-height']).toBe('0');
+  const viewport = parse(readFileSync(new URL('../src/components/playViewport.css', import.meta.url), 'utf8'));
+  const anchored = tokens(".play-viewport[data-viewport-anchored='true']", {}, viewport);
+  expect(anchored.height).toBe('var(--play-visible-height)'); expect(anchored.top).toBe('var(--play-visible-top)');
+  const answer = parse(readFileSync(new URL('../src/components/answerStudio.css', import.meta.url), 'utf8'));
+  expect(tokens('.answer-studio-prompt.has-scene', {}, answer).display).toBe('grid');
+  expect(tokens('.answer-studio-scene > svg', {}, answer).height).toBe('90px');
+});
 it('también conserva contraste de texto y feedback en cada escena del nuevo Play, sin bajar el umbral', () => {
   const zero = parse(readFileSync(new URL('../src/components/zeroJourney.css', import.meta.url), 'utf8'));
   const light = tokens('.zero-journey', {}, zero), dark = tokens(":root[data-appearance='dark'] .zero-journey", light, zero);

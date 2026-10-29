@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type PointerEvent, type ReactNode } from 'react';
 import './verticalEpisode.css';
+import { PlayViewport } from './PlayViewport';
 
 const interactiveCardTarget = (target: EventTarget) => Boolean((target as HTMLElement).closest?.('button,input,textarea,select,a,summary,[contenteditable="true"],[draggable="true"],[role="button"]'));
 
@@ -7,7 +8,7 @@ const FeedPresentation = createContext(false);
 export const usePlayFeed = () => useContext(FeedPresentation);
 /** Presentation only: reuse every existing readiness, answer and save condition. */
 export function PlayFeed({ children, enabled = true }: { children: ReactNode; enabled?: boolean }) {
-  return <FeedPresentation.Provider value={enabled}>{children}</FeedPresentation.Provider>;
+  return <FeedPresentation.Provider value={enabled}>{enabled ? <PlayViewport>{children}</PlayViewport> : children}</FeedPresentation.Provider>;
 }
 
 interface GameCardProps {

@@ -31,6 +31,26 @@ it('la corrección queda junto al campo y en su descripción sin responder ni re
   act(() => { vi.advanceTimersByTime(1000); });
   expect(answer).not.toHaveBeenCalled();
 });
+it('escena y consigna permanecen junto al campo al editar y en una corrección', () => {
+  const scene = <svg role="img" aria-label="Un vaso espera hielo" />;
+  const render = (value = '', feedback?: string) => <AnswerStudio id="visual" taskKey="visual" target="Quiero agua fría" scene={scene} value={value} onChange={() => {}} onAnswer={answer} accepts={() => false} feedback={feedback} />;
+  act(() => { tree = create(render()); });
+  expect(tree.root.findByProps({ className: 'answer-studio-prompt has-scene' }).findByType('svg')).toBeDefined();
+  act(() => tree.update(render('I want cold whater', 'whater → WATER')));
+  expect(tree.root.findByType('svg').props['aria-label']).toBe('Un vaso espera hielo');
+  expect(tree.root.findByProps({ id: 'visual-target' }).children).toEqual(['Quiero agua fría']);
+  expect(tree.root.findByType('input').props.value).toBe('I want cold whater');
+});
+it('cierra solo su teclado tras un acierto; un error mantiene el campo activo', () => {
+  const field = { blur: vi.fn() };
+  vi.stubGlobal('document', { activeElement: field });
+  act(() => { tree = create(<Harness />, { createNodeMock: (node) => node.type === 'input' ? field : null }); });
+  type('I playing'); act(() => tree.root.findByType('form').props.onSubmit({ preventDefault() {} }));
+  expect(field.blur).not.toHaveBeenCalled();
+  type('I am playing'); act(() => { vi.advanceTimersByTime(450); });
+  expect(field.blur).toHaveBeenCalledOnce(); expect(answer).toHaveBeenLastCalledWith('I am playing');
+  vi.unstubAllGlobals();
+});
 it('reconoce respuesta completa una vez, sin botón y sin evaluar borradores incompletos', () => {
   act(() => { tree = create(<Harness />); });
   expect(tree.root.findAllByType('button')).toHaveLength(0);

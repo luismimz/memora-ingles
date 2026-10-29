@@ -39,7 +39,7 @@
 .zero-journey .zero-card[data-feedback] .card-vertical-scroll { box-shadow: inset 0 -3px var(--task-state); }
 .zero-journey .game-card-body { padding: 18px 24px max(18px,env(safe-area-inset-bottom)); }
 .zero-journey .card-vertical-rest { display: none; }
-.zero-content { position: relative; min-height: calc(100dvh - 108px); padding-bottom: 42px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; width: 100%; animation: zero-arrival .3s ease-out both; }
+.zero-content { position: relative; flex: 1; min-height: 0; padding-bottom: 34px; display: flex; flex-direction: column; align-items: center; justify-content: safe center; gap: 14px; text-align: center; width: 100%; animation: zero-arrival .3s ease-out both; }
 .zero-content h1 { max-width: 18ch; margin: 0; font-size: clamp(1.9rem,7vw,3.2rem); line-height: 1.08; font-weight: 720; letter-spacing: -.045em; text-wrap: balance; }
 .zero-content p { margin: 0; }
 .zero-kicker { color: var(--muted); letter-spacing: .19em; font-size: .61rem; font-weight: 750; }
@@ -105,11 +105,10 @@
 .zero-journey .answer-studio input { background: var(--zero-glass); border-color: var(--line); color: var(--ink); }
 .zero-journey .answer-studio-status { font-size: .7rem; color: var(--muted); }
 .zero-journey .answer-studio-feedback { color: var(--warm); font-size: .9rem; }
-.zero-content.is-writing { gap: 12px; }
-.zero-content.is-writing > h1 { font-size: clamp(1.1rem,4vw,1.5rem); color: var(--muted); letter-spacing: -.02em; }
-.zero-content.is-writing > .zero-scene { height: 88px; }
-.zero-content:has(.answer-studio:focus-within) { min-height: 0; justify-content: flex-start; }
-.zero-content.is-writing:has(.answer-studio:focus-within) > .zero-scene { height: 40px; }
+.zero-content.is-writing { gap: 10px; justify-content: flex-start; padding-block: 6px 14px; }
+.zero-content.is-writing > .zero-scene { height: 90px; flex-shrink: 0; }
+.zero-journey .answer-studio { margin-block: 0; }
+.zero-journey .answer-studio-scene > .zero-scene { height: 90px; }
 .zero-inline-help { min-height: 44px; padding: 9px 16px; border: 1px solid var(--line); border-radius: 99px; color: var(--accent-ink); background: var(--zero-glass); font: inherit; font-size: .9rem; }
 .zero-support-note { font-size: .72rem; color: var(--muted); }
 .writing-spelling-repair { display: grid; justify-items: center; gap: 10px; text-align: center; }

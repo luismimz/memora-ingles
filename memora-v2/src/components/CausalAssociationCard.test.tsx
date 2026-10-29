@@ -58,16 +58,16 @@ it('provocar descubre, no aprueba: modelo inglés inicial, transformación y reg
   expect(tree.root.findByType(CausalDeskScene).props.active).toBe(true);
   expect(playEnglish).not.toHaveBeenCalled(); expect(readLearningActivities(user)).toEqual(before);
 });
-it('audio fallido no bloquea; montaje retira imagen principal, conserva ayuda y solo avanza cuando se arma', async () => {
+it('audio fallido no bloquea; montaje conserva escena y ayuda sin acreditar recuerdo independiente', async () => {
   await mount();
   await act(async () => tree.root.findByProps({ 'aria-label': 'Tocar el disco' }).props.onClick());
   await act(async () => tree.root.findByType(GameCard).props.onAdvance());
   expect(tree.root.findByType(WordAssembly).props.sceneAsHelp).toBe(true);
   expect(progress).toHaveBeenCalledWith({ selected: [], hinted: false, modelUsed: false, layout: 'letters-v2' });
-  expect(tree.root.findByType(SceneVisual).parent!.type).toBe('details');
+  expect(tree.root.findByType(SceneVisual).parent!.props.className).toBe('assembly-context has-scene');
   expect(tree.root.findByType(GameCard).props.onAdvance).toBeUndefined();
   await act(async () => tree.root.findByType('details').props.onToggle({ currentTarget: { open: true } }));
-  expect(progress).toHaveBeenLastCalledWith({ selected: [], hinted: false, modelUsed: true, layout: 'letters-v2' });
+  expect(progress).toHaveBeenLastCalledWith({ selected: [], hinted: true, modelUsed: true, layout: 'letters-v2' });
   for (const [index, letter] of [...word.en].entries()) await act(async () => tree.root.findByProps({ 'aria-label': `Colocar ${letter}, pieza ${index + 1}` }).props.onClick());
   expect(readWordMemories(user)).toEqual([]); expect(readLearningActivities(user)).toHaveLength(1);
   expect(tree.root.findByType('h2').children).toEqual(['Armada con modelo']);
@@ -135,6 +135,6 @@ it.each(['PILLOW', 'PHONE'])('%s representa su acción preparada y enlaza con pi
   expect(readLearningActivities(user)).toEqual(records);
   await act(async () => tree.root.findByType(GameCard).props.onAdvance());
   expect(tree.root.findByType(WordAssembly).props.sceneAsHelp).toBe(true);
-  expect(tree.root.findByType(SceneVisual).parent!.type).toBe('details');
+  expect(tree.root.findByType(SceneVisual).parent!.props.className).toBe('assembly-context has-scene');
   expect(readWordMemories(user)).toEqual([]); expect(connect).not.toHaveBeenCalled();
 });

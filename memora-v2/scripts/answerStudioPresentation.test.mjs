@@ -19,7 +19,7 @@ it('la guía se muestra al escribir sin retirar su espacio ni duplicar la franja
   expect(css.toString()).not.toContain('answer-studio-direction');
 });
 it('la consigna no hereda separación/alineación de formularios de otros juegos', () => {
-  const label = declarations('.answer-studio > .answer-studio-instruction');
+  const label = declarations('.answer-studio .answer-studio-instruction');
   expect(label.margin).toBe('0');
   expect(label['text-align']).toBe('center');
   expect(label.color).toBe('var(--muted)');

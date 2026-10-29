@@ -1,0 +1,40 @@
+import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { afterEach, expect, it, vi } from 'vitest';
+import { PlayViewport } from './PlayViewport';
+
+let tree: ReactTestRenderer;
+afterEach(() => { if (tree) act(() => tree.unmount()); vi.unstubAllGlobals(); });
+it('sigue altura y desplazamiento visibles al abrir/cerrar teclado sin mover foco o scroll', () => {
+  const listeners = new Map<string, () => void>();
+  const viewport = { height: 800, offsetTop: 0, scale: 1, addEventListener: vi.fn((name, fn) => listeners.set(name, fn)), removeEventListener: vi.fn() };
+  const focus = vi.fn(), scrollTo = vi.fn(), properties = new Map<string,string>();
+  const node = { dataset: {} as Record<string,string>, style: { setProperty: (name: string, value: string) => properties.set(name,value) }, focus, scrollTo };
+  const windowRemove = vi.fn();
+  vi.stubGlobal('window', { visualViewport: viewport, addEventListener: vi.fn(), removeEventListener: windowRemove, scrollTo });
+  act(() => { tree = create(<PlayViewport><main>Reto y escena</main></PlayViewport>, { createNodeMock: () => node }); });
+  expect(node.dataset.viewportAnchored).toBe('true'); expect(properties.get('--play-visible-height')).toBe('800px');
+  viewport.height = 392; viewport.offsetTop = 91;
+  act(() => listeners.get('resize')!());
+  expect(properties.get('--play-visible-height')).toBe('392px'); expect(properties.get('--play-visible-top')).toBe('91px');
+  viewport.offsetTop = 106; act(() => listeners.get('scroll')!());
+  expect(properties.get('--play-visible-top')).toBe('106px');
+  viewport.height = 800; viewport.offsetTop = 0; act(() => listeners.get('resize')!());
+  expect(properties.get('--play-visible-height')).toBe('800px'); expect(focus).not.toHaveBeenCalled(); expect(scrollTo).not.toHaveBeenCalled();
+  act(() => tree.unmount());
+  expect(viewport.removeEventListener).toHaveBeenCalledWith('resize', listeners.get('resize'));
+  expect(viewport.removeEventListener).toHaveBeenCalledWith('scroll', listeners.get('scroll'));
+  expect(windowRemove).toHaveBeenCalledOnce();
+});
+it('sin API usa CSS y durante zoom no fuerza la ventana reducida ni impide ampliar', () => {
+  const listeners = new Map<string, () => void>();
+  const viewport = { height: 400, offsetTop: 0, scale: 2, addEventListener: (name: string, fn: () => void) => listeners.set(name,fn), removeEventListener() {} };
+  const node = { dataset: {} as Record<string,string>, style: { setProperty: vi.fn() } };
+  vi.stubGlobal('window', { visualViewport: viewport });
+  act(() => { tree = create(<PlayViewport><main /></PlayViewport>, { createNodeMock: () => node }); });
+  expect(node.dataset.viewportAnchored).toBe('false'); expect(node.style.setProperty).not.toHaveBeenCalled();
+  viewport.scale = 1; viewport.height = Number.NaN; act(() => listeners.get('resize')!());
+  expect(node.dataset.viewportAnchored).toBe('false'); expect(node.style.setProperty).not.toHaveBeenCalled();
+  act(() => tree.unmount()); vi.stubGlobal('window', {});
+  act(() => { tree = create(<PlayViewport><main /></PlayViewport>, { createNodeMock: () => node }); });
+  expect(tree.root.findByType('main')).toBeDefined();
+});

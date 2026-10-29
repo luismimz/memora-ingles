@@ -1,5 +1,5 @@
 import { expect, it } from 'vitest';
-import { freshZeroJourney, nextZeroStep, resumeZeroJourney, zeroAccepts, zeroCorrection, zeroDraftCue, zeroCoffeePieces, zeroNoWaterPieces, zeroMessages, zeroRecallSteps, zeroSpellingRepair, zeroSteps, zeroTask, zeroWords, zeroWritingGuide } from './zeroJourney';
+import { freshZeroJourney, nextZeroStep, resumeZeroJourney, zeroAccepts, zeroCorrection, zeroDraftCue, zeroCoffeePieces, zeroNoWaterPieces, zeroMessages, zeroRecallSteps, zeroSpellingRepair, zeroSteps, zeroRoute, zeroTask, zeroWords, zeroWritingGuide } from './zeroJourney';
 it('cada transferencia sigue a la enseñanza de sus piezas y usa un mensaje diferente', () => {
   expect(new Set(zeroWords.map((word) => word.en)).size).toBe(4);
   expect(zeroWords.every((word) => !word.imageUrl && word.ipa && word.scene && word.associationId)).toBe(true);
@@ -74,7 +74,7 @@ it('migra por identidad, conserva borradores e historial, y rechaza piezas invá
   expect(resumeZeroJourney({ ...state, checkId: 'handoff' })).toMatchObject({ checkId: 'not-want', feedback: 'idle', input: '', helped: false, episodeId: state.episodeId });
   expect(nextZeroStep('write-key')).toBe('complete');
   expect(nextZeroStep('write-coffee')).toBe('not-want');
-  expect(nextZeroStep('cold-order')).toBe('arcade-refusal-action');
+  expect(nextZeroStep('cold-order')).toBe('write-cold-water');
   expect(nextZeroStep('arcade-refusal')).toBe('write-cold-water');
   expect(nextZeroStep('write-cold-water')).toBe('key');
   expect(nextZeroStep('write-cold')).toBe('use-refusal');
@@ -83,4 +83,15 @@ it('migra por identidad, conserva borradores e historial, y rechaza piezas invá
   expect(resumeZeroJourney({ ...freshZeroJourney(['write-key']), checkId: 'water' })).toBeNull();
   expect(resumeZeroJourney({ ...freshZeroJourney(['write-key']), review: { pending: ['have'], total: 1 } })).toBeNull();
   expect(resumeZeroJourney({ ...state, resumeAfter: 'write-key' })).toBeNull();
+});
+it('la cadena nueva intercala lo conocido y retira peajes inmediatos sin inventar completados', () => {
+  const visited = ['water'];
+  while (visited.at(-1) !== 'complete' && visited.length < 25) visited.push(nextZeroStep(visited.at(-1) as typeof zeroSteps[number]));
+  expect(visited).toEqual(zeroRoute);
+  expect(visited).toHaveLength(16);
+  expect(visited).not.toContain('build-no-water'); expect(visited).not.toContain('have-meaning');
+  expect(visited.indexOf('cold')).toBeLessThan(visited.indexOf('arcade-water'));
+  expect(visited.indexOf('arcade-refusal-action')).toBeLessThan(visited.indexOf('write-cold-water'));
+  for (const id of ['want','be','not-want','cold-order','have','write-cold-water','write-key']) expect(visited).toContain(id);
+  expect(nextZeroStep('build-no-water')).toBe('cold-order'); expect(nextZeroStep('have-meaning')).toBe('write-key');
 });

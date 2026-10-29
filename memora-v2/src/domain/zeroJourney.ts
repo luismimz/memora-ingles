@@ -8,10 +8,17 @@ import { dueSentenceMemories } from './memory';
 export const zeroJourney = { id: 'memora:zero-cafe-v1', version: '1', title: 'Una mañana con Byte' };
 export const zeroSteps = ['water', 'coffee', 'want', 'build-coffee', 'arcade-water', 'cold', 'be', 'contrast', 'not-want', 'build-no-water', 'cold-order', 'arcade-refusal', 'arcade-refusal-action', 'write-cold-water', 'write-cold', 'use-refusal', 'key', 'have', 'have-meaning', 'write-key', 'write-coffee', 'complete'] as const;
 export type ZeroStep = typeof zeroSteps[number];
-// A saved coffee draft remains answerable. New runs do not repeat that old task.
-export const nextZeroStep = (step: ZeroStep): ZeroStep => step === 'write-key' ? 'complete' : step === 'write-coffee' ? 'not-want'
-  : step === 'cold-order' ? 'arcade-refusal-action' : step === 'arcade-refusal' ? 'write-cold-water'
-  : step === 'write-cold-water' ? 'key' : zeroSteps[Math.min(zeroSteps.indexOf(step) + 1, zeroSteps.length - 1)];
+/** Current route, separate from stable saved IDs. No repeated negative assembly
+ * or immediate HAVE gap-fill after its model. Existing drafts remain usable. */
+export const zeroRoute: readonly ZeroStep[] = ['water', 'coffee', 'want', 'build-coffee', 'cold', 'be', 'contrast', 'arcade-water', 'not-want', 'arcade-refusal-action', 'cold-order', 'write-cold-water', 'key', 'have', 'write-key', 'complete'];
+export const nextZeroStep = (step: ZeroStep): ZeroStep => {
+  const index = zeroRoute.indexOf(step);
+  if (index >= 0) return zeroRoute[Math.min(index + 1, zeroRoute.length - 1)];
+  // Retired tasks are not erased or relabelled as new attempts.
+  return step === 'write-coffee' ? 'not-want' : step === 'write-cold' ? 'use-refusal'
+    : step === 'use-refusal' ? 'key' : step === 'build-no-water' ? 'cold-order'
+    : step === 'have-meaning' ? 'write-key' : 'write-cold-water';
+};
 export const zeroWords: AtomicWord[] = [
   { id: 901001, en: 'WATER', es: 'agua', ipa: '/ˈwɔːtə/', bridge: 'WÁTER', associationMode: 'acoustic_bridge', scene: 'Un WÁTER estornuda y lo llena todo de AGUA.', emojis: ['🚽', '💧'], associationId: 'zero-water-wc-v1', associationVersion: 1 },
   { id: 901002, en: 'COFFEE', es: 'café', ipa: '/ˈkɒfi/', bridge: 'CAFÉ', associationMode: 'cognate', scene: 'El CAFÉ salta de la taza al oír COFFEE.', cognateEvidence: { sameMeaning: true, note: 'COFFEE y café nombran la misma bebida; el audio modela el sonido inglés.' }, emojis: ['☕'], associationId: 'zero-coffee-cognate-v1', associationVersion: 1 },

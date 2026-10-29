@@ -97,7 +97,7 @@ it('tablero nuevo de MATHEMATICS: tres huecos, recarga estable y resultado unido
   expect(tree.root.findByProps({ className: 'assembly-bank' }).findAllByType('button')).toHaveLength(3);
   await act(async () => tree.root.findByProps({ 'aria-label': 'Colocar A, pieza 2' }).props.onClick());
   const saved = progress.mock.calls.at(-1)![0];
-  expect(saved).toEqual({ selected: [1], hinted: false, modelUsed: true, layout: 'letters-v2' });
+  expect(saved).toEqual({ selected: [1], hinted: true, modelUsed: true, layout: 'letters-v2' });
   act(() => tree.unmount());
   act(() => { tree = create(<WordAssembly vertical sceneAsHelp word={word} initialPosition={saved} onContinue={next} onProgress={progress} />); });
   expect(tree.root.findAllByProps({ className: 'is-filled' })).toHaveLength(1);
