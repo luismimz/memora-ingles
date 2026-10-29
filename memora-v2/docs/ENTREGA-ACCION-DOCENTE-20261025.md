@@ -2,6 +2,18 @@
 
 ## Reconstrucción por historias · 29/10/2026
 
+Nueva revisión integral solicitada tras1be6b98: el usuario rechaza la coherencia del conjunto. NO aceptado ni terminado. La programación existente fue reactivada explícitamente; criterios únicos de aceptación y continuación en MEMORA-IMPLEMENTACION-01.md.
+
+Superficie actual: una misma composición, materiales, tipografía y funciones de color para portada/historias/gramática/construcción/ayuda. StoryScene añade escenarios SVG propios de terraza, hotel y estación; actores emoji y reacción breve al resolver. Se sustituyó la hoja storyJourney.css, no se añadió otra capa de tema. No generó imágenes ni importó código de referencias. No se afirma revisión visual móvil.
+
+StoryMirror permite cambiar intenciones con variantes autorales que solo usan piezas ya preparadas: tener/querer/necesitar, frío/sin frío, afirmación/rechazo y búsqueda. Idiomas y audio cambian juntos; cada consulta es exposición neutral de la frase realmente mostrada. Colores por función y no por posición, compartidos con el constructor. No exige activar variantes para avanzar.
+
+31escenas en las mismas tres historias: se suman dos reparaciones de intención/pregunta al Arcade, no palabras ni cobertura ficticia. Temporizador solo para frases ya enseñadas; conserva ayuda/calma/salida. La evidencia guarda texto e idioma de la opción elegida. Pistas neutrales ante borradores completos equivocados: señala pieza concreta sin penalizar ni borrar; no evalúa prefijos incompletos. Construcción con ayuda muestra traducción de las piezas.
+
+El SRS existente intercala como máximo dos frases vencidas al cambiar de capítulo y retorna al siguiente mediante el checkpoint existente; no otro scheduler ni intervalo inventado. Recuperación sin modelo, ayuda separada de recuerdo autónomo. Integración1096tests/176archivos pasa, build previo pasa; error de tipo de un test y keys React duplicadas corregidos antes de integrar. Quedan pendientes inspección visual/partida real/audio, expansión curricular, reinserción de omisiones, variación adicional de transferencia, unificación de herramientas secundarias y validación humana. Detalle de publicación y copia en checkpoint.
+
+### Base histórica de la reconstrucción (no aceptación vigente)
+
 La nueva petición rechaza todo el producto anterior. StoryJourney sustituye ZeroJourney en la entrada principal; StoryWelcome sustituye su portada de acceso. Tres situaciones autorales (terraza, hotel y estación),29escenas, seis tipos de actividad: asociación, espejo bilingüe, montaje, escucha, decisión Arcade y escritura. Emojis y CSS originales; sin imágenes de pago ni importación de Claude.
 
 Corrección tras revisión humana29/10: desaparece «toca para descubrir» y el volteo obligatorio de cada pieza. Palabra/asociación y espejo completo visibles al llegar; color vincula inglés y apoyo español, movimiento breve ordenado sin ocultar contenido. Exposición neutral al dejar enseñanza, no acierto/prueba de lectura; checkpoints ya revelados no se duplican.

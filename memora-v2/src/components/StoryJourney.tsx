@@ -15,6 +15,9 @@ import { WritingSpellingRepair } from './WritingSpellingRepair';
 import { ArcadeClock } from './ArcadeClock';
 import { useArcadeClock } from './useArcadeClock';
 import { EchoPractice } from './EchoPractice';
+import { StoryMirror } from './StoryMirror';
+import { StoryScene } from './StoryScene';
+import { storyRole, storyWritingCue } from '../domain/storyLanguage';
 import './storyJourney.css';
 
 function fresh(stage = 0): TrickCheckpoint {
@@ -50,18 +53,20 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
     const next = {...live.current,...patch}; live.current=next; setState(next);
     if (!inspection) writeTrickCheckpoint(userId,storyJourney.id,storyJourney.version,next);
   }
-  function record(response:string, correct:boolean|null, helped:boolean, source:'learner'|'authored'='learner') {
-    if (inspection || !card) return undefined;
+  function record(response:string, correct:boolean|null, helped:boolean, source:'learner'|'authored'='learner', shown=card) {
+    if (inspection || !card || !shown) return undefined;
+    const selected=source==='learner' ? shown.options?.find(option=>option.value===response) : undefined;
+    const expected=selected ? shown.options?.find(option=>option.value===shown.answer)?.text : shown.en;
     return recordLearningActivity(userId,{ unitId:storyJourney.id,unitTitle:storyJourney.title,contentVersion:storyJourney.version,
       activityId:`story:${state.episodeId}:${card.id}`,skill:`story:${card.id}`,phase:teach?'grammar':card.timed?'arcade':card.kind==='write'?'dialogue':'construction',
-      source,modality:card.kind==='write' && !helped?'writing':'choice',prompt:card.es,response,expected:card.answer ?? card.en,correct,helped,
-      promptLanguage:'es',responseLanguage:card.options?'es':'en',parentAttemptId:live.current.previousAttemptId,
+      source,modality:card.kind==='write' && !helped?'writing':'choice',prompt:shown.es,response:selected?.text ?? response,expected:expected ?? shown.en,correct,helped,
+      promptLanguage:'es',responseLanguage:selected?(shown.choiceLanguage ?? 'es'):'en',parentAttemptId:live.current.previousAttemptId,
       responseDelayMs:Math.max(0,Date.now()-Date.parse(live.current.promptStartedAt ?? new Date().toISOString())) });
   }
-  function expose() {
-    if (!card) return;
-    record(card.en,null,true,'authored');
-    if (!inspection && card.kind !== 'discover') recordSentenceExposure(userId,storyJourney.id,storySentence(card));
+  function expose(shown=card) {
+    if (!shown) return;
+    record(shown.en,null,true,'authored',shown);
+    if (!inspection && shown.kind !== 'discover') recordSentenceExposure(userId,storyJourney.id,storySentence(shown));
   }
   function advance() {
     if (!card || live.current.checkId !== card.id || paused || menu || oral) return;
@@ -71,8 +76,17 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
     if (!solved && !teach && !model) record('Pasó a otra escena; práctica pendiente.',null,live.current.helped);
     stopSpeech();
     const pending = live.current.review?.pending.slice(1);
-    const nextStage = pending ? (pending.length ? storyCards.findIndex(item=>item.id===pending[0]) : storyCards.length) : state.stage+1;
-    save({...fresh(nextStage),episodeId:state.episodeId,continuation:undefined,previousAttemptId:undefined,correctionResponse:undefined,...(pending ? {review:{pending,total:state.review!.total}} : {review:undefined})});
+    const returnStage=live.current.resumeAfter ? storyCards.findIndex(item=>item.id===live.current.resumeAfter) : storyCards.length;
+    let nextStage = pending ? (pending.length ? storyCards.findIndex(item=>item.id===pending[0]) : returnStage<0?storyCards.length:returnStage) : state.stage+1;
+    let review=pending?.length ? {pending,total:state.review!.total} : undefined;
+    let resumeAfter=pending?.length ? live.current.resumeAfter : undefined;
+    // A small due-memory interlude connects chapters. Timing belongs to the
+    // existing SRS; swiping never marks a memory recalled or manufactures work.
+    if(!pending && !inspection && storyCards[nextStage] && storyCards[nextStage].chapter!==card.chapter) {
+      const due=dueReviews(state.stage,2);
+      if(due.length) { resumeAfter=storyCards[nextStage].id; review={pending:due,total:due.length}; nextStage=storyCards.findIndex(item=>item.id===due[0]); }
+    }
+    save({...fresh(nextStage),episodeId:state.episodeId,continuation:undefined,previousAttemptId:undefined,correctionResponse:undefined,review,resumeAfter});
   }
   function answer(value:string, assisted=false) {
     if (!card || live.current.checkId !== card.id || live.current.feedback === 'correct' || (live.current.checkFailures ?? 0)>=2 || paused || menu) return;
@@ -104,12 +118,17 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
   },[state.stage,solved,calm,paused,menu,oral]);
 
   const due = !card && !inspection ? dueSentenceMemories(userId).filter(item=>item.unitId===storyJourney.id) : [];
+  function dueReviews(through:number,limit:number) {
+    return dueSentenceMemories(userId).filter(item=>item.unitId===storyJourney.id)
+      .flatMap(memory=>{const match=storyCards.slice(0,through+1).find(item=>item.chunks && storyAccepts(item.en,memory.sentenceEn));return match?[match.id]:[];})
+      .filter((id,index,all)=>all.indexOf(id)===index).slice(0,limit);
+  }
   function reviewDue() {
-    const pending=due.flatMap(memory=>{const match=storyCards.find(item=>item.chunks && storyAccepts(item.en,memory.sentenceEn));return match?[match.id]:[];}).filter((id,index,all)=>all.indexOf(id)===index).slice(0,8);
+    const pending=dueReviews(storyCards.length,8);
     if (!pending.length) return;
     save({...fresh(storyCards.findIndex(item=>item.id===pending[0])),review:{pending,total:pending.length}});
   }
-  const scene = <div className={`story-scene${solved?' is-alive':''}`} aria-label={card?.scene.join(' ')}>{card?.scene.map((emoji,index)=><span key={index} style={{'--actor':index} as React.CSSProperties}>{emoji}</span>)}<i aria-hidden="true" /></div>;
+  const scene = card ? <StoryScene card={card} solved={solved}/> : null;
   const spelling = card?.kind==='write' && state.feedback==='help' ? sentenceSpellingRepair(state.input,card.en) : undefined;
   return <PlayViewport><main className={`story-world${card?.timed?' is-arcade':''}`} style={{'--story-accent':chapter.color,'--story-bg':chapter.background} as React.CSSProperties}>
     <button className="story-options-toggle" aria-label="Pausa y opciones" aria-expanded={menu} onClick={()=>setMenu(!menu)}>•••</button>
@@ -120,12 +139,12 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
         <h1>{card.title}</h1>
         {card.kind==='write' ? null : scene}
         {card.timed && !calm ? <ArcadeClock durationMs={12000} remaining={clock.remaining} paused={paused || menu} revealed={solved || model} />:null}
-        {card.kind==='discover' ? <div className="story-discover"><div className="story-word"><strong lang="en">{card.en}</strong><span>{card.es}</span></div><p>{card.hint}</p><SpeechModelButton text={card.en} label="Escuchar el inglés" /></div>
-        : card.kind==='mirror' ? <div className="story-mirror"><p className="story-target">{card.es}</p><div className="story-mirror-pieces">{card.chunks?.map((part,index)=><div key={index} className={`story-piece role-${index}`} style={{'--piece-index':index} as React.CSSProperties}><strong lang="en">{part.en}</strong><small lang="es">{part.es}</small></div>)}</div><p className="story-insight">{card.hint}</p><SpeechModelButton text={card.en} label="Escuchar la frase"/></div>
+        {card.kind==='discover' ? <div className="story-discover"><div className="story-word"><strong lang="en">{card.en}</strong><span>{card.es}</span></div>{card.bridge?<p className="story-bridge">{card.bridge}</p>:null}<p>{card.hint}</p><SpeechModelButton text={card.en} label="Escuchar el inglés" idleLabel="Oír la palabra" /></div>
+        : card.kind==='mirror' ? <StoryMirror key={card.id} card={card} onExplore={variant=>{stopSpeech();expose(variant);}}/>
         : model ? <div className="story-model"><span>Vamos con ayuda</span><strong lang="en">{card.en}</strong><p>{card.hint}</p><SpeechModelButton text={card.en}/><small>Puedes deslizar y seguir. Queda como práctica con ayuda.</small></div>
-        : card.kind==='build' || card.kind==='write' && state.continuation ? <div className="story-builder"><p className="story-target">{card.es}</p>{state.helped?<p className="story-insight">{card.hint}</p>:null}<GrammarOrder puzzle autoCheck pieces={bank.map((part,index)=>({text:part.en,role:index===bank.length-1?'subject':'context'}))} selected={state.order ?? []} locked={solved} onChange={order=>save({order})} onAnswer={value=>answer(value,true)}/></div>
-        : card.kind==='write' ? <AnswerStudio id="story-write" taskKey={card.id} scene={scene} target={card.es} instruction="Dilo en inglés" value={state.input} onChange={input=>save({input,feedback:'idle'})} accepts={value=>storyAccepts(value,card.en)} onAnswer={value=>answer(value)} disabled={solved} repeatDraftCues draftCue={value=>sentenceSpellingRepair(value,card.en)?card.hint:undefined} onDraftCue={(value,cue)=>{if(live.current.input!==value)return;record(cue,null,true,'authored');save({feedback:'help',helped:true});}} feedback={spelling?<WritingSpellingRepair repair={spelling} onApply={()=>answer(spelling.corrected,true)}/>:state.feedback==='help'?card.hint:undefined}/>
-        : <div className="story-choice">{card.kind==='listen'?<SpeechModelButton text={card.en} label="Escucha el pedido"/>:<p className="story-target" lang="en">{card.en}</p>}<div className="story-options">{card.options?.map(option=><button key={option.value} disabled={solved} onClick={()=>answer(option.value)} className={solved && option.value===card.answer?'is-right':state.correctionResponse===option.value?'is-wrong':''}><span>{option.image}</span><strong>{option.text}</strong></button>)}</div></div>}
+        : card.kind==='build' || card.kind==='write' && state.continuation ? <div className="story-builder"><p className="story-target">{card.es}</p>{state.helped?<p className="story-insight">{card.hint}</p>:null}<GrammarOrder puzzle autoCheck pieces={bank.map(part=>({text:part.en,role:storyRole(part.en)}))} translations={state.helped?bank.map(part=>part.es):undefined} selected={state.order ?? []} locked={solved} onChange={order=>save({order})} onAnswer={value=>answer(value,true)}/></div>
+        : card.kind==='write' ? <AnswerStudio id="story-write" taskKey={card.id} scene={scene} target={card.es} instruction="Dilo en inglés" value={state.input} onChange={input=>save({input,feedback:'idle'})} accepts={value=>storyAccepts(value,card.en)} onAnswer={value=>answer(value)} disabled={solved} repeatDraftCues draftCue={value=>storyWritingCue(value,card)} onDraftCue={(value,cue)=>{if(live.current.input!==value)return;record(cue,null,true,'authored');save({feedback:'help',helped:true});}} feedback={spelling?<WritingSpellingRepair repair={spelling} onApply={()=>answer(spelling.corrected,true)}/>:state.feedback==='help'?storyWritingCue(state.input,card) ?? card.hint:undefined}/>
+        : <div className="story-choice">{card.kind==='listen'?<SpeechModelButton text={card.en} label="Escucha el pedido"/>:card.kind==='repair'?<><p className="story-target">{card.es}</p><p className="story-repair-line" lang="en">{card.frame?.split('___')[0]}<span className={solved?'is-filled':''}>{solved?card.answer:'…'}</span>{card.frame?.split('___')[1]}</p></>:<p className="story-target" lang="en">{card.en}</p>}<div className="story-options">{card.options?.map(option=><button key={option.value} disabled={solved} onClick={()=>answer(option.value)} className={solved && option.value===card.answer?'is-right':state.correctionResponse===option.value?'is-wrong':''}><span>{option.image}</span><strong>{option.text}</strong></button>)}</div></div>}
         <div className="story-response" aria-live="polite">{solved?<p>✓ {state.helped && card.kind==='write'?'Mensaje construido con ayuda.':card.reaction}</p>:state.feedback==='help' && !model && card.kind!=='write'?<p>{card.hint}</p>:null}</div>
         {!teach && !solved && !model?<button className="story-help" onClick={()=>help(card.kind!=='write')}>{card.kind==='write'?'Armar juntos':'Enséñame cómo'}</button>:null}
         <footer className="story-gesture"><span aria-hidden="true">↑</span><span className={state.stage===0?'':'sr-only'}>{state.stage===0?'Desliza para seguir':!teach&&!solved&&!model?'Puedes pasar; queda pendiente':'Siguiente escena'}</span></footer>

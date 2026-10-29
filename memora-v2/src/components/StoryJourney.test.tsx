@@ -27,3 +27,40 @@ it('dos fallos muestran solución y mantienen salida por gesto',async()=>{await 
 it('el tiempo agotado enseña y no se registra como acierto',async()=>{await mount('arcade-key');await act(async()=>{vi.advanceTimersByTime(12100);});expect(checkpoint().checkFailures).toBe(2);expect(readLearningActivities(user).every(item=>item.correct===null)).toBe(true);});
 it('recupera una frase pendiente del SRS sin enseñar primero el modelo',async()=>{recordSentenceExposure(user,storyJourney.id,storySentence(storyCards.find(card=>card.id==='want')!),new Date(Date.now()-7200000));await mount('end');await click('Recuperar lo que toca hoy');expect(tree.root.findByType(AnswerStudio).props.target).toBe('Quiero café.');expect(text(tree.toJSON())).not.toContain('I want coffee');expect(readLearningActivities(user)).toEqual([]);});
 it('pausar impide autoavance de un acierto',async()=>{await mount('order-tea');await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('I want tea'));await act(async()=>tree.root.findByProps({'aria-label':'Pausa y opciones'}).props.onClick());await click('Pausar');await act(async()=>{vi.advanceTimersByTime(5000);});expect(checkpoint().checkId).toBe('order-tea');});
+it('intercala el repaso vencido entre historias y vuelve al siguiente capítulo sin reiniciar',async()=>{
+  recordSentenceExposure(user,storyJourney.id,storySentence(storyCards.find(card=>card.id==='want')!),new Date(Date.now()-7200000));
+  await mount('arcade-cafe');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint()).toMatchObject({checkId:'want',resumeAfter:'key',review:{pending:['want'],total:1}});
+  expect(tree.root.findByType(AnswerStudio).props.target).toBe('Quiero café.');
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onAnswer('I want coffee'));
+  await act(async()=>{vi.advanceTimersByTime(1500);});
+  expect(checkpoint().checkId).toBe('key');
+  expect(checkpoint().review).toBeUndefined();
+  expect(checkpoint().resumeAfter).toBeUndefined();
+});
+it('la pista automática para un mensaje completo no castiga el borrador ni borra lo escrito',async()=>{
+  await mount('recall-cafe');
+  const input='i want warm coffee';
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onChange(input));
+  const cue=tree.root.findByType(AnswerStudio).props.draftCue(input);
+  expect(cue).toContain('COLD');
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onDraftCue(input,cue));
+  expect(checkpoint()).toMatchObject({input,helped:true,feedback:'help'});
+  expect(checkpoint().checkFailures).toBeUndefined();
+  expect(readLearningActivities(user)).toMatchObject([{source:'authored',correct:null,helped:true}]);
+});
+it('repara una intención en Arcade sin mostrar la solución antes de responder',async()=>{
+  await mount('repair-have');
+  expect(text(tree.root.findByProps({className:'story-repair-line'}))).toContain('…');
+  await click('have');
+  expect(checkpoint().feedback).toBe('correct');
+  expect(text(tree.root.findByProps({className:'story-repair-line'}))).toContain('have');
+  expect(readLearningActivities(user).at(-1)).toMatchObject({response:'have',expected:'have',responseLanguage:'en',correct:true,helped:true,phase:'arcade'});
+});
+it('una variante del espejo guarda la frase realmente vista, no la variante inicial',async()=>{
+  await mount('need');
+  await click('Lo tengo');
+  expect(readLearningActivities(user).at(-1)).toMatchObject({prompt:'Tengo una llave.',response:'I have a key.',expected:'I have a key.',source:'authored',correct:null});
+  expect(readSentenceMemories(user).some(memory=>memory.sentenceEn==='I have a key.')).toBe(true);
+});

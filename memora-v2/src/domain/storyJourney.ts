@@ -2,13 +2,13 @@ import type { UnitSentence } from './unit';
 import { normalizeSentenceAnswer } from './sentenceAnswer';
 
 export const storyJourney = { id: 'memora:stories-v1', version: '1', title: 'Historias que puedes vivir' };
-export type StoryKind = 'discover' | 'mirror' | 'build' | 'listen' | 'decide' | 'write';
+export type StoryKind = 'discover' | 'mirror' | 'build' | 'listen' | 'decide' | 'repair' | 'write';
 export interface StoryCard {
   id: string; chapter: number; kind: StoryKind; title: string; scene: string[];
   en: string; es: string; hint: string; reaction: string;
   bridge?: string; chunks?: { en: string; es: string }[];
   options?: { text: string; image: string; value: string }[];
-  answer?: string; timed?: boolean;
+  answer?: string; timed?: boolean; frame?: string; choiceLanguage?: 'en' | 'es';
 }
 export const storyChapters = [
   { title: 'El café que se escapa', place: 'Una terraza · primera conversación', color: '#b7edb0', background: '#182c27' },
@@ -34,6 +34,7 @@ export const storyCards: StoryCard[] = [
   { id:'polite-request', chapter:1, kind:'mirror', title:'Haz tu petición más amable.', scene:['🙂','🔑'], en:'Can I have a key, please?', es:'¿Me das una llave, por favor?', chunks:chunks('Can I have|¿puedo tener?','a key|una llave','please|por favor'), hint:'CAN I HAVE…? sirve aquí para pedir algo con amabilidad. PLEASE añade «por favor». Usa la pieza completa.', reaction:'Una forma amable de pedir lo que necesitas.' },
   { id:'wrong-drink', chapter:1, kind:'mirror', title:'El gigante te trae café por error.', scene:['🧌','☕','🙅'], en:"I don't want coffee.", es:'No quiero café.', chunks:chunks('I|yo',"don't want|no quiero",'coffee|café'), hint:'DON’T WANT es la pieza de rechazo: no quiero. Cambia WANT por DON’T WANT.', reaction:'El gigante retira el café.' },
   { id:'arcade-key', chapter:1, kind:'decide', title:'¿Qué necesita el huésped?', scene:['🛎️'], en:'I need a key.', es:'Necesito una llave.', options:[{text:'La llave',image:'🔑',value:'key'},{text:'El té',image:'🍵',value:'tea'}], answer:'key', timed:true, hint:'NEED: necesita. A KEY: una llave.', reaction:'El gigante ya puede entrar.' },
+  { id:'repair-have', chapter:1, kind:'repair', title:'Ya tienes la llave. Cuéntalo.', scene:['🤲','🔑'], en:'I have a key.', es:'Tengo una llave.', frame:'I ___ a key.', options:[{text:'want',image:'💭',value:'want'},{text:'have',image:'🤲',value:'have'},{text:'need',image:'🚪',value:'need'}], answer:'have', choiceLanguage:'en', timed:true, hint:'HAVE dice que la tienes. WANT que la quieres; NEED que la necesitas.', reaction:'Una pieza cambia toda la intención.' },
   { id:'refuse-tea', chapter:1, kind:'build', title:'Esta vez no quieres té.', scene:['🍵','🙅'], en:"I don't want tea.", es:'No quiero té.', chunks:chunks('I|yo',"don't want|no quiero",'tea|té'), hint:'I · DON’T WANT · TEA. Cambia la bebida, conserva la intención.', reaction:'Tu mensaje cambia lo que ocurre.' },
   { id:'recall-cafe', chapter:1, kind:'write', title:'Desde el hotel, pide café frío.', scene:['🏨','☕','🧊'], en:'I want cold coffee.', es:'Quiero café frío.', chunks:chunks('I|yo','want|quiero','cold|frío','coffee|café'), hint:'I WANT abre el pedido. COLD va antes de COFFEE.', reaction:'Tu pedido llega a la habitación.' },
   { id:'ticket', chapter:2, kind:'discover', title:'Un tique sale disparado del reloj.', scene:['⏰','🎟️'], en:'a ticket', es:'un billete', bridge:'TIQUE → TICKET → BILLETE', hint:'Con cada tic, el reloj escupe un TIQUE: tu TICKET para el tren. Aquí significa billete.', reaction:'Ya puedes pedir el billete.' },
@@ -45,6 +46,7 @@ export const storyCards: StoryCard[] = [
   { id:'train-question', chapter:2, kind:'mirror', title:'Pregunta por el tren.', scene:['🚆','🔎'], en:'Where is the train?', es:'¿Dónde está el tren?', chunks:chunks('Where is|dónde está','the train|el tren'), hint:'MY es «mi». THE es «el» en THE TRAIN. La pregunta WHERE IS se conserva.', reaction:'Puedes buscar algo que no es tuyo.' },
   { id:'listen-key', chapter:2, kind:'listen', title:'Escucha. ¿Qué está buscando?', scene:['🧳','🔎'], en:'Where is my key?', es:'¿Dónde está mi llave?', options:[{text:'Su llave',image:'🔑',value:'key'},{text:'Su billete',image:'🎟️',value:'ticket'},{text:'El tren',image:'🚆',value:'train'}], answer:'key', hint:'MY KEY es su llave. WHERE IS pregunta dónde está.', reaction:'Le ayudas a encontrarla.' },
   { id:'arcade-ticket', chapter:2, kind:'decide', title:'El gato llega a la taquilla.', scene:['🐈','🎟️'], en:'I need a ticket.', es:'Necesito un billete.', options:[{text:'Dar un billete',image:'🎟️',value:'ticket'},{text:'Dar una llave',image:'🔑',value:'key'},{text:'Dar café',image:'☕',value:'coffee'}], answer:'ticket', timed:true, hint:'Necesita A TICKET: un billete.', reaction:'¡El gato sube al tren!' },
+  { id:'repair-search', chapter:2, kind:'repair', title:'La llave se ha escondido.', scene:['🔎','🔑'], en:'Where is my key?', es:'¿Dónde está mi llave?', frame:'___ my key?', options:[{text:'I have',image:'🤲',value:'I have'},{text:'Where is',image:'🔎',value:'Where is'},{text:'I need',image:'🚪',value:'I need'}], answer:'Where is', choiceLanguage:'en', timed:true, hint:'WHERE IS pregunta dónde está. Aquí buscas, no dices lo que tienes.', reaction:'Has convertido la búsqueda en una pregunta.' },
   { id:'recall-key', chapter:2, kind:'write', title:'Una viajera puede ayudarte.', scene:['🧳','🔑'], en:'I need a key.', es:'Necesito una llave.', chunks:chunks('I|yo','need|necesito','a key|una llave'), hint:'I NEED dice «necesito». UNA llave es A KEY.', reaction:'Has pedido ayuda sin el modelo.' },
 ];
 export const storySentence = (card: StoryCard): UnitSentence => ({ en:card.en, es:card.es, slots:[], pronunciationTip:'Escucha el mensaje completo.' });
