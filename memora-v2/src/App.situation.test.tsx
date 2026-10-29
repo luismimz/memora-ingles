@@ -16,8 +16,8 @@ import { initializeJournal, readJournal } from './domain/progressJournal';
 import { completeLearningMode } from './domain/learningModes';
 import { JourneyTrickExperience } from './components/JourneyTrickExperience';
 import { GrammarCoach } from './components/GrammarCoach';
-import { ZeroJourney } from './components/ZeroJourney';
-import { freshZeroJourney, zeroJourney, zeroMessages, zeroSteps } from './domain/zeroJourney';
+import { StoryJourney } from './components/StoryJourney';
+import { freshZeroJourney, zeroJourney, zeroSteps } from './domain/zeroJourney';
 import { readTrickCheckpoint, writeTrickCheckpoint } from './domain/trickCheckpoint';
 const unit = validateUnit(keys);
 const source = vi.hoisted(() => ({ load: null as null | (() => Promise<unknown>), followup: null as null | ReturnType<typeof validateUnit>, extra: [] as ReturnType<typeof validateUnit>[] }));
@@ -42,80 +42,44 @@ async function mount(seed?: () => void, legacy = true) {
   seed?.();
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
-  if (legacy) await click('Recorrido anterior');
+  if (legacy) await act(async () => tree.root.findByType(StoryJourney).props.onExit());
 }
 afterEach(() => { if (tree) act(() => tree.unmount()); source.load = null; source.followup = null; source.extra = []; vi.unstubAllGlobals(); });
 it('el nuevo comienzo es la entrada principal; salir conserva la actividad anterior y puede retomarse Play', async () => {
   await mount(undefined, false);
-  expect(text(tree.toJSON())).toContain('Byte tiene sed.');
+  expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
   expect(readLearningActivities('situation-app-isolated')).toEqual([]);
-  await click('Recorrido anterior');
+  await act(async () => tree.root.findByType(StoryJourney).props.onExit());
   await click('Memora Play · recorrido nuevo');
-  expect(text(tree.toJSON())).toContain('Byte tiene sed.');
+  expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
 });
-it('terminar Play enlaza preparación publicada, sin completar ni resetear esa misión por navegar', async () => {
+it('salir de las historias conserva acceso al recorrido sin abrir una misión por sorpresa', async () => {
   source.followup = validateUnit(examples[0]);
   await mount(undefined, false);
-  await act(async () => tree.root.findByType(ZeroJourney).props.onNext());
-  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
-  expect(tree.root.findByType(LanguageGame).props.learningMode).toBe('vocabulary');
+  await act(async () => tree.root.findByType(StoryJourney).props.onExit());
+  expect(tree.root.findAllByType(LanguageGame)).toHaveLength(0);
   expect(readLearningActivities('situation-app-isolated')).toEqual([]);
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
 });
-it('tras Play, preparar el ordenador lleva a usar esas palabras aunque haya otro truco antiguo disponible', async () => {
-  source.followup = validateUnit(examples[0]);
-  // A valid earlier published-summary fixture can share the same grammar skill.
-  // The generic map deduplicates it, but this contextual continuation must not
-  // send the learner to that older story after preparing the computer scene.
-  source.extra = [validateUnit({ ...examples[0], id: 'm1-z1-01' })];
-  await mount(() => {
-    for (const word of unit.words) recordWordRecall('situation-app-isolated', word, 'hesitant');
-    writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('complete'), checkId: 'complete' });
-  }, false);
-  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
-  // A page reload must not lose the contextual intent or duplicate completion.
-  act(() => tree.unmount());
-  const App = (await import('./App')).default;
-  await act(async () => { tree = create(<App />); });
-  expect(tree.root.findByType(LanguageGame).props.unit.id).toBe('m1-test-desk');
-  expect(readLearningActivities('situation-app-isolated').filter((event) => event.unitId === zeroJourney.id && event.phase === 'completion')).toHaveLength(1);
-  for (const word of source.followup.words) recordWordRecall('situation-app-isolated', word, 'hesitant');
-  completeLearningMode('situation-app-isolated', source.followup, 'vocabulary', { correct: 3, attempted: 3, completedAt: new Date().toISOString(), nextReviewAt: new Date(Date.now() + 3600000).toISOString() });
-  await act(async () => tree.root.findByType(LanguageGame).props.onFinished());
-  await act(async () => tree.root.findByType(LanguageGame).props.onNext());
-  expect(tree.root.findByType(JourneyTrickExperience).props.unit.id).toBe('m1-test-desk');
-  expect(tree.root.findByType(GrammarCoach).props.lesson.id).toBe('computer-playing-prepared-v1');
-  expect(readLearningActivities('situation-app-isolated').some((event) => event.activityId.startsWith(`${keysSituationId}:completed`))).toBe(false);
-});
-it('quien terminó el primer Play encuentra la ampliación sin borrar su recorrido anterior', async () => {
+it('un checkpoint histórico no impide descubrir las nuevas historias ni se sobrescribe', async () => {
   await mount(() => writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: 10, checkId: 'handoff' }), false);
-  expect(text(tree.toJSON())).toContain('No era tu pedido.');
+  expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
-  await click('Recorrido anterior'); await click('Memora Play · recorrido nuevo');
-  expect(text(tree.toJSON())).toContain('No era tu pedido.');
+  await act(async () => tree.root.findByType(StoryJourney).props.onExit()); await click('Memora Play · recorrido nuevo');
+  expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
+  expect(readTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version)?.checkId).toBe('handoff');
   expect(readLearningActivities('situation-app-isolated')).toEqual([]);
 });
-it('reabrir un Play ampliado terminado reinicia solo el episodio, no el resto del curso', async () => {
+it('reabrir las historias no resetea ni reinterpreta la finalización antigua', async () => {
   await mount(() => writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('complete'), checkId: 'complete' }), false);
-  await click('← Recorrido');
+  await act(async () => tree.root.findByType(StoryJourney).props.onExit());
   await click('Memora Play · recorrido nuevo');
-  expect(text(tree.toJSON())).toContain('Byte tiene sed.');
-  expect(readTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version)?.checkId).toBe('water');
+  expect(text(tree.toJSON())).toContain('Tu café acaba de escapar.');
+  expect(readTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version)?.checkId).toBe('complete');
   expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
   expect(readLearningActivities('situation-app-isolated').filter((event) => event.correct !== null)).toEqual([]);
-});
-it('al volver tras la fecha del SRS abre uso sin modelo, no otra vuelta por las asociaciones', async () => {
-  await mount(() => {
-    recordSentenceExposure('situation-app-isolated', zeroJourney.id, zeroMessages.coldWater, new Date(Date.now() - 7_200_000));
-    writeTrickCheckpoint('situation-app-isolated', zeroJourney.id, zeroJourney.version, { ...freshZeroJourney(), stage: zeroSteps.indexOf('complete'), checkId: 'complete' });
-  }, false);
-  expect(text(tree.toJSON())).toContain('SIN VOLVER A MIRAR');
-  expect(text(tree.toJSON())).toContain('Quiero agua fría.');
-  expect(text(tree.toJSON())).not.toContain('I want cold water');
-  expect(readGameCheckpoint('situation-app-isolated', unit.id, unit.contentVersion!)).toMatchObject({ phase: 'build', filledSlots: 1 });
-  expect(readLearningActivities('situation-app-isolated')).toEqual([]);
 });
 it('Nora prepara las palabras del ordenador y enlaza al coach contextual con Detective, sin enseñar piezas desconocidas', async () => {
   source.followup = validateUnit(examples[0]);

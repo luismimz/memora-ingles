@@ -58,7 +58,7 @@ function game() {
   hooks.refCursor = 0;
   let root = App() as ReactElement<any>;
   // These are compatibility tests for the retained course; explicitly choose it.
-  if (root.props.label === 'Memora Play') {
+  if (root.props.label === 'Memora') {
     root.props.onBack(); hooks.cursor = 0; hooks.refCursor = 0;
     root = App() as ReactElement<any>;
   }

@@ -1,6 +1,18 @@
 # Acciones docentes y orientación dentro de la actividad
 
-## Teclado, continuidad visual y ritmo de práctica · 29/10/2026
+## Reconstrucción por historias · 29/10/2026
+
+La nueva petición rechaza todo el producto anterior. StoryJourney sustituye ZeroJourney en la entrada principal; StoryWelcome sustituye su portada de acceso. Tres situaciones autorales (terraza, hotel y estación),29escenas, seis tipos de actividad: asociación, espejo manipulable, montaje, escucha, decisión Arcade y escritura. Emojis y CSS originales; sin imágenes de pago ni importación de Claude.
+
+El contenido conecta WANT, AM COLD, posición del adjetivo, HAVE/NEED, DON'T WANT, petición CAN I HAVE… PLEASE y pregunta WHERE IS. La transferencia cambia objeto/contexto. Las frases construidas y enseñadas entran en el SRS existente; el repaso escrito se presenta sin modelo y la ayuda nunca se convierte en recuerdo autónomo. La voz opcional reutiliza EchoPractice local; no califica pronunciación.
+
+El gesto puede dejar un reto pendiente sin acreditar acierto. Resolver avanza automáticamente salvo pausa/calma. Errores conservan borrador, proponen corrección de errata, permiten montaje guiado y muestran modelo tras dos fallos. Tiempo Arcade12s, pausa/calma y salida; no temporiza enseñanza. Nueva posición con ID propio conserva todos los datos anteriores. No vuelve automáticamente al recorrido antiguo al terminar.
+
+Integración1085tests/174archivos y build pasan. Los contratos de App se actualizaron para la nueva entrada; pruebas del curso anterior se mantienen entrando explícitamente por salida. Primera integración falló por expectativas de la entrada sustituida, ya adaptadas. Puertas de UI/control/autenticación y render qlmanage siguen cerradas: no se usaron alternativas para sortearlas. No verificado visualmente ni jugado en iPhone, audio no oído, diversión/retención no evaluadas.
+
+NO es transformación completa: hay tres historias, no un feed ilimitado preparado ni30d/1000palabras. Al terminar se informa del límite y se permite el recorrido anterior. La ampliación de curso, revisión visual, variación de recuperación y validación humana quedan pendientes. Publicación exacta, copias y siguiente acción en MEMORA-IMPLEMENTACION-01.md.
+
+## Revisión anterior de teclado, continuidad visual y ritmo · 29/10/2026 (histórico)
 
 El usuario rechaza el resultado anterior: pantalla que se desplaza al escribir, imágenes que desaparecen, repetición y frustración. Esta revisión corrige esos mecanismos concretos; no considera aceptado el diseño por tener pruebas verdes.
 

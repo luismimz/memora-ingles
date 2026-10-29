@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { StoryJourney } from './components/StoryJourney';
 import { previewUnit } from './preview/previewUnit';
 import { grammarTricks, trickStop } from './domain/journeyTricks';
 import { recordWordRecall } from './domain/memory';
@@ -51,7 +52,7 @@ it('App conserva la búsqueda y la tarjeta elegida al salir de una tanda opciona
   const focused: string[] = [];
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />, { createNodeMock: (node) => node.type === 'h2' ? { focus: () => focused.push(String(node.props.children)) } : null }); });
-  await click('Recorrido anterior');
+  await act(async () => tree.root.findByType(StoryJourney).props.onExit());
   await click('Aprender palabras');
   await act(async () => tree.root.findByType('input').props.onChange({ target: { value: 'casa' } }));
   await act(async () => tree.root.findByProps({ className: 'learning-library-more' }).findByType('button').props.onClick());
@@ -90,7 +91,7 @@ it('App real enlaza episodio→chat→siguiente disponible sin confirmación de 
   local.setItem(`memora-v2.resume-mode.${user}`, 'grammar');
   const App = (await import('./App')).default;
   await act(async () => { tree = create(<App />); });
-  await click('Recorrido anterior');
+  await act(async () => tree.root.findByType(StoryJourney).props.onExit());
   await click('Continuar jugando');
   for (let step = 0; step < 3; step++) await advance();
   await click('Estoy jugando ahora.'); await advance();

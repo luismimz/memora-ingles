@@ -1,5 +1,6 @@
 import { afterEach, expect, it, vi } from 'vitest';
 import { act, create, type ReactTestRenderer } from 'react-test-renderer';
+import { StoryJourney } from './components/StoryJourney';
 import { reviewUnits } from './preview/previewUnit';
 import { grammarTricks, trickStop } from './domain/journeyTricks';
 import { recordWordRecall } from './domain/memory';
@@ -32,7 +33,7 @@ async function start(staleCook = false) {
   for (const word of [...kitchen.words, ...food.words]) recordWordRecall(user, staleCook && word.en === 'COOK' ? { ...word, scene: 'Presentación antigua.' } : word, 'hesitant', new Date(), 'recognition', undefined, true);
   local.setItem(`memora-v2.resume.${user}`, foodStop.id); local.setItem(`memora-v2.resume-mode.${user}`, 'grammar');
   const App = (await import('./App')).default;
-  await act(async () => { tree = create(<App />); }); await click('Recorrido anterior'); await click('Continuar jugando');
+  await act(async () => { tree = create(<App />); }); await act(async () => tree.root.findByType(StoryJourney).props.onExit()); await click('Continuar jugando');
 }
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
 it('el botón del paso previo abre el truco de cena con su ID estable sin fabricar intentos', async () => {
