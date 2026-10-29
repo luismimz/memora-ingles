@@ -40,6 +40,7 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
   const [paused,setPaused] = useState(false);
   const [menu,setMenu] = useState(false);
   const [oral,setOral] = useState(false);
+  const [audioBusy,setAudioBusy] = useState(false);
   const original = storyCards[state.stage];
   const card: StoryCard | undefined = original && state.review ? {...original,kind:'write',title:'En otra ocasión, necesitas decirlo.',scene:['🧳',...original.scene.slice(-1)],answer:undefined,timed:false} : original;
   const solved = state.feedback === 'correct';
@@ -112,10 +113,10 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
   useEffect(()=>()=>stopSpeech(),[state.stage]);
   useEffect(()=>{if(paused || menu) stopSpeech();},[paused,menu]);
   useEffect(()=>{
-    if(!solved || calm || paused || menu || oral) return;
+    if(!solved || calm || paused || menu || oral || audioBusy) return;
     const timer=window.setTimeout(advance,1450);
     return ()=>window.clearTimeout(timer);
-  },[state.stage,solved,calm,paused,menu,oral]);
+  },[state.stage,solved,calm,paused,menu,oral,audioBusy]);
 
   const due = !card && !inspection ? dueSentenceMemories(userId).filter(item=>item.unitId===storyJourney.id) : [];
   function dueReviews(through:number,limit:number) {
@@ -139,12 +140,12 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
         <h1>{card.title}</h1>
         {card.kind==='write' ? null : scene}
         {card.timed && !calm ? <ArcadeClock durationMs={12000} remaining={clock.remaining} paused={paused || menu} revealed={solved || model} />:null}
-        {card.kind==='discover' ? <div className="story-discover"><div className="story-word"><strong lang="en">{card.en}</strong><span>{card.es}</span></div>{card.bridge?<p className="story-bridge">{card.bridge}</p>:null}<p>{card.hint}</p><SpeechModelButton text={card.en} label="Escuchar el inglés" idleLabel="Oír la palabra" /></div>
-        : card.kind==='mirror' ? <StoryMirror key={card.id} card={card} onExplore={variant=>{stopSpeech();expose(variant);}}/>
-        : model ? <div className="story-model"><span>Vamos con ayuda</span><strong lang="en">{card.en}</strong><p>{card.hint}</p><SpeechModelButton text={card.en}/><small>Puedes deslizar y seguir. Queda como práctica con ayuda.</small></div>
+        {card.kind==='discover' ? <div className="story-discover"><div className="story-word"><strong lang="en">{card.en}</strong><span>{card.es}</span></div>{card.bridge?<p className="story-bridge">{card.bridge}</p>:null}<p>{card.hint}</p><SpeechModelButton text={card.en} label="Escuchar el inglés" idleLabel="Oír la palabra" onBusyChange={setAudioBusy}/></div>
+        : card.kind==='mirror' ? <StoryMirror key={card.id} card={card} onAudioBusy={setAudioBusy} onExplore={variant=>{stopSpeech();expose(variant);}}/>
+        : model ? <div className="story-model"><span>Vamos con ayuda</span><strong lang="en">{card.en}</strong><p>{card.hint}</p><SpeechModelButton text={card.en} onBusyChange={setAudioBusy}/><small>Puedes deslizar y seguir. Queda como práctica con ayuda.</small></div>
         : card.kind==='build' || card.kind==='write' && state.continuation ? <div className="story-builder"><p className="story-target">{card.es}</p>{state.helped?<p className="story-insight">{card.hint}</p>:null}<GrammarOrder puzzle autoCheck pieces={bank.map(part=>({text:part.en,role:storyRole(part.en)}))} translations={state.helped?bank.map(part=>part.es):undefined} selected={state.order ?? []} locked={solved} onChange={order=>save({order})} onAnswer={value=>answer(value,true)}/></div>
         : card.kind==='write' ? <AnswerStudio id="story-write" taskKey={card.id} scene={scene} target={card.es} instruction="Dilo en inglés" value={state.input} onChange={input=>save({input,feedback:'idle'})} accepts={value=>storyAccepts(value,card.en)} onAnswer={value=>answer(value)} disabled={solved} repeatDraftCues draftCue={value=>storyWritingCue(value,card)} onDraftCue={(value,cue)=>{if(live.current.input!==value)return;record(cue,null,true,'authored');save({feedback:'help',helped:true});}} feedback={spelling?<WritingSpellingRepair repair={spelling} onApply={()=>answer(spelling.corrected,true)}/>:state.feedback==='help'?storyWritingCue(state.input,card) ?? card.hint:undefined}/>
-        : <div className="story-choice">{card.kind==='listen'?<SpeechModelButton text={card.en} label="Escucha el pedido"/>:card.kind==='repair'?<><p className="story-target">{card.es}</p><p className="story-repair-line" lang="en">{card.frame?.split('___')[0]}<span className={solved?'is-filled':''}>{solved?card.answer:'…'}</span>{card.frame?.split('___')[1]}</p></>:<p className="story-target" lang="en">{card.en}</p>}<div className="story-options">{card.options?.map(option=><button key={option.value} disabled={solved} onClick={()=>answer(option.value)} className={solved && option.value===card.answer?'is-right':state.correctionResponse===option.value?'is-wrong':''}><span>{option.image}</span><strong>{option.text}</strong></button>)}</div></div>}
+        : <div className="story-choice">{card.kind==='listen'?<SpeechModelButton text={card.en} label="Escucha el pedido" onBusyChange={setAudioBusy}/>:card.kind==='repair'?<><p className="story-target">{card.es}</p><p className="story-repair-line" lang="en">{card.frame?.split('___')[0]}<span className={solved?'is-filled':''}>{solved?card.answer:'…'}</span>{card.frame?.split('___')[1]}</p></>:<p className="story-target" lang="en">{card.en}</p>}<div className="story-options">{card.options?.map(option=><button key={option.value} disabled={solved} onClick={()=>answer(option.value)} className={solved && option.value===card.answer?'is-right':state.correctionResponse===option.value?'is-wrong':''}><span>{option.image}</span><strong>{option.text}</strong></button>)}</div></div>}
         <div className="story-response" aria-live="polite">{solved?<p>✓ {state.helped && card.kind==='write'?'Mensaje construido con ayuda.':card.reaction}</p>:state.feedback==='help' && !model && card.kind!=='write'?<p>{card.hint}</p>:null}</div>
         {!teach && !solved && !model?<button className="story-help" onClick={()=>help(card.kind!=='write')}>{card.kind==='write'?'Armar juntos':'Enséñame cómo'}</button>:null}
         <footer className="story-gesture"><span aria-hidden="true">↑</span><span className={state.stage===0?'':'sr-only'}>{state.stage===0?'Desliza para seguir':!teach&&!solved&&!model?'Puedes pasar; queda pendiente':'Siguiente escena'}</span></footer>

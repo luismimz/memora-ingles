@@ -12,6 +12,8 @@ StoryMirror permite cambiar intenciones con variantes autorales que solo usan pi
 
 El SRS existente intercala como máximo dos frases vencidas al cambiar de capítulo y retorna al siguiente mediante el checkpoint existente; no otro scheduler ni intervalo inventado. Recuperación sin modelo, ayuda separada de recuerdo autónomo. Integración1096tests/176archivos pasa, build previo pasa; error de tipo de un test y keys React duplicadas corregidos antes de integrar. Quedan pendientes inspección visual/partida real/audio, expansión curricular, reinserción de omisiones, variación adicional de transferencia, unificación de herramientas secundarias y validación humana. Detalle de publicación y copia en checkpoint.
 
+Continuación independiente de la revisión: SpeechModelButton notifica opcionalmente preparación/reproducción y libera el estado al terminar/fallar/desmontar. StoryJourney suspende solo autoavance mientras el audio solicitado está activo; gesto voluntario/pausa/salida siguen funcionando. Espejo propaga el mismo estado.33pruebas enfocadas pasan, incluido esperar audio antes de pasar; build final pasa. No otra batería completa redundante tras esta corrección pequeña. Servicio público devolvió504 en comprobación posterior al primer push: no se afirma servida esa versión hasta contraste final.
+
 ### Base histórica de la reconstrucción (no aceptación vigente)
 
 La nueva petición rechaza todo el producto anterior. StoryJourney sustituye ZeroJourney en la entrada principal; StoryWelcome sustituye su portada de acceso. Tres situaciones autorales (terraza, hotel y estación),29escenas, seis tipos de actividad: asociación, espejo bilingüe, montaje, escucha, decisión Arcade y escritura. Emojis y CSS originales; sin imágenes de pago ni importación de Claude.

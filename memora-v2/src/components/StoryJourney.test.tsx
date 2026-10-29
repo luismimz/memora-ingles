@@ -8,6 +8,7 @@ import { storyCards,storyJourney,storySentence } from '../domain/storyJourney';
 import { readTrickCheckpoint,writeTrickCheckpoint } from '../domain/trickCheckpoint';
 import { readLearningActivities } from '../domain/learningActivity';
 import { readSentenceMemories,recordSentenceExposure } from '../domain/memory';
+import { playEnglish, type PlaybackResult } from '../services/audio';
 vi.mock('../services/audio',()=>({stopSpeech:vi.fn(),playSnap:vi.fn(),playEnglish:vi.fn(async()=>({status:'blocked',source:null}))}));
 let tree:ReactTestRenderer;
 const user='stories-isolated';
@@ -63,4 +64,16 @@ it('una variante del espejo guarda la frase realmente vista, no la variante inic
   await click('Lo tengo');
   expect(readLearningActivities(user).at(-1)).toMatchObject({prompt:'Tengo una llave.',response:'I have a key.',expected:'I have a key.',source:'authored',correct:null});
   expect(readSentenceMemories(user).some(memory=>memory.sentenceEn==='I have a key.')).toBe(true);
+});
+it('espera a que termine el audio solicitado antes de avanzar automáticamente',async()=>{
+  let finish!:(result:PlaybackResult)=>void;
+  vi.mocked(playEnglish).mockImplementationOnce(()=>new Promise(resolve=>{finish=resolve;}));
+  await mount('listen-tea');
+  await click('Escucha el pedido');
+  await click('Té');
+  await act(async()=>{vi.advanceTimersByTime(3000);});
+  expect(checkpoint().checkId).toBe('listen-tea');
+  await act(async()=>{finish({status:'played',source:'browser'});});
+  await act(async()=>{vi.advanceTimersByTime(1500);});
+  expect(checkpoint().checkId).toBe('cold-tea');
 });
