@@ -26,13 +26,15 @@ interface GameCardProps {
   vertical?: boolean;
   /** Keep feed gestures and keyboard navigation, without a repeated next button. */
   showAdvanceButton?: boolean;
+  /** Edge-to-edge scene: no reserved button strip; the whole page slides. */
+  immersive?: boolean;
   stepKey?: string;
   /** Observed task state only. Color accompanies the existing textual feedback. */
   feedback?: 'correct' | 'retry' | 'model';
 }
 
 /** La misma superficie y física para asociaciones, recompensas y gramática. */
-export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', reserveFooter = false, revealFooter = true, className = '', showBack, advanceControl = false, vertical = false, showAdvanceButton = true, stepKey = '', feedback }: GameCardProps) {
+export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', reserveFooter = false, revealFooter = true, className = '', showBack, advanceControl = false, vertical = false, showAdvanceButton = true, immersive = false, stepKey = '', feedback }: GameCardProps) {
   const feedOnly = useContext(FeedPresentation);
   const showButton = showAdvanceButton && !feedOnly;
   const verticalAdvanceLabel = advanceLabel.replace(/\s*→\s*$/u, '');
@@ -74,7 +76,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
     if (vertical) { touchStart.current = undefined; wheelGesture.current.allowed = false; }
     const origin = stepKey;
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-    setDragX(reduced ? 0 : vertical ? -32 : -800);
+    setDragX(reduced ? 0 : vertical ? immersive ? -(scrollport.current?.clientHeight ?? 600) : -32 : -800);
     setExiting(true);
     timer.current = window.setTimeout(() => {
       // A step can change inside this same card (not always unmount it).
@@ -138,7 +140,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
       const lockedControl = element.closest?.('button:disabled');
       return Boolean(onAdvance && revealFooter && (!interactiveCardTarget(target) || sceneSurface || lockedControl) && !window.getSelection?.()?.toString());
     };
-    return <div className={`game-card-anchor card-vertical ${className}`} data-feedback={feedback}>
+    return <div className={`game-card-anchor card-vertical${immersive ? ' card-immersive' : ''} ${className}`} data-feedback={feedback}>
       <div ref={scrollport} className={`card-vertical-scroll${exiting ? ' is-exiting' : dragX < 0 ? ' is-following-touch' : ''}`} role="region" aria-label={showButton ? 'Contenido de la actividad. Desplázate para leer; el botón de avance está fuera del texto cuando puedes seguir.' : 'Escena de juego. Desliza hacia arriba o usa la flecha abajo al terminar la acción.'} tabIndex={0}
         style={{ transform: `translate3d(0, ${dragX}px, 0)` }}
         onKeyDown={!showButton ? (event) => { if (['ArrowUp', 'ArrowDown', 'PageDown'].includes(event.key) && canLeave(event.target) && atEnd(event.currentTarget)) { event.preventDefault(); advance(); } } : undefined}
@@ -151,7 +153,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
           const across = Math.abs((event.touches[0].clientX ?? touchStart.current.x) - touchStart.current.x);
           if (across > Math.max(12, distance)) { touchStart.current = undefined; if (!advancing.current) setDragX(0); return; }
           if (!canLeave(event.target) || !atEnd(event.currentTarget)) return;
-          if (!advancing.current) setDragX(-Math.min(32, Math.max(0, distance) * .42));
+          if (!advancing.current) setDragX(-Math.min(immersive ? 120 : 32, Math.max(0, distance) * (immersive ? 1 : .42)));
           if (distance >= 48) { swipedControl.current = true; advance(); }
         }}
         onTouchCancel={() => { touchStart.current = undefined; swipedControl.current = false; if (!advancing.current) setDragX(0); }}
@@ -176,7 +178,7 @@ export function GameCard({ children, back, onAdvance, advanceLabel = 'Conecta', 
         }}>
         <article className="game-card-face card-vertical-page"><div className="game-card-body">{children}{back ? <details className="card-vertical-memory"><summary>Recordar la escena</summary>{back}</details> : null}</div></article>
       </div>
-      {onAdvance && revealFooter && showButton ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel} title="Desliza hacia arriba o toca para seguir"><span>{verticalAdvanceLabel}</span><span className="feed-next-arrow" aria-hidden="true">↑</span></button></footer> : feedOnly ? <footer className="card-feed-hint">{onAdvance && revealFooter ? <span>Desliza para seguir <b aria-hidden="true">↑</b></span> : null}</footer> : <div className="card-vertical-rest" aria-hidden="true" />}
+      {immersive ? null : onAdvance && revealFooter && showButton ? <footer className="card-vertical-next"><button type="button" onClick={advance} disabled={exiting} aria-label={verticalAdvanceLabel} title="Desliza hacia arriba o toca para seguir"><span>{verticalAdvanceLabel}</span><span className="feed-next-arrow" aria-hidden="true">↑</span></button></footer> : feedOnly ? <footer className="card-feed-hint">{onAdvance && revealFooter ? <span>Desliza para seguir <b aria-hidden="true">↑</b></span> : null}</footer> : <div className="card-vertical-rest" aria-hidden="true" />}
       {!showButton && onAdvance && revealFooter ? <button type="button" className="sr-only feed-accessible-next" onClick={advance} disabled={exiting} aria-label="Pasar a la siguiente escena">Pasar a la siguiente escena ↑</button> : null}
     </div>;
   }

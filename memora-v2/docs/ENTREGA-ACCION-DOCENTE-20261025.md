@@ -2,7 +2,11 @@
 
 ## Reconstrucción por historias · 29/10/2026
 
-La nueva petición rechaza todo el producto anterior. StoryJourney sustituye ZeroJourney en la entrada principal; StoryWelcome sustituye su portada de acceso. Tres situaciones autorales (terraza, hotel y estación),29escenas, seis tipos de actividad: asociación, espejo manipulable, montaje, escucha, decisión Arcade y escritura. Emojis y CSS originales; sin imágenes de pago ni importación de Claude.
+La nueva petición rechaza todo el producto anterior. StoryJourney sustituye ZeroJourney en la entrada principal; StoryWelcome sustituye su portada de acceso. Tres situaciones autorales (terraza, hotel y estación),29escenas, seis tipos de actividad: asociación, espejo bilingüe, montaje, escucha, decisión Arcade y escritura. Emojis y CSS originales; sin imágenes de pago ni importación de Claude.
+
+Corrección tras revisión humana29/10: desaparece «toca para descubrir» y el volteo obligatorio de cada pieza. Palabra/asociación y espejo completo visibles al llegar; color vincula inglés y apoyo español, movimiento breve ordenado sin ocultar contenido. Exposición neutral al dejar enseñanza, no acierto/prueba de lectura; checkpoints ya revelados no se duplican.
+
+GameCard inmersivo opt-in: sin cabecera ni espacio reservado para botón ausente; menú flotante conserva pausa/salida. Gesto desplaza la altura visible completa sin desvanecer tarjeta interior; respeta lectura, teclado, arrastre y movimiento reducido. Cubre el área de la app, no oculta barras del navegador/sistema. Integración actual1087tests/174archivos y build pasan; siguen pendientes inspección/partida real.
 
 El contenido conecta WANT, AM COLD, posición del adjetivo, HAVE/NEED, DON'T WANT, petición CAN I HAVE… PLEASE y pregunta WHERE IS. La transferencia cambia objeto/contexto. Las frases construidas y enseñadas entran en el SRS existente; el repaso escrito se presenta sin modelo y la ayuda nunca se convierte en recuerdo autónomo. La voz opcional reutiliza EchoPractice local; no califica pronunciación.
 

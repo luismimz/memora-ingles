@@ -12,6 +12,16 @@ function mount(advance?: () => void, stepKey = 'one') {
 }
 beforeEach(() => { viewport.scrollTop = 0; vi.useFakeTimers(); vi.stubGlobal('window', { setTimeout, clearTimeout, matchMedia: () => ({ matches: false }), getSelection: () => null }); });
 afterEach(() => { if (tree) act(() => tree.unmount()); vi.useRealTimers(); vi.unstubAllGlobals(); });
+it('la escena inmersiva recorre su altura sin reservar pie y avanza una sola vez', () => {
+  const advance=vi.fn();
+  act(()=>{tree=create(<GameCard vertical immersive showAdvanceButton={false} onAdvance={advance}>Escena</GameCard>,{createNodeMock:node=>node.props.role==='region'?viewport:null});});
+  expect(tree.root.findAllByProps({className:'card-vertical-rest'})).toHaveLength(0);
+  viewport.scrollTop=200;
+  act(()=>wheel());
+  expect(region().props.style.transform).toBe('translate3d(0, -600px, 0)');
+  act(()=>{wheel();vi.advanceTimersByTime(230);});
+  expect(advance).toHaveBeenCalledOnce();
+});
 it('el feed compartido cambia presentación sin responder, mantiene teclado y no salta lo pendiente', () => {
   const advance = vi.fn(), preventDefault = vi.fn();
   act(() => { tree = create(<PlayFeed><GameCard vertical>Pendiente</GameCard></PlayFeed>); });
