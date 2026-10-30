@@ -100,6 +100,9 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
   }
   function answer(value:string, assisted=false) {
     if (!card || live.current.checkId !== card.id || live.current.feedback === 'correct' || (live.current.checkFailures ?? 0)>=2 || paused || menu) return;
+    // Re-sending the same rejected draft is not a new attempt. Keep the local
+    // correction available instead of escalating to the full model on Enter.
+    if (live.current.correctionResponse !== undefined && storyAccepts(value,live.current.correctionResponse) && !storyAccepts(value,card.answer ?? card.en)) return;
     const correct=storyAccepts(value,card.answer ?? card.en);
     const helped=live.current.helped || assisted || card.kind!=='write';
     const event=record(value,correct,helped);

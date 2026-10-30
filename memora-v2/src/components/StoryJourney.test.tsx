@@ -75,6 +75,20 @@ it('no reserva cabecera ni franja de avance en la escena inmersiva',async()=>{aw
 it('un montaje correcto continúa una sola vez y conserva la evidencia con piezas',async()=>{await mount('order-tea');await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('I want tea'));expect(checkpoint().feedback).toBe('correct');await act(async()=>{vi.advanceTimersByTime(1500);});expect(checkpoint().checkId).toBe('cold');expect(readLearningActivities(user)[0]).toMatchObject({correct:true,helped:true});});
 it('una errata mantiene el borrador y ofrece reparación visible',async()=>{await mount('recall-cafe');await act(async()=>tree.root.findByType(AnswerStudio).props.onChange('i want cold cofee'));await act(async()=>tree.root.findByType(AnswerStudio).props.onAnswer('i want cold cofee'));expect(checkpoint().input).toBe('i want cold cofee');expect(tree.root.findAllByType(AnswerStudio)).toHaveLength(1);expect(text(tree.toJSON())).toContain('COFFEE');expect(readLearningActivities(user)[0]).toMatchObject({correct:false,helped:false});});
 it('ayuda convierte escritura en montaje sin fingir recuerdo autónomo',async()=>{await mount('recall-key');await click('Armar juntos');await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('I need a key'));expect(readLearningActivities(user).at(-1)).toMatchObject({correct:true,helped:true,modality:'choice'});expect(readSentenceMemories(user).every(item=>item.attempts===0)).toBe(true);});
+it('reenviar el mismo error no consume intentos ni oculta su reparación',async()=>{
+  await mount('recall-cafe');
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onChange('i want cold cofee'));
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onAnswer('i want cold cofee'));
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onAnswer('I want cold cofee.'));
+  expect(checkpoint().checkFailures).toBe(1);
+  expect(readLearningActivities(user)).toHaveLength(1);
+  expect(text(tree.toJSON())).toContain('Corregir esta palabra');
+  await click('Corregir esta palabra');
+  expect(checkpoint().feedback).toBe('correct');
+  expect(readLearningActivities(user).at(-1)).toMatchObject({correct:true,helped:true});
+  await act(async()=>{vi.advanceTimersByTime(1500);});
+  expect(checkpoint().checkId).toBe('ticket');
+});
 it('dos fallos muestran solución y mantienen salida por gesto',async()=>{await mount('order-tea');await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('tea I want'));await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('want tea I'));expect(text(tree.toJSON())).toContain('Vamos con ayuda');expect(checkpoint().checkFailures).toBe(2);await act(async()=>tree.root.findByType(GameCard).props.onAdvance());expect(checkpoint().checkId).toBe('cold');expect(readLearningActivities(user).filter(item=>item.correct===true)).toHaveLength(0);});
 it('el tiempo agotado enseña y no se registra como acierto',async()=>{await mount('arcade-key');await act(async()=>{vi.advanceTimersByTime(12100);});expect(checkpoint().checkFailures).toBe(2);expect(readLearningActivities(user).every(item=>item.correct===null)).toBe(true);});
 it('recupera una frase pendiente del SRS sin enseñar primero el modelo',async()=>{recordSentenceExposure(user,storyJourney.id,storySentence(storyCards.find(card=>card.id==='want')!),new Date(Date.now()-7200000));await mount('end');await click('Recuperar lo que toca hoy');expect(tree.root.findByType(AnswerStudio).props.target).toBe('Quiero café.');expect(text(tree.toJSON())).not.toContain('I want coffee');expect(readLearningActivities(user)).toEqual([]);});
