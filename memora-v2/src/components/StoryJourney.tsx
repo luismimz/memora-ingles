@@ -30,7 +30,9 @@ function resume(userId: string, inspection: boolean) {
   if (!saved) return fresh();
   if (saved.checkId === 'end') return saved.stage < storyCards.length ? fresh(saved.stage) : { ...saved, stage:storyCards.length };
   const stage = storyCards.findIndex(card => card.id === saved.checkId);
-  if (stage < 0 || (saved.order ?? []).some(index => index >= (storyCards[stage].chunks?.length ?? 0))) return fresh();
+  if (stage < 0) return fresh();
+  const shown = saved.review?.mode==='transfer' ? storyTransfer(storyCards[stage]) ?? storyCards[stage] : storyCards[stage];
+  if ((saved.order ?? []).some(index => index >= (shown.chunks?.length ?? 0))) return {...saved,stage,order:[]};
   return { ...saved, stage };
 }
 
@@ -78,6 +80,7 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
     // checkpoints already recorded it; leaving must not duplicate that event.
     if (teach && live.current.input !== 'seen' && !(card.kind==='mirror' && live.current.order?.length===card.chunks?.length)) expose();
     if(state.review?.mode==='transfer') record('Terminó la oportunidad de volver al mensaje.',null,live.current.helped,'learner',card,'story:returned');
+    else if(state.review) record('Terminó esta oportunidad de repaso.',null,live.current.helped,'learner',card,'story:reviewed');
     else if (!solved && !teach && !model) record('Pasó a otra escena; práctica pendiente.',null,live.current.helped,'learner',card,'story:omitted');
     stopSpeech();
     const pending = live.current.review?.pending.slice(1);
@@ -125,13 +128,16 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
   },[state.stage,solved,calm,paused,menu,oral,audioBusy]);
 
   const due = !card && !inspection ? dueSentenceMemories(userId).filter(item=>item.unitId===storyJourney.id) : [];
-  function dueReviews(through:number,limit:number) {
+  function dueReviews(through:number,limit:number,repeatRequested=false) {
+    const offered = new Set(repeatRequested ? [] : readLearningActivities(userId)
+      .filter(event=>event.unitId===storyJourney.id && event.feedback==='story:reviewed' && event.activityId.startsWith(`story:${state.episodeId}:`))
+      .map(event=>event.skill.slice(6)));
     return dueSentenceMemories(userId).filter(item=>item.unitId===storyJourney.id)
       .flatMap(memory=>{const match=storyCards.slice(0,through+1).find(item=>item.chunks && storyAccepts(item.en,memory.sentenceEn));return match?[match.id]:[];})
-      .filter((id,index,all)=>all.indexOf(id)===index).slice(0,limit);
+      .filter((id,index,all)=>all.indexOf(id)===index && !offered.has(id)).slice(0,limit);
   }
   function reviewDue() {
-    const pending=dueReviews(storyCards.length,8);
+    const pending=dueReviews(storyCards.length,8,true);
     if (!pending.length) return;
     save({...fresh(storyCards.findIndex(item=>item.id===pending[0])),review:{pending,total:pending.length}});
   }

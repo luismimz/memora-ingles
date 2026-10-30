@@ -82,6 +82,31 @@ it('la pista automática para un mensaje completo no castiga el borrador ni borr
   expect(checkpoint().checkFailures).toBeUndefined();
   expect(readLearningActivities(user)).toMatchObject([{source:'authored',correct:null,helped:true}]);
 });
+it('un repaso omitido sigue vencido pero no interrumpe otra vez el mismo recorrido, incluso tras recargar',async()=>{
+  recordSentenceExposure(user,storyJourney.id,storySentence(storyCards.find(card=>card.id==='want')!),new Date(Date.now()-7200000));
+  await mount('arcade-cafe');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint().checkId).toBe('want');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint().checkId).toBe('key');
+  expect(readLearningActivities(user).at(-1)).toMatchObject({feedback:'story:reviewed',correct:null});
+  expect(readSentenceMemories(user)[0].attempts).toBe(0);
+  act(()=>tree.unmount());
+  await mount('recall-cafe');
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint().checkId).toBe('ticket');
+  act(()=>tree.unmount());
+  await mount('end');
+  await click('Recuperar lo que toca hoy');
+  expect(checkpoint().checkId).toBe('want');
+});
+it('una selección obsoleta no reinicia la historia ni pierde el regreso del repaso',async()=>{
+  writeTrickCheckpoint(user,storyJourney.id,storyJourney.version,{stage:3,checkId:'order-tea',checkIndex:0,input:'borrador',order:[7],feedback:'help',helped:true,episodeId:'test',review:{mode:'transfer',pending:['order-tea'],total:1},resumeAfter:'key'});
+  await mount();
+  expect(checkpoint()).toMatchObject({checkId:'order-tea',input:'borrador',order:[],review:{mode:'transfer'},resumeAfter:'key',helped:true});
+  await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
+  expect(checkpoint().checkId).toBe('key');
+});
 it('repara una intención en Arcade sin mostrar la solución antes de responder',async()=>{
   await mount('repair-have');
   expect(text(tree.root.findByProps({className:'story-repair-line'}))).toContain('…');
