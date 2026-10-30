@@ -2,12 +2,12 @@ import { useEffect, useRef, useState } from 'react';
 import { useSpeechPlayback } from './useSpeechPlayback';
 
 /** Same audio service; a failed playback becomes a readable task, not a dead end. */
-export function StoryListeningPrompt({ text, onTextReveal, onBusyChange }: {
-  text: string; onTextReveal: () => void; onBusyChange: (busy:boolean) => void;
+export function StoryListeningPrompt({ text, initialReading=false, onTextReveal, onBusyChange }: {
+  text: string; initialReading?: boolean; onTextReveal: () => void; onBusyChange: (busy:boolean) => void;
 }) {
   const playback=useSpeechPlayback();
-  const [reading,setReading]=useState(false);
-  const revealed=useRef(false);
+  const [reading,setReading]=useState(initialReading);
+  const revealed=useRef(initialReading);
   const busy=playback.audio?.status==='preparing'||playback.audio?.status==='playing';
   useEffect(()=>{onBusyChange(busy);},[busy,onBusyChange]);
   useEffect(()=>()=>onBusyChange(false),[onBusyChange]);

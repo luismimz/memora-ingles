@@ -178,6 +178,22 @@ it('leer es opcional, no dispara audio y solo expone una vez el mensaje',async()
   expect(text(tree.toJSON())).toContain('I want tea.');
   expect(readLearningActivities(user)[0].correct).toBeNull();
 });
+it('conserva la lectura tras pausa y recarga sin repetir exposición ni filtrarla al reto siguiente',async()=>{
+  await mount('listen-tea');
+  await click('Prefiero leer');
+  await act(async()=>tree.root.findByProps({'aria-label':'Pausa y opciones'}).props.onClick());
+  await click('Pausar');
+  await click('Volver');
+  expect(text(tree.toJSON())).toContain('I want tea.');
+  act(()=>tree.unmount());
+  await mount();
+  expect(text(tree.toJSON())).toContain('I want tea.');
+  expect(checkpoint()).toMatchObject({input:'transcript',helped:true});
+  expect(readLearningActivities(user)).toHaveLength(1);
+  await click('Té');
+  await act(async()=>{vi.advanceTimersByTime(1500);});
+  expect(checkpoint()).toMatchObject({checkId:'cold-tea',input:'',helped:false});
+});
 it('recupera una omisión con otro mensaje, conserva el regreso y no la encadena otra vez',async()=>{
   await mount('order-tea');
   await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
