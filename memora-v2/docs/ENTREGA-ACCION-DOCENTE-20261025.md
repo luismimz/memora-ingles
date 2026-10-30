@@ -2,6 +2,8 @@
 
 ## Reconstrucción por historias · 29/10/2026
 
+Rescate y memoria30/10: reenviar el mismo error (incluida edición de mayúsculas/puntuación) restaura la pista sin consumir otro intento ni forzar modelo. Una escritura completada con corrección queda expuesta en el SRS existente, sin acreditar recuerdo autónomo. No migra intentos anteriores ni modifica intervalos. Recorrido errata→edición→reenvío→reparación→avance y nueva frase asistida→memoria cubiertos; integración1126tests/179archivos y build pasan. Inspección móvil/partida siguen pendientes.
+
 Continuidad al ausentarse30/10: reloj compartido pausa al ocultarse la página, conserva segundos restantes, detiene audio y evita autoavance de resultados en segundo plano. Volver respeta pausa manual. StoryJourney también suspende su autoavance. Agrupado con lectura de escucha persistente al pausar/recargar, sin duplicar exposición. Integración1124tests/179archivos y build pasan; pruebas de visibilidad simulada, no bloqueo físico de móvil ni partida real.
 
 Espejo coherente30/10: cambiar intención actualiza también el truco explicativo; pausa y práctica de voz conservan la misma selección, escena, título y piezas. La voz opcional usa la frase seleccionada, no la inicial. Volver no añade otra exposición ni acierto.25pruebas enfocadas pasan, TypeScript/Vite y diff --check pasan; inspección real sigue pendiente.

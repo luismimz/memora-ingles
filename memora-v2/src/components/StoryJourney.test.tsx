@@ -91,6 +91,18 @@ it('reenviar el mismo error no consume intentos ni oculta su reparación',async(
   await act(async()=>{vi.advanceTimersByTime(1500);});
   expect(checkpoint().checkId).toBe('ticket');
 });
+it('una frase nueva reparada entra en memoria como exposición, nunca como recuerdo autónomo',async()=>{
+  await mount('recall-milk');
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onChange('i want cofee with milk'));
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onAnswer('i want cofee with milk'));
+  await click('Corregir esta palabra');
+  const memory=readSentenceMemories(user).find(item=>item.sentenceEn==='I want coffee with milk.');
+  expect(memory).toBeDefined();
+  expect(memory!.attempts).toBe(0);
+  expect(readLearningActivities(user).at(-1)).toMatchObject({correct:true,helped:true,modality:'choice'});
+  await act(async()=>{vi.advanceTimersByTime(1500);});
+  expect(checkpoint().checkId).toBe('end');
+});
 it('dos fallos muestran solución y mantienen salida por gesto',async()=>{await mount('order-tea');await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('tea I want'));await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('want tea I'));expect(text(tree.toJSON())).toContain('Vamos con ayuda');expect(checkpoint().checkFailures).toBe(2);await act(async()=>tree.root.findByType(GameCard).props.onAdvance());expect(checkpoint().checkId).toBe('cold');expect(readLearningActivities(user).filter(item=>item.correct===true)).toHaveLength(0);});
 it('el tiempo agotado enseña y no se registra como acierto',async()=>{await mount('arcade-key');await act(async()=>{vi.advanceTimersByTime(12100);});expect(checkpoint().checkFailures).toBe(2);expect(readLearningActivities(user).every(item=>item.correct===null)).toBe(true);});
 it('recupera una frase pendiente del SRS sin enseñar primero el modelo',async()=>{recordSentenceExposure(user,storyJourney.id,storySentence(storyCards.find(card=>card.id==='want')!),new Date(Date.now()-7200000));await mount('end');await click('Recuperar lo que toca hoy');expect(tree.root.findByType(AnswerStudio).props.target).toBe('Quiero café.');expect(text(tree.toJSON())).not.toContain('I want coffee');expect(readLearningActivities(user)).toEqual([]);});

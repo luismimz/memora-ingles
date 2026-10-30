@@ -109,9 +109,8 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
     const correct=storyAccepts(value,card.answer ?? card.en);
     const helped=live.current.helped || assisted || card.kind!=='write';
     const event=record(value,correct,helped);
-    if (!inspection && correct && card.kind==='build') recordSentenceExposure(userId,storyJourney.id,storySentence(card));
+    if (!inspection && correct && (card.kind==='build' || card.kind==='write')) recordSentenceExposure(userId,storyJourney.id,storySentence(card));
     if (!inspection && card.kind==='write' && !helped) {
-      if (correct) recordSentenceExposure(userId,storyJourney.id,storySentence(card));
       recordSentenceRecall(userId,sentenceKey(storyJourney.id,storySentence(card)),correct?'hesitant':'missed');
     }
     save({feedback:correct?'correct':'help',helped:helped || !correct,correctionResponse:value,previousAttemptId:event?.id,
