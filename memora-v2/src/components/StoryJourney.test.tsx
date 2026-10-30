@@ -79,6 +79,19 @@ it('dos fallos muestran solución y mantienen salida por gesto',async()=>{await 
 it('el tiempo agotado enseña y no se registra como acierto',async()=>{await mount('arcade-key');await act(async()=>{vi.advanceTimersByTime(12100);});expect(checkpoint().checkFailures).toBe(2);expect(readLearningActivities(user).every(item=>item.correct===null)).toBe(true);});
 it('recupera una frase pendiente del SRS sin enseñar primero el modelo',async()=>{recordSentenceExposure(user,storyJourney.id,storySentence(storyCards.find(card=>card.id==='want')!),new Date(Date.now()-7200000));await mount('end');await click('Recuperar lo que toca hoy');expect(tree.root.findByType(AnswerStudio).props.target).toBe('Quiero café.');expect(text(tree.toJSON())).not.toContain('I want coffee');expect(readLearningActivities(user)).toEqual([]);});
 it('pausar impide autoavance de un acierto',async()=>{await mount('order-tea');await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('I want tea'));await act(async()=>tree.root.findByProps({'aria-label':'Pausa y opciones'}).props.onClick());await click('Pausar');await act(async()=>{vi.advanceTimersByTime(5000);});expect(checkpoint().checkId).toBe('order-tea');});
+it('ocultar la página conserva el resultado y espera al regreso para continuar',async()=>{
+  const page=Object.assign(new EventTarget(),{visibilityState:'visible'});
+  vi.stubGlobal('document',page);
+  await mount('order-tea');
+  await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('I want tea'));
+  await act(async()=>{page.visibilityState='hidden';page.dispatchEvent(new Event('visibilitychange'));});
+  await act(async()=>{vi.advanceTimersByTime(60000);});
+  expect(checkpoint()).toMatchObject({checkId:'order-tea',feedback:'correct'});
+  await act(async()=>{page.visibilityState='visible';page.dispatchEvent(new Event('visibilitychange'));});
+  await act(async()=>{vi.advanceTimersByTime(1500);});
+  expect(checkpoint().checkId).toBe('cold');
+  expect(readLearningActivities(user).filter(item=>item.correct===true)).toHaveLength(1);
+});
 it('intercala el repaso vencido entre historias y vuelve al siguiente capítulo sin reiniciar',async()=>{
   recordSentenceExposure(user,storyJourney.id,storySentence(storyCards.find(card=>card.id==='want')!),new Date(Date.now()-7200000));
   await mount('arcade-cafe');

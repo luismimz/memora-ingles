@@ -73,3 +73,32 @@ it('consultar el resultado cancela avance pendiente sin crear otro reloj ni dobl
   act(() => { clock.advanceNow(); clock.advanceNow(); });
   expect(advance).toHaveBeenCalledOnce();
 });
+it('ocultar la página congela el tiempo y volver conserva los segundos restantes', () => {
+  const page=Object.assign(new EventTarget(),{visibilityState:'visible'});
+  vi.stubGlobal('document',page);
+  act(()=>{root=create(<Harness calm={false}/>);});
+  act(()=>{vi.advanceTimersByTime(2000);});
+  const remaining=clock.remaining;
+  act(()=>{page.visibilityState='hidden';page.dispatchEvent(new Event('visibilitychange'));});
+  act(()=>{vi.advanceTimersByTime(60000);});
+  expect(clock.remaining).toBe(remaining);
+  expect(expire).not.toHaveBeenCalled();
+  act(()=>{page.visibilityState='visible';page.dispatchEvent(new Event('visibilitychange'));});
+  act(()=>{vi.advanceTimersByTime(remaining-50);});
+  expect(expire).not.toHaveBeenCalled();
+  act(()=>{vi.advanceTimersByTime(50);});
+  expect(expire).toHaveBeenCalledOnce();
+});
+it('no avanza resultados en segundo plano ni revoca una pausa manual al volver', () => {
+  const page=Object.assign(new EventTarget(),{visibilityState:'visible'});
+  vi.stubGlobal('document',page);
+  act(()=>{root=create(<Harness calm={false} revealed/>);});
+  act(()=>{page.visibilityState='hidden';page.dispatchEvent(new Event('visibilitychange'));});
+  act(()=>{vi.advanceTimersByTime(5000);clock.togglePause();});
+  act(()=>{page.visibilityState='visible';page.dispatchEvent(new Event('visibilitychange'));});
+  act(()=>{vi.advanceTimersByTime(5000);});
+  expect(advance).not.toHaveBeenCalled();
+  act(()=>clock.togglePause());
+  act(()=>{vi.advanceTimersByTime(1000);});
+  expect(advance).toHaveBeenCalledOnce();
+});

@@ -2,6 +2,8 @@
 
 ## Reconstrucción por historias · 29/10/2026
 
+Continuidad al ausentarse30/10: reloj compartido pausa al ocultarse la página, conserva segundos restantes, detiene audio y evita autoavance de resultados en segundo plano. Volver respeta pausa manual. StoryJourney también suspende su autoavance. Agrupado con lectura de escucha persistente al pausar/recargar, sin duplicar exposición. Integración1124tests/179archivos y build pasan; pruebas de visibilidad simulada, no bloqueo físico de móvil ni partida real.
+
 Espejo coherente30/10: cambiar intención actualiza también el truco explicativo; pausa y práctica de voz conservan la misma selección, escena, título y piezas. La voz opcional usa la frase seleccionada, no la inicial. Volver no añade otra exposición ni acierto.25pruebas enfocadas pasan, TypeScript/Vite y diff --check pasan; inspección real sigue pendiente.
 
 Continuidad de repaso30/10: una frase vencida ofrecida entre capítulos no vuelve a interrumpir el mismo episodio si se omite o se usa ayuda. Sigue vencida en el SRS; registro neutral en el journal existente, sin acierto, intervalo inventado ni nuevo motor. Recargar conserva esa decisión; recuperar explícitamente al final permite volver a practicar. Selección de piezas obsoleta se limpia sin reiniciar la historia ni perder borrador/ayuda/regreso, validando la variante realmente mostrada. Pruebas de recorrido y build pasan; pendiente validación móvil real.

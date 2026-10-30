@@ -122,10 +122,10 @@ export function StoryJourney({ userId, inspection = false, onExit }: { userId:st
   useEffect(()=>()=>stopSpeech(),[state.stage]);
   useEffect(()=>{if(paused || menu) stopSpeech();},[paused,menu]);
   useEffect(()=>{
-    if(!solved || calm || paused || menu || oral || audioBusy) return;
+    if(!solved || calm || paused || menu || oral || audioBusy || clock.hidden) return;
     const timer=window.setTimeout(advance,1450);
     return ()=>window.clearTimeout(timer);
-  },[state.stage,solved,calm,paused,menu,oral,audioBusy]);
+  },[state.stage,solved,calm,paused,menu,oral,audioBusy,clock.hidden]);
 
   const due = !card && !inspection ? dueSentenceMemories(userId).filter(item=>item.unitId===storyJourney.id) : [];
   function dueReviews(through:number,limit:number,repeatRequested=false) {
