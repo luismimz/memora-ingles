@@ -79,8 +79,10 @@ it('reenviar el mismo error no consume intentos ni oculta su reparación',async(
   await mount('recall-cafe');
   await act(async()=>tree.root.findByType(AnswerStudio).props.onChange('i want cold cofee'));
   await act(async()=>tree.root.findByType(AnswerStudio).props.onAnswer('i want cold cofee'));
+  await act(async()=>tree.root.findByType(AnswerStudio).props.onChange('I want cold cofee.'));
   await act(async()=>tree.root.findByType(AnswerStudio).props.onAnswer('I want cold cofee.'));
   expect(checkpoint().checkFailures).toBe(1);
+  expect(checkpoint().feedback).toBe('help');
   expect(readLearningActivities(user)).toHaveLength(1);
   expect(text(tree.toJSON())).toContain('Corregir esta palabra');
   await click('Corregir esta palabra');
