@@ -2,7 +2,7 @@ import type { StoryCard } from '../domain/storyJourney';
 
 /** One stage across teaching and play. Geometry is local SVG, no external media. */
 export function StoryScene({card,solved=false}:{card:StoryCard;solved?:boolean}) {
-  const milk = card.chapter===3 && /\bwith(?:out)? milk/i.test(card.en) ? /without milk/i.test(card.en)?'without':'with' : undefined;
+  const milk = (card.kind!=='listen'||solved) && card.chapter===3 && /\bwith(?:out)? milk/i.test(card.en) ? /without milk/i.test(card.en)?'without':'with' : undefined;
   return <figure className={`story-scene scene-${card.chapter}${solved?' is-alive':''}`} data-milk={milk} aria-label={solved?card.reaction:card.title}>
     <svg viewBox="0 0 440 200" aria-hidden="true" className="story-scenery">
       <ellipse cx="220" cy="179" rx="180" ry="13" className="scene-shadow"/>

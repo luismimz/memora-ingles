@@ -3,6 +3,7 @@ import { afterEach,beforeEach,expect,it,vi } from 'vitest';
 import { StoryJourney } from './StoryJourney';
 import { GameCard } from './GameCard';
 import { StoryScene } from './StoryScene';
+import { StoryListeningPrompt } from './StoryListeningPrompt';
 import { GrammarOrder } from './GrammarOrder';
 import { AnswerStudio } from './AnswerStudio';
 import { storyCards,storyJourney,storySentence } from '../domain/storyJourney';
@@ -30,11 +31,13 @@ it('con y sin cambian juntos escena, piezas y frase de audio; el montaje siguien
   expect(tree.root.findByType(StoryScene).props.card.id).toBe('without-milk');
   await click('Con leche');
   expect(tree.root.findByType(StoryScene).props.card.id).toBe('with-milk');
+  expect(text(tree.root.findByType('h1'))).toBe('Invita a la leche a tu taza.');
   expect(text(tree.toJSON())).toContain('Quiero té con leche.');
   expect(readLearningActivities(user).at(-1)).toMatchObject({source:'authored',correct:null,response:'I want tea with milk.'});
   await act(async()=>tree.root.findByType(GameCard).props.onAdvance());
   expect(checkpoint().checkId).toBe('soup-order');
   expect(tree.root.findByType(StoryScene).props.card.id).toBe('soup-order');
+  expect(text(tree.root.findByType('h1'))).toBe('La sopa tampoco lleva leche.');
   await act(async()=>tree.root.findByType(GrammarOrder).props.onAnswer('I want soup without milk'));
   await act(async()=>{vi.advanceTimersByTime(1500);});
   expect(checkpoint().checkId).toBe('listen-milk');
@@ -104,6 +107,31 @@ it('espera a que termine el audio solicitado antes de avanzar automáticamente',
   await act(async()=>{finish({status:'played',source:'browser'});});
   await act(async()=>{vi.advanceTimersByTime(1500);});
   expect(checkpoint().checkId).toBe('cold-tea');
+});
+it('el audio fallido ofrece el mismo reto por texto sin resolverlo ni quitar opciones',async()=>{
+  vi.mocked(playEnglish).mockResolvedValueOnce({status:'unavailable',source:null});
+  await mount('listen-milk');
+  expect(text(tree.toJSON())).not.toContain('I want tea with milk.');
+  expect(tree.root.findByType('figure').props['data-milk']).toBeUndefined();
+  await click('Escucha el pedido');
+  expect(text(tree.toJSON())).toContain('I want tea with milk.');
+  expect(checkpoint().helped).toBe(true);
+  expect(checkpoint().feedback).toBe('idle');
+  expect(readLearningActivities(user)).toMatchObject([{source:'authored',correct:null,helped:true}]);
+  await click('Té con leche');
+  expect(readLearningActivities(user).at(-1)).toMatchObject({source:'learner',correct:true,helped:true,modality:'choice'});
+  await act(async()=>{vi.advanceTimersByTime(1500);});
+  expect(checkpoint().checkId).toBe('repair-without');
+});
+it('leer es opcional, no dispara audio y solo expone una vez el mensaje',async()=>{
+  const before=vi.mocked(playEnglish).mock.calls.length;
+  await mount('listen-tea');
+  await click('Prefiero leer');
+  expect(vi.mocked(playEnglish).mock.calls.length).toBe(before);
+  expect(readLearningActivities(user)).toHaveLength(1);
+  expect(tree.root.findAllByType(StoryListeningPrompt)).toHaveLength(1);
+  expect(text(tree.toJSON())).toContain('I want tea.');
+  expect(readLearningActivities(user)[0].correct).toBeNull();
 });
 it('recupera una omisión con otro mensaje, conserva el regreso y no la encadena otra vez',async()=>{
   await mount('order-tea');

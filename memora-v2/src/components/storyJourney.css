@@ -58,6 +58,8 @@
 .story-scene[data-milk='with'] .story-actors > span:last-child { transform: translateX(-12px) rotate(-12deg); }
 .story-scene[data-milk='without'] .story-actors > span:last-child { transform: translateX(24px); opacity: .45; }
 .story-discover, .story-mirror, .story-builder, .story-choice { display: flex; flex-direction: column; gap: 16px; }
+.story-listening { display: grid; gap: 12px; text-align: center; }
+.story-listening-note { margin: 0; font-size: 12px; line-height: 1.5; color: var(--muted); }
 .story-word { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: center; gap: 10px 16px; }
 .story-word strong { font-size: clamp(36px,10vw,54px); letter-spacing: -.045em; font-weight: 750; }
 .story-word span { color: var(--story-accent); font-size: 23px; }
